@@ -1,5 +1,5 @@
+
 import React, { useRef, useEffect, useCallback } from 'react';
-// FIX: Import DraggedPointInfo from '../hooks/useDrawingCanvas' where it is exported, not from '../types'.
 import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { VEC } from '../utils/vectorUtils';
@@ -256,6 +256,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ width, height, paths: ini
         ctx.restore();
     }
 
+    // The parent controls this state via the prop, ensuring guides don't disappear until explicitly redrawn
     if (settings.showGridOutlines && !isInitiallyDrawn) {
       const textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
       const guideFontFamily = getComputedStyle(document.documentElement).getPropertyValue('--guide-font-family').trim() || 'sans-serif';

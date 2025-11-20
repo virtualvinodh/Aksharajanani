@@ -12,7 +12,6 @@ import DrawingToolbar from './DrawingToolbar';
 import ImageControlPanel from './ImageControlPanel';
 import { useClipboard } from '../contexts/ClipboardContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { isGlyphDrawn } from '../utils/glyphUtils';
 import Modal from './Modal';
 import ImageTracerModal from './modals/ImageTracerModal';
 import { useGlyphEditSession } from '../hooks/drawing/useGlyphEditSession';
@@ -26,7 +25,7 @@ interface DrawingModalProps {
   character: Character;
   characterSet: CharacterSet;
   glyphData: GlyphData | undefined;
-  onSave: (unicode: number, newGlyphData: GlyphData, newBearings: { lsb?: number, rsb?: number }, onSuccess: () => void, silent: boolean, skipCascade: boolean) => void;
+  onSave: (unicode: number, newGlyphData: GlyphData, newBearings: { lsb?: number, rsb?: number }, onSuccess?: () => void, options?: any) => void;
   onClose: () => void;
   onDelete: (unicode: number) => void;
   onNavigate: (character: Character) => void;
@@ -75,12 +74,20 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   
   const isLocked = !!character.link;
   const isComposite = !!character.composite && character.composite.length > 0;
-  const isInitiallyDrawn = useMemo(() => isGlyphDrawn(glyphData), [glyphData]);
 
   const visibleCharactersForNav = useMemo(() => characterSet.characters.filter(c => !c.hidden), [characterSet]);
   const currentIndex = visibleCharactersForNav.findIndex(c => c.unicode === character.unicode);
   const prevCharacter = currentIndex > 0 ? visibleCharactersForNav[currentIndex - 1] : null;
   const nextCharacter = currentIndex < visibleCharactersForNav.length - 1 ? visibleCharactersForNav[currentIndex + 1] : null;
+
+  const triggerClose = useCallback((postAnimationCallback: () => void) => {
+    if (modalOriginRect) {
+        setAnimationClass('animate-modal-exit');
+        animationTimeoutRef.current = window.setTimeout(() => { setAnimationClass(''); postAnimationCallback(); }, 300);
+    } else {
+        postAnimationCallback();
+    }
+  }, [modalOriginRect]);
 
   // --- Hook: Session Management ---
   const {
@@ -140,15 +147,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         animationTimeoutRef.current = window.setTimeout(() => setAnimationClass(''), 300);
     }
     return () => { if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current); };
-  }, [modalOriginRect, character.unicode]);
-
-  // Reset tool/view on char change
-  useEffect(() => {
-    if (character.link) setCurrentTool('select'); else setCurrentTool('pen');
-    setZoom(1); setViewOffset({ x: 0, y: 0 }); setSelectedPathIds(new Set()); setIsImageSelected(false);
-    setBackgroundImage(null); setImageTransform(null); setBackgroundImageOpacity(0.5);
-    if (character.link) showNotification(t('linkedGlyphLocked', { components: character.link.join(' + ') }), 'info');
-  }, [character, showNotification, t]);
+  }, [modalOriginRect]); // Only run on mount for entry animation
 
   // Action Handlers
   const handleClear = () => handlePathsChange([]);
@@ -162,17 +161,16 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       });
   };
 
-  const triggerClose = useCallback((postAnimationCallback: () => void) => {
-    if (modalOriginRect) {
-        setAnimationClass('animate-modal-exit');
-        animationTimeoutRef.current = window.setTimeout(() => { setAnimationClass(''); postAnimationCallback(); }, 300);
-    } else {
-        postAnimationCallback();
-    }
-  }, [modalOriginRect]);
-
   const handleConfirmUnlock = () => { onUnlockGlyph(character.unicode!); setIsUnlockConfirmOpen(false); showNotification(t('glyphUnlockedSuccess'), 'success'); };
   const handleConfirmRelink = () => { onRelinkGlyph(character.unicode!); setIsRelinkConfirmOpen(false); showNotification(t('glyphRelinkedSuccess'), 'success'); };
+
+  // Setup tool and reset view on init (since we remount on char change now, this is safe)
+  useEffect(() => {
+      if (character.link) setCurrentTool('select'); else setCurrentTool('pen');
+      setZoom(1); setViewOffset({ x: 0, y: 0 }); setSelectedPathIds(new Set()); setIsImageSelected(false);
+      setBackgroundImage(null); setImageTransform(null); setBackgroundImageOpacity(0.5);
+      if (character.link) showNotification(t('linkedGlyphLocked', { components: character.link.join(' + ') }), 'info');
+  }, []);
 
   const canvasComponent = (
      <DrawingCanvas 
@@ -184,7 +182,8 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         imageTransform={imageTransform} onImageTransformChange={setImageTransform}
         selectedPathIds={selectedPathIds} onSelectionChange={setSelectedPathIds}
         isImageSelected={isImageSelected} onImageSelectionChange={setIsImageSelected}
-        lsb={lsb} rsb={rsb} calligraphyAngle={calligraphyAngle} isInitiallyDrawn={!wasEmptyOnLoad}
+        lsb={lsb} rsb={rsb} calligraphyAngle={calligraphyAngle} 
+        isInitiallyDrawn={!wasEmptyOnLoad} // Pass the boolean result directly
         transformMode={isLocked ? 'move-only' : 'all'}
     />
   );
@@ -202,7 +201,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         onBackClick={() => handleNavigationAttempt(null)} onNavigate={handleNavigationAttempt}
         settings={settings} metrics={metrics} lsb={lsb} setLsb={setLsb} rsb={rsb} setRsb={setRsb}
         onDeleteClick={() => setIsDeleteConfirmOpen(true)} onClear={handleClear} 
-        onSave={() => handleSave(currentPaths, false, false)} 
+        onSave={handleSave} 
         isLocked={isLocked} isComposite={isComposite} onRefresh={handleRefresh}
       />
 

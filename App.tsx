@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import DrawingModal from './components/DrawingModal';
@@ -271,6 +270,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       
       {selectedCharacter && characterSets && (
         <DrawingModal
+          key={selectedCharacter.unicode} // CRITICAL: Forces clean remount on character change
           character={selectedCharacter}
           characterSet={characterSets.find(cs => cs.characters.some(c => c.unicode === selectedCharacter.unicode)) || characterSets[layout.activeTab]}
           glyphData={glyphDataMap.get(selectedCharacter.unicode)}
