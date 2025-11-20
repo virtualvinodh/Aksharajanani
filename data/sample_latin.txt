@@ -1,0 +1,18 @@
+A B C D E F G H I J K L M N O P Q R S T U V W X Y Z 
+a b c d e f g h i j k l m n o p q r s t u v w x y z 
+ABCDEFGHIJKLMNOPQRSTUVWXYZ 
+abcdefghijklmnopqrstuvwxyz
+0123456789 0 1 2 3 4 5 6 7 8 9
+. , ; : ! ? - – — ( ) [ ] { } \" ' @ # & % $ + * / = < > | ~ ^ _ « »
+.,;:!?-–—()[]{}\"'@#&%$+*/=<>|~^_«»
+
+The quick brown fox jumps over the lazy dog.
+the quick brown fox jumps over the lazy dog.
+The Quick Brown Fox Jumps Over The Lazy Dog.
+THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.
+
+This morning I wrote down the sequence 0123456789 on a piece of paper. I asked myself, \\\"Is this really all the digits?\\\" and then laughed! She replied: \\\"Yes, of course, #numbers are complete.\\\" We added symbols like $ for money, % for discounts, and & for joining words. Later, I said 'Look at this sign ( ) and the star * above it.' We continued: plus +, minus -, dot ., comma ,, and even the slash / were included. At lunch we checked the clock: 12:45, then compared times: 14:30 > 09:15, so clearly < and > worked fine. We asked: \\\"Do you agree?\\\" @ the office everyone nodded. The notes had brackets [ ] with a backslash \\\\ inside, and even a curly brace { } with a vertical bar | separating parts. Someone whispered ^ keep it quiet _, then tapped the backtick ` on the keyboard. For fun we ended the line with a tilde ~. We also wrote ₹ to mark the rupee. Finally, she said: ‘Here’s a single quote’ and “Here’s a double quote.” The list ended with ; : just before the final period.
+
+English is a West Germanic language that emerged in early medieval England and has since become a global lingua franca. The namesake of the language is the Angles, one of the Germanic peoples who migrated to Britain after the end of Roman rule. English is the most spoken language in the world, primarily due to the global influences of the former British Empire (succeeded by the Commonwealth of Nations) and the United States. It is the most widely learned second language in the world, with more second-language speakers than native speakers. However, English is only the third-most spoken native language, after Mandarin Chinese and Spanish.
+
+English is either the official language, or one of the official languages, in 57 sovereign states and 30 dependent territories, making it the most geographically widespread language in the world. In the United Kingdom, the United States, Australia, and New Zealand, it is the dominant language for historical reasons without being explicitly defined by law. It is a co-official language of the United Nations, the European Union, and many other international and regional organisations. It has also become the de facto lingua franca of diplomacy, science, technology, international trade, logistics, tourism, aviation, entertainment, and the Internet. Ethnologue estimated that there were over 1.4 billion speakers worldwide as of 2021.

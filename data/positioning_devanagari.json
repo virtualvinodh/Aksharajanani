@@ -1,0 +1,88 @@
+[
+   {
+    "groups": {
+      "consFused": ["$consonants", "$rakarConjuncts", "$conjuncts"],
+      "spacingMarksRight": [ "ा", "ी", "ो", "ौ"]
+    }
+   },
+  { "positioning": [   
+    {
+      "base": ["ऋ","ॠ"],
+      "mark": [""],
+      "gsub": "abvs"
+    },       
+    {
+      "base": ["ा", "ी", "ो", "ौ"],
+      "mark": ["ं","ँ", ""],
+      "gpos": "abvm"
+    },    
+    {
+      "base": ["$vowels"],
+      "mark": ["ं","ँ"],
+      "gpos": "abvm"
+    },
+    {
+      "base": ["$consFused"],
+      "mark": ["ं","ँ", "े", "ै", "ें", "ैं","ेँ", "ैँ", "ॅ", "", "", ""],
+      "gpos": "abvm"
+    },    
+    {
+      "base": ["$consFused"],
+      "mark": ["्", "ु", "ू", "ृ", "ॄ", "ॢ", "ॣ"],
+      "gpos": "blwm"
+    }
+  ],
+    "markAttachmentClass": [
+      {
+        "members": ["ु", "ू", "ृ", "ॄ", "ॢ", "ॣ"],
+        "exceptions": ["र"]
+      },
+      {
+        "members": [ "े", "ै", "ें", "ैं","ेँ", "ैँ"]
+      },
+      {
+        "members": [ "ॅ", "ँ"]
+      },
+      {
+        "members": ["", "", ""]
+      }               
+    ],
+    "baseAttachmentClass": []
+  },
+  { "markAttachment": {
+    "$vowelSigns":  {
+      "ं": ["topCenter", "bottomCenter", "0", "-140"],
+      "ँ": ["topCenter", "bottomCenter", "0", "-140"]
+    },    
+    "$vowels":  {
+      "ं": ["topCenter", "bottomCenter", "0", "-140"],
+      "ँ": ["topCenter", "bottomCenter", "0", "-140"]
+    },
+    "$consFused":  {
+      "ं": ["topCenter", "bottomCenter", "0", "-140"],
+      "ँ": ["topCenter", "bottomCenter", "0", "-140"],
+      "ॅ": ["topCenter", "bottomCenter", "0", "-140"],
+      "े": ["topCenter", "bottomRight"], 
+      "ै": ["topCenter", "bottomRight"],
+      "ें": ["topCenter", "bottomRight"], 
+      "ैं": ["topCenter", "bottomRight"], 
+      "ेँ": ["topCenter", "bottomRight"], 
+      "ैँ": ["topCenter", "bottomRight"], 
+      "": ["topCenter", "bottomCenter"],
+      "ु": ["bottomCenter", "topCenter"], 
+      "ू": ["bottomCenter", "topCenter"],
+      "ृ": ["bottomCenter", "topCenter"], 
+      "ॄ": ["bottomCenter", "topCenter"],     
+      "ॢ": ["bottomCenter", "topCenter"], 
+      "ॣ": ["bottomCenter", "topCenter"],
+      "्": ["bottomCenter", "topCenter"]            
+
+      }
+  } },
+  { "recommendedKerning": [
+      ["$consFused", "$spacingMarksRight"],      
+      ["ि", "$consFused"],
+      ["$halfConjuncts", "$consFused"]  
+      ] 
+  }
+]

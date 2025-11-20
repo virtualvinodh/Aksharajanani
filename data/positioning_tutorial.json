@@ -1,0 +1,25 @@
+  [
+    {
+    "positioning": [                
+      {
+        "base": ["A", "a"],
+        "mark": ["ͤ"],
+        "gpos": "abvm"
+      }
+    ]
+  },
+   {
+    "markAttachment": {
+        "A":  {  "ͤ": ["topCenter", "bottomCenter"] },
+        "a":  {  "ͤ": ["topCenter", "bottomCenter"] },
+        "N":  {  "̃": ["topCenter", "bottomCenter"] },        
+        "n":  {  "̃": ["topCenter", "bottomCenter"] }     
+    }
+   },
+{
+    "recommendedKerning": [
+      ["T", "a"],
+      ["T", "e"]
+    ]
+  }   
+]

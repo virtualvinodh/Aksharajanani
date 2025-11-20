@@ -1,0 +1,47 @@
+[  
+  {
+    "groups": {
+      "descenders": ["ஏ", "த",  "த்", "தி", "தீ", "ந", "ந்", "நி", "நீ", 
+      "ர", "ர்", "ரி", "ரீ", "ற", "ற்", "றி", "றீ", "ஹ", "ஹ்", "ஹி", "ஹீ"],
+      "spacingMarks": ["ா", "ெ", "ே", "ு", "ூ", "ை", "ௗ"],
+      "charsAll": ["$vowels", "$consonants", "$halfCons", 
+      "$iCons", "$iiCons", "$uCons", "$uuCons", "$spacingMarks"]
+    }
+  },
+  {
+    "positioning": []
+  },
+  {
+    "markAttachment": {
+      "க":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ங":  {  "ீ": ["topRight", "bottomCenter"],  "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ச":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ஞ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ட":  { "்": ["topRight", "bottomCenter"] },
+      "ண":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "த":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ந":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ப":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ம":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ய":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ர":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ல":  {  "ீ": ["topRight", "bottomCenter"],  "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "வ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ழ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ள":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ற":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ன":  {  "ீ": ["topRight", "bottomCenter"],  "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ஜ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ஸ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ஷ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ஹ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "க்ஷ": {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ஶ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] }
+    }
+  },
+  {
+    "recommendedKerning": [
+      ["$charsAll", "$descenders"]
+    ]
+  }
+]

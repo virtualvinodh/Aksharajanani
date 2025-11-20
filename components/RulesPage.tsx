@@ -1,0 +1,469 @@
+import React, { useState, useMemo, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
+import { Character, CharacterSet, GlyphData, AppSettings, KerningMap, MarkPositioningMap, PositioningRules, FontMetrics } from '../types';
+import { useLocale } from '../contexts/LocaleContext';
+import RuleEditor, { RuleType } from './RuleEditor';
+import { SaveIcon, AddIcon, FeaIcon, CodeBracketsIcon, EditIcon, TrashIcon } from '../constants';
+import { generateFea, exportFeaFile, exportJsonRules } from '../services/feaService';
+import { getAccurateGlyphBBox, BoundingBox } from '../services/glyphRenderService';
+import AddFeatureModal from './AddFeatureModal';
+import DeleteRuleConfirmationModal from './DeleteRuleConfirmationModal';
+import RevertToGuiModal from './RevertToGuiModal';
+import { useRulesState } from '../hooks/useRulesState';
+import ExistingRuleDisplay from './rules/ExistingRuleDisplay';
+import DistRulesEditor from './rules/DistRulesEditor';
+import { useLayout } from '../contexts/LayoutContext';
+import { isGlyphDrawn } from '../utils/glyphUtils';
+import GroupsPane from './rules/GroupsPane';
+import LookupsPane from './rules/LookupsPane';
+
+interface RulesPageProps {
+  allCharacterSets: CharacterSet[];
+  allCharsByName: Map<string, Character>;
+  allCharsByUnicode: Map<number, Character>;
+  kerningMap: KerningMap;
+  markPositioningMap: MarkPositioningMap;
+  glyphDataMap: Map<number, GlyphData>;
+  strokeThickness: number;
+  fontRules: any;
+  onFontRulesChange: (newRules: any) => void;
+  fontName: string;
+  settings: AppSettings;
+  positioningRules: PositioningRules[] | null;
+  metrics: FontMetrics;
+  isFeaEditMode: boolean | undefined;
+  onIsFeaEditModeChange: (isEditMode: boolean) => void;
+  manualFeaCode: string | null | undefined;
+  onManualFeaCodeChange: (code: string) => void;
+  isFeaOnlyMode: boolean;
+  onHasUnsavedChanges: (isDirty: boolean) => void;
+}
+
+const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
+  allCharacterSets, allCharsByName, allCharsByUnicode, kerningMap, markPositioningMap, glyphDataMap,
+  strokeThickness, fontRules, onFontRulesChange, fontName, settings, positioningRules,
+  metrics, isFeaEditMode, onIsFeaEditModeChange, manualFeaCode, onManualFeaCodeChange, isFeaOnlyMode, onHasUnsavedChanges
+}, ref) => {
+  const { t } = useLocale();
+  const { showNotification } = useLayout();
+  const [activeSubTab, setActiveSubTab] = useState<'gui' | 'lookups' | 'groups' | 'fea'>(isFeaOnlyMode ? 'fea' : 'gui');
+  const [isRevertConfirmOpen, setIsRevertConfirmOpen] = useState(false);
+  const [isFeaCodeLocked, setIsFeaCodeLocked] = useState(isFeaOnlyMode);
+
+  const {
+      localRules, scriptTag, features, activeFeature, setActiveFeature,
+      addingRuleType, setAddingRuleType, editingRule, setEditingRule,
+      addingDistRuleType, setAddingDistRuleType, isAddFeatureModalOpen,
+      setIsAddFeatureModalOpen, isDeleteConfirmOpen, setIsDeleteConfirmOpen,
+      handleDeleteRule, handleConfirmDelete, handleSaveNewRule, handleUpdateRule,
+      handleConfirmAddFeature, activeLigatureRules, activeContextualRules,
+      activeMultipleRules, activeSingleRules, activeDistRules,
+      handleEditDistRule, handleSaveDistRule, handleDeleteDistRule,
+      saveChanges, handleScriptTagChange, handleFeatureTagChange,
+      groups, handleSaveGroup, handleDeleteGroup,
+      lookups, expandedLookups, handleToggleLookupExpansion, handleAddLookup, handleUpdateLookup, handleDeleteLookup,
+      handleAddLookupReference, handleRemoveLookupReference, handleReorderFeatureItem
+  } = useRulesState();
+
+  useImperativeHandle(ref, () => ({
+      saveChanges
+  }));
+
+  const [isEditingScriptTag, setIsEditingScriptTag] = useState(false);
+  const [scriptTagInput, setScriptTagInput] = useState(scriptTag);
+  const [editingFeature, setEditingFeature] = useState<string | null>(null);
+  const [featureTagInput, setFeatureTagInput] = useState('');
+  const [lookupToAdd, setLookupToAdd] = useState('');
+
+  useEffect(() => {
+    if (scriptTag) setScriptTagInput(scriptTag);
+  }, [scriptTag]);
+  
+  useEffect(() => {
+    setLookupToAdd('');
+  }, [activeFeature]);
+
+  const handleSaveScriptTag = () => {
+    const newTag = scriptTagInput.trim();
+    if (newTag.length === 4 && /^[a-z0-9]{4}$/.test(newTag)) {
+        if (newTag !== scriptTag) {
+            handleScriptTagChange(newTag);
+        }
+        setIsEditingScriptTag(false);
+    } else {
+        showNotification(t('errorScriptTagInvalid'), 'error');
+        setScriptTagInput(scriptTag);
+        setIsEditingScriptTag(false);
+    }
+  };
+
+  const handleSaveFeatureTag = (oldFeature: string) => {
+    const newTag = featureTagInput.trim();
+    if (newTag.length === 4 && /^[a-z0-9]{4}$/.test(newTag)) {
+        if (newTag !== oldFeature && !features.includes(newTag)) {
+            handleFeatureTagChange(oldFeature, newTag);
+        }
+        setEditingFeature(null);
+    } else {
+        showNotification(t('errorFeatureTagInvalidUnique'), 'error');
+        setEditingFeature(null);
+    }
+  };
+
+    const activeFeatureData = useMemo(() => {
+        if (!scriptTag || !activeFeature) return {};
+        return localRules[scriptTag]?.[activeFeature] || {};
+    }, [localRules, scriptTag, activeFeature]);
+
+    const lookupflags = useMemo(() => activeFeatureData.lookupflags || {}, [activeFeatureData]);
+
+  const areAllGlyphsDrawn = useMemo(() => {
+    return allCharacterSets
+      .flatMap(set => set.characters)
+      .filter(char => char.unicode !== 32)
+      .every(char => isGlyphDrawn(glyphDataMap.get(char.unicode)));
+  }, [allCharacterSets, glyphDataMap]);
+
+  const handleExportFea = () => {
+    try {
+        exportFeaFile(localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics);
+    } catch (error) {
+        showNotification(error instanceof Error ? error.message : 'Failed to export FEA file', 'error');
+    }
+  };
+  
+  const handleExportJson = () => {
+    try {
+        exportJsonRules(localRules, fontName);
+        showNotification(t('rulesExportedAsJson'));
+    } catch (error) {
+        showNotification(error instanceof Error ? error.message : 'Failed to export JSON rules', 'error');
+    }
+  };
+
+  const generatedFeaCode = useMemo(() => {
+    const glyphBBoxes = new Map<number, BoundingBox | null>();
+    glyphDataMap.forEach((glyphData, unicode) => {
+        glyphBBoxes.set(unicode, getAccurateGlyphBBox(glyphData.paths, strokeThickness));
+    });
+    return generateFea(localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, glyphBBoxes);
+  }, [localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, strokeThickness]);
+
+  const handleEnterEditMode = () => {
+      if (!manualFeaCode || manualFeaCode.trim() === '') {
+          onManualFeaCodeChange(generatedFeaCode);
+      }
+      onIsFeaEditModeChange(true);
+  };
+  
+  const handleConfirmRevert = () => {
+    onIsFeaEditModeChange(false);
+    onManualFeaCodeChange(''); 
+    setIsRevertConfirmOpen(false);
+  };
+
+  const renderRuleSection = (title: string, rules: { [key: string]: any }, ruleType: RuleType) => {
+    const hasExistingRules = Object.keys(rules).length > 0;
+    const isAddingThisType = addingRuleType === ruleType && !editingRule;
+    const isEditingThisType = editingRule?.type === ruleType;
+
+    if (!hasExistingRules && !isAddingThisType && !isEditingThisType) {
+        return null;
+    }
+
+    return (
+        <>
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">{title}</h3>
+            <div className="space-y-4">
+                {isAddingThisType && activeFeature && (
+                    <RuleEditor
+                        isNew={true}
+                        ruleType={addingRuleType!}
+                        onSave={(newRule, type) => handleSaveNewRule(activeFeature, newRule, type, 'feature')}
+                        onCancel={() => setAddingRuleType(null)}
+                        allCharacterSets={allCharacterSets}
+                        allCharsByName={allCharsByName}
+                        glyphDataMap={glyphDataMap}
+                        strokeThickness={strokeThickness}
+                        showNotification={showNotification}
+                        mode="editing"
+                        groups={groups}
+                    />
+                )}
+                {Object.entries(rules).map(([key, value]) => (
+                    editingRule?.key === key && editingRule?.type === ruleType ? (
+                        <RuleEditor
+                            key={key}
+                            isNew={false}
+                            ruleKey={key}
+                            ruleValue={value}
+                            ruleType={ruleType}
+                            onSave={(updatedRule) => handleUpdateRule(activeFeature!, key, updatedRule, ruleType, 'feature')}
+                            onCancel={() => setEditingRule(null)}
+                            allCharacterSets={allCharacterSets}
+                            allCharsByName={allCharsByName}
+                            glyphDataMap={glyphDataMap}
+                            strokeThickness={strokeThickness}
+                            showNotification={showNotification}
+                            mode="editing"
+                            groups={groups}
+                        />
+                    ) : (
+                        <ExistingRuleDisplay
+                            key={key}
+                            ruleKey={key}
+                            ruleValue={value}
+                            ruleType={ruleType}
+                            onEdit={() => setEditingRule({ key, type: ruleType })}
+                            onDelete={() => handleDeleteRule('feature', activeFeature!, key, ruleType)}
+                            allCharsByName={allCharsByName}
+                            glyphDataMap={glyphDataMap}
+                            strokeThickness={strokeThickness}
+                            mode="editing"
+                        />
+                    )
+                ))}
+            </div>
+        </>
+    );
+  };
+
+  return (
+    <div className="w-full h-full flex flex-col">
+      <main className="flex-1 flex flex-col p-4 overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">{t('openTypeRules')}</h2>
+            <div className="flex items-center gap-2">
+              {isEditingScriptTag ? (
+                <input
+                    type="text" value={scriptTagInput} onChange={(e) => setScriptTagInput(e.target.value.toLowerCase())}
+                    onBlur={handleSaveScriptTag} onKeyDown={(e) => { if (e.key === 'Enter') handleSaveScriptTag(); if (e.key === 'Escape') setIsEditingScriptTag(false); }}
+                    maxLength={4} className="text-sm font-mono bg-white dark:bg-gray-900 px-2 py-1 rounded-md border border-indigo-500 focus:outline-none w-20"
+                    autoFocus onFocus={(e) => e.target.select()}
+                />
+              ) : (
+                <>
+                    <span className="text-sm font-mono bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-md">{scriptTag}</span>
+                    <button onClick={() => setIsEditingScriptTag(true)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"><EditIcon /></button>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExportJson} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700"><CodeBracketsIcon /> <span className="hidden sm:inline">{t('exportJson')}</span></button>
+            <button onClick={handleExportFea} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700"><FeaIcon /> <span className="hidden sm:inline">{t('exportFea')}</span></button>
+            {!settings.isAutosaveEnabled && <button onClick={saveChanges} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700"><SaveIcon /> <span className="hidden sm:inline">{t('save')}</span></button>}
+          </div>
+        </div>
+        
+        {!isFeaOnlyMode && (
+            <div className="mb-4"><div className="flex border-b border-gray-200 dark:border-gray-700">
+                <button onClick={() => setActiveSubTab('groups')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'groups' ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('glyphGroups')}</button>
+                <button onClick={() => setActiveSubTab('lookups')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'lookups' ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('lookups')}</button>
+                <button onClick={() => setActiveSubTab('gui')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'gui' ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('rulesTabDescription')}</button>
+                <button onClick={() => setActiveSubTab('fea')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'fea' ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('workspaceFeaCode')}</button>
+            </div></div>
+        )}
+        
+        {activeSubTab === 'gui' && !isFeaOnlyMode && (
+             <div className="relative">
+                {isFeaEditMode && (
+                    <div className="absolute inset-0 bg-gray-200/50 dark:bg-gray-800/50 z-10 flex items-center justify-center rounded-lg">
+                        <div className="p-4 bg-white dark:bg-gray-700 rounded-lg shadow-lg text-center">
+                            <p className="font-semibold text-gray-800 dark:text-gray-200">{t('guiEditorDisabled')}</p>
+                            <button onClick={() => setActiveSubTab('fea')} className="mt-2 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">{t('workspaceFeaCode')}</button>
+                        </div>
+                    </div>
+                )}
+                <div className={isFeaEditMode ? 'opacity-50 pointer-events-none' : ''}>
+                    <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
+                        <nav className="-mb-px flex space-x-2 items-center" aria-label="Tabs">
+                          {features.map(feature => (
+                              <div key={feature} className="flex items-center gap-1">
+                                  {editingFeature === feature ? (
+                                      <input
+                                          type="text" value={featureTagInput} onChange={e => setFeatureTagInput(e.target.value.toLowerCase())}
+                                          onBlur={() => handleSaveFeatureTag(feature)}
+                                          onKeyDown={e => { if (e.key === 'Enter') handleSaveFeatureTag(feature); if (e.key === 'Escape') setEditingFeature(null); }}
+                                          maxLength={4}
+                                          className="whitespace-nowrap py-4 px-2 border-b-2 font-mono text-sm bg-transparent border-indigo-500 text-indigo-600 dark:text-indigo-400 focus:outline-none"
+                                          style={{ width: '4rem' }} autoFocus
+                                      />
+                                  ) : (
+                                      <button
+                                          onClick={() => { setActiveFeature(feature); setAddingRuleType(null); setAddingDistRuleType(null); setEditingRule(null); }}
+                                          className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm transition-colors ${activeFeature === feature ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-500'}`}
+                                      >
+                                          {feature.toUpperCase()}
+                                      </button>
+                                  )}
+                                  {activeFeature === feature && editingFeature !== feature && (
+                                      <button onClick={() => { setEditingFeature(feature); setFeatureTagInput(feature); }} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
+                                          <EditIcon />
+                                      </button>
+                                  )}
+                              </div>
+                          ))}
+                          <button onClick={() => setIsAddFeatureModalOpen(true)} title="Add new feature" className="ml-2 h-8 w-8 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"><AddIcon /></button>
+                        </nav>
+                    </div>
+                    {!areAllGlyphsDrawn && <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">{t('rulesShowOnlyComplete')}</div>}
+                    
+                    {Object.keys(lookupflags).length > 0 && (
+                        <div className="my-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm">
+                            <h4 className="font-bold mb-1 text-blue-800 dark:text-blue-200">Lookup Flags</h4>
+                            <pre className="font-mono text-xs text-blue-700 dark:text-blue-300">
+                                {Object.entries(lookupflags).map(([key, value]) => `lookupflag ${key} ${value};`).join('\n')}
+                            </pre>
+                        </div>
+                    )}
+                    
+                    <div className="space-y-6">
+                        {(activeFeatureData.children || []).map((child: { type: string, name: string }, index: number) => {
+                            const isFirst = index === 0;
+                            const isLast = index === activeFeatureData.children.length - 1;
+
+                            if (child.type === 'inline') {
+                                return (
+                                    <div key={`inline-${index}`} className="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 pt-8">
+                                        <div className="absolute top-2 right-2 flex gap-1">
+                                            <button onClick={() => handleReorderFeatureItem(activeFeature!, index, index - 1)} disabled={isFirst} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">↑</button>
+                                            <button onClick={() => handleReorderFeatureItem(activeFeature!, index, index + 1)} disabled={isLast} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">↓</button>
+                                        </div>
+                                        <span className="absolute top-2 left-2 text-xs font-semibold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">Inline Rules</span>
+                                        {activeFeature === 'dist' ? (
+                                            <DistRulesEditor 
+                                                rules={activeDistRules} 
+                                                onSave={handleSaveDistRule} 
+                                                onDelete={handleDeleteDistRule} 
+                                                onEditRule={handleEditDistRule} 
+                                                addingRuleType={addingDistRuleType} 
+                                                onAddRule={setAddingDistRuleType} 
+                                                allCharacterSets={allCharacterSets}
+                                                allCharsByName={allCharsByName} 
+                                                glyphDataMap={glyphDataMap} 
+                                                strokeThickness={strokeThickness}
+                                                showNotification={showNotification}
+                                                groups={groups}
+                                            />
+                                        ) : (
+                                            <>
+                                                <div className="space-y-4">
+                                                    {renderRuleSection(t('singleSubstitutionRules'), activeSingleRules, 'single')}
+                                                    {renderRuleSection(t('multipleSubstitutionRules'), activeMultipleRules, 'multiple')}
+                                                    {renderRuleSection(t('contextualRules'), activeContextualRules, 'contextual')}
+                                                    {renderRuleSection(t('ligatureRules'), activeLigatureRules, 'ligature')}
+                                                </div>
+
+                                                {!addingRuleType && !editingRule && (
+                                                    <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg mt-6">
+                                                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                                                            <span className="font-semibold text-gray-600 dark:text-gray-400">{t('addNewRule')}:</span>
+                                                            <button onClick={() => setAddingRuleType('single')} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewSingleRule')}</button>
+                                                            <button onClick={() => setAddingRuleType('ligature')} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewLigatureRule')}</button>
+                                                            <button onClick={() => setAddingRuleType('contextual')} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewContextualRule')}</button>
+                                                            <button onClick={() => setAddingRuleType('multiple')} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewMultipleRule')}</button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            }
+                            if (child.type === 'lookup') {
+                                return (
+                                    <div key={`${child.name}-${index}`} className="relative flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+                                        <div>
+                                            <span className="text-xs text-gray-500">Lookup</span>
+                                            <p className="font-mono text-indigo-600 dark:text-indigo-400">{child.name}</p>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button onClick={() => handleReorderFeatureItem(activeFeature!, index, index - 1)} disabled={isFirst} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">↑</button>
+                                            <button onClick={() => handleReorderFeatureItem(activeFeature!, index, index + 1)} disabled={isLast} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">↓</button>
+                                            <button onClick={() => handleRemoveLookupReference(activeFeature!, index)} title="Remove Lookup Reference" className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                <TrashIcon />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })}
+
+                        <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg mt-6">
+                            <div className="flex items-center justify-center gap-4">
+                                <select
+                                    id={`add-lookup-select-${activeFeature}`}
+                                    className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                                    value={lookupToAdd}
+                                    onChange={e => setLookupToAdd(e.target.value)}
+                                >
+                                    <option value="">Select a lookup...</option>
+                                    {Object.keys(lookups).map(name => <option key={name} value={name}>{name}</option>)}
+                                </select>
+                                <button 
+                                    onClick={() => { if (lookupToAdd) { handleAddLookupReference(activeFeature!, lookupToAdd); setLookupToAdd(''); } }}
+                                    disabled={!lookupToAdd}
+                                    className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400"
+                                >
+                                    {t('add')} Lookup
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+        
+        {activeSubTab === 'lookups' && !isFeaOnlyMode && (
+            <LookupsPane
+                lookups={lookups}
+                expandedLookups={expandedLookups}
+                onToggleLookup={handleToggleLookupExpansion}
+                onAddLookup={handleAddLookup}
+                onUpdateLookup={handleUpdateLookup}
+                onDeleteLookup={handleDeleteLookup}
+                onSaveRule={handleSaveNewRule}
+                onUpdateRule={handleUpdateRule}
+                onDeleteRule={handleDeleteRule}
+                allCharacterSets={allCharacterSets}
+                allCharsByName={allCharsByName}
+                glyphDataMap={glyphDataMap}
+                strokeThickness={strokeThickness}
+                groups={groups}
+            />
+        )}
+
+        {activeSubTab === 'groups' && !isFeaOnlyMode && (
+            <GroupsPane
+                groups={groups}
+                onSave={handleSaveGroup}
+                onDelete={handleDeleteGroup}
+                characterSets={allCharacterSets}
+            />
+        )}
+
+        {(activeSubTab === 'fea' || isFeaOnlyMode) && (
+            <div>
+                <div className="flex justify-end items-center mb-2 gap-2">
+                    <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mr-auto">{t('workspaceFeaCode')}</h3>
+                    {isFeaOnlyMode ? ( isFeaCodeLocked && <button onClick={() => setIsFeaCodeLocked(false)} title={t('edit')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"><EditIcon /><span>{t('edit')}</span></button>
+                    ) : ( isFeaEditMode ? <button onClick={() => setIsRevertConfirmOpen(true)} title={t('revertToGuiTooltip')} className="px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700">{t('revertToGui')}</button>
+                        : <button onClick={handleEnterEditMode} title={t('editFeaManuallyTooltip')} className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">{t('editFeaManually')}</button>)}
+                </div>
+                <textarea readOnly={isFeaOnlyMode ? isFeaCodeLocked : !isFeaEditMode} value={isFeaEditMode ? manualFeaCode ?? '' : generatedFeaCode} onChange={(e) => onManualFeaCodeChange(e.target.value)}
+                    className="w-full h-[60vh] font-mono p-4 border rounded-md bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 read-only:bg-gray-200 dark:read-only:bg-gray-800 read-only:cursor-not-allowed transition-colors"
+                    placeholder="OpenType Feature Code..." spellCheck="false"/>
+            </div>
+        )}
+      </main>
+      
+      <AddFeatureModal isOpen={isAddFeatureModalOpen} onClose={() => setIsAddFeatureModalOpen(false)} onAdd={handleConfirmAddFeature} existingFeatures={features}/>
+      <DeleteRuleConfirmationModal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} onConfirm={handleConfirmDelete}/>
+      <RevertToGuiModal isOpen={isRevertConfirmOpen} onClose={() => setIsRevertConfirmOpen(false)} onConfirm={handleConfirmRevert}/>
+    </div>
+  );
+});
+
+export default React.memo(RulesPage);

@@ -1,0 +1,74 @@
+[
+  {
+    "nameKey": "numbers",
+    "characters": [
+        { "unicode": 48, "name": "0", "glyphClass": "base" },
+        { "unicode": 49, "name": "1", "glyphClass": "base" },
+        { "unicode": 50, "name": "2", "glyphClass": "base" },
+        { "unicode": 51, "name": "3", "glyphClass": "base" },
+        { "unicode": 52, "name": "4", "glyphClass": "base" },
+        { "unicode": 53, "name": "5", "glyphClass": "base" },
+        { "unicode": 54, "name": "6", "glyphClass": "base" },
+        { "unicode": 55, "name": "7", "glyphClass": "base" },
+        { "unicode": 56, "name": "8", "glyphClass": "base" },
+        { "unicode": 57, "name": "9", "glyphClass": "base" }
+    ]
+  },
+  {
+  "nameKey": "punctuationsAndOthers",
+  "characters": [
+    { "unicode": 33,  "name": "!",     "glyphClass": "base" },
+    { "unicode": 34,  "name": "\"",    "glyphClass": "base" },
+    { "unicode": 35,  "name": "#",     "glyphClass": "base" },
+    { "unicode": 36,  "name": "$",     "glyphClass": "base" },
+    { "unicode": 37,  "name": "%",     "glyphClass": "base" },
+    { "unicode": 38,  "name": "&",     "glyphClass": "base" },
+    { "unicode": 39,  "name": "'",     "glyphClass": "base" },
+    { "unicode": 40,  "name": "(",     "glyphClass": "base" },
+    { "unicode": 41,  "name": ")",     "glyphClass": "base" },
+    { "unicode": 42,  "name": "*",     "glyphClass": "base" },
+    { "unicode": 43,  "name": "+",     "glyphClass": "base" },
+    { "unicode": 44,  "name": ",",     "glyphClass": "base" },
+    { "unicode": 45,  "name": "-",     "glyphClass": "base" },
+    { "unicode": 46,  "name": ".",     "glyphClass": "base" },
+    { "unicode": 47,  "name": "/",     "glyphClass": "base" },
+    { "unicode": 58,  "name": ":",     "glyphClass": "base" },
+    { "unicode": 59,  "name": ";",     "glyphClass": "base" },
+    { "unicode": 60,  "name": "<",     "glyphClass": "base" },
+    { "unicode": 61,  "name": "=",     "glyphClass": "base" },
+    { "unicode": 62,  "name": ">",     "glyphClass": "base" },
+    { "unicode": 63,  "name": "?",     "glyphClass": "base" },
+    { "unicode": 64,  "name": "@",     "glyphClass": "base" },
+    { "unicode": 91,  "name": "[",     "glyphClass": "base" },
+    { "unicode": 92,  "name": "\\",    "glyphClass": "base" },
+    { "unicode": 93,  "name": "]",     "glyphClass": "base" },
+    { "unicode": 94,  "name": "^",     "glyphClass": "base" },
+    { "unicode": 95,  "name": "_",     "glyphClass": "base" },
+    { "unicode": 96,  "name": "`",     "glyphClass": "base" },
+    { "unicode": 123, "name": "{",     "glyphClass": "base" },
+    { "unicode": 124, "name": "|",     "glyphClass": "base" },
+    { "unicode": 125, "name": "}",     "glyphClass": "base" },
+    { "unicode": 126, "name": "~",     "glyphClass": "base" },
+    { "unicode": 8360, "name": "₹",    "glyphClass": "base" },
+    { "unicode": 8216, "name": "‘",    "glyphClass": "base" },
+    { "unicode": 8217, "name": "’",    "glyphClass": "base" },
+    { "unicode": 8220, "name": "“",    "glyphClass": "base" },
+    { "unicode": 8221, "name": "”",    "glyphClass": "base" },
+{
+  "unicode": 9676,
+  "name": "◌",
+  "glyphClass": "dottedCircle"
+},    
+{
+  "unicode": 8205,
+  "name": "zwj",
+  "glyphClass": "mark"
+},
+{
+  "unicode": 8204,
+  "name": "zwnj",
+  "glyphClass": "mark"
+}
+  ]
+}
+]

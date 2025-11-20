@@ -1,0 +1,518 @@
+
+[
+  {
+    "nameKey": "vowelSigns",
+    "characters": [
+      { "unicode": 3530, "name": "්", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 3535, "name": "ා", "glyphClass": "base" },
+      { "unicode": 57824, "name": "ා්", "glyphClass": "base", "composite": ["ා", "්"] },
+      { "unicode": 3536, "name": "ැ", "glyphClass": "base" },
+      { "unicode": 3537, "name": "ෑ", "glyphClass": "base" },
+      { "unicode": 3538, "name": "ි", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 3539, "name": "ී", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 3540, "name": "ු", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 3542, "name": "ූ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 3544, "name": "ෘ", "glyphClass": "base" },
+      { "unicode": 3570, "name": "ෲ", "glyphClass": "base", "composite": ["ෘ", "ෘ"] },
+      { "unicode": 3551, "name": "ෟ", "glyphClass": "base" },
+      { "unicode": 3571, "name": "ෳ", "glyphClass": "base" },      
+      { "unicode": 3545, "name": "ෙ", "glyphClass": "base" },
+      { "unicode": 3546, "name": "ේ", "glyphClass": "base", "composite": ["ෙ","්"] },
+      { "unicode": 3547, "name": "ෛ", "glyphClass": "base", "composite": ["ෙ","ෙ"] },
+      { "unicode": 3548, "name": "ො", "glyphClass": "base", "composite": ["ෙ","ා"] },
+      { "unicode": 3549, "name": "ෝ", "glyphClass": "base", "composite": ["ෙ","ා","්"] },
+      { "unicode": 3550, "name": "ෞ", "glyphClass": "base", "composite": ["ෙ","ෟ"] },
+      { "unicode": 3458, "name": "ං", "glyphClass": "base" },
+      { "unicode": 3459, "name": "ඃ", "glyphClass": "base" }
+    ]
+  },
+  {
+    "nameKey": "vowels",
+    "characters": [
+      { "unicode": 3461, "name": "අ", "glyphClass": "base" },
+      { "unicode": 3462, "name": "ආ", "glyphClass": "base", "composite": ["අ","ා"] },
+      { "unicode": 3463, "name": "ඇ", "glyphClass": "base", "composite": ["අ","ැ"] },
+      { "unicode": 3464, "name": "ඈ", "glyphClass": "base", "composite": ["අ","ෑ"] },
+      { "unicode": 3465, "name": "ඉ", "glyphClass": "base" },
+      { "unicode": 3466, "name": "ඊ", "glyphClass": "base" },
+      { "unicode": 3467, "name": "උ", "glyphClass": "base" },
+      { "unicode": 3468, "name": "ඌ", "glyphClass": "base", "composite": ["උ","ෟ"] },
+      { "unicode": 3469, "name": "ඍ", "glyphClass": "base" },
+      { "unicode": 3470, "name": "ඎ", "glyphClass": "base", "composite": ["ඍ","ෘ"] },
+      { "unicode": 3471, "name": "ඏ", "glyphClass": "base" },
+      { "unicode": 3472, "name": "ඐ", "glyphClass": "base", "composite": ["ඏ","ෟ"] },
+      { "unicode": 3473, "name": "එ", "glyphClass": "base" },
+      { "unicode": 3474, "name": "ඒ", "glyphClass": "base", "composite": ["එ","්"] },
+      { "unicode": 3475, "name": "ඓ", "glyphClass": "base", "composite": ["ෙ", "එ"] },
+      { "unicode": 3476, "name": "ඔ", "glyphClass": "base" },
+      { "unicode": 3477, "name": "ඕ", "glyphClass": "base" },
+      { "unicode": 3478, "name": "ඖ", "glyphClass": "base", "composite": ["ඔ","ෟ"] }
+    ]
+  },
+  {
+    "nameKey": "consonants",
+    "characters": [
+      {
+        "unicode": 3482,
+        "name": "ක",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3483,
+        "name": "ඛ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3484,
+        "name": "ග",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3485,
+        "name": "ඝ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3486,
+        "name": "ඞ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3487,
+        "name": "ඟ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3488,
+        "name": "ච",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3489,
+        "name": "ඡ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3490,
+        "name": "ජ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3491,
+        "name": "ඣ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3492,
+        "name": "ඤ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3493,
+        "name": "ඥ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3494,
+        "name": "ඦ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3495,
+        "name": "ට",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3496,
+        "name": "ඨ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3497,
+        "name": "ඩ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3498,
+        "name": "ඪ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3499,
+        "name": "ණ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3500,
+        "name": "ඬ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3501,
+        "name": "ත",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3502,
+        "name": "ථ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3503,
+        "name": "ද",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3504,
+        "name": "ධ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3505,
+        "name": "න",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3507,
+        "name": "ඳ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3508,
+        "name": "ප",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3509,
+        "name": "ඵ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3510,
+        "name": "බ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3511,
+        "name": "භ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3512,
+        "name": "ම",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3513,
+        "name": "ඹ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3514,
+        "name": "ය",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3515,
+        "name": "ර",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3517,
+        "name": "ල",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3520,
+        "name": "ව",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3521,
+        "name": "ශ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3522,
+        "name": "ෂ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3523,
+        "name": "ස",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3524,
+        "name": "හ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3525,
+        "name": "ළ",
+        "glyphClass": "base"
+      },
+      {
+        "unicode": 3526,
+        "name": "ෆ",
+        "glyphClass": "base"
+      }
+    ]
+  },
+  {
+    "nameKey": "halfCons",
+    "characters": [
+      { "unicode": 57714, "name": "ක්", "glyphClass": "ligature", "composite": ["ක", "්"] },
+      { "unicode": 57715, "name": "ඛ්", "glyphClass": "ligature", "composite": ["ඛ"] },
+      { "unicode": 57716, "name": "ග්", "glyphClass": "ligature", "composite": ["ග", "්"] },
+      { "unicode": 57717, "name": "ඝ්", "glyphClass": "ligature", "composite": ["ඝ", "්"] },
+      { "unicode": 57718, "name": "ඞ්", "glyphClass": "ligature", "composite": ["ඞ"] },
+      { "unicode": 57719, "name": "ඟ්", "glyphClass": "ligature", "composite": ["ඟ", "්"] },
+      { "unicode": 57720, "name": "ච්", "glyphClass": "ligature", "composite": ["ච"] },
+      { "unicode": 57721, "name": "ඡ්", "glyphClass": "ligature", "composite": ["ඡ", "්"] },
+      { "unicode": 57722, "name": "ජ්", "glyphClass": "ligature", "composite": ["ජ", "්"] },
+      { "unicode": 57723, "name": "ඣ්", "glyphClass": "ligature", "composite": ["ඣ"] },
+      { "unicode": 57724, "name": "ඤ්", "glyphClass": "ligature", "composite": ["ඤ", "්"] },
+      { "unicode": 57725, "name": "ඥ්", "glyphClass": "ligature", "composite": ["ඥ", "්"] },
+      { "unicode": 57726, "name": "ඦ්", "glyphClass": "ligature", "composite": ["ඦ", "්"] },
+      { "unicode": 57727, "name": "ට්", "glyphClass": "ligature", "composite": ["ට"] },
+      { "unicode": 57728, "name": "ඨ්", "glyphClass": "ligature", "composite": ["ඨ", "්"] },
+      { "unicode": 57729, "name": "ඩ්", "glyphClass": "ligature", "composite": ["ඩ"] },
+      { "unicode": 57730, "name": "ඪ්", "glyphClass": "ligature", "composite": ["ඪ", "්"] },
+      { "unicode": 57731, "name": "ණ්", "glyphClass": "ligature", "composite": ["ණ", "්"] },
+      { "unicode": 57732, "name": "ඬ්", "glyphClass": "ligature", "composite": [""] },
+      { "unicode": 57733, "name": "ත්", "glyphClass": "ligature", "composite": ["ත", "්"] },
+      { "unicode": 57734, "name": "ථ්", "glyphClass": "ligature", "composite": ["ථ", "්"] },
+      { "unicode": 57735, "name": "ද්", "glyphClass": "ligature", "composite": ["ද", "්"] },
+      { "unicode": 57736, "name": "ධ්", "glyphClass": "ligature", "composite": ["ධ"]},
+      { "unicode": 57737, "name": "න්", "glyphClass": "ligature", "composite": ["න", "්"] },
+      { "unicode": 57738, "name": "ඳ්", "glyphClass": "ligature", "composite": ["ඳ", "්"] },
+      { "unicode": 57739, "name": "ප්", "glyphClass": "ligature", "composite": ["ප", "්"] },
+      { "unicode": 57740, "name": "ඵ්", "glyphClass": "ligature", "composite": ["ඵ", "්"] },
+      { "unicode": 57741, "name": "බ්", "glyphClass": "ligature", "composite": ["බ"] },
+      { "unicode": 57742, "name": "භ්", "glyphClass": "ligature", "composite": ["භ", "්"] },
+      { "unicode": 57743, "name": "ම්", "glyphClass": "ligature", "composite": ["ම"]},
+      { "unicode": 57744, "name": "ඹ්", "glyphClass": "ligature", "composite": ["ඹ"] },
+      { "unicode": 57745, "name": "ය්", "glyphClass": "ligature", "composite": ["ය", "්"] },
+      { "unicode": 57746, "name": "ර්", "glyphClass": "ligature", "composite": ["ර", "්"] },
+      { "unicode": 57747, "name": "ල්", "glyphClass": "ligature", "composite": ["ල", "්"] },
+      { "unicode": 57748, "name": "ව්", "glyphClass": "ligature", "composite": ["ව"]},
+      { "unicode": 57749, "name": "ශ්", "glyphClass": "ligature", "composite": ["ශ", "්"] },
+      { "unicode": 57750, "name": "ෂ්", "glyphClass": "ligature", "composite": ["ෂ", "්"] },
+      { "unicode": 57751, "name": "ස්", "glyphClass": "ligature", "composite": ["ස", "්"] },
+      { "unicode": 57752, "name": "හ්", "glyphClass": "ligature", "composite": ["හ", "්"] },
+      { "unicode": 57753, "name": "ළ්", "glyphClass": "ligature", "composite": ["ළ", "්"] },
+      { "unicode": 57754, "name": "ෆ්", "glyphClass": "ligature", "composite": ["ෆ", "්"] }
+    ]
+  },
+  {
+    "nameKey": "iCons",
+    "characters": [
+      { "unicode": 57346, "name": "කි", "glyphClass": "ligature", "composite": ["ක", "ි"] },
+      { "unicode": 57347, "name": "ඛි", "glyphClass": "ligature" },
+      { "unicode": 57348, "name": "ගි", "glyphClass": "ligature", "composite": ["ග", "ි"] },
+      { "unicode": 57349, "name": "ඝි", "glyphClass": "ligature", "composite": ["ඝ", "ි"] },
+      { "unicode": 57350, "name": "ඞි", "glyphClass": "ligature"},
+      { "unicode": 57351, "name": "ඟි", "glyphClass": "ligature", "composite": ["ඟ", "ි"] },
+      { "unicode": 57352, "name": "චි", "glyphClass": "ligature" },
+      { "unicode": 57353, "name": "ඡි", "glyphClass": "ligature", "composite": ["ඡ", "ි"] },
+      { "unicode": 57354, "name": "ජි", "glyphClass": "ligature", "composite": ["ජ", "ි"] },
+      { "unicode": 57355, "name": "ඣි", "glyphClass": "ligature" },
+      { "unicode": 57356, "name": "ඤි", "glyphClass": "ligature", "composite": ["ඤ", "ි"] },
+      { "unicode": 57357, "name": "ඥි", "glyphClass": "ligature", "composite": ["ඥ", "ි"] },
+      { "unicode": 57358, "name": "ඦි", "glyphClass": "ligature", "composite": ["ඦ", "ි"] },
+      { "unicode": 57359, "name": "ටි", "glyphClass": "ligature" },
+      { "unicode": 57360, "name": "ඨි", "glyphClass": "ligature", "composite": ["ඨ", "ි"] },
+      { "unicode": 57361, "name": "ඩි", "glyphClass": "ligature" },
+      { "unicode": 57362, "name": "ඪි", "glyphClass": "ligature" },
+      { "unicode": 57363, "name": "ණි", "glyphClass": "ligature", "composite": ["ණ", "ි"] },
+      { "unicode": 57364, "name": "ඬි", "glyphClass": "ligature"},
+      { "unicode": 57365, "name": "ති", "glyphClass": "ligature", "composite": ["ත", "ි"] },
+      { "unicode": 57366, "name": "ථි", "glyphClass": "ligature", "composite": ["ථ", "ි"] },
+      { "unicode": 57367, "name": "දි", "glyphClass": "ligature", "composite": ["ද", "ි"] },
+      { "unicode": 57368, "name": "ධි", "glyphClass": "ligature"},
+      { "unicode": 57369, "name": "නි", "glyphClass": "ligature", "composite": ["න", "ි"] },
+      { "unicode": 57370, "name": "ඳි", "glyphClass": "ligature", "composite": ["ඳ", "ි"] },
+      { "unicode": 57371, "name": "පි", "glyphClass": "ligature", "composite": ["ප", "ි"] },
+      { "unicode": 57372, "name": "ඵි", "glyphClass": "ligature", "composite": ["ඵ", "ි"] },
+      { "unicode": 57373, "name": "බි", "glyphClass": "ligature" },
+      { "unicode": 57374, "name": "භි", "glyphClass": "ligature", "composite": ["භ", "ි"] },
+      { "unicode": 57375, "name": "මි", "glyphClass": "ligature", "composite": ["ම", "ි"] },
+      { "unicode": 57376, "name": "ඹි", "glyphClass": "ligature" },
+      { "unicode": 57377, "name": "යි", "glyphClass": "ligature", "composite": ["ය", "ි"] },
+      { "unicode": 57378, "name": "රි", "glyphClass": "ligature", "composite": ["ර", "ි"] },
+      { "unicode": 57379, "name": "ලි", "glyphClass": "ligature", "composite": ["ල", "ි"] },
+      { "unicode": 57380, "name": "වි", "glyphClass": "ligature" },
+      { "unicode": 57381, "name": "ශි", "glyphClass": "ligature", "composite": ["ශ", "ි"] },
+      { "unicode": 57382, "name": "ෂි", "glyphClass": "ligature", "composite": ["ෂ", "ි"] },
+      { "unicode": 57383, "name": "සි", "glyphClass": "ligature", "composite": ["ස", "ි"] },
+      { "unicode": 57384, "name": "හි", "glyphClass": "ligature", "composite": ["හ", "ි"] },
+      { "unicode": 57385, "name": "ළි", "glyphClass": "ligature", "composite": ["ළ", "ි"] },
+      { "unicode": 57386, "name": "ෆි", "glyphClass": "ligature", "composite": ["ෆ", "ි"] }
+    ]
+  },
+  {
+    "nameKey": "iiCons",
+    "characters": [
+      { "unicode": 57986, "name": "කී", "glyphClass": "ligature", "composite": ["ක", "ී"] },
+      { "unicode": 57387, "name": "ඛී", "glyphClass": "ligature" },
+      { "unicode": 57388, "name": "ගී", "glyphClass": "ligature", "composite": ["ග", "ී"] },
+      { "unicode": 57389, "name": "ඝී", "glyphClass": "ligature", "composite": ["ඝ", "ී"] },
+      { "unicode": 57390, "name": "ඞී", "glyphClass": "ligature" },
+      { "unicode": 57391, "name": "ඟී", "glyphClass": "ligature", "composite": ["ඟ", "ී"] },
+      { "unicode": 57392, "name": "චී", "glyphClass": "ligature" },
+      { "unicode": 57393, "name": "ඡී", "glyphClass": "ligature", "composite": ["ඡ", "ී"] },
+      { "unicode": 57394, "name": "ජී", "glyphClass": "ligature", "composite": ["ජ", "ී"] },
+      { "unicode": 57395, "name": "ඣී", "glyphClass": "ligature" },
+      { "unicode": 57396, "name": "ඤී", "glyphClass": "ligature", "composite": ["ඤ", "ී"] },
+      { "unicode": 57397, "name": "ඥී", "glyphClass": "ligature", "composite": ["ඥ", "ී"] },
+      { "unicode": 57398, "name": "ඦී", "glyphClass": "ligature", "composite": ["ඦ", "ී"] },
+      { "unicode": 57399, "name": "ටී", "glyphClass": "ligature" },
+      { "unicode": 57400, "name": "ඨී", "glyphClass": "ligature", "composite": ["ඨ", "ී"] },
+      { "unicode": 57401, "name": "ඩී", "glyphClass": "ligature" },
+      { "unicode": 57402, "name": "ඪී", "glyphClass": "ligature", "composite": ["ඪ", "ී"] },
+      { "unicode": 57403, "name": "ණී", "glyphClass": "ligature", "composite": ["ණ", "ී"] },
+      { "unicode": 57404, "name": "ඬී", "glyphClass": "ligature" },
+      { "unicode": 57405, "name": "තී", "glyphClass": "ligature", "composite": ["ත", "ී"] },
+      { "unicode": 57406, "name": "ථී", "glyphClass": "ligature", "composite": ["ථ", "ී"] },
+      { "unicode": 57407, "name": "දී", "glyphClass": "ligature", "composite": ["ද", "ී"] },
+      { "unicode": 57408, "name": "ධී", "glyphClass": "ligature" },
+      { "unicode": 57409, "name": "නී", "glyphClass": "ligature", "composite": ["න", "ී"] },
+      { "unicode": 57410, "name": "ඳී", "glyphClass": "ligature", "composite": ["ඳ", "ී"] },
+      { "unicode": 57411, "name": "පී", "glyphClass": "ligature", "composite": ["ප", "ී"] },
+      { "unicode": 57412, "name": "ඵී", "glyphClass": "ligature", "composite": ["ඵ", "ී"] },
+      { "unicode": 57413, "name": "බී", "glyphClass": "ligature" },
+      { "unicode": 57414, "name": "භී", "glyphClass": "ligature", "composite": ["භ", "ී"] },
+      { "unicode": 57415, "name": "මී", "glyphClass": "ligature" },
+      { "unicode": 57416, "name": "ඹී", "glyphClass": "ligature" },
+      { "unicode": 57417, "name": "යී", "glyphClass": "ligature", "composite": ["ය", "ී"] },
+      { "unicode": 57418, "name": "රී", "glyphClass": "ligature", "composite": ["ර", "ී"] },
+      { "unicode": 57419, "name": "ලී", "glyphClass": "ligature", "composite": ["ල", "ී"] },
+      { "unicode": 57420, "name": "වී", "glyphClass": "ligature" },
+      { "unicode": 57421, "name": "ශී", "glyphClass": "ligature", "composite": ["ශ", "ී"] },
+      { "unicode": 57422, "name": "ෂී", "glyphClass": "ligature", "composite": ["ෂ", "ී"] },
+      { "unicode": 57423, "name": "සී", "glyphClass": "ligature", "composite": ["ස", "ී"] },
+      { "unicode": 57424, "name": "හී", "glyphClass": "ligature", "composite": ["හ", "ී"] },
+      { "unicode": 57425, "name": "ළී", "glyphClass": "ligature", "composite": ["ළ", "ී"] },
+      { "unicode": 57426, "name": "ෆී", "glyphClass": "ligature", "composite": ["ෆ", "ී"] }
+    ]
+  },
+    {
+    "nameKey": "uCons",
+    "characters": [
+      { "unicode": 57886, "name": "කු", "glyphClass": "ligature", "composite": ["ක"] },
+      { "unicode": 57427, "name": "ඛු", "glyphClass": "ligature", "composite": ["ඛ", "ු"] },
+      { "unicode": 57428, "name": "ගු", "glyphClass": "ligature", "composite": ["ග"] },
+      { "unicode": 57429, "name": "ඝු", "glyphClass": "ligature", "composite": ["ඝ", "ු"] },
+      { "unicode": 57430, "name": "ඞු", "glyphClass": "ligature", "composite": ["ඞ", "ු"] },
+      { "unicode": 57431, "name": "ඟු", "glyphClass": "ligature", "composite": ["ඟ"] },
+      { "unicode": 57432, "name": "චු", "glyphClass": "ligature", "composite": ["ච", "ු"] },
+      { "unicode": 57433, "name": "ඡු", "glyphClass": "ligature", "composite": ["ඡ", "ු"] },
+      { "unicode": 57434, "name": "ජු", "glyphClass": "ligature", "composite": ["ජ", "ු"] },
+      { "unicode": 57435, "name": "ඣු", "glyphClass": "ligature", "composite": ["ඣ", "ු"] },
+      { "unicode": 57436, "name": "ඤු", "glyphClass": "ligature", "composite": ["ඤ", "ු"] },
+      { "unicode": 57437, "name": "ඥු", "glyphClass": "ligature", "composite": ["ඥ", "ු"] },
+      { "unicode": 57438, "name": "ඦු", "glyphClass": "ligature", "composite": ["ඦ", "ු"] },
+      { "unicode": 57439, "name": "ටු", "glyphClass": "ligature", "composite": ["ට", "ු"] },
+      { "unicode": 57440, "name": "ඨු", "glyphClass": "ligature", "composite": ["ඨ", "ු"] },
+      { "unicode": 57441, "name": "ඩු", "glyphClass": "ligature", "composite": ["ඩ", "ු"] },
+      { "unicode": 57442, "name": "ඪු", "glyphClass": "ligature", "composite": ["ඪ", "ු"] },
+      { "unicode": 57443, "name": "ණු", "glyphClass": "ligature", "composite": ["ණ", "ු"] },
+      { "unicode": 57444, "name": "ඬු", "glyphClass": "ligature", "composite": ["ඬ", "ු"] },
+      { "unicode": 57445, "name": "තු", "glyphClass": "ligature", "composite": ["ත"] },
+      { "unicode": 57446, "name": "ථු", "glyphClass": "ligature", "composite": ["ථ", "ු"] },
+      { "unicode": 57447, "name": "දු", "glyphClass": "ligature", "composite": ["ද", "ු"] },
+      { "unicode": 57448, "name": "ධු", "glyphClass": "ligature", "composite": ["ධ", "ු"] },
+      { "unicode": 57449, "name": "නු", "glyphClass": "ligature", "composite": ["න", "ු"] },
+      { "unicode": 57450, "name": "ඳු", "glyphClass": "ligature", "composite": ["ඳ", "ු"] },
+      { "unicode": 57451, "name": "පු", "glyphClass": "ligature", "composite": ["ප", "ු"] },
+      { "unicode": 57452, "name": "ඵු", "glyphClass": "ligature", "composite": ["ඵ", "ු"] },
+      { "unicode": 57453, "name": "බු", "glyphClass": "ligature", "composite": ["බ", "ු"] },
+      { "unicode": 57454, "name": "භු", "glyphClass": "ligature", "composite": ["භ"] },
+      { "unicode": 57455, "name": "මු", "glyphClass": "ligature", "composite": ["ම", "ු"] },
+      { "unicode": 57456, "name": "ඹු", "glyphClass": "ligature", "composite": ["ඹ", "ු"] },
+      { "unicode": 57457, "name": "යු", "glyphClass": "ligature", "composite": ["ය", "ු"] },
+      { "unicode": 57458, "name": "රු", "glyphClass": "ligature", "composite": ["ර", "ැ"] },
+      { "unicode": 57459, "name": "ලු", "glyphClass": "ligature", "composite": ["ල", "ු"] },
+      { "unicode": 57460, "name": "වු", "glyphClass": "ligature", "composite": ["ව", "ු"] },
+      { "unicode": 57461, "name": "ශු", "glyphClass": "ligature", "composite": ["ශ"] },
+      { "unicode": 57462, "name": "ෂු", "glyphClass": "ligature", "composite": ["ෂ", "ු"] },
+      { "unicode": 57463, "name": "සු", "glyphClass": "ligature", "composite": ["ස", "ු"] },
+      { "unicode": 57464, "name": "හු", "glyphClass": "ligature", "composite": ["හ", "ු"] },
+      { "unicode": 57465, "name": "ළු", "glyphClass": "ligature" },
+      { "unicode": 57466, "name": "ෆු", "glyphClass": "ligature", "composite": ["ෆ", "ු"] }
+    ]
+  },
+  {
+    "nameKey": "uuCons",
+    "characters": [
+      { "unicode": 57996, "name": "කූ", "glyphClass": "ligature", "composite": ["ක"]},
+      { "unicode": 57467, "name": "ඛූ", "glyphClass": "ligature", "composite": ["ඛ", "ූ"] },
+      { "unicode": 57468, "name": "ගූ", "glyphClass": "ligature", "composite": ["ග"] },
+      { "unicode": 57469, "name": "ඝූ", "glyphClass": "ligature", "composite": ["ඝ", "ූ"] },
+      { "unicode": 57470, "name": "ඞූ", "glyphClass": "ligature", "composite": ["ඞ", "ූ"] },
+      { "unicode": 57471, "name": "ඟූ", "glyphClass": "ligature", "composite": ["ඟ"] },
+      { "unicode": 57472, "name": "චූ", "glyphClass": "ligature", "composite": ["ච", "ූ"] },
+      { "unicode": 57473, "name": "ඡූ", "glyphClass": "ligature", "composite": ["ඡ", "ූ"] },
+      { "unicode": 57474, "name": "ජූ", "glyphClass": "ligature", "composite": ["ජ", "ූ"] },
+      { "unicode": 57475, "name": "ඣූ", "glyphClass": "ligature", "composite": ["ඣ", "ූ"] },
+      { "unicode": 57476, "name": "ඤූ", "glyphClass": "ligature", "composite": ["ඤ", "ූ"] },
+      { "unicode": 57477, "name": "ඥූ", "glyphClass": "ligature", "composite": ["ඥ", "ූ"] },
+      { "unicode": 57478, "name": "ඦූ", "glyphClass": "ligature", "composite": ["ඦ", "ූ"] },
+      { "unicode": 57479, "name": "ටූ", "glyphClass": "ligature", "composite": ["ට", "ූ"] },
+      { "unicode": 57480, "name": "ඨූ", "glyphClass": "ligature", "composite": ["ඨ", "ූ"] },
+      { "unicode": 57481, "name": "ඩූ", "glyphClass": "ligature", "composite": ["ඩ", "ූ"] },
+      { "unicode": 57482, "name": "ඪූ", "glyphClass": "ligature", "composite": ["ඪ", "ූ"] },
+      { "unicode": 57483, "name": "ණූ", "glyphClass": "ligature", "composite": ["ණ", "ූ"] },
+      { "unicode": 57484, "name": "ඬූ", "glyphClass": "ligature", "composite": ["ඬ", "ූ"] },
+      { "unicode": 57485, "name": "තූ", "glyphClass": "ligature", "composite": ["ත"] },
+      { "unicode": 57486, "name": "ථූ", "glyphClass": "ligature", "composite": ["ථ", "ූ"] },
+      { "unicode": 57487, "name": "දූ", "glyphClass": "ligature", "composite": ["ද", "ූ"] },
+      { "unicode": 57488, "name": "ධූ", "glyphClass": "ligature", "composite": ["ධ", "ූ"] },
+      { "unicode": 57489, "name": "නූ", "glyphClass": "ligature", "composite": ["න", "ූ"] },
+      { "unicode": 57490, "name": "ඳූ", "glyphClass": "ligature", "composite": ["ඳ", "ූ"] },
+      { "unicode": 57491, "name": "පූ", "glyphClass": "ligature", "composite": ["ප", "ූ"] },
+      { "unicode": 57492, "name": "ඵූ", "glyphClass": "ligature", "composite": ["ඵ", "ූ"] },
+      { "unicode": 57493, "name": "බූ", "glyphClass": "ligature", "composite": ["බ", "ූ"] },
+      { "unicode": 57494, "name": "භූ", "glyphClass": "ligature", "composite": ["භ"] },
+      { "unicode": 57495, "name": "මූ", "glyphClass": "ligature", "composite": ["ම", "ූ"] },
+      { "unicode": 57496, "name": "ඹූ", "glyphClass": "ligature", "composite": ["ඹ", "ූ"] },
+      { "unicode": 57497, "name": "යූ", "glyphClass": "ligature", "composite": ["ය", "ූ"] },
+      { "unicode": 57498, "name": "රූ", "glyphClass": "ligature", "composite": ["ර", "ෑ"] },
+      { "unicode": 57499, "name": "ලූ", "glyphClass": "ligature", "composite": ["ල", "ූ"] },
+      { "unicode": 57500, "name": "වූ", "glyphClass": "ligature", "composite": ["ව", "ූ"] },
+      { "unicode": 57501, "name": "ශූ", "glyphClass": "ligature", "composite": ["ශ"]  },
+      { "unicode": 57502, "name": "ෂූ", "glyphClass": "ligature", "composite": ["ෂ", "ූ"] },
+      { "unicode": 57503, "name": "සූ", "glyphClass": "ligature", "composite": ["ස", "ූ"] },
+      { "unicode": 57504, "name": "හූ", "glyphClass": "ligature", "composite": ["හ", "ූ"] },
+      { "unicode": 57505, "name": "ළූ", "glyphClass": "ligature", "composite": ["ළු", "ෑ"] },
+      { "unicode": 57506, "name": "ෆූ", "glyphClass": "ligature", "composite": ["ෆ", "ූ"] }
+    ]
+  },
+  {
+    "nameKey": "conjuncts",
+    "characters": [
+      { "unicode": 57508, "name": "්‍ය", "glyphClass": "ligature"},
+      { "unicode": 57510, "name": "්‍යි", "glyphClass": "ligature", "composite": ["්‍ය", "ි"]},
+      { "unicode": 57511, "name": "්‍යී", "glyphClass": "ligature", "composite": ["්‍ය", "ී"]},      
+      { "unicode": 57512, "name": "්‍යු", "glyphClass": "ligature", "composite": ["්‍ය", "ු"]},
+      { "unicode": 57513, "name": "්‍යූ", "glyphClass": "ligature", "composite": ["්‍ය", "ූ"]},
+      { "unicode": 57514, "name": "්‍ය්", "glyphClass": "ligature", "composite": ["්‍ය", "්"]},     
+      { "unicode": 57515, "name": "්‍ර", "glyphClass": "ligature"},
+      { "unicode": 57516, "name": "්‍රු", "glyphClass": "ligature", "composite": ["්‍ර", "ැ"]},
+      { "unicode": 57517, "name": "්‍රූ", "glyphClass": "ligature", "composite": ["්‍ර", "ෑ"]},
+      { "unicode": 57518, "name": "ද්‍ර", "glyphClass": "ligature"},
+      { "unicode": 57519, "name": "ද්‍රි", "glyphClass": "ligature", "composite": ["ද්‍ර", "ි"]},
+      { "unicode": 57520, "name": "ද්‍රී", "glyphClass": "ligature", "composite": ["ද්‍ර", "ී"]},
+      { "unicode": 57521, "name": "ද්‍රු", "glyphClass": "ligature", "composite": ["ද්‍ර", "ැ"]},
+      { "unicode": 57522, "name": "ද්‍රූ", "glyphClass": "ligature", "composite": ["ද්‍ර", "ෑ"]},
+      { "unicode": 57523, "name": "ද්‍ර්", "glyphClass": "ligature", "composite": ["ද්‍ර", "්"]},
+      { "unicode": 57524, "name": "ක්‍ෂ", "glyphClass": "ligature"},
+      { "unicode": 57525, "name": "ක්‍ෂි", "glyphClass": "ligature", "composite": ["ක්‍ෂ", "ි"] },
+      { "unicode": 57526, "name": "ක්‍ෂී", "glyphClass": "ligature", "composite": ["ක්‍ෂ", "ී"] },
+      { "unicode": 57527, "name": "ක්‍ෂු", "glyphClass": "ligature", "composite": ["ක්‍ෂ", "ු"] },
+      { "unicode": 57528, "name": "ක්‍ෂූ", "glyphClass": "ligature", "composite": ["ක්‍ෂ", "ූ"] },
+      { "unicode": 57529, "name": "ක්‍ෂ්", "glyphClass": "ligature", "composite": ["ක්‍ෂ", "්"] }
+    ]
+  }
+]

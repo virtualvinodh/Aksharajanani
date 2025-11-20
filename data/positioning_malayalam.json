@@ -1,0 +1,52 @@
+[
+  { "positioning":  [
+        {
+            "base": ["$consonants", "$conjuncts"],
+            "mark": ["്", "ഁ", "ൢ", "ൣ"],
+            "gpos": "abvm"
+        },
+        {
+            "base": ["$consonants", "$conjuncts"],
+            "mark": ["ൢ", "ൣ"],
+            "gpos": "blwm"
+        }
+    ]      
+  },
+  {
+    "markAttachment": {
+      "$consonants":  {
+      "്": ["topRight", "bottomCenter", "0", "-70"],
+      "ഁ": ["topCenter", "bottomCenter", "0", "-70"],
+      "ൢ": ["bottomCenter", "topCenter", "0", "70"], 
+      "ൣ": ["bottomCenter", "topCenter", "0", "70"] 
+      },
+      "$conjuncts":  {
+      "്": ["topRight", "bottomCenter"],
+      "ഁ": ["topCenter", "bottomCenter", "0", "-70"] 
+      }   
+    }
+  },
+  {
+    "markAttachmentClass": []
+  },
+  { "recommendedKerning": [ 
+  ["$consonants", "ി"],
+  ["$consonants", "ീ"],
+  ["$consonants", "ു"],
+  ["$consonants", "ൂ"],
+  ["$consonants", "്യ"],
+  ["$consonants", "ൃ"],
+  ["$consonants", "ൄ"],
+  ["$consonants", "്വ"],
+  ["$conjuncts", "ി"],
+  ["$conjuncts", "ീ"],
+  ["$conjuncts", "ു"],
+  ["$conjuncts", "ൂ"],
+  ["$conjuncts", "്യ"],
+  ["$conjuncts", "ൃ"],
+  ["$conjuncts", "ൄ"],
+  ["$conjuncts", "്വ"],
+  ["്ര", "$consonants"],
+  ["്ര", "$conjuncts"]
+ ] }
+]

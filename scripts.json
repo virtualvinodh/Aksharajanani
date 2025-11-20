@@ -1,0 +1,791 @@
+{
+  "defaultScriptId": "tamil",
+  "scripts": [
+    {
+      "id": "tutorial",
+      "nameKey": "scriptTutorial",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "TutorialSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 420
+      },
+      "sampleText": "Ta Te A B C E",
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    }, 
+    {
+      "id": "tamil",
+      "nameKey": "scriptTamil",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 800,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "topLineY": 300,
+        "baseLineY": 600,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "TamilRegular",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 520
+      },
+      "guideFont": {
+        "fontName": "Noto Sans Tamil",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansTamil/hinted/ttf/NotoSansTamil-Regular.ttf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+    {
+      "id": "tamil_old",
+      "nameKey": "scriptTamilOld",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 800,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "topLineY": 300,
+        "baseLineY": 600,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "TamilOld",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 450
+      },
+      "guideFont": {
+        "fontName": "Mukta Malar",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/MuktaMalar-Regular.ttf",
+        "stylisticSet": "\"ss04\""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+    {
+      "id": "malayalam",
+      "nameKey": "scriptMalayalam",
+      "support": "full",
+      "kerning": "true",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 800,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "topLineY": 300,
+        "baseLineY": 600,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "MalayalamRegular",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 450
+      },
+      "guideFont": {
+        "fontName": "Noto Sans Malayalam",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansMalayalam/hinted/ttf/NotoSansMalayalam-Regular.ttf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+    {
+      "id": "telugu",
+      "nameKey": "scriptTelugu",
+      "support": "full",
+      "kerning": "true",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 800,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "topLineY": 300,
+        "baseLineY": 600,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "TeluguRegular",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 450
+      },
+      "guideFont": {
+        "fontName": "Noto Sans Telugu Modified",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/NotoSansTelugu-Modified.otf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },    
+        {
+      "id": "kannada",
+      "nameKey": "scriptKannada",
+      "support": "full",
+      "kerning": "true",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 800,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "topLineY": 300,
+        "baseLineY": 600,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "sampleText": "",
+      "defaults": {
+        "fontName": "TeluguRegular",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 450
+      },
+      "guideFont": {
+        "fontName": "Noto Sans Kannada Modified",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/NotoSansKannada-RegularModified.otf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },   
+    {
+      "id": "devanagari",
+      "nameKey": "scriptDevanagari",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 800,
+        "descender": -200,
+        "defaultAdvanceWidth": 800,
+        "topLineY": 400,
+        "baseLineY": 800,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": -5,
+        "defaultRSB": -5
+      },
+      "defaults": {
+        "fontName": "DevanagariRegular",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": { "characterNameSize": 450 },
+      "guideFont": {
+        "fontName": "Noto Sans Devanagari",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/NotoSansDevanagari-Modified.otf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": { "default": 48 },
+        "lineHeight": { "default": 1.5 }
+      }
+    },
+ {
+      "id": "gurmukhi",
+      "nameKey": "scriptGurmukhi",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 800,
+        "descender": -200,
+        "defaultAdvanceWidth": 800,
+        "topLineY": 400,
+        "baseLineY": 800,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": -5,
+        "defaultRSB": -5
+      },
+      "defaults": {
+        "fontName": "GurmukhiRegular",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": { "characterNameSize": 450 },
+      "guideFont": {
+        "fontName": "Noto Sans Devanagari",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/NotoSansDevanagari-Modified.otf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": { "default": 48 },
+        "lineHeight": { "default": 1.5 }
+      }
+    },    
+    {
+      "id": "sinhala",
+      "nameKey": "scriptSinhala",
+      "support": "full",
+      "touchingConsonants": "true",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 800,
+        "descender": -200,
+        "defaultAdvanceWidth": 800,
+        "topLineY": 400,
+        "baseLineY": 800,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "SinhalaRegular",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 450
+      },
+      "guideFont": {
+        "fontName": "Noto Sans Sinhala",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansSinhala/hinted/ttf/NotoSansSinhala-Regular.ttf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+  {
+      "id": "thai",
+      "nameKey": "scriptThai",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "ThaiSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 480
+      },
+      "guideFont": {
+        "fontName": "Noto Sans Lao",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansLao/hinted/ttf/NotoSansLao-Regular.ttf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },        
+
+{
+      "id": "lao",
+      "nameKey": "scriptLao",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "LaoSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 480
+      },
+      "guideFont": {
+        "fontName": "Noto Sans Lao",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansLao/hinted/ttf/NotoSansLao-Regular.ttf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },        
+   {
+      "id": "hebrew",
+      "nameKey": "scriptHebrew",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "HebrewSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 680
+      },
+      "guideFont": {
+        "fontName": "Noto Sans Hebrew",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansHebrew/hinted/ttf/NotoSansHebrew-Regular.ttf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+        {
+      "id": "latin",
+      "nameKey": "scriptEnglish",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "RomanSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 560
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+    {
+      "id": "spanish",
+      "nameKey": "scriptSpanish",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "SpanishSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 560
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+    {
+      "id": "french",
+      "nameKey": "scriptFrench",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "FrenchSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 420
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+    {
+      "id": "portuguese",
+      "nameKey": "scriptPortugese",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "PortugueseSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 420
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+    {
+      "id": "german",
+      "nameKey": "scriptGerman",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "germanSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 420
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+    {
+      "id": "greek",
+      "nameKey": "scriptGreek",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "GreekSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 420
+      },
+      "guideFont": {
+        "fontName": "Noto Sans Greek",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansGreek/hinted/ttf/NotoSansGreek-Regular.ttf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+    {
+      "id": "cyrillic",
+      "nameKey": "scriptCyrillic",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "CyrillicSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 420
+      },
+      "guideFont": {
+        "fontName": "Noto Sans Cyrillic",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansCyrillic/hinted/ttf/NotoSansCyrillic-Regular.ttf",
+        "stylisticSet": ""
+      },
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    }   
+         
+  ]
+}

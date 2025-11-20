@@ -1,0 +1,60 @@
+
+[
+  {
+    "groups": {
+      "consAll": ["ກ", "ຂ", "ຄ", "ງ", "ຈ", "ຊ", "ຍ", "ດ", "ຕ", "ຖ", "ທ", "ນ", "ບ", "ປ", "ຜ", "ຝ", "ພ", "ຟ", "ມ", "ຢ", "ຣ", "ລ", "ວ", "ສ", "ຫ", "ອ", "ຮ", "ໜ", "ໝ", "ຆ","ຉ","ຌ","ຏ","ຐ","ຑ","ຒ","ຓ","ຘ","ຠ","ຬ"],
+      "aboveMarks": ["ັ", "ິ", "ີ", "ຶ", "ື", "ໍ", "ົ", "໌"],
+      "toneMarks": ["່", "້", "໊", "໋"],
+      "aboveAll": ["$aboveMarks", "$toneMarks", "$specialForms"],
+      "belowMarks": ["ຸ", "ູ", "ຼ", "຺"],
+      "belowMarksCenter": ["ຼ"],
+      "belowMarksEdge": ["ຸ", "ູ",  "຺"]
+
+
+    }
+  },
+  {
+    "positioning": [
+      {
+        "base": ["$consAll"],
+        "mark": ["$aboveAll", "$belowMarks", "$specialForms", "໎"],
+        "gpos": "mark"
+      }
+    ]
+  },
+  {
+    "markAttachment": {
+      "$consAll": {
+        "$aboveAll": ["topCenter", "bottomCenter", 0, -50],
+        "໎": ["topRight", "bottomCenter", 0, -50],
+        "$belowMarksCenter": ["bottomRight", "TopLeft", 0, 50],
+        "$belowMarksEdge": ["bottomRight", "topRight", 0, 50]
+
+      },
+      "$aboveMarks": {
+        "$toneMarks": ["topCenter", "bottomCenter", 0, -50]
+      }
+    }
+  },
+  {"markAttachmentClass": [
+      {
+      "members":[
+      "ິ", "ີ", 
+      "ຶ", "ື",
+      "ິ່","ິ້","ິ໊","ິ໋",
+      "ີ່","ີ້", "ີ໊","ີ໋",
+      "ຶ່","ຶ້","ຶ໊","ຶ໋",
+      "ື່","ື້","ື໊","ື໋"]     
+ },
+      {
+        "members":["ັ","ົ","ັ່","ັ້","ັ໊","ັ໋","ົ່","ົ້","ົ໊","ົ໋"]
+      },
+      {
+        "members":["ໍ", "໌", "ໍ່", "ໍ້", "ໍ໊", "ໍ໋"] 
+      }
+    ]
+  },
+  {
+    "recommendedKerning": []
+  }
+]

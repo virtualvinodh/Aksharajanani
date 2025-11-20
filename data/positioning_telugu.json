@@ -1,0 +1,137 @@
+[
+  {
+    "groups": {
+      "consAll": [
+        "$consonants",
+        "$halfCons",
+        "$aaCons",
+        "$iCons",
+        "$iiCons",
+        "$eCons",
+        "$eeCons",
+        "$oCons",
+        "$ooCons",
+        "$uCons",
+        "$auCons"
+      ],
+      "uUCons": ["త", "చ", "ట", "బ", "ద", "డ", "గ", "థ", "ఛ", "ఠ", "ఖ", "భ", "ధ", "ఝ", "ఢ", "ఘ", "స", "శ", "ష", "మ", "న", "ఞ", "ణ", "ఙ", "ర", "ఱ", "ల","య"],
+      "spacingR": ["ృ", "ౄ"],
+      "spacingu": ["ు", "ూ"],
+      "vowCombCenter": ["ా", "ె", "ీ", "ె", "ే", "్", "", "ి"],
+      "vowCombLeft": [ "ొ", "ో", "ౌ"],
+      "consCenter": ["", "", "", "", "", "", "", "", "", "", "", ""],
+      "consLeft": ["", "", "", "", "", "", "", "", "", "", "", "", "జు", "జూ", "పు", "ఫు", "పూ", "ఫూ", "వు", "వూ", "ళు", "ళూ", "హు", "హూ", "", "", "", ""],
+      "consRight": ["", "", "", "", "ఖ", "ఙ", "జ", "ట", 
+      "ణ", "బ", "మ", "ల", "ఱ", "ఴ", "ఞ"],
+      "ottuMid": ["$consonants", "$halfCons", "$aaCons", "$iCons", "$iiCons"],
+      "ottuRight": ["$eCons",
+        "$eeCons"],
+      "ottuLeft": ["$oCons",
+        "$ooCons", "$auCons", "$uCons"],
+      "spacingOttus": [
+         "్క",  "్చ",  "్ఛ", "్న", "్ప",  "్ఫ",  "్బ",  "్భ",  "్మ", "్య", "్ళ",
+         "్వ", "్శ",  "్స", ""
+      ],
+      "nonSpacingOttus": [
+            "్ఖ", "్గ", "్ఘ", "్ఙ", "్జ", "్ఝ", "్ఞ", "్ట", "్ఠ", "్డ", "్ఢ", "్ణ",
+            "్త", "్థ", "్ద", "్ధ", "", "్ఱ", "్ల", "్ష", "్హ", "", "", ""
+        ]
+    }
+  },
+  {
+    "positioning": [                
+      {
+        "base": ["$consAll"],
+        "mark": ["$nonSpacingOttus"],
+        "gpos": "blwm"
+      },      
+      {
+        "base": ["$eCons"],
+        "mark": ["ౖ", "$subConsAdd"],
+        "gpos": "blwm"
+      },
+      {
+        "base": ["$uUCons"],
+        "mark": ["ు", "ూ"],
+        "movement": "horizontal"
+      }
+    ]
+  },
+  {
+    "markAttachment": {
+      "$uUCons": {
+        "ు": ["bottomRight", "bottomLeft"],
+        "ూ": ["bottomRight", "bottomLeft"]
+      },      
+      "ు": {
+        "ా": ["topRight", "topLeft"]
+      },
+      "ె": {
+         "ౕ": ["topRight", "bottomLeft", "-100", "0" ]
+      },                
+      "$consAll": {
+        "": ["topCenter", "bottomCenter", "0", "-100"]
+      },      
+      "$nonSpacingOttus": {
+        "ౖ": ["bottomCenter", "topCenter", "0", "30"]
+      },           
+      "$eCons": {
+        "ౖ": ["bottomCenter", "topCenter", "0", "30"],
+        "$subConsAdd": ["bottomCenter", "topCenter", "0", "30"]
+      },      
+      "$consCenter": {
+        "$vowCombCenter": ["topCenter", "bottomCenter"],
+        "$vowCombLeft": ["topCenter", "bottomLeft"]
+      },
+      "$consLeft": {
+        "$vowCombCenter": ["topLeft", "bottomCenter"],
+        "$vowCombLeft": ["topCenter", "bottomLeft"]
+      },
+      "$consRight": {
+        "$vowCombCenter": ["topRight", "bottomCenter"],
+        "$vowCombLeft": ["topCenter", "bottomLeft"]
+      },      
+      "$ottuMid": {
+        "$nonSpacingOttus": ["bottomCenter", "topCenter", "0", "30"]
+      },
+      "$ottuLeft": {
+        "$nonSpacingOttus": ["bottomLeft", "topLeft", "0", "30"]
+      },
+      "$ottuRight": {
+        "$nonSpacingOttus": ["bottomRight", "topRight","0",  "30"]
+      }       
+    }
+  },
+  {
+    "markAttachmentClass": [  
+      {
+        "members": ["$nonSpacingOttus", "$subConsAdd"]
+      },
+      {
+        "members": ["ు", "ూ"]
+      },      
+      {
+        "members": ["ె", "ే"]
+      },
+      {
+        "members": ["ొ", "ో"]
+      },
+      {
+        "members": ["ా", "ౌ"]
+      }              
+    ]
+  },
+  {
+    "baseAttachmentClass": [                    
+    ]
+  },
+  {
+    "recommendedKerning": [
+      ["", "$consAll", "0"],
+      ["$consAll", "$spacingOttus"],  
+      ["$spacingu", "$spacingOttus"], 
+      ["$consonants", "$spacingR"],
+      ["$spacingOttus", "$spacingR"]      
+    ]
+  }
+]

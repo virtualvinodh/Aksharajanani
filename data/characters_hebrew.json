@@ -1,0 +1,60 @@
+
+[
+  {
+    "nameKey": "consonants",
+    "characters": [
+      { "unicode": 1488, "name": "א", "glyphClass": "base" },
+      { "unicode": 1489, "name": "ב", "glyphClass": "base" },
+      { "unicode": 1490, "name": "ג", "glyphClass": "base" },
+      { "unicode": 1491, "name": "ד", "glyphClass": "base" },
+      { "unicode": 1492, "name": "ה", "glyphClass": "base" },
+      { "unicode": 1493, "name": "ו", "glyphClass": "base" },
+      { "unicode": 1494, "name": "ז", "glyphClass": "base" },
+      { "unicode": 1495, "name": "ח", "glyphClass": "base" },
+      { "unicode": 1496, "name": "ט", "glyphClass": "base" },
+      { "unicode": 1497, "name": "י", "glyphClass": "base" },
+      { "unicode": 1499, "name": "כ", "glyphClass": "base" },
+      { "unicode": 1500, "name": "ל", "glyphClass": "base" },
+      { "unicode": 1502, "name": "מ", "glyphClass": "base" },
+      { "unicode": 1504, "name": "נ", "glyphClass": "base" },
+      { "unicode": 1505, "name": "ס", "glyphClass": "base" },
+      { "unicode": 1506, "name": "ע", "glyphClass": "base" },
+      { "unicode": 1508, "name": "פ", "glyphClass": "base" },
+      { "unicode": 1510, "name": "צ", "glyphClass": "base" },
+      { "unicode": 1511, "name": "ק", "glyphClass": "base" },
+      { "unicode": 1512, "name": "ר", "glyphClass": "base" },
+      { "unicode": 1513, "name": "ש", "glyphClass": "base" },
+      { "unicode": 1514, "name": "ת", "glyphClass": "base" },
+      { "unicode": 1498, "name": "ך", "glyphClass": "base" },
+      { "unicode": 1501, "name": "ם", "glyphClass": "base" },
+      { "unicode": 1503, "name": "ן", "glyphClass": "base" },
+      { "unicode": 1507, "name": "ף", "glyphClass": "base" },
+      { "unicode": 1509, "name": "ץ", "glyphClass": "base" }
+    ]
+  },
+  {
+    "nameKey": "vowelSigns",
+    "characters": [
+      { "unicode": 1470, "name": "־", "glyphClass": "base" },
+      { "unicode": 1475, "name": "׃", "glyphClass": "base" },
+      { "unicode": 1523, "name": "׳", "glyphClass": "base" },
+      { "unicode": 1524, "name": "״", "glyphClass": "base" },
+      { "unicode": 1456, "name": "ְ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1457, "name": "ֱ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1458, "name": "ֲ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1459, "name": "ֳ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1460, "name": "ִ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1461, "name": "ֵ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1462, "name": "ֶ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1463, "name": "ַ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1464, "name": "ָ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1465, "name": "ֹ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1466, "name": "ֺ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1467, "name": "ֻ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1468, "name": "ּ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1479, "name": "ׇ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1473, "name": "ׁ", "glyphClass": "mark", "advWidth": 0 },
+      { "unicode": 1474, "name": "ׂ", "glyphClass": "mark", "advWidth": 0 }
+    ]
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "nameKey": "letters",
+    "characters": [
+        { "name": "A", "glyphClass": "base" },
+        { "name": "F", "glyphClass": "base" },
+        { "name": "E", "glyphClass": "base", "composite": ["F"] },
+        { "name": "N", "glyphClass": "base" },
+        { "name": "T", "glyphClass": "base" },
+        { "name": "a", "glyphClass": "base" },       
+        { "name": "e", "glyphClass": "base" },             
+        { "name": "g", "glyphClass": "base" },          
+        { "name": "n", "glyphClass": "base" },        
+        { "name": "̃", "glyphClass": "mark", "advWidth":0 },
+        { "name": "Ñ", "glyphClass": "base", "link": ["N", "̃"] },
+        { "name": "ñ", "glyphClass": "base", "link": ["n", "̃"] },                
+        { "name": "ͤ", "glyphClass": "mark", "advWidth":0, "link": ["e"], "compositeTransform": [0.5, -400]}
+    ]
+  }
+]
