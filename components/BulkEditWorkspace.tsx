@@ -386,17 +386,17 @@ const BulkTransformModal: React.FC<BulkTransformModalProps> = ({ isOpen, onClose
                 
                 {/* Preview Area */}
                 {selectedGlyphs.length > 0 && (
-                    <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 flex flex-col items-center border border-gray-200 dark:border-gray-600">
-                         <div className="flex items-center justify-between w-full mb-2">
-                            <button onClick={() => setPreviewIndex(i => Math.max(0, i - 1))} disabled={previewIndex === 0} className="p-1 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-30"><LeftArrowIcon /></button>
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('livePreview')}: {previewGlyph?.name}</span>
-                            <button onClick={() => setPreviewIndex(i => Math.min(selectedGlyphs.length - 1, i + 1))} disabled={previewIndex === selectedGlyphs.length - 1} className="p-1 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-30"><RightArrowIcon /></button>
+                    <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 flex flex-col items-center border border-gray-200 dark:border-gray-600 relative">
+                         <div className="absolute top-1/2 left-0 w-full flex justify-between px-2 -translate-y-1/2 pointer-events-none">
+                            <button onClick={() => setPreviewIndex(i => Math.max(0, i - 1))} disabled={previewIndex === 0} className="p-2 bg-white/80 dark:bg-black/50 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-black rounded-full shadow-sm disabled:opacity-0 pointer-events-auto transition-opacity"><LeftArrowIcon /></button>
+                            <button onClick={() => setPreviewIndex(i => Math.min(selectedGlyphs.length - 1, i + 1))} disabled={previewIndex === selectedGlyphs.length - 1} className="p-2 bg-white/80 dark:bg-black/50 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-black rounded-full shadow-sm disabled:opacity-0 pointer-events-auto transition-opacity"><RightArrowIcon /></button>
                          </div>
-                         <div className="w-32 h-32 bg-white dark:bg-gray-800 border rounded shadow-sm flex items-center justify-center">
+                         <div className="w-40 h-40 bg-white dark:bg-gray-800 border rounded shadow-sm flex items-center justify-center">
                              {previewGlyph && transformedPreviewGlyphData && (
                                  <GlyphTile character={previewGlyph} glyphData={transformedPreviewGlyphData} strokeThickness={strokeThickness} />
                              )}
                          </div>
+                         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{previewGlyph?.name}</p>
                     </div>
                 )}
 
