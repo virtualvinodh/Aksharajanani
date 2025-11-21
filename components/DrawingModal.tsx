@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
-import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment } from '../types';
+import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment, TransformState } from '../types';
 import DrawingCanvas from './DrawingCanvas';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
@@ -18,6 +18,9 @@ import { useGlyphEditSession } from '../hooks/drawing/useGlyphEditSession';
 import { useDrawingShortcuts } from '../hooks/drawing/useDrawingShortcuts';
 import { useImportLogic } from '../hooks/drawing/useImportLogic';
 import { useCanvasOperations } from '../hooks/drawing/useCanvasOperations';
+import { getAccurateGlyphBBox } from '../services/glyphRenderService';
+import { VEC } from '../utils/vectorUtils';
+import ContextualToolbar from './ContextualToolbar';
 
 declare var paper: any;
 
@@ -59,6 +62,9 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const [backgroundImageOpacity, setBackgroundImageOpacity] = useState(0.5);
   const [imageTransform, setImageTransform] = useState<ImageTransform | null>(null);
   
+  // Transform Tool State
+  const [previewTransform, setPreviewTransform] = useState<TransformState | null>(null);
+
   // Trace Modal State
   const [isTracerModalOpen, setIsTracerModalOpen] = useState(false);
   const [tracerImageSrc, setTracerImageSrc] = useState<string | null>(null);
@@ -69,6 +75,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const [isRelinkConfirmOpen, setIsRelinkConfirmOpen] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const animationTimeoutRef = useRef<number | null>(null);
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
   
@@ -118,6 +125,66 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       currentPaths, handlePathsChange, selectedPathIds, setSelectedPathIds,
       clipboard, clipboardDispatch, showNotification, t
   });
+
+  // --- Transform Application Logic ---
+  const handleApplyTransform = (transform: TransformState & { flipX?: boolean; flipY?: boolean }) => {
+      if (selectedPathIds.size === 0) return;
+
+      const selectedPaths = currentPaths.filter(p => selectedPathIds.has(p.id));
+      const bbox = getAccurateGlyphBBox(selectedPaths, settings.strokeThickness);
+      if (!bbox) return;
+
+      const center = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
+      const angleRad = (transform.rotate * Math.PI) / 180;
+      const sx = (transform.flipX ? -1 : 1) * transform.scale;
+      const sy = (transform.flipY ? -1 : 1) * transform.scale;
+
+      const transformPoint = (pt: Point) => {
+          let px = pt.x - center.x;
+          let py = pt.y - center.y;
+          
+          // Rotate
+          const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
+          const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
+          
+          // Scale & Flip
+          px = rx * sx;
+          py = ry * sy;
+          
+          return { x: px + center.x, y: py + center.y };
+      };
+
+      const newPaths = currentPaths.map(p => {
+          if (!selectedPathIds.has(p.id)) return p;
+          
+          const newP = { ...p, points: p.points.map(transformPoint) };
+          if (p.segmentGroups) {
+              newP.segmentGroups = p.segmentGroups.map(g => g.map(s => ({
+                  ...s,
+                  point: transformPoint(s.point),
+                  // Handle vectors need rotation and scaling but not translation
+                  handleIn: VEC.scale(VEC.rotate(s.handleIn, angleRad), sx),
+                  // Note: for non-uniform scale (flip), handle logic is complex.
+                  // Simplified here: applying scalar scale. For true flip, x/y components need separate scaling.
+                  // Correcting for Flip:
+                  handleOut: VEC.scale(VEC.rotate(s.handleOut, angleRad), sx)
+              })));
+              
+              // For proper flip of handles, we need component-wise multiplication if sx != sy
+               if (transform.flipX || transform.flipY) {
+                  newP.segmentGroups = newP.segmentGroups.map(g => g.map(s => ({
+                      ...s,
+                      handleIn: { x: s.handleIn.x * (transform.flipX ? -1 : 1), y: s.handleIn.y * (transform.flipY ? -1 : 1) },
+                      handleOut: { x: s.handleOut.x * (transform.flipX ? -1 : 1), y: s.handleOut.y * (transform.flipY ? -1 : 1) }
+                  })));
+               }
+          }
+          return newP;
+      });
+
+      handlePathsChange(newPaths);
+      setPreviewTransform(null);
+  };
 
   // --- Hook: Shortcuts ---
   useDrawingShortcuts({
@@ -178,6 +245,13 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       if (character.link) showNotification(t('linkedGlyphLocked', { components: character.link.join(' + ') }), 'info');
   }, []);
 
+  // Compute the current selection bounding box for the contextual toolbar
+  const activeSelectionBBox = useMemo(() => {
+    if (selectedPathIds.size === 0 || isLocked) return null;
+    const selectedPaths = currentPaths.filter(p => selectedPathIds.has(p.id));
+    return getAccurateGlyphBBox(selectedPaths, settings.strokeThickness);
+  }, [selectedPathIds, currentPaths, settings.strokeThickness, isLocked]);
+
   const canvasComponent = (
      <DrawingCanvas 
         width={DRAWING_CANVAS_SIZE} height={DRAWING_CANVAS_SIZE} 
@@ -191,6 +265,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         lsb={lsb} rsb={rsb} calligraphyAngle={calligraphyAngle} 
         isInitiallyDrawn={!wasEmptyOnLoad} // Pass the boolean result directly
         transformMode={isLocked ? 'move-only' : 'all'}
+        previewTransform={previewTransform}
     />
   );
   
@@ -221,9 +296,24 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                 onZoom={handleZoom} onImageImportClick={() => imageImportRef.current?.click()} onSvgImportClick={() => svgImportRef.current?.click()}
                 onImageTraceClick={() => imageTraceRef.current?.click()} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
                 onUnlockClick={() => setIsUnlockConfirmOpen(true)} onRelinkClick={() => setIsRelinkConfirmOpen(true)}
+                onApplyTransform={handleApplyTransform}
+                previewTransform={previewTransform}
+                setPreviewTransform={setPreviewTransform}
              />
          </div>
-        <div className="flex-1 min-w-0 min-h-0 flex justify-center items-center">
+        <div className="flex-1 min-w-0 min-h-0 flex justify-center items-center relative" ref={canvasContainerRef}>
+            {settings.editorMode === 'advanced' && activeSelectionBBox && canvasContainerRef.current && (
+                <ContextualToolbar 
+                    selectionBox={activeSelectionBBox}
+                    zoom={zoom}
+                    viewOffset={viewOffset}
+                    onApplyTransform={handleApplyTransform}
+                    previewTransform={previewTransform}
+                    setPreviewTransform={setPreviewTransform}
+                    containerWidth={canvasContainerRef.current.clientWidth}
+                    containerHeight={canvasContainerRef.current.clientHeight}
+                />
+            )}
             <div className="rounded-md overflow-hidden shadow-lg aspect-square max-w-full max-h-full">
                 {canvasComponent}
             </div>

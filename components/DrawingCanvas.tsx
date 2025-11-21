@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
-import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform } from '../types';
+import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { VEC } from '../utils/vectorUtils';
 import { renderPaths, getAccurateGlyphBBox, BoundingBox } from '../services/glyphRenderService';
@@ -42,9 +42,18 @@ interface DrawingCanvasProps {
   transformMode?: 'all' | 'move-only';
   movementConstraint?: 'horizontal' | 'vertical' | 'none';
   isInitiallyDrawn?: boolean;
+  // New props for live preview
+  previewTransform?: TransformState | null;
 }
 
-const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ width, height, paths: initialPaths, onPathsChange, metrics, tool, zoom, setZoom, viewOffset, setViewOffset, settings, currentCharacter, gridConfig, backgroundImage, backgroundImageOpacity, imageTransform, onImageTransformChange, selectedPathIds, onSelectionChange, isImageSelected, onImageSelectionChange, lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides = true, disableTransformations = false, calligraphyAngle = 45, transformMode = 'all', movementConstraint = 'none', isInitiallyDrawn = false }) => {
+const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 
+    width, height, paths: initialPaths, onPathsChange, metrics, tool, zoom, setZoom, viewOffset, setViewOffset, 
+    settings, currentCharacter, gridConfig, backgroundImage, backgroundImageOpacity, imageTransform, 
+    onImageTransformChange, selectedPathIds, onSelectionChange, isImageSelected, onImageSelectionChange, 
+    lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides = true, disableTransformations = false, 
+    calligraphyAngle = 45, transformMode = 'all', movementConstraint = 'none', isInitiallyDrawn = false,
+    previewTransform = null
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
 
@@ -138,7 +147,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ width, height, paths: ini
             ctx.stroke();
         }
         points.forEach((p, index) => {
-            const isSelected = selectedPoint?.type === 'freehand' && selectedPoint.pathId === path.id && selectedPoint.pointIndex === index;
+            const isSelected = selectedPointInfo?.type === 'freehand' && selectedPointInfo.pathId === path.id && selectedPointInfo.pointIndex === index;
             let isControlPoint = (type === 'pen' && index > 0 && index < points.length - 1) || (type === 'curve' && index === 1);
             if (isControlPoint) {
                 ctx.fillStyle = isSelected ? `rgba(99, 102, 241, ${pointAlpha})` : `rgba(251, 191, 36, ${pointAlpha})`;
@@ -183,12 +192,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ width, height, paths: ini
                 ctx.strokeRect(-imageTransform.width/2, -imageTransform.height/2, imageTransform.width, imageTransform.height);
                 ctx.restore();
             } else {
-                ctx.strokeRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
+                // Don't draw selection box if rotating/scaling via toolbar preview to avoid confusion
+                if (!previewTransform) {
+                    ctx.strokeRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
+                }
             }
         }
         ctx.setLineDash([]);
         
-        if (handles && transformMode !== 'move-only') {
+        if (handles && transformMode !== 'move-only' && !previewTransform) {
             const mobileMultiplier = isMobile ? 3 : 1;
             const adjustedHandleSize = HANDLE_SIZE * mobileMultiplier;
             const scaledHandleSize = adjustedHandleSize / zoom;
@@ -224,7 +236,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ width, height, paths: ini
             });
         }
     }
-  }, [marqueeBox, zoom, selectionBox, isImageSelected, imageTransform, handles, HANDLE_SIZE, isMobile, theme, transformMode]);
+  }, [marqueeBox, zoom, selectionBox, isImageSelected, imageTransform, handles, HANDLE_SIZE, isMobile, theme, transformMode, previewTransform]);
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d');
@@ -256,7 +268,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ width, height, paths: ini
         ctx.restore();
     }
 
-    // The parent controls this state via the prop, ensuring guides don't disappear until explicitly redrawn
     if (settings.showGridOutlines && !isInitiallyDrawn) {
       const textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
       const guideFontFamily = getComputedStyle(document.documentElement).getPropertyValue('--guide-font-family').trim() || 'sans-serif';
@@ -334,7 +345,49 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ width, height, paths: ini
     const selectedNotHoveredPaths: Path[] = [];
     const normalPaths: Path[] = [];
     
-    currentPaths.forEach(path => {
+    // Apply live transformations if needed
+    let pathsToRender = currentPaths;
+    if (previewTransform && selectionBox && selectedPathIds.size > 0) {
+        const { x, y, width, height } = selectionBox;
+        const center = { x: x + width / 2, y: y + height / 2 };
+        const angleRad = (previewTransform.rotate * Math.PI) / 180;
+        
+        pathsToRender = currentPaths.map(p => {
+            if (!selectedPathIds.has(p.id)) return p;
+
+            const transformPoint = (pt: Point) => {
+                // 1. Translate to center
+                let px = pt.x - center.x;
+                let py = pt.y - center.y;
+                
+                // 2. Rotate
+                const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
+                const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
+                
+                // 3. Scale
+                px = rx * previewTransform.scale;
+                py = ry * previewTransform.scale;
+                
+                // 4. Translate back
+                return { x: px + center.x, y: py + center.y };
+            };
+            
+            // Clone and transform
+            const newP = { ...p, points: p.points.map(transformPoint) };
+            if (p.segmentGroups) {
+                newP.segmentGroups = p.segmentGroups.map(g => g.map(s => ({
+                    ...s,
+                    point: transformPoint(s.point),
+                    // Handle vectors need rotation and scaling but not translation
+                    handleIn: VEC.scale(VEC.rotate(s.handleIn, angleRad), previewTransform.scale),
+                    handleOut: VEC.scale(VEC.rotate(s.handleOut, angleRad), previewTransform.scale)
+                })));
+            }
+            return newP;
+        });
+    }
+
+    pathsToRender.forEach(path => {
         if ((tool === 'select' || tool === 'edit') && hoveredPathIds.has(path.id)) {
             hoveredPaths.push(path);
         } else if (selectedPathIds.has(path.id)) {
@@ -354,7 +407,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ width, height, paths: ini
     }
     
     if (tool === 'edit') {
-      drawControlPoints(ctx, currentPaths, focusedPathId, selectedPointInfo);
+      drawControlPoints(ctx, pathsToRender, focusedPathId, selectedPointInfo);
     }
 
     if (previewPath) renderPaths(ctx, [previewPath], { color: theme === 'dark' ? '#6366F1' : '#818CF8', strokeThickness: settings.strokeThickness, lineDash: [5, 5] });
@@ -362,7 +415,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ width, height, paths: ini
     if (tool === 'select') drawSelectionUI(ctx);
 
     ctx.restore();
-  }, [currentPaths, previewPath, marqueeBox, selectionBox, width, height, settings, metrics, theme, tool, zoom, viewOffset, currentCharacter, gridConfig, bgImageObject, backgroundImageOpacity, imageTransform, focusedPathId, selectedPointInfo, lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides, drawControlPoints, drawSelectionUI, hoveredPathIds, selectedPathIds, isInitiallyDrawn]);
+  }, [currentPaths, previewPath, marqueeBox, selectionBox, width, height, settings, metrics, theme, tool, zoom, viewOffset, currentCharacter, gridConfig, bgImageObject, backgroundImageOpacity, imageTransform, focusedPathId, selectedPointInfo, lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides, drawControlPoints, drawSelectionUI, hoveredPathIds, selectedPathIds, isInitiallyDrawn, previewTransform]);
   
   return (
     <canvas
