@@ -18,7 +18,7 @@ const BulkEditWorkspace: React.FC = () => {
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
     const { settings, metrics } = useSettings();
     const { t } = useLocale();
-    const { showNotification, metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
+    const { showNotification, metricsSelection, setMetricsSelection } = useLayout();
 
     const [isPropertiesModalOpen, setIsPropertiesModalOpen] = useState(false);
     const [isTransformModalOpen, setIsTransformModalOpen] = useState(false);
@@ -34,13 +34,20 @@ const BulkEditWorkspace: React.FC = () => {
     }, [characterSets, glyphDataMap]);
 
     const toggleSelection = (unicode: number) => {
-        if (!isMetricsSelectionMode) return;
         setMetricsSelection(prev => {
             const newSet = new Set(prev);
             if (newSet.has(unicode)) newSet.delete(unicode);
             else newSet.add(unicode);
             return newSet;
         });
+    };
+
+    const handleSelectAll = () => {
+        setMetricsSelection(new Set(drawnCharacters.map(c => c.unicode!)));
+    };
+
+    const handleSelectNone = () => {
+        setMetricsSelection(new Set());
     };
 
     // --- Metrics (Properties) Handlers ---
@@ -68,7 +75,7 @@ const BulkEditWorkspace: React.FC = () => {
         
         showNotification(t('updateComplete'), 'success');
         setIsPropertiesModalOpen(false);
-        exitSelectionMode();
+        setMetricsSelection(new Set());
     };
 
     // --- Delete Handlers ---
@@ -84,7 +91,7 @@ const BulkEditWorkspace: React.FC = () => {
 
         showNotification(t('glyphDeletedSuccess', { name: `${metricsSelection.size} glyphs` }), 'success');
         setIsDeleteConfirmOpen(false);
-        exitSelectionMode();
+        setMetricsSelection(new Set());
     };
 
     // --- Transform Handlers ---
@@ -162,53 +169,69 @@ const BulkEditWorkspace: React.FC = () => {
         }
 
         setIsTransformModalOpen(false);
-        exitSelectionMode();
-    };
-
-    const exitSelectionMode = () => {
-        setIsMetricsSelectionMode(false);
         setMetricsSelection(new Set());
     };
 
+
     return (
         <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-900">
-            <div className="p-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('bulkEdit')}</h2>
-                {!isMetricsSelectionMode ? (
+            <div className="p-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0 sticky top-0 z-10 shadow-sm">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('batchOperations')}</h2>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md">
+                         {t('metricsSelection', { count: metricsSelection.size })}
+                    </span>
+                </div>
+                
+                <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
+                     <div className="flex gap-1 mr-2">
+                        <button onClick={handleSelectAll} className="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors whitespace-nowrap">{t('selectAll')}</button>
+                        <button onClick={handleSelectNone} disabled={metricsSelection.size === 0} className="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 whitespace-nowrap">{t('selectNone')}</button>
+                     </div>
+                     
+                     <div className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1 self-center hidden sm:block"></div>
+
                     <button 
-                        onClick={() => setIsMetricsSelectionMode(true)} 
-                        className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                        onClick={() => setIsPropertiesModalOpen(true)}
+                        disabled={metricsSelection.size === 0}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap text-sm"
                     >
-                        {t('edit')}
+                        <SettingsIcon /> {t('editProperties')}
                     </button>
-                ) : (
                     <button 
-                        onClick={exitSelectionMode} 
-                        className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors"
+                        onClick={() => setIsTransformModalOpen(true)}
+                        disabled={metricsSelection.size === 0}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:bg-teal-400 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap text-sm"
                     >
-                        {t('cancel')}
+                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        {t('transform')}
                     </button>
-                )}
+                    <button 
+                        onClick={() => setIsDeleteConfirmOpen(true)}
+                        disabled={metricsSelection.size === 0}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap text-sm"
+                    >
+                        <TrashIcon /> {t('delete')}
+                    </button>
+                </div>
             </div>
 
-            <div className={`flex-grow overflow-y-auto p-4 ${isMetricsSelectionMode ? 'pb-32' : ''}`}>
+            <div className="flex-grow overflow-y-auto p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {drawnCharacters.map(char => (
                         <div 
                             key={char.unicode}
                             onClick={() => toggleSelection(char.unicode!)}
-                            className={`relative bg-white dark:bg-gray-800 border rounded-lg p-4 flex items-center gap-4 transition-all ${isMetricsSelectionMode ? 'cursor-pointer' : ''} ${metricsSelection.has(char.unicode!) ? 'ring-2 ring-indigo-500 border-transparent' : 'border-gray-200 dark:border-gray-700'}`}
+                            className={`relative bg-white dark:bg-gray-800 border rounded-lg p-4 flex items-center gap-4 transition-all cursor-pointer hover:shadow-md ${metricsSelection.has(char.unicode!) ? 'ring-2 ring-indigo-500 border-transparent bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-700'}`}
                         >
-                            {isMetricsSelectionMode && (
-                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${metricsSelection.has(char.unicode!) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-400'}`}>
-                                    {metricsSelection.has(char.unicode!) && <CheckCircleIcon className="w-4 h-4 text-white" />}
-                                </div>
-                            )}
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${metricsSelection.has(char.unicode!) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-400 bg-white dark:bg-gray-700'}`}>
+                                {metricsSelection.has(char.unicode!) && <CheckCircleIcon className="w-4 h-4 text-white" />}
+                            </div>
                             <div className="w-16 h-16 flex-shrink-0">
                                 <GlyphTile character={char} glyphData={glyphDataMap.get(char.unicode!)} strokeThickness={settings?.strokeThickness || 15} />
                             </div>
                             <div className="flex-grow min-w-0">
-                                <h3 className="font-bold text-lg truncate" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>{char.name}</h3>
+                                <h3 className="font-bold text-lg truncate text-gray-900 dark:text-white" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>{char.name}</h3>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 grid grid-cols-2 gap-1 mt-1">
                                     <span>LSB: <span className="font-mono text-gray-800 dark:text-gray-200">{char.lsb ?? metrics?.defaultLSB}</span></span>
                                     <span>RSB: <span className="font-mono text-gray-800 dark:text-gray-200">{char.rsb ?? metrics?.defaultRSB}</span></span>
@@ -218,38 +241,6 @@ const BulkEditWorkspace: React.FC = () => {
                     ))}
                 </div>
             </div>
-
-            {isMetricsSelectionMode && (
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-lg flex flex-col sm:flex-row justify-between items-center z-10 gap-4">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300 hidden sm:block">
-                        {t('metricsSelection', { count: metricsSelection.size })}
-                    </span>
-                    <div className="flex gap-2 w-full sm:w-auto overflow-x-auto">
-                        <button 
-                            onClick={() => setIsPropertiesModalOpen(true)}
-                            disabled={metricsSelection.size === 0}
-                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow whitespace-nowrap"
-                        >
-                            <SettingsIcon /> {t('editProperties')}
-                        </button>
-                        <button 
-                            onClick={() => setIsTransformModalOpen(true)}
-                            disabled={metricsSelection.size === 0}
-                            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow whitespace-nowrap"
-                        >
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                            {t('transform')}
-                        </button>
-                        <button 
-                            onClick={() => setIsDeleteConfirmOpen(true)}
-                            disabled={metricsSelection.size === 0}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow whitespace-nowrap"
-                        >
-                            <TrashIcon /> {t('delete')}
-                        </button>
-                    </div>
-                </div>
-            )}
 
             <BulkPropertiesModal 
                 isOpen={isPropertiesModalOpen} 
