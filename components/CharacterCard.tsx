@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Character } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -111,10 +112,10 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, onSelect }) =>
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
-      className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col items-center justify-between shadow-sm hover:shadow-md hover:-translate-y-1 cursor-pointer transition-all duration-200 aspect-square group"
+      className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square group"
     >
       {tooltip.visible && (
-        <div className="absolute top-full mb-2 w-max max-w-xs bg-black text-white text-xs rounded py-1 px-2 z-50 pointer-events-none transform -translate-x-1/2 left-1/2 opacity-90 dark:bg-gray-700 shadow-lg">
+        <div className="absolute top-full mb-2 w-max max-w-xs bg-black text-white text-xs rounded py-1 px-2 z-50 pointer-events-none transform -translate-x-1/2 left-1/2 opacity-90 dark:bg-gray-700">
           {tooltip.name}
           <svg className="absolute text-black h-2 w-full left-0 top-full dark:text-gray-700" x="0px" y="0px" viewBox="0 0 255 255">
              <polygon className="fill-current" points="0,0 0,0 255,0"/>
@@ -122,11 +123,11 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, onSelect }) =>
         </div>
       )}
       <div className="w-full h-full flex items-center justify-center">
-        <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className="group-hover:scale-110 transition-transform duration-300 ease-out"></canvas>
+        <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className="group-hover:scale-110 transition-transform duration-200"></canvas>
       </div>
       <div className="text-center mt-2">
         <p 
-          className="text-2xl font-bold text-gray-900 dark:text-white drop-shadow-sm"
+          className="text-2xl font-bold text-gray-900 dark:text-white"
           style={{
             fontFamily: 'var(--guide-font-family)',
             fontFeatureSettings: 'var(--guide-font-feature-settings)'

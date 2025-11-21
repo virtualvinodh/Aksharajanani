@@ -118,7 +118,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     };
 
     return (
-        <div className="flex flex-col h-full overflow-hidden w-full mx-auto max-w-7xl">
+        <div className="flex flex-col h-full overflow-hidden">
             <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 relative">
                 {showNavArrows.left && (
                     <button

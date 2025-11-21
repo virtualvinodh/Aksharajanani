@@ -469,17 +469,16 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
     }
 
     return (
-        <div className="relative min-h-screen text-gray-800 dark:text-gray-200 flex flex-col">
-            {/* Let the body background pattern show through, or apply it here if needed on route switch */}
+        <div className="relative min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json"/>
             
             <header className="absolute top-0 right-0 p-4 z-10">
                 <div className="flex items-center gap-3">
-                     <button onClick={onShowHelp} title={t('help')} className="flex items-center gap-2 bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-lg transition-colors shadow-sm backdrop-blur-sm">
+                     <button onClick={onShowHelp} title={t('help')} className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-lg transition-colors">
                           <HelpIcon />
                           <span className="hidden sm:inline">{t('help')}</span>
                      </button>
-                     <button onClick={onShowAbout} title={t('about')} className="flex items-center gap-2 bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-lg transition-colors shadow-sm backdrop-blur-sm">
+                     <button onClick={onShowAbout} title={t('about')} className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-lg transition-colors">
                           <AboutIcon />
                           <span className="hidden sm:inline">{t('about')}</span>
                      </button>
@@ -489,39 +488,33 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
             
             <main className="flex-grow flex flex-col items-center justify-center p-4 pt-24 sm:pt-4">
                 <div className="text-center mb-10">
-                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 p-1 shadow-xl mx-auto mb-6 flex items-center justify-center">
-                        <div className="w-full h-full rounded-full bg-white dark:bg-gray-900 flex items-center justify-center">
-                             <span
-                                className="logo-emboss text-7xl sm:text-8xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
-                                style={{ fontFamily: 'Purnavarman_1' }}
-                                aria-hidden="true"
-                            >
-                                ꦄ
-                            </span>
-                        </div>
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-indigo-600 dark:border-indigo-400 flex items-center justify-center mx-auto mb-4">
+                        <span
+                            className="logo-emboss text-6xl sm:text-7xl text-indigo-600 dark:text-indigo-400"
+                            style={{ fontFamily: 'Purnavarman_1' }}
+                            aria-hidden="true"
+                        >
+                            ꦄ
+                        </span>
                     </div>
-                    <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight mb-3 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">{t('appTitle')}</h1>
-                    <p  style={{ fontFamily: 'Purnavarman_1' }} className="text-xl sm:text-2xl text-gray-600 dark:text-gray-400 mt-4 max-w-2xl mx-auto opacity-90">ꦄꦏꦴꦫꦺꦴ ꦩꦸꦑꦃ ꦱꦫ꧀ꦮꦣꦫ꧀ꦩꦴꦟꦴꦩ꧀ </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-2 font-medium tracking-wide uppercase">The Mother of Letters</p>
+                    <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-wide mb-2">{t('appTitle')}</h1>
+                    <p  style={{ fontFamily: 'Purnavarman_1' }} className="text-xxl sm:text-2xl text-gray-700 dark:text-gray-300 mt-4 max-w-2xl mx-auto">ꦄꦏꦴꦫꦺꦴ ꦩꦸꦑꦃ ꦱꦫ꧀ꦮꦣꦫ꧀ꦩꦴꦟꦴꦩ꧀ </p>
                 </div>
                 
                 {(isLoadingProjects || recentProjects.length > 0) && (
-                    <div className="w-full max-w-7xl mb-12 mx-auto px-4">
-                         <h2 className="text-xl font-bold text-left mb-6 text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-2 flex items-center gap-2">
-                            <span className="bg-indigo-100 dark:bg-indigo-900/30 p-1.5 rounded-md text-indigo-600 dark:text-indigo-400"><LoadIcon/></span>
-                            {t('recentProjects')}
-                         </h2>
+                    <div className="w-full max-w-5xl mb-12">
+                         <h2 className="text-2xl font-semibold text-center mb-6 text-indigo-600 dark:text-indigo-400">{t('recentProjects')}</h2>
                          {isLoadingProjects ? (
                              <div className="flex justify-center items-center p-8"><SpinnerIcon/></div>
                          ) : (
-                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                  {recentProjects.map(p => {
                                      const scriptForSubtitle = scripts.find(s => s.id === p.scriptId) || (p.scriptId?.startsWith('custom_blocks_') ? { nameKey: 'customBlockFont' } : { nameKey: '' });
                                      const isDeleteVisible = longPressedProjectId === p.projectId;
                                      return (
                                         <div
                                             key={p.projectId}
-                                            className="relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col items-center justify-between text-center hover:-translate-y-1 hover:shadow-xl shadow-sm transition-all duration-300 ease-out group cursor-pointer"
+                                            className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-between text-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-900 focus-within:ring-indigo-500"
                                             onTouchStart={() => p.projectId !== undefined && handleTouchStart(p.projectId)}
                                             onTouchEnd={handleTouchInteractionEnd}
                                             onTouchMove={handleTouchInteractionEnd}
@@ -538,15 +531,10 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                                                 <TrashIcon />
                                             </button>
                                             <div onClick={() => handleProjectClick(p)} className="w-full h-full flex flex-col items-center justify-between text-center">
-                                                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mb-3 text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                                                    {p.settings.fontName[0].toUpperCase()}
-                                                </div>
-                                                <h3 className="text-base font-bold text-gray-900 dark:text-white truncate w-full">{p.settings.fontName}</h3>
+                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate w-full">{p.settings.fontName}</h3>
                                                 <RecentProjectPreview project={p} />
-                                                <div className="mt-auto w-full">
-                                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1">{t(scriptForSubtitle.nameKey)}</p>
-                                                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{new Date(p.savedAt!).toLocaleDateString()}</p>
-                                                </div>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t(scriptForSubtitle.nameKey)}</p>
+                                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{new Date(p.savedAt!).toLocaleString()}</p>
                                             </div>
                                         </div>
                                      )
@@ -558,14 +546,11 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
 
 
                 {/* Primary Action Zone */}
-                <div className="w-full max-w-7xl mb-12 mx-auto px-4">
-                    <h2 className="text-xl font-bold text-left mb-2 text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-2 flex items-center gap-2">
-                        <span className="bg-purple-100 dark:bg-purple-900/30 p-1.5 rounded-md text-purple-600 dark:text-purple-400"><SwitchScriptIcon/></span>
-                        {t('selectScriptTitle')}
-                    </h2>
-                    <div className="flex justify-end items-center mb-4">
-                        <label htmlFor="include-latin-toggle" className="flex items-center gap-3 cursor-pointer group">
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">
+                <div className="w-full max-w-5xl mb-12">
+                    <h2 className="text-2xl font-semibold text-center mb-2 text-indigo-600 dark:text-indigo-400">{t('selectScriptTitle')}</h2>
+                    <div className="flex justify-center items-center mb-8">
+                        <label htmlFor="include-latin-toggle" className="flex items-center gap-3 cursor-pointer">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                 {t('includeLatinLetters')}
                             </span>
                             <div className="relative inline-flex items-center">
@@ -580,16 +565,16 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                             </div>
                         </label>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                         {scripts.map(script => (
                             <button 
                                 key={script.id} 
                                 onClick={() => handleScriptSelection(script)}
                                 type="button"
-                                className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:-translate-y-1 hover:shadow-xl shadow-sm cursor-pointer transition-all duration-300 ease-out group min-h-[160px]"
+                                className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-between text-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500"
                             >
                                 <div
-                                  className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300 text-indigo-600 dark:text-indigo-400 drop-shadow-sm"
+                                  className="script-card-char group-hover:scale-110 transition-transform duration-200"
                                   aria-hidden="true"
                                   style={{
                                     fontFamily: script.guideFont?.fontName ? `'${script.guideFont.fontName}', 'Noto Sans'` : "'Noto Sans'",
@@ -598,10 +583,10 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                                 >
                                     {representativeChars[script.id] || script.nameKey[0]}
                                 </div>
-                                <div className="mt-auto w-full">
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{t(script.nameKey)}</h3>
+                                <div className="mt-2">
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t(script.nameKey)}</h3>
                                     {script.support === 'partial' && (
-                                        <span className="inline-block mt-2 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-xs font-semibold rounded-full">{t('partialSupport')}</span>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('partialSupport')}</p>
                                     )}
                                 </div>
                             </button>
@@ -610,25 +595,25 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                             key="custom-blocks"
                             onClick={() => setIsBlockSelectorOpen(true)}
                             type="button"
-                            className="relative bg-white/50 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-400 cursor-pointer transition-all duration-300 group min-h-[160px]"
+                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
                         >
-                            <div className="text-4xl mb-4 text-gray-400 dark:text-gray-500 group-hover:scale-110 transition-transform duration-300 group-hover:text-indigo-500" aria-hidden="true">
+                            <div className="script-card-char group-hover:scale-110 transition-transform duration-200" aria-hidden="true">
                                 <SwitchScriptIcon />
                             </div>
-                            <div className="mt-auto">
-                                <h3 className="text-lg font-bold text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{t('createFromBlocks')}</h3>
+                            <div className="mt-2">
+                                <h3 className="text-lg font-bold">{t('createFromBlocks')}</h3>
                             </div>
                         </button>
                     </div>
                 </div>
 
-                <div className="w-full max-w-7xl grid grid-cols-1 md:grid-cols-3 gap-8 items-start text-center border-t border-gray-200 dark:border-gray-700 pt-10 mx-auto px-4">
+                <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-8 items-start text-center border-t border-gray-200 dark:border-gray-700 pt-10">
                     {/* Secondary Action */}
                     <div className="space-y-4">
                         <p className="font-semibold text-gray-700 dark:text-gray-300">{t('returningUser')}</p>
                         <button
                             onClick={handleLoadProjectClick}
-                            className="w-full max-w-xs mx-auto flex items-center justify-center gap-3 px-6 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white font-bold rounded-xl hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
+                            className="w-full max-w-xs mx-auto flex items-center justify-center gap-3 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-bold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors shadow-md"
                         >
                             <LoadIcon />
                             <span>{t('load')} Project</span>
@@ -640,7 +625,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                          <p className="font-semibold text-gray-700 dark:text-gray-300">{t('advanced')}</p>
                          <button
                             onClick={() => setIsCreatingScript(true)}
-                            className="w-full max-w-xs mx-auto px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            className="w-full max-w-xs mx-auto px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
                         >
                             {t('createScript')}
                         </button>
@@ -651,7 +636,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                         <p className="font-semibold text-gray-700 dark:text-gray-300">&nbsp;</p>
                         <button
                             onClick={() => setIsUploadingScript(true)}
-                            className="w-full max-w-xs mx-auto px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            className="w-full max-w-xs mx-auto px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
                         >
                             {t('loadCustomScript')}
                         </button>
