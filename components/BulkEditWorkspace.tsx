@@ -1,0 +1,380 @@
+
+import React, { useState, useMemo, useCallback } from 'react';
+import { useCharacter } from '../contexts/CharacterContext';
+import { useGlyphData } from '../contexts/GlyphDataContext';
+import { useSettings } from '../contexts/SettingsContext';
+import { useLocale } from '../contexts/LocaleContext';
+import { Character, GlyphData, Path, Point, Segment } from '../types';
+import { isGlyphDrawn } from '../utils/glyphUtils';
+import GlyphTile from './GlyphTile';
+import Modal from './Modal';
+import { EditIcon, CheckCircleIcon, TrashIcon, SettingsIcon } from '../constants';
+import { useLayout } from '../contexts/LayoutContext';
+import { VEC } from '../utils/vectorUtils';
+import { getAccurateGlyphBBox } from '../services/glyphRenderService';
+
+const BulkEditWorkspace: React.FC = () => {
+    const { characterSets, dispatch: characterDispatch } = useCharacter();
+    const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
+    const { settings, metrics } = useSettings();
+    const { t } = useLocale();
+    const { showNotification, metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
+
+    const [isPropertiesModalOpen, setIsPropertiesModalOpen] = useState(false);
+    const [isTransformModalOpen, setIsTransformModalOpen] = useState(false);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+    // Filter to only drawn characters
+    const drawnCharacters = useMemo(() => {
+        if (!characterSets) return [];
+        return characterSets
+            .flatMap(set => set.characters)
+            .filter(char => char.unicode !== undefined && !char.hidden && isGlyphDrawn(glyphDataMap.get(char.unicode)))
+            .sort((a, b) => a.unicode! - b.unicode!);
+    }, [characterSets, glyphDataMap]);
+
+    const toggleSelection = (unicode: number) => {
+        if (!isMetricsSelectionMode) return;
+        setMetricsSelection(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(unicode)) newSet.delete(unicode);
+            else newSet.add(unicode);
+            return newSet;
+        });
+    };
+
+    // --- Metrics (Properties) Handlers ---
+    const handleSaveMetrics = (newLSB: string, newRSB: string, newAdvWidth: string) => {
+        const lsbVal = newLSB.trim() === '' ? undefined : parseInt(newLSB, 10);
+        const rsbVal = newRSB.trim() === '' ? undefined : parseInt(newRSB, 10);
+        
+        metricsSelection.forEach(unicode => {
+             const char = drawnCharacters.find(c => c.unicode === unicode);
+             if (char) {
+                 const updatePayload: any = { unicode };
+                 let hasUpdate = false;
+                 
+                 if (lsbVal !== undefined) { updatePayload.lsb = lsbVal; hasUpdate = true; }
+                 else { updatePayload.lsb = char.lsb; }
+
+                 if (rsbVal !== undefined) { updatePayload.rsb = rsbVal; hasUpdate = true; }
+                 else { updatePayload.rsb = char.rsb; }
+                 
+                 if (hasUpdate) {
+                     characterDispatch({ type: 'UPDATE_CHARACTER_BEARINGS', payload: updatePayload });
+                 }
+             }
+        });
+        
+        showNotification(t('updateComplete'), 'success');
+        setIsPropertiesModalOpen(false);
+        exitSelectionMode();
+    };
+
+    // --- Delete Handlers ---
+    const handleBulkDelete = () => {
+        if (metricsSelection.size === 0) return;
+        
+        metricsSelection.forEach(unicode => {
+             // Delete glyph drawing data
+             glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
+             // Note: We generally don't delete the character definition itself in bulk mode, 
+             // as it might be part of a standard set. If it's custom, it remains but empty.
+        });
+
+        showNotification(t('glyphDeletedSuccess', { name: `${metricsSelection.size} glyphs` }), 'success');
+        setIsDeleteConfirmOpen(false);
+        exitSelectionMode();
+    };
+
+    // --- Transform Handlers ---
+    const handleBulkTransform = (
+        scaleX: number, scaleY: number, 
+        rotation: number, 
+        flipH: boolean, flipV: boolean
+    ) => {
+        const newMap = new Map(glyphDataMap);
+        const strokeThickness = settings?.strokeThickness || 15;
+        let transformCount = 0;
+
+        metricsSelection.forEach(unicode => {
+            const glyph = newMap.get(unicode);
+            if (!glyph || !isGlyphDrawn(glyph)) return;
+
+            const bbox = getAccurateGlyphBBox(glyph.paths, strokeThickness);
+            if (!bbox) return;
+
+            const center = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
+            const angleRad = (rotation * Math.PI) / 180;
+            
+            const sx = (flipH ? -1 : 1) * scaleX;
+            const sy = (flipV ? -1 : 1) * scaleY;
+
+            const transformPoint = (pt: Point) => {
+                // 1. Translate to center (relative to bbox center)
+                let px = pt.x - center.x;
+                let py = pt.y - center.y;
+
+                // 2. Scale & Flip
+                px = px * sx;
+                py = py * sy;
+                
+                // 3. Rotate
+                const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
+                const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
+
+                // 4. Translate back
+                return { x: rx + center.x, y: ry + center.y };
+            };
+
+            const newPaths = glyph.paths.map(p => {
+                 // Handle normal points
+                 const newP = { ...p, points: p.points.map(transformPoint) };
+                 
+                 // Handle Outline Segment Groups (Handles must be rotated/scaled relative to anchor)
+                 if (p.segmentGroups) {
+                     newP.segmentGroups = p.segmentGroups.map(g => g.map(s => {
+                         // Rotate handles locally
+                         const hInRot = VEC.rotate(s.handleIn, angleRad);
+                         const hOutRot = VEC.rotate(s.handleOut, angleRad);
+                         // Scale handles
+                         const hInTransformed = { x: hInRot.x * sx, y: hInRot.y * sy };
+                         const hOutTransformed = { x: hOutRot.x * sx, y: hOutRot.y * sy };
+                         
+                         return {
+                             ...s,
+                             point: transformPoint(s.point),
+                             handleIn: hInTransformed,
+                             handleOut: hOutTransformed
+                         };
+                     }));
+                 }
+                 return newP;
+            });
+
+            newMap.set(unicode, { paths: newPaths });
+            transformCount++;
+        });
+
+        if (transformCount > 0) {
+            glyphDataDispatch({ type: 'SET_MAP', payload: newMap });
+            showNotification(t('updateComplete'), 'success');
+        }
+
+        setIsTransformModalOpen(false);
+        exitSelectionMode();
+    };
+
+    const exitSelectionMode = () => {
+        setIsMetricsSelectionMode(false);
+        setMetricsSelection(new Set());
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-900">
+            <div className="p-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('bulkEdit')}</h2>
+                {!isMetricsSelectionMode ? (
+                    <button 
+                        onClick={() => setIsMetricsSelectionMode(true)} 
+                        className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                        {t('edit')}
+                    </button>
+                ) : (
+                    <button 
+                        onClick={exitSelectionMode} 
+                        className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors"
+                    >
+                        {t('cancel')}
+                    </button>
+                )}
+            </div>
+
+            <div className={`flex-grow overflow-y-auto p-4 ${isMetricsSelectionMode ? 'pb-32' : ''}`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {drawnCharacters.map(char => (
+                        <div 
+                            key={char.unicode}
+                            onClick={() => toggleSelection(char.unicode!)}
+                            className={`relative bg-white dark:bg-gray-800 border rounded-lg p-4 flex items-center gap-4 transition-all ${isMetricsSelectionMode ? 'cursor-pointer' : ''} ${metricsSelection.has(char.unicode!) ? 'ring-2 ring-indigo-500 border-transparent' : 'border-gray-200 dark:border-gray-700'}`}
+                        >
+                            {isMetricsSelectionMode && (
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${metricsSelection.has(char.unicode!) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-400'}`}>
+                                    {metricsSelection.has(char.unicode!) && <CheckCircleIcon className="w-4 h-4 text-white" />}
+                                </div>
+                            )}
+                            <div className="w-16 h-16 flex-shrink-0">
+                                <GlyphTile character={char} glyphData={glyphDataMap.get(char.unicode!)} strokeThickness={settings?.strokeThickness || 15} />
+                            </div>
+                            <div className="flex-grow min-w-0">
+                                <h3 className="font-bold text-lg truncate" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>{char.name}</h3>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 grid grid-cols-2 gap-1 mt-1">
+                                    <span>LSB: <span className="font-mono text-gray-800 dark:text-gray-200">{char.lsb ?? metrics?.defaultLSB}</span></span>
+                                    <span>RSB: <span className="font-mono text-gray-800 dark:text-gray-200">{char.rsb ?? metrics?.defaultRSB}</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {isMetricsSelectionMode && (
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-lg flex flex-col sm:flex-row justify-between items-center z-10 gap-4">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300 hidden sm:block">
+                        {t('metricsSelection', { count: metricsSelection.size })}
+                    </span>
+                    <div className="flex gap-2 w-full sm:w-auto overflow-x-auto">
+                        <button 
+                            onClick={() => setIsPropertiesModalOpen(true)}
+                            disabled={metricsSelection.size === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow whitespace-nowrap"
+                        >
+                            <SettingsIcon /> {t('editProperties')}
+                        </button>
+                        <button 
+                            onClick={() => setIsTransformModalOpen(true)}
+                            disabled={metricsSelection.size === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow whitespace-nowrap"
+                        >
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            {t('transform')}
+                        </button>
+                        <button 
+                            onClick={() => setIsDeleteConfirmOpen(true)}
+                            disabled={metricsSelection.size === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow whitespace-nowrap"
+                        >
+                            <TrashIcon /> {t('delete')}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <BulkPropertiesModal 
+                isOpen={isPropertiesModalOpen} 
+                onClose={() => setIsPropertiesModalOpen(false)} 
+                onSave={handleSaveMetrics}
+                count={metricsSelection.size}
+            />
+
+            <BulkTransformModal
+                isOpen={isTransformModalOpen}
+                onClose={() => setIsTransformModalOpen(false)}
+                onConfirm={handleBulkTransform}
+                count={metricsSelection.size}
+            />
+
+            <Modal
+                isOpen={isDeleteConfirmOpen}
+                onClose={() => setIsDeleteConfirmOpen(false)}
+                title={t('confirmDeleteSelectedTitle')}
+                titleClassName="text-red-600"
+                footer={
+                    <>
+                        <button onClick={() => setIsDeleteConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button>
+                        <button onClick={handleBulkDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg">{t('delete')}</button>
+                    </>
+                }
+            >
+                <p>{t('confirmDeleteSelectedMessage', { count: metricsSelection.size })}</p>
+            </Modal>
+        </div>
+    );
+};
+
+const BulkPropertiesModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (l: string, r: string, w: string) => void, count: number }> = ({ isOpen, onClose, onSave, count }) => {
+    const { t } = useLocale();
+    const [lsb, setLsb] = useState('');
+    const [rsb, setRsb] = useState('');
+
+    if (!isOpen) return null;
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={`${t('editProperties')} (${count})`} footer={
+            <>
+                <button onClick={onClose} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button>
+                <button onClick={() => onSave(lsb, rsb, '')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">{t('save')}</button>
+            </>
+        }>
+            <div className="space-y-4">
+                <p className="text-sm text-gray-500">Leave fields blank to keep existing values.</p>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">{t('leftSpace')} (LSB)</label>
+                        <input type="number" value={lsb} onChange={e => setLsb(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">{t('rightSpace')} (RSB)</label>
+                        <input type="number" value={rsb} onChange={e => setRsb(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                    </div>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+const BulkTransformModal: React.FC<{ isOpen: boolean, onClose: () => void, onConfirm: (sx: number, sy: number, r: number, fh: boolean, fv: boolean) => void, count: number }> = ({ isOpen, onClose, onConfirm, count }) => {
+    const { t } = useLocale();
+    const [scaleX, setScaleX] = useState('1.0');
+    const [scaleY, setScaleY] = useState('1.0');
+    const [rotation, setRotation] = useState('0');
+    const [flipH, setFlipH] = useState(false);
+    const [flipV, setFlipV] = useState(false);
+    const [lockAspect, setLockAspect] = useState(true);
+
+    const handleScaleXChange = (val: string) => {
+        setScaleX(val);
+        if (lockAspect) setScaleY(val);
+    };
+
+    const handleSubmit = () => {
+        onConfirm(parseFloat(scaleX) || 1, parseFloat(scaleY) || 1, parseFloat(rotation) || 0, flipH, flipV);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={t('transformGlyphsTitle', { count })} footer={
+            <>
+                <button onClick={onClose} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button>
+                <button onClick={handleSubmit} className="px-4 py-2 bg-green-600 text-white rounded-lg">{t('applyTransform')}</button>
+            </>
+        }>
+             <div className="space-y-6">
+                <p className="text-xs text-gray-500 italic">{t('transformOriginCenter')}</p>
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2 sm:col-span-1">
+                        <label className="block text-sm font-medium mb-1">{t('scaleX')}</label>
+                        <input type="number" step="0.1" value={scaleX} onChange={e => handleScaleXChange(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                    </div>
+                    <div className="col-span-2 sm:col-span-1">
+                        <label className="block text-sm font-medium mb-1">{t('scaleY')}</label>
+                        <input type="number" step="0.1" value={scaleY} onChange={e => setScaleY(e.target.value)} disabled={lockAspect} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50" />
+                    </div>
+                     <div className="col-span-2 flex items-center">
+                        <input type="checkbox" id="lockAspect" checked={lockAspect} onChange={e => setLockAspect(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" />
+                        <label htmlFor="lockAspect" className="ml-2 text-sm">Lock Aspect Ratio</label>
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium mb-1">{t('rotate')}</label>
+                    <input type="number" value={rotation} onChange={e => setRotation(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+
+                <div className="flex gap-6">
+                     <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={flipH} onChange={e => setFlipH(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" />
+                        <span>{t('flipHorizontal')}</span>
+                    </label>
+                     <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={flipV} onChange={e => setFlipV(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" />
+                        <span>{t('flipVertical')}</span>
+                    </label>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+export default BulkEditWorkspace;

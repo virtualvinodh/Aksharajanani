@@ -593,5 +593,20 @@
 	"templateChars": "Template Characters",
 	"subCons": "Sub. Cons",
 	"subConsAdd": "Sub. Cons Add.",
-    "bulkEdit": "Bulk Edit"
+    "bulkEdit": "Bulk Edit",
+    "transform": "Transform",
+    "rotate": "Rotate (deg)",
+    "scale": "Scale (x)",
+    "flip": "Flip",
+    "deleteSelected": "Delete Selected",
+    "confirmDeleteSelectedTitle": "Delete Selected Glyphs?",
+    "confirmDeleteSelectedMessage": "Are you sure you want to delete {count} selected glyph(s)? This action cannot be undone.",
+    "metricsSelection": "{count} selected",
+    "applyTransform": "Apply Transform",
+    "transformGlyphsTitle": "Transform {count} Glyphs",
+    "transformOriginCenter": "Origin: Center of each glyph",
+    "flipHorizontal": "Flip Horizontal",
+    "flipVertical": "Flip Vertical",
+    "scaleX": "Scale X",
+    "scaleY": "Scale Y"
 }

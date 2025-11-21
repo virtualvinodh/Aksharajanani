@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import DrawingModal from './components/DrawingModal';
@@ -18,7 +19,7 @@ import DrawingWorkspace from './components/DrawingWorkspace';
 import PositioningWorkspace from './components/PositioningWorkspace';
 import KerningWorkspace from './components/KerningWorkspace';
 import RulesWorkspace from './components/RulesWorkspace';
-import MetricsWorkspace from './components/MetricsWorkspace';
+import BulkEditWorkspace from './components/BulkEditWorkspace';
 import TestCasePage from './components/TestCasePage';
 import ExportAnimation from './components/ExportAnimation';
 import ImportGlyphsModal from './components/ImportGlyphsModal';
@@ -261,7 +262,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
               />
           )}
           {workspace === 'metrics' && settings.editorMode === 'advanced' && (
-              <MetricsWorkspace />
+              <BulkEditWorkspace />
           )}
         </div>
       </main>

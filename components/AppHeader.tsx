@@ -57,7 +57,7 @@ const WorkspaceTab: React.FC<{
 }> = React.memo(({ workspaceId, label, icon, showUnsavedIndicator = false, onWorkspaceChange, activeWorkspace, progress }) => {
     const isActive = activeWorkspace === workspaceId;
     const isComplete = progress.total > 0 ? progress.completed >= progress.total : true;
-    // Don't show completion for metrics, it's a utility
+    // Don't show completion for metrics/bulk, it's a utility
     const showCompletion = workspaceId !== 'metrics' && isComplete;
 
     return (
@@ -99,7 +99,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     const visibleTabCount = 1 + // Drawing
         (hasPositioning ? 1 : 0) +
         ((settings.editorMode === 'advanced' || script.kerning === 'true') && hasKerning ? 1 : 0) +
-        (settings.editorMode === 'advanced' ? 2 : 0); // Rules + Metrics
+        (settings.editorMode === 'advanced' ? 2 : 0); // Rules + Bulk
 
     let tabIndex = 1;
 
@@ -255,7 +255,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     {hasPositioning && <WorkspaceTab workspaceId="positioning" label={t('workspacePositioning')} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<PositioningIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={positioningProgress} />}
                     {(settings.editorMode === 'advanced' || script.kerning === 'true') && hasKerning && <WorkspaceTab workspaceId="kerning" label={kerningLabel} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<KerningIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={kerningProgress} />}
                     {settings.editorMode === 'advanced' && <WorkspaceTab workspaceId="rules" label={t('workspaceRules')} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<RulesIcon /></>} showUnsavedIndicator={hasUnsavedRules} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={rulesProgress} />}
-                    {settings.editorMode === 'advanced' && <WorkspaceTab workspaceId="metrics" label={t('metrics')} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<SettingsIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={{completed: 0, total: 0}} />}
+                    {settings.editorMode === 'advanced' && <WorkspaceTab workspaceId="metrics" label={t('bulkEdit')} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<SettingsIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={{completed: 0, total: 0}} />}
                 </nav>
             </div>
         </header>
