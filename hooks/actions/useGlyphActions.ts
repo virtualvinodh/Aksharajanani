@@ -15,7 +15,7 @@ declare var UnicodeProperties: any;
 
 export interface SaveOptions {
     isDraft?: boolean;  // If true, skip cascade updates (fast/autosave). If false, run cascade (commit).
-    silent?: boolean;   // If true, do not show success notifications.
+    silent?: boolean;   // If true, do not show success notifications (unless critical cascade).
 }
 
 export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number, Set<number>>>) => {
@@ -69,13 +69,10 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
         }
 
         // 4. COMMIT Logic (Navigation or Manual Save) - Run Cascade
-        // RELINKING LOGIC: If this is a relink operation (detected by lack of paths/bearings args usually, 
-        // but here we rely on the caller), we proceed. 
-        // NOTE: The caller actually passes new data.
         
         const dependents = dependencyMap.current.get(unicode);
         
-        // Also check for positioned pairs that might need updates (visual cascade)
+        // Check for positioned pairs that might need updates (visual cascade)
         let positionedPairCount = 0;
         markPositioningMap.forEach((_, key) => {
             const [baseUnicode, markUnicode] = key.split('-').map(Number);
@@ -86,28 +83,36 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
             }
         });
 
-        const hasDependents = (dependents && dependents.size > 0);
+        const totalDependents = (dependents ? dependents.size : 0) + positionedPairCount;
+        const hasCascade = totalDependents > 0;
 
-        if (hasDependents) {
-            if (!silent) {
-                layout.showNotification(t('updatingDependents', { count: dependents.size }), 'info');
-            }
+        if (hasCascade) {
+            // 1. Snapshot state before making changes for Undo
+            const glyphDataSnapshot = new Map(glyphDataMap.entries());
+            const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
+            const markPositioningSnapshot = new Map(markPositioningMap.entries());
+            
+            const undoChanges = () => {
+                glyphDataDispatch({ type: 'SET_MAP', payload: glyphDataSnapshot });
+                characterDispatch({ type: 'SET_CHARACTER_SETS', payload: characterSetsSnapshot });
+                positioningDispatch({ type: 'SET_MAP', payload: markPositioningSnapshot });
+                layout.showNotification(t('glyphUpdateReverted'), 'info');
+            };
 
+            // 2. Perform Cascade Update
             glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prevGlyphData) => {
                 const newGlyphDataMap = new Map(prevGlyphData);
                 // Ensure the source is updated in the map used for regeneration
                 newGlyphDataMap.set(unicode, newGlyphData);
         
-                dependents.forEach(depUnicode => {
+                dependents?.forEach(depUnicode => {
                     const dependentChar = allCharsByUnicode.get(depUnicode);
                     if (!dependentChar || !dependentChar.link) return;
         
                     const dependentGlyphData = newGlyphDataMap.get(depUnicode);
                     
-                    // If dependent isn't drawn yet, we can just regenerate it entirely if we want, 
-                    // or skip it. Usually better to regenerate if possible.
+                    // If dependent isn't drawn yet, attempt full regeneration
                     if (!dependentGlyphData || !isGlyphDrawn(dependentGlyphData)) {
-                         // Attempt full regeneration
                          const regenerated = generateCompositeGlyphData({ 
                             character: dependentChar, 
                             allCharsByName, 
@@ -140,11 +145,9 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
                         const groupIdToUpdate = `component-${index}`;
                         
                         // Find paths belonging to this specific component instance
-                        // We check for exact match or prefix (in case ids were modified)
                         const oldPathsOfComponent = tempPaths.filter(p => p.groupId === groupIdToUpdate || (p.groupId && p.groupId.startsWith(`${groupIdToUpdate}-`)));
                         
                         if (oldPathsOfComponent.length === 0) {
-                            // If we can't find the old paths to measure, we must regenerate.
                             pathsNeedRegeneration = true;
                             break; 
                         }
@@ -200,7 +203,6 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
                     }
             
                     if (pathsNeedRegeneration) {
-                        console.warn(`Could not calculate bbox for smart cascade on ${dependentChar.name}. Regenerating fully.`);
                         const regenerated = generateCompositeGlyphData({ 
                             character: dependentChar, 
                             allCharsByName, 
@@ -220,12 +222,18 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
                 
                 return newGlyphDataMap;
             }});
+
+            // 3. Notification: ALWAYS show if there was a cascade, even if silent=true (e.g. navigation)
+            // This is crucial so the user knows other glyphs were affected and can Undo.
+            layout.showNotification(
+                t('updatedDependents', { count: totalDependents }),
+                'success',
+                // { onUndo: undoChanges, duration: 7000 }
+            );
+            
         } else if (!silent) {
-             if (positionedPairCount > 0) {
-                 layout.showNotification(`${t('saveGlyphSuccess')} (Affected ${positionedPairCount} positioned pairs)`, 'success');
-             } else {
-                 layout.showNotification(t('saveGlyphSuccess'));
-             }
+            // No cascade, only show success if NOT silent
+            layout.showNotification(t('saveGlyphSuccess'));
         }
         
         if (onSuccess) onSuccess();
