@@ -8,7 +8,7 @@ import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { Character, GlyphData, Path, Point, CharacterSet } from '../../types';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
-import { generateCompositeGlyphData, getAccurateGlyphBBox } from '../../services/glyphRenderService';
+import { generateCompositeGlyphData, updateComponentInPaths } from '../../services/glyphRenderService';
 import { VEC } from '../../utils/vectorUtils';
 
 declare var UnicodeProperties: any;
@@ -140,66 +140,23 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
             
                     let pathsNeedRegeneration = false;
                     let tempPaths = dependentGlyphData.paths;
+                    const strokeThickness = settings?.strokeThickness ?? 1;
             
                     for (const index of indicesToUpdate) {
-                        const groupIdToUpdate = `component-${index}`;
-                        
-                        // Find paths belonging to this specific component instance
-                        const oldPathsOfComponent = tempPaths.filter(p => p.groupId === groupIdToUpdate || (p.groupId && p.groupId.startsWith(`${groupIdToUpdate}-`)));
-                        
-                        if (oldPathsOfComponent.length === 0) {
-                            pathsNeedRegeneration = true;
-                            break; 
-                        }
-                        
-                        const newPathsOfSourceComponent = newGlyphData.paths;
-                        const strokeThickness = settings?.strokeThickness ?? 1;
-                        
-                        const oldBbox = getAccurateGlyphBBox(oldPathsOfComponent, strokeThickness);
-                        const newSourceBbox = getAccurateGlyphBBox(newPathsOfSourceComponent, strokeThickness);
-            
-                        if (!oldBbox || !newSourceBbox || newSourceBbox.width === 0 || newSourceBbox.height === 0) {
+                        const updatedPaths = updateComponentInPaths(
+                            tempPaths,
+                            index,
+                            newGlyphData.paths,
+                            strokeThickness
+                        );
+
+                        if (!updatedPaths) {
+                            // If transformation fails (e.g. missing bounding boxes), flag for full regeneration
                             pathsNeedRegeneration = true;
                             break;
                         }
 
-                        // Calculate transformation (Scale and Translation)
-                        const scaleX = oldBbox.width / newSourceBbox.width;
-                        const scaleY = oldBbox.height / newSourceBbox.height;
-                        
-                        const newSourceCenter = { x: newSourceBbox.x + newSourceBbox.width / 2, y: newSourceBbox.y + newSourceBbox.height / 2 };
-                        const oldCenter = { x: oldBbox.x + oldBbox.width / 2, y: oldBbox.y + oldBbox.height / 2 };
-
-                        if (!isFinite(scaleX) || !isFinite(scaleY)) {
-                            pathsNeedRegeneration = true;
-                            break;
-                        }
-
-                        const transformPoint = (pt: Point): Point => {
-                            // 1. Center the point relative to source
-                            const vec = VEC.sub(pt, newSourceCenter);
-                            // 2. Scale
-                            const scaledVec = { x: vec.x * scaleX, y: vec.y * scaleY };
-                            // 3. Translate to old center
-                            return VEC.add(scaledVec, oldCenter);
-                        };
-                        
-                        const transformedNewPaths = newPathsOfSourceComponent.map((p: Path) => ({
-                            ...p,
-                            id: `${p.id}-c${index}-${Date.now()}`, // Ensure unique IDs
-                            groupId: groupIdToUpdate,
-                            points: p.points.map(transformPoint),
-                            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({
-                                ...seg,
-                                point: transformPoint(seg.point),
-                                handleIn: { x: seg.handleIn.x * scaleX, y: seg.handleIn.y * scaleY },
-                                handleOut: { x: seg.handleOut.x * scaleX, y: seg.handleOut.y * scaleY }
-                            }))) : undefined
-                        }));
-                        
-                        // Remove old paths for this component and append new ones
-                        const otherPaths = tempPaths.filter(p => p.groupId !== groupIdToUpdate && (!p.groupId || !p.groupId.startsWith(`${groupIdToUpdate}-`)));
-                        tempPaths = [...otherPaths, ...transformedNewPaths];
+                        tempPaths = updatedPaths;
                     }
             
                     if (pathsNeedRegeneration) {
