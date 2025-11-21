@@ -186,6 +186,11 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       setPreviewTransform(null);
   };
 
+  // Reset transform preview when selection changes
+  useEffect(() => {
+      setPreviewTransform(null);
+  }, [selectedPathIds]);
+
   // --- Hook: Shortcuts ---
   useDrawingShortcuts({
       onUndo: undo, onRedo: redo, onCopy: handleCopy, onCut: handleCut, onPaste: handlePaste,

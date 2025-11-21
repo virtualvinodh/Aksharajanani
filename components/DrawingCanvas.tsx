@@ -364,9 +364,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
                 const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
                 
-                // 3. Scale
-                px = rx * previewTransform.scale;
-                py = ry * previewTransform.scale;
+                // 3. Scale & Flip
+                const sx = (previewTransform.flipX ? -1 : 1) * previewTransform.scale;
+                const sy = (previewTransform.flipY ? -1 : 1) * previewTransform.scale;
+                
+                px = rx * sx;
+                py = ry * sy;
                 
                 // 4. Translate back
                 return { x: px + center.x, y: py + center.y };
@@ -375,13 +378,31 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             // Clone and transform
             const newP = { ...p, points: p.points.map(transformPoint) };
             if (p.segmentGroups) {
-                newP.segmentGroups = p.segmentGroups.map(g => g.map(s => ({
-                    ...s,
-                    point: transformPoint(s.point),
-                    // Handle vectors need rotation and scaling but not translation
-                    handleIn: VEC.scale(VEC.rotate(s.handleIn, angleRad), previewTransform.scale),
-                    handleOut: VEC.scale(VEC.rotate(s.handleOut, angleRad), previewTransform.scale)
-                })));
+                newP.segmentGroups = p.segmentGroups.map(g => g.map(s => {
+                    // For handles, we rotate and scale them.
+                    // When flipping, handles need to be mirrored properly.
+                    // If we flip X (horizontal flip), vectors (dx, dy) become (-dx, dy).
+                    // However, transformPoint effectively multiplies x by sx.
+                    // If sx is negative, x is inverted.
+                    
+                    const sx = (previewTransform.flipX ? -1 : 1) * previewTransform.scale;
+                    const sy = (previewTransform.flipY ? -1 : 1) * previewTransform.scale;
+
+                    // 1. Rotate handle vector
+                    const hInRot = VEC.rotate(s.handleIn, angleRad);
+                    const hOutRot = VEC.rotate(s.handleOut, angleRad);
+                    
+                    // 2. Scale & Flip handle vector
+                    const hInTransformed = { x: hInRot.x * sx, y: hInRot.y * sy };
+                    const hOutTransformed = { x: hOutRot.x * sx, y: hOutRot.y * sy };
+
+                    return {
+                        ...s,
+                        point: transformPoint(s.point),
+                        handleIn: hInTransformed,
+                        handleOut: hOutTransformed
+                    };
+                }));
             }
             return newP;
         });

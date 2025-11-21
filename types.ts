@@ -1,4 +1,5 @@
 
+
 export interface Point {
   x: number;
   y: number;
@@ -36,6 +37,8 @@ export interface ImageTransform {
 export interface TransformState {
   rotate: number; // degrees
   scale: number;  // multiplier
+  flipX?: boolean;
+  flipY?: boolean;
 }
 
 export interface Character {
