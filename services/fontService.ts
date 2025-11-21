@@ -4,11 +4,13 @@
 
 
 
+
+
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Path, KerningMap, MarkPositioningMap, PositioningRules, MarkAttachmentRules, Segment } from '../types';
 import { compileFeaturesAndPatch } from './pythonFontService';
 import { generateFea } from './feaService';
 import { VEC } from '../utils/vectorUtils';
-import { curveToPolyline, quadraticCurveToPolyline, getAccurateGlyphBBox, calculateDefaultMarkOffset, BoundingBox } from './glyphRenderService';
+import { curveToPolyline, quadraticCurveToPolyline, getAccurateGlyphBBox, calculateDefaultMarkOffset, BoundingBox, getStrokeOutlinePoints } from './glyphRenderService';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
 
@@ -148,6 +150,7 @@ const createFont = (
 
       const finalOtPath = new opentype.Path();
       const scaledThickness = settings.strokeThickness * scale;
+      const contrast = settings.contrast !== undefined ? settings.contrast : 1.0;
 
       if (drawn) {
           // Clear the project before processing a new glyph to prevent state leakage.
@@ -224,83 +227,90 @@ const createFont = (
                 x: p.x * scale,
                 y: ((DRAWING_CANVAS_SIZE - p.y) * scale) + metrics.descender
             }));
-            
-            let polylineToOutline: Point[];
 
-            if (strokePath.type === 'pen' || strokePath.type === 'calligraphy') {
-                 polylineToOutline = curveToPolyline(transformedStroke);
-            } else if (strokePath.type === 'curve') {
-                 polylineToOutline = quadraticCurveToPolyline(transformedStroke);
-            } else {
-                 polylineToOutline = transformedStroke;
-            }
-
-            if (polylineToOutline.length < 2) return;
-
-            // --- Robustness: Sanitize polyline to remove duplicate points ---
-            const sanitizedPolyline: Point[] = [polylineToOutline[0]];
-            for (let i = 1; i < polylineToOutline.length; i++) {
-                if (VEC.len(VEC.sub(polylineToOutline[i], sanitizedPolyline[sanitizedPolyline.length - 1])) > 1e-4) {
-                    sanitizedPolyline.push(polylineToOutline[i]);
-                }
-            }
-            if (sanitizedPolyline.length < 2) return;
-
-            const outline1: Point[] = [];
-            const outline2: Point[] = [];
-
-            for (let i = 0; i < sanitizedPolyline.length; i++) {
-                const p_curr = sanitizedPolyline[i];
-                const p_prev = sanitizedPolyline[i - 1];
-                const p_next = sanitizedPolyline[i + 1];
+            // If contrast < 1.0 or calligraphy, use outline expansion
+            if (strokePath.type === 'calligraphy' || (contrast < 1.0 && ['pen', 'line', 'curve', 'circle', 'ellipse'].includes(strokePath.type))) {
+                const angle = strokePath.type === 'calligraphy' ? strokePath.angle : undefined;
+                // Calligraphy uses its own implicit high contrast if not specified, but generally depends on dot product.
+                // getStrokeOutlinePoints handles this logic.
                 
-                let normal: Point;
-                let dir: Point;
-                if (!p_prev) { // Start point
-                    dir = VEC.normalize(VEC.sub(p_next, p_curr));
-                    normal = VEC.perp(dir);
-                } else if (!p_next) { // End point
-                    dir = VEC.normalize(VEC.sub(p_curr, p_prev));
-                    normal = VEC.perp(dir);
-                } else { // Miter join
-                    const dir1 = VEC.normalize(VEC.sub(p_curr, p_prev));
-                    const n1 = VEC.perp(dir1);
-                    const dir2 = VEC.normalize(VEC.sub(p_next, p_curr));
-                    const n2 = VEC.perp(dir2);
-                    
-                    // The direction for thickness calculation should be the outgoing direction of the stroke.
-                    dir = dir2;
+                // Note: getStrokeOutlinePoints returns points. We need to convert them to Paper.js path.
+                const { outline1, outline2 } = getStrokeOutlinePoints(transformedStroke, scaledThickness, contrast, angle);
+                
+                if (outline1.length > 0) {
+                     const outlinePoints = [...outline1, ...outline2.reverse()];
+                     const paperStrokePath = new paperScope.Path({
+                         segments: outlinePoints.map(p => [p.x, p.y]),
+                         closed: true,
+                     });
+                     paperPaths.push(paperStrokePath);
+                }
+            } else {
+                // Standard Monoline Expansion (Polyline to Outline)
+                // This is the fallback logic for contrast = 1.0
+                let polylineToOutline: Point[];
+                if (strokePath.type === 'curve') {
+                     polylineToOutline = quadraticCurveToPolyline(transformedStroke);
+                } else if (strokePath.type === 'pen') {
+                     polylineToOutline = curveToPolyline(transformedStroke);
+                } else {
+                     polylineToOutline = transformedStroke;
+                }
 
-                    // The normal for the miter join is calculated from the bisector of the individual normals.
-                    let miterVec = VEC.normalize(VEC.add(n1, n2));
-                    const dotProduct = VEC.dot(miterVec, n1);
-                    if (Math.abs(dotProduct) < 1e-6) {
-                        normal = n1;
-                    } else {
-                        let miterLen = 1 / dotProduct;
-                        if (miterLen > 5) miterLen = 5; // Miter limit
-                        normal = VEC.scale(miterVec, miterLen);
+                if (polylineToOutline.length < 2) return;
+
+                // --- Robustness: Sanitize polyline to remove duplicate points ---
+                const sanitizedPolyline: Point[] = [polylineToOutline[0]];
+                for (let i = 1; i < polylineToOutline.length; i++) {
+                    if (VEC.len(VEC.sub(polylineToOutline[i], sanitizedPolyline[sanitizedPolyline.length - 1])) > 1e-4) {
+                        sanitizedPolyline.push(polylineToOutline[i]);
                     }
                 }
+                if (sanitizedPolyline.length < 2) return;
 
-                let thicknessAtPoint = scaledThickness;
-                if (strokePath.type === 'calligraphy') {
-                    const angleRad = (strokePath.angle || 45) * Math.PI / 180;
-                    const perpToNib = { x: -Math.sin(angleRad), y: Math.cos(angleRad) };
-                    thicknessAtPoint = scaledThickness * Math.abs(VEC.dot(dir, perpToNib));
+                const outline1: Point[] = [];
+                const outline2: Point[] = [];
+
+                for (let i = 0; i < sanitizedPolyline.length; i++) {
+                    const p_curr = sanitizedPolyline[i];
+                    const p_prev = sanitizedPolyline[i - 1];
+                    const p_next = sanitizedPolyline[i + 1];
+                    
+                    let normal: Point;
+                    if (!p_prev) { // Start point
+                        const dir = VEC.normalize(VEC.sub(p_next, p_curr));
+                        normal = VEC.perp(dir);
+                    } else if (!p_next) { // End point
+                        const dir = VEC.normalize(VEC.sub(p_curr, p_prev));
+                        normal = VEC.perp(dir);
+                    } else { // Miter join
+                        const dir1 = VEC.normalize(VEC.sub(p_curr, p_prev));
+                        const n1 = VEC.perp(dir1);
+                        const dir2 = VEC.normalize(VEC.sub(p_next, p_curr));
+                        const n2 = VEC.perp(dir2);
+                        let miterVec = VEC.normalize(VEC.add(n1, n2));
+                        const dotProduct = VEC.dot(miterVec, n1);
+                        if (Math.abs(dotProduct) < 1e-6) {
+                            normal = n1;
+                        } else {
+                            let miterLen = 1 / dotProduct;
+                            if (miterLen > 5) miterLen = 5; // Miter limit
+                            normal = VEC.scale(miterVec, miterLen);
+                        }
+                    }
+                    
+                    outline1.push(VEC.add(p_curr, VEC.scale(normal, scaledThickness / 2)));
+                    outline2.push(VEC.add(p_curr, VEC.scale(normal, -scaledThickness / 2)));
                 }
-                
-                outline1.push(VEC.add(p_curr, VEC.scale(normal, thicknessAtPoint / 2)));
-                outline2.push(VEC.add(p_curr, VEC.scale(normal, -thicknessAtPoint / 2)));
-            }
 
-            if (outline1.length > 0) {
-                 const outlinePoints = [...outline1, ...outline2.reverse()];
-                 const paperStrokePath = new paperScope.Path({
-                     segments: outlinePoints.map(p => [p.x, p.y]),
-                     closed: true,
-                 });
-                 paperPaths.push(paperStrokePath);
+                if (outline1.length > 0) {
+                     const outlinePoints = [...outline1, ...outline2.reverse()];
+                     const paperStrokePath = new paperScope.Path({
+                         segments: outlinePoints.map(p => [p.x, p.y]),
+                         closed: true,
+                     });
+                     paperPaths.push(paperStrokePath);
+                }
             }
           });
 
@@ -512,6 +522,66 @@ export const exportToOtf = async (
             }
             return polyline;
         };`;
+        
+        // Need to inline the outline expansion logic for the worker
+        const getStrokeOutlinePointsForWorker = `
+        const getStrokeOutlinePoints = (points, thickness, contrast = 1.0, angle) => {
+             const polyline = curveToPolyline(points, 15);
+             if (polyline.length < 2) return { outline1: [], outline2: [] };
+             
+             const outline1 = [];
+             const outline2 = [];
+             
+             const nibAngleRad = angle !== undefined ? (angle * Math.PI / 180) : (90 * Math.PI / 180);
+             const perpToNib = { x: -Math.sin(nibAngleRad), y: Math.cos(nibAngleRad) }; 
+             
+             for (let i = 0; i < polyline.length; i++) {
+                const p_curr = polyline[i];
+                const p_prev = polyline[i - 1];
+                const p_next = polyline[i + 1];
+                let normal;
+                let dir;
+
+                if (!p_prev) {
+                  dir = VEC.normalize(VEC.sub(p_next, p_curr));
+                  normal = VEC.perp(dir);
+                } else if (!p_next) {
+                  dir = VEC.normalize(VEC.sub(p_curr, p_prev));
+                  normal = VEC.perp(dir);
+                } else {
+                  const dir1 = VEC.normalize(VEC.sub(p_curr, p_prev));
+                  const n1 = VEC.perp(dir1);
+                  const dir2 = VEC.normalize(VEC.sub(p_next, p_curr));
+                  const n2 = VEC.perp(dir2);
+                  let miterVec = VEC.normalize(VEC.add(n1, n2));
+                  const dotProduct = VEC.dot(miterVec, n1);
+                  if (Math.abs(dotProduct) < 1e-6) {
+                    normal = n1;
+                  } else {
+                    let miterLen = 1 / dotProduct;
+                    if (miterLen > 5) { miterLen = 5; } 
+                    normal = VEC.scale(miterVec, miterLen);
+                  }
+                  dir = VEC.normalize(VEC.add(dir1, dir2));
+                }
+
+                let thicknessAtPoint = thickness;
+                
+                if (angle !== undefined) {
+                     thicknessAtPoint = thickness * Math.max(0.1, Math.abs(VEC.dot(dir, perpToNib))); 
+                } else if (contrast < 1.0) {
+                    const unitNormal = VEC.normalize(normal);
+                    const verticalFactor = Math.abs(unitNormal.x); 
+                    const minThickness = thickness * contrast;
+                    thicknessAtPoint = minThickness + (thickness - minThickness) * verticalFactor;
+                }
+                
+                outline1.push(VEC.add(p_curr, VEC.scale(normal, thicknessAtPoint / 2)));
+                outline2.push(VEC.add(p_curr, VEC.scale(normal, -thicknessAtPoint / 2)));
+             }
+             return { outline1, outline2 };
+        };
+        `;
 
         const getAccurateGlyphBBoxForWorker = `const getAccurateGlyphBBox = (paths, strokeThickness) => {
             paperScope.project.clear(); // Use the worker-global scope and clear it.
@@ -625,6 +695,7 @@ export const exportToOtf = async (
             ${VEC_DEFINITION_STRING_FOR_WORKER}
             ${quadraticCurveToPolylineForWorker}
             ${curveToPolylineForWorker}
+            ${getStrokeOutlinePointsForWorker}
             ${getAccurateGlyphBBoxForWorker}
             ${isGlyphDrawnForWorker}
             ${getGlyphExportNameByUnicodeForWorker}

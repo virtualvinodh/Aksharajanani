@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Character } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -93,6 +94,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, onSelect }) =>
     ctx.scale(scale, scale);
     renderPaths(ctx, glyphData!.paths, {
         strokeThickness: settings.strokeThickness,
+        contrast: settings.contrast,
         color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
     });
     ctx.restore();

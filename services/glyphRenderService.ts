@@ -1,4 +1,5 @@
 
+
 // FIX: Added AppSettings to types import and added new imports for isGlyphDrawn and DRAWING_CANVAS_SIZE
 import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings } from '../types';
 import { VEC } from '../utils/vectorUtils';
@@ -16,6 +17,7 @@ export interface RenderOptions {
     strokeThickness: number;
     color: string;
     lineDash?: number[];
+    contrast?: number; // Optional contrast for variable width rendering
 }
 
 export interface BoundingBox {
@@ -84,7 +86,106 @@ export const curveToPolyline = (points: Point[], density = 15): Point[] => {
         polyline.push(quadraticPoint(j / density, p0, p1, p2));
     }
     return polyline;
+};
+
+/**
+ * Helper function to generate outline points for a path based on thickness and contrast.
+ * This simulates a nib with a vertical axis (90 degrees) or a custom angle.
+ */
+export const getStrokeOutlinePoints = (points: Point[], thickness: number, contrast: number = 1.0, angle?: number): { outline1: Point[], outline2: Point[] } => {
+     const polyline = curveToPolyline(points, 15);
+     if (polyline.length < 2) return { outline1: [], outline2: [] };
+     
+     const outline1: Point[] = [];
+     const outline2: Point[] = [];
+     
+     // If angle is provided (Calligraphy tool), use it. Otherwise assume vertical axis (90 deg).
+     // For vertical axis, the nib is wide horizontally (0 deg) and thin vertically.
+     // Wait, no. A vertical nib (like holding a marker straight up) draws thick verticals and thin horizontals.
+     // That means the "wide" part of the nib is horizontal.
+     // So the perp vector to the nib is Vertical.
+     
+     const nibAngleRad = angle !== undefined ? (angle * Math.PI / 180) : (90 * Math.PI / 180);
+     const perpToNib = { x: -Math.sin(nibAngleRad), y: Math.cos(nibAngleRad) }; // Normal to nib direction
+     // For 90 deg (Vertical line nib), perp is (-1, 0) -> Horizontal.
+     // Moving Vertically (dir = 0, 1). Dot(dir, perp) = 0. Minimum thickness?
+     // Wait. If I hold a flat pen horizontally (-), moving up/down makes a thin line. Moving left/right makes a thick line.
+     // If I hold a flat pen vertically (|), moving up/down makes a thick line. Moving left/right makes a thin line.
+     // Standard contrast (Times New Roman): Vertical strokes are thick. Horizontal are thin.
+     // This implies the "pen" is effectively a horizontal flat shape that we drag.
+     // Or rather, we calculate thickness based on projection onto the X-axis.
+     
+     // Let's use the expansion formula directly without "nib" analogy to avoid confusion.
+     // Thick verticals -> thickness depends on x-component of normal vector.
+     // Thin horizontals -> thickness depends on y-component of normal vector.
+     
+     for (let i = 0; i < polyline.length; i++) {
+        const p_curr = polyline[i];
+        const p_prev = polyline[i - 1];
+        const p_next = polyline[i + 1];
+        let normal: Point;
+        let dir: Point;
+
+        if (!p_prev) {
+          dir = VEC.normalize(VEC.sub(p_next, p_curr));
+          normal = VEC.perp(dir);
+        } else if (!p_next) {
+          dir = VEC.normalize(VEC.sub(p_curr, p_prev));
+          normal = VEC.perp(dir);
+        } else {
+          const dir1 = VEC.normalize(VEC.sub(p_curr, p_prev));
+          const n1 = VEC.perp(dir1);
+          const dir2 = VEC.normalize(VEC.sub(p_next, p_curr));
+          const n2 = VEC.perp(dir2);
+          
+          // Miter join logic
+          let miterVec = VEC.normalize(VEC.add(n1, n2));
+          const dotProduct = VEC.dot(miterVec, n1);
+          if (Math.abs(dotProduct) < 1e-6) {
+            normal = n1;
+          } else {
+            let miterLen = 1 / dotProduct;
+            if (miterLen > 5) { miterLen = 5; } // Miter limit
+            normal = VEC.scale(miterVec, miterLen);
+          }
+          // Use average direction for thickness calculation
+          dir = VEC.normalize(VEC.add(dir1, dir2));
+        }
+
+        let thicknessAtPoint = thickness;
+        
+        if (angle !== undefined) {
+            // Explicit Calligraphy Tool (fixed angle nib)
+            // Existing logic: dot product with nib normal.
+            // If stroke moves parallel to nib angle -> thin. Perpendicular -> thick.
+             thicknessAtPoint = thickness * Math.max(0.1, Math.abs(VEC.dot(dir, perpToNib))); 
+             // Ensure it doesn't disappear completely
+        } else if (contrast < 1.0) {
+            // Global Contrast Mode (Vertical Axis Stress)
+            // Vertical lines (dir y dominated, normal x dominated) -> Thick
+            // Horizontal lines (dir x dominated, normal y dominated) -> Thin
+            // Normal vector (nx, ny). Vertical line has normal (~1, 0). Horizontal has normal (0, ~1).
+            // We want thickness to be max when normal.x is 1.
+            // We want thickness to be min when normal.y is 1.
+            
+            // Let's use the unit normal for thickness calculation to avoid miter scaling artifacts affecting ratio
+            const unitNormal = VEC.normalize(normal);
+            
+            // Interpolation factor based on horizontal-ness of the normal (which means vertical-ness of the stroke)
+            const verticalFactor = Math.abs(unitNormal.x); 
+            
+            // Thickness = Min + (Max - Min) * verticalFactor
+            const minThickness = thickness * contrast;
+            thicknessAtPoint = minThickness + (thickness - minThickness) * verticalFactor;
+        }
+        
+        outline1.push(VEC.add(p_curr, VEC.scale(normal, thicknessAtPoint / 2)));
+        outline2.push(VEC.add(p_curr, VEC.scale(normal, -thicknessAtPoint / 2)));
+     }
+     
+     return { outline1, outline2 };
 }
+
 
 /**
  * Calculates a precise bounding box for a set of paths by flattening curves and accounting for stroke thickness.
@@ -387,58 +488,24 @@ export const renderPaths = (ctx: CanvasRenderingContext2D, paths: Path[], option
       return;
     }
 
-    if (path.type === 'calligraphy') {
-      const polyline = curveToPolyline(stroke, 15);
-      if (polyline.length < 2) return;
-      const angleRad = (path.angle || 45) * Math.PI / 180;
-      const perpToNib = { x: -Math.sin(angleRad), y: Math.cos(angleRad) };
-      const outline1: Point[] = [];
-      const outline2: Point[] = [];
+    // Handle Calligraphy (Specific Tool) or Global Contrast (General Setting)
+    if (path.type === 'calligraphy' || (options.contrast !== undefined && options.contrast < 1.0 && ['pen', 'line', 'curve', 'circle', 'ellipse'].includes(path.type))) {
+        const angle = path.type === 'calligraphy' ? path.angle : undefined; // Calligraphy tool uses specific angle
+        const contrast = path.type === 'calligraphy' ? 0.2 : (options.contrast || 1.0); // Specific Calligraphy tool has high contrast by default
+        
+        // Calculate outline points
+        const { outline1, outline2 } = getStrokeOutlinePoints(stroke, options.strokeThickness, contrast, angle);
 
-      for (let i = 0; i < polyline.length; i++) {
-        const p_curr = polyline[i];
-        const p_prev = polyline[i - 1];
-        const p_next = polyline[i + 1];
-        let normal: Point;
-        let dir: Point;
-
-        if (!p_prev) {
-          dir = VEC.normalize(VEC.sub(p_next, p_curr));
-          normal = VEC.perp(dir);
-        } else if (!p_next) {
-          dir = VEC.normalize(VEC.sub(p_curr, p_prev));
-          normal = VEC.perp(dir);
-        } else {
-          const dir1 = VEC.normalize(VEC.sub(p_curr, p_prev));
-          const n1 = VEC.perp(dir1);
-          const dir2 = VEC.normalize(VEC.sub(p_next, p_curr));
-          const n2 = VEC.perp(dir2);
-          dir = VEC.normalize(VEC.add(dir1, dir2));
-          let miterVec = VEC.normalize(VEC.add(n1, n2));
-          const dotProduct = VEC.dot(miterVec, n1);
-          if (Math.abs(dotProduct) < 1e-6) {
-            normal = n1;
-          } else {
-            let miterLen = 1 / dotProduct;
-            if (miterLen > 5) { miterLen = 5; } // Miter limit
-            normal = VEC.scale(miterVec, miterLen);
-          }
+        if (outline1.length > 0) {
+            ctx.beginPath();
+            ctx.moveTo(outline1[0].x, outline1[0].y);
+            for (let i = 1; i < outline1.length; i++) ctx.lineTo(outline1[i].x, outline1[i].y);
+            ctx.lineTo(outline2[outline2.length - 1].x, outline2[outline2.length - 1].y);
+            for (let i = outline2.length - 2; i >= 0; i--) ctx.lineTo(outline2[i].x, outline2[i].y);
+            ctx.closePath();
+            ctx.fill();
         }
-        const thicknessAtPoint = options.strokeThickness * Math.abs(VEC.dot(dir, perpToNib));
-        outline1.push(VEC.add(p_curr, VEC.scale(normal, thicknessAtPoint / 2)));
-        outline2.push(VEC.add(p_curr, VEC.scale(normal, -thicknessAtPoint / 2)));
-      }
-
-      if (outline1.length > 0) {
-        ctx.beginPath();
-        ctx.moveTo(outline1[0].x, outline1[0].y);
-        for (let i = 1; i < outline1.length; i++) ctx.lineTo(outline1[i].x, outline1[i].y);
-        ctx.lineTo(outline2[outline2.length - 1].x, outline2[outline2.length - 1].y);
-        for (let i = outline2.length - 2; i >= 0; i--) ctx.lineTo(outline2[i].x, outline2[i].y);
-        ctx.closePath();
-        ctx.fill();
-      }
-      return;
+        return;
     }
 
     if (stroke.length < 2) return;

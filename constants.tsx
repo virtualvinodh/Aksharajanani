@@ -19,6 +19,10 @@ export const TOOL_RANGES = {
   pathSimplification: {
     min: 0,
     max: 10
+  },
+  contrast: {
+    min: 0.1,
+    max: 1.0
   }
 };
 

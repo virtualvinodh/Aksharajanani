@@ -101,6 +101,7 @@ export type CharacterDefinition = CharacterSet | { recommendedKerning: Recommend
 
 export interface AppSettings {
   strokeThickness: number;
+  contrast: number;
   pathSimplification: number;
   fontName: string;
   showGridOutlines: boolean;
@@ -163,6 +164,7 @@ export interface BoundingBox {
 export interface ScriptDefaults {
     fontName: string;
     strokeThickness: number;
+    contrast?: number;
     pathSimplification: number;
     showGridOutlines: boolean;
     isAutosaveEnabled: boolean;
@@ -182,6 +184,7 @@ export interface SliderRange extends Range {
 export interface ToolRanges {
     strokeThickness: Range;
     pathSimplification: Range;
+    contrast: Range;
 }
 
 export interface TestPageConfig {

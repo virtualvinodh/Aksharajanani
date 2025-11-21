@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { BackIcon } from '../../constants';
@@ -22,7 +24,7 @@ const DEFAULT_METRICS: FontMetrics = {
 };
 
 const DEFAULT_DEFAULTS: ScriptDefaults = {
-    fontName: "NewFont", strokeThickness: 15, pathSimplification: 0.5,
+    fontName: "NewFont", strokeThickness: 15, contrast: 1.0, pathSimplification: 0.5,
     showGridOutlines: false, isAutosaveEnabled: true, editorMode: 'simple',
     isPrefillEnabled: true
 };
@@ -153,7 +155,7 @@ const ScriptCreator: React.FC<ScriptCreatorProps> = ({ availableScripts, onBack,
             setScriptName(`${t(script.nameKey)} ${t('scriptNameCustomSuffix')}`);
             setScriptId(`${script.id}_custom`);
             setMetrics(script.metrics);
-            setDefaults(script.defaults);
+            setDefaults({ ...script.defaults, contrast: 1.0 }); // Default contrast
             setCharacterSets(loadedCharacterSets);
             
             const finalRules = { ...rulesData };
@@ -258,9 +260,6 @@ const ScriptCreator: React.FC<ScriptCreatorProps> = ({ availableScripts, onBack,
                 allCharsByName={allCharsByName} 
                 scriptTag={scriptTag} 
                 allCharacterSets={characterSets}
-                // FIX: Pass missing glyphDataMap and strokeThickness props to RulesPane.
-                // In the script creator, there's no existing glyph data, so an empty map is appropriate.
-                // Stroke thickness is sourced from the 'defaults' state.
                 glyphDataMap={new Map<number, GlyphData>()}
                 strokeThickness={defaults.strokeThickness}
                 />;

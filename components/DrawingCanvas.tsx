@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -127,6 +128,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         const controlRadius = isFocused ? controlRadiusBase * 1.2 : controlRadiusBase;
         
         if (points.length >= 2) {
+            // Draw skeleton line for editing even if calligraphy
             ctx.strokeStyle = `rgba(107, 114, 128, ${lineAlpha})`;
             ctx.lineWidth = 1.5 / zoom;
             ctx.beginPath();
@@ -419,19 +421,19 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     });
 
     // Render in layers: normal -> selected -> hovered
-    renderPaths(ctx, normalPaths, { strokeThickness: settings.strokeThickness, color: mainColor });
+    renderPaths(ctx, normalPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: mainColor });
     if (selectedNotHoveredPaths.length > 0) {
-        renderPaths(ctx, selectedNotHoveredPaths, { strokeThickness: settings.strokeThickness, color: highlightColor });
+        renderPaths(ctx, selectedNotHoveredPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: highlightColor });
     }
     if (hoveredPaths.length > 0) {
-        renderPaths(ctx, hoveredPaths, { strokeThickness: settings.strokeThickness, color: highlightColor });
+        renderPaths(ctx, hoveredPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: highlightColor });
     }
     
     if (tool === 'edit') {
       drawControlPoints(ctx, pathsToRender, focusedPathId, selectedPointInfo);
     }
 
-    if (previewPath) renderPaths(ctx, [previewPath], { color: theme === 'dark' ? '#6366F1' : '#818CF8', strokeThickness: settings.strokeThickness, lineDash: [5, 5] });
+    if (previewPath) renderPaths(ctx, [previewPath], { color: theme === 'dark' ? '#6366F1' : '#818CF8', strokeThickness: settings.strokeThickness, contrast: settings.contrast, lineDash: [5, 5] });
     
     if (tool === 'select') drawSelectionUI(ctx);
 
