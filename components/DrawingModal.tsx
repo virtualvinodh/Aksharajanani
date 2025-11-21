@@ -162,7 +162,13 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   };
 
   const handleConfirmUnlock = () => { onUnlockGlyph(character.unicode!); setIsUnlockConfirmOpen(false); showNotification(t('glyphUnlockedSuccess'), 'success'); };
-  const handleConfirmRelink = () => { onRelinkGlyph(character.unicode!); setIsRelinkConfirmOpen(false); showNotification(t('glyphRelinkedSuccess'), 'success'); };
+  
+  const handleConfirmRelink = () => { 
+    onRelinkGlyph(character.unicode!); 
+    handleRefresh();
+    setIsRelinkConfirmOpen(false); 
+    showNotification(t('glyphRelinkedSuccess'), 'success'); 
+  };
 
   // Setup tool and reset view on init (since we remount on char change now, this is safe)
   useEffect(() => {

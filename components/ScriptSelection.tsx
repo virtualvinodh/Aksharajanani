@@ -498,7 +498,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                         </span>
                     </div>
                     <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-wide mb-2">{t('appTitle')}</h1>
-                    <p className="text-xl sm:text-2xl text-gray-700 dark:text-gray-300 mt-4 max-w-2xl mx-auto">{t('scriptSelectionSubtitle')}</p>
+                    <p  style={{ fontFamily: 'Purnavarman_1' }} className="text-xxl sm:text-2xl text-gray-700 dark:text-gray-300 mt-4 max-w-2xl mx-auto">ꦄꦏꦴꦫꦺꦴ ꦩꦸꦑꦃ ꦱꦫ꧀ꦮꦣꦫ꧀ꦩꦴꦟꦴꦩ꧀ </p>
                 </div>
                 
                 {(isLoadingProjects || recentProjects.length > 0) && (

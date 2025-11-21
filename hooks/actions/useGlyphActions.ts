@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback } from 'react';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -70,6 +69,10 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
         }
 
         // 4. COMMIT Logic (Navigation or Manual Save) - Run Cascade
+        // RELINKING LOGIC: If this is a relink operation (detected by lack of paths/bearings args usually, 
+        // but here we rely on the caller), we proceed. 
+        // NOTE: The caller actually passes new data.
+        
         const dependents = dependencyMap.current.get(unicode);
         
         // Also check for positioned pairs that might need updates (visual cascade)
@@ -218,7 +221,11 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
                 return newGlyphDataMap;
             }});
         } else if (!silent) {
-             layout.showNotification(t('saveGlyphSuccess'));
+             if (positionedPairCount > 0) {
+                 layout.showNotification(`${t('saveGlyphSuccess')} (Affected ${positionedPairCount} positioned pairs)`, 'success');
+             } else {
+                 layout.showNotification(t('saveGlyphSuccess'));
+             }
         }
         
         if (onSuccess) onSuccess();
@@ -313,7 +320,27 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
         }
 
         characterDispatch({ type: 'RELINK_GLYPH', payload: { unicode } });
-        glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
+        
+        // Regenerate the composite data from the components
+        if (relinkedChar.link && settings && metrics && characterSets) {
+            const compositeData = generateCompositeGlyphData({
+                character: relinkedChar,
+                allCharsByName,
+                allGlyphData: glyphDataMap,
+                settings,
+                metrics,
+                markAttachmentRules,
+                allCharacterSets: characterSets
+            });
+            
+            if (compositeData) {
+                glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev) => new Map(prev).set(unicode, compositeData) });
+            } else {
+                glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
+            }
+        } else {
+            glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
+        }
 
         if (relinkedChar.link) {
             relinkedChar.link.forEach(compName => {
@@ -326,7 +353,7 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
                 }
             });
         }
-    }, [characterDispatch, glyphDataDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout]);
+    }, [characterDispatch, glyphDataDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap]);
 
     const handleImportGlyphs = useCallback((glyphsToImport: [number, GlyphData][]) => {
         if (!glyphsToImport || glyphsToImport.length === 0) return;
