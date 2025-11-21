@@ -57,7 +57,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, onSettingsC
                 type="range"
                 min={toolRanges.contrast.min}
                 max={toolRanges.contrast.max}
-                step="0.05"
+                step="0.01"
                 value={settings.contrast !== undefined ? settings.contrast : 1.0}
                 onChange={handleSettingChange('contrast', true)}
                 className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
