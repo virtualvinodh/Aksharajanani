@@ -655,81 +655,59 @@ export const generateCompositeGlyphData = ({
     return { paths: accumulatedPaths };
 };
 
-/**
- * Updates a specific component within a set of paths, applying geometric transformations
- * to fit the new component shape into the existing composite layout.
- *
- * @param currentPaths The full path array of the composite glyph.
- * @param componentIndex The index of the component to update.
- * @param newSourcePaths The updated paths of the source component.
- * @param strokeThickness The stroke thickness for accurate bbox calculation.
- * @returns The updated path array, or null if regeneration is required.
- */
 export const updateComponentInPaths = (
     currentPaths: Path[],
     componentIndex: number,
     newSourcePaths: Path[],
-    strokeThickness: number
+    strokeThickness: number,
+    transformConfig?: [number, number] | (number | string)[][]
 ): Path[] | null => {
     const groupIdToUpdate = `component-${componentIndex}`;
-    
-    // 1. Filter paths belonging to this component index
     const oldPathsOfComponent = currentPaths.filter(p =>
         p.groupId === groupIdToUpdate || (p.groupId && p.groupId.startsWith(`${groupIdToUpdate}-`))
     );
 
-    if (oldPathsOfComponent.length === 0) {
-        // If the component doesn't exist in the current paths (e.g. it was deleted or not yet drawn),
-        // we can't calculate a transform. We must regenerate the whole glyph.
-        return null;
-    }
+    if (oldPathsOfComponent.length === 0) return null;
 
     const oldBbox = getAccurateGlyphBBox(oldPathsOfComponent, strokeThickness);
     const newSourceBbox = getAccurateGlyphBBox(newSourcePaths, strokeThickness);
 
-    if (!oldBbox || !newSourceBbox || newSourceBbox.width === 0 || newSourceBbox.height === 0) {
-        // Cannot calculate transform without valid bounding boxes.
-        return null;
+    if (!oldBbox || !newSourceBbox) return null;
+
+    let scale = 1.0;
+    if (transformConfig) {
+        if (Array.isArray(transformConfig[0])) {
+            const perComponentTransform = (transformConfig as (number | string)[][])[componentIndex];
+            if (perComponentTransform && typeof perComponentTransform[0] === 'number') {
+                scale = perComponentTransform[0];
+            }
+        } else if (typeof transformConfig[0] === 'number') {
+            scale = transformConfig[0];
+        }
     }
 
-    // 2. Calculate Transform (Scale & Translate)
-    const scaleX = oldBbox.width / newSourceBbox.width;
-    const scaleY = oldBbox.height / newSourceBbox.height;
-
-    // If the old shape was extremely small or empty (width/height ~ 0), scale calculation fails.
-    // Fallback to regeneration.
-    if (!isFinite(scaleX) || !isFinite(scaleY)) {
-        return null;
-    }
-
-    const newSourceCenter = { x: newSourceBbox.x + newSourceBbox.width / 2, y: newSourceBbox.y + newSourceBbox.height / 2 };
-    const oldCenter = { x: oldBbox.x + oldBbox.width / 2, y: oldBbox.y + oldBbox.height / 2 };
+    const oldAnchor = { x: oldBbox.x, y: oldBbox.y + oldBbox.height };
+    const newSourceAnchor = { x: newSourceBbox.x, y: newSourceBbox.y + newSourceBbox.height };
 
     const transformPoint = (pt: Point): Point => {
-        // 1. Center the point relative to source
-        const vec = VEC.sub(pt, newSourceCenter);
-        // 2. Scale
-        const scaledVec = { x: vec.x * scaleX, y: vec.y * scaleY };
-        // 3. Translate to old center
-        return VEC.add(scaledVec, oldCenter);
+        const relativeVec = VEC.sub(pt, newSourceAnchor);
+        const scaledVec = VEC.scale(relativeVec, scale);
+        return VEC.add(scaledVec, oldAnchor);
     };
 
-    // 3. Apply Transform to new source paths
     const transformedNewPaths = newSourcePaths.map((p: Path) => ({
         ...p,
-        // Ensure unique IDs for the new paths
         id: `${p.id}-c${componentIndex}-${Date.now()}`,
         groupId: groupIdToUpdate,
         points: p.points.map(transformPoint),
         segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({
             ...seg,
             point: transformPoint(seg.point),
-            handleIn: { x: seg.handleIn.x * scaleX, y: seg.handleIn.y * scaleY },
-            handleOut: { x: seg.handleOut.x * scaleX, y: seg.handleOut.y * scaleY }
+            handleIn: VEC.scale(seg.handleIn, scale),
+            handleOut: VEC.scale(seg.handleOut, scale)
         }))) : undefined
     }));
 
-    // 4. Merge: Keep other components, replace this one
     const otherPaths = currentPaths.filter(p =>
         p.groupId !== groupIdToUpdate && (!p.groupId || !p.groupId.startsWith(`${groupIdToUpdate}-`))
     );

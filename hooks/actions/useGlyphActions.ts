@@ -147,7 +147,8 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
                             tempPaths,
                             index,
                             newGlyphData.paths,
-                            strokeThickness
+                            strokeThickness,
+                            dependentChar.compositeTransform
                         );
 
                         if (!updatedPaths) {
