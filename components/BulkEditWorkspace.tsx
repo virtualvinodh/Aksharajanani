@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useCharacter } from '../contexts/CharacterContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -8,10 +8,73 @@ import { Character, GlyphData, Path, Point, Segment } from '../types';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import GlyphTile from './GlyphTile';
 import Modal from './Modal';
-import { EditIcon, CheckCircleIcon, TrashIcon, SettingsIcon } from '../constants';
+import { EditIcon, CheckCircleIcon, TrashIcon, SettingsIcon, LeftArrowIcon, RightArrowIcon } from '../constants';
 import { useLayout } from '../contexts/LayoutContext';
 import { VEC } from '../utils/vectorUtils';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
+
+// --- Helper Logic for Transformation (Shared between Preview and Apply) ---
+const transformGlyphPaths = (
+    paths: Path[], 
+    strokeThickness: number, 
+    scaleX: number, 
+    scaleY: number, 
+    rotation: number, 
+    flipH: boolean, 
+    flipV: boolean
+): Path[] => {
+    const bbox = getAccurateGlyphBBox(paths, strokeThickness);
+    if (!bbox) return paths;
+
+    const center = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
+    const angleRad = (rotation * Math.PI) / 180;
+    
+    const sx = (flipH ? -1 : 1) * scaleX;
+    const sy = (flipV ? -1 : 1) * scaleY;
+
+    const transformPoint = (pt: Point) => {
+        // 1. Translate to center (relative to bbox center)
+        let px = pt.x - center.x;
+        let py = pt.y - center.y;
+
+        // 2. Scale & Flip
+        px = px * sx;
+        py = py * sy;
+        
+        // 3. Rotate
+        const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
+        const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
+
+        // 4. Translate back
+        return { x: rx + center.x, y: ry + center.y };
+    };
+
+    return paths.map(p => {
+            // Handle normal points
+            const newP = { ...p, points: p.points.map(transformPoint) };
+            
+            // Handle Outline Segment Groups (Handles must be rotated/scaled relative to anchor)
+            if (p.segmentGroups) {
+                newP.segmentGroups = p.segmentGroups.map(g => g.map(s => {
+                    // Rotate handles locally
+                    const hInRot = VEC.rotate(s.handleIn, angleRad);
+                    const hOutRot = VEC.rotate(s.handleOut, angleRad);
+                    // Scale handles
+                    const hInTransformed = { x: hInRot.x * sx, y: hInRot.y * sy };
+                    const hOutTransformed = { x: hOutRot.x * sx, y: hOutRot.y * sy };
+                    
+                    return {
+                        ...s,
+                        point: transformPoint(s.point),
+                        handleIn: hInTransformed,
+                        handleOut: hOutTransformed
+                    };
+                }));
+            }
+            return newP;
+    });
+};
+
 
 const BulkEditWorkspace: React.FC = () => {
     const { characterSets, dispatch: characterDispatch } = useCharacter();
@@ -32,6 +95,10 @@ const BulkEditWorkspace: React.FC = () => {
             .filter(char => char.unicode !== undefined && !char.hidden && isGlyphDrawn(glyphDataMap.get(char.unicode)))
             .sort((a, b) => a.unicode! - b.unicode!);
     }, [characterSets, glyphDataMap]);
+
+    const selectedGlyphData = useMemo(() => {
+        return drawnCharacters.filter(c => metricsSelection.has(c.unicode!));
+    }, [drawnCharacters, metricsSelection]);
 
     const toggleSelection = (unicode: number) => {
         setMetricsSelection(prev => {
@@ -85,8 +152,6 @@ const BulkEditWorkspace: React.FC = () => {
         metricsSelection.forEach(unicode => {
              // Delete glyph drawing data
              glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
-             // Note: We generally don't delete the character definition itself in bulk mode, 
-             // as it might be part of a standard set. If it's custom, it remains but empty.
         });
 
         showNotification(t('glyphDeletedSuccess', { name: `${metricsSelection.size} glyphs` }), 'success');
@@ -108,56 +173,7 @@ const BulkEditWorkspace: React.FC = () => {
             const glyph = newMap.get(unicode);
             if (!glyph || !isGlyphDrawn(glyph)) return;
 
-            const bbox = getAccurateGlyphBBox(glyph.paths, strokeThickness);
-            if (!bbox) return;
-
-            const center = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
-            const angleRad = (rotation * Math.PI) / 180;
-            
-            const sx = (flipH ? -1 : 1) * scaleX;
-            const sy = (flipV ? -1 : 1) * scaleY;
-
-            const transformPoint = (pt: Point) => {
-                // 1. Translate to center (relative to bbox center)
-                let px = pt.x - center.x;
-                let py = pt.y - center.y;
-
-                // 2. Scale & Flip
-                px = px * sx;
-                py = py * sy;
-                
-                // 3. Rotate
-                const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
-                const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
-
-                // 4. Translate back
-                return { x: rx + center.x, y: ry + center.y };
-            };
-
-            const newPaths = glyph.paths.map(p => {
-                 // Handle normal points
-                 const newP = { ...p, points: p.points.map(transformPoint) };
-                 
-                 // Handle Outline Segment Groups (Handles must be rotated/scaled relative to anchor)
-                 if (p.segmentGroups) {
-                     newP.segmentGroups = p.segmentGroups.map(g => g.map(s => {
-                         // Rotate handles locally
-                         const hInRot = VEC.rotate(s.handleIn, angleRad);
-                         const hOutRot = VEC.rotate(s.handleOut, angleRad);
-                         // Scale handles
-                         const hInTransformed = { x: hInRot.x * sx, y: hInRot.y * sy };
-                         const hOutTransformed = { x: hOutRot.x * sx, y: hOutRot.y * sy };
-                         
-                         return {
-                             ...s,
-                             point: transformPoint(s.point),
-                             handleIn: hInTransformed,
-                             handleOut: hOutTransformed
-                         };
-                     }));
-                 }
-                 return newP;
-            });
+            const newPaths = transformGlyphPaths(glyph.paths, strokeThickness, scaleX, scaleY, rotation, flipH, flipV);
 
             newMap.set(unicode, { paths: newPaths });
             transformCount++;
@@ -196,7 +212,7 @@ const BulkEditWorkspace: React.FC = () => {
                         disabled={metricsSelection.size === 0}
                         className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap text-sm"
                     >
-                        <SettingsIcon /> {t('editProperties')}
+                        <SettingsIcon /> <span className="hidden sm:inline">{t('editProperties')}</span>
                     </button>
                     <button 
                         onClick={() => setIsTransformModalOpen(true)}
@@ -204,14 +220,14 @@ const BulkEditWorkspace: React.FC = () => {
                         className="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:bg-teal-400 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap text-sm"
                     >
                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                        {t('transform')}
+                         <span className="hidden sm:inline">{t('transform')}</span>
                     </button>
                     <button 
                         onClick={() => setIsDeleteConfirmOpen(true)}
                         disabled={metricsSelection.size === 0}
                         className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap text-sm"
                     >
-                        <TrashIcon /> {t('delete')}
+                        <TrashIcon /> <span className="hidden sm:inline">{t('delete')}</span>
                     </button>
                 </div>
             </div>
@@ -254,6 +270,9 @@ const BulkEditWorkspace: React.FC = () => {
                 onClose={() => setIsTransformModalOpen(false)}
                 onConfirm={handleBulkTransform}
                 count={metricsSelection.size}
+                selectedGlyphs={selectedGlyphData}
+                glyphDataMap={glyphDataMap}
+                strokeThickness={settings?.strokeThickness || 15}
             />
 
             <Modal
@@ -305,7 +324,17 @@ const BulkPropertiesModal: React.FC<{ isOpen: boolean, onClose: () => void, onSa
     );
 };
 
-const BulkTransformModal: React.FC<{ isOpen: boolean, onClose: () => void, onConfirm: (sx: number, sy: number, r: number, fh: boolean, fv: boolean) => void, count: number }> = ({ isOpen, onClose, onConfirm, count }) => {
+interface BulkTransformModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (sx: number, sy: number, r: number, fh: boolean, fv: boolean) => void;
+    count: number;
+    selectedGlyphs: Character[];
+    glyphDataMap: Map<number, GlyphData>;
+    strokeThickness: number;
+}
+
+const BulkTransformModal: React.FC<BulkTransformModalProps> = ({ isOpen, onClose, onConfirm, count, selectedGlyphs, glyphDataMap, strokeThickness }) => {
     const { t } = useLocale();
     const [scaleX, setScaleX] = useState('1.0');
     const [scaleY, setScaleY] = useState('1.0');
@@ -313,6 +342,14 @@ const BulkTransformModal: React.FC<{ isOpen: boolean, onClose: () => void, onCon
     const [flipH, setFlipH] = useState(false);
     const [flipV, setFlipV] = useState(false);
     const [lockAspect, setLockAspect] = useState(true);
+    const [previewIndex, setPreviewIndex] = useState(0);
+
+    // Reset state on open
+    useEffect(() => {
+        if(isOpen) {
+            setScaleX('1.0'); setScaleY('1.0'); setRotation('0'); setFlipH(false); setFlipV(false); setPreviewIndex(0);
+        }
+    }, [isOpen]);
 
     const handleScaleXChange = (val: string) => {
         setScaleX(val);
@@ -323,6 +360,21 @@ const BulkTransformModal: React.FC<{ isOpen: boolean, onClose: () => void, onCon
         onConfirm(parseFloat(scaleX) || 1, parseFloat(scaleY) || 1, parseFloat(rotation) || 0, flipH, flipV);
     };
 
+    const previewGlyph = selectedGlyphs[previewIndex];
+    const transformedPreviewGlyphData = useMemo(() => {
+        if (!previewGlyph) return null;
+        const originalData = glyphDataMap.get(previewGlyph.unicode!);
+        if (!originalData) return null;
+        
+        const sx = parseFloat(scaleX) || 1;
+        const sy = parseFloat(scaleY) || 1;
+        const r = parseFloat(rotation) || 0;
+        
+        const transformedPaths = transformGlyphPaths(originalData.paths, strokeThickness, sx, sy, r, flipH, flipV);
+        return { paths: transformedPaths };
+    }, [previewGlyph, glyphDataMap, strokeThickness, scaleX, scaleY, rotation, flipH, flipV]);
+
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={t('transformGlyphsTitle', { count })} footer={
             <>
@@ -331,7 +383,24 @@ const BulkTransformModal: React.FC<{ isOpen: boolean, onClose: () => void, onCon
             </>
         }>
              <div className="space-y-6">
-                <p className="text-xs text-gray-500 italic">{t('transformOriginCenter')}</p>
+                
+                {/* Preview Area */}
+                {selectedGlyphs.length > 0 && (
+                    <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 flex flex-col items-center border border-gray-200 dark:border-gray-600">
+                         <div className="flex items-center justify-between w-full mb-2">
+                            <button onClick={() => setPreviewIndex(i => Math.max(0, i - 1))} disabled={previewIndex === 0} className="p-1 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-30"><LeftArrowIcon /></button>
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('livePreview')}: {previewGlyph?.name}</span>
+                            <button onClick={() => setPreviewIndex(i => Math.min(selectedGlyphs.length - 1, i + 1))} disabled={previewIndex === selectedGlyphs.length - 1} className="p-1 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-30"><RightArrowIcon /></button>
+                         </div>
+                         <div className="w-32 h-32 bg-white dark:bg-gray-800 border rounded shadow-sm flex items-center justify-center">
+                             {previewGlyph && transformedPreviewGlyphData && (
+                                 <GlyphTile character={previewGlyph} glyphData={transformedPreviewGlyphData} strokeThickness={strokeThickness} />
+                             )}
+                         </div>
+                    </div>
+                )}
+
+                <p className="text-xs text-gray-500 italic text-center">{t('transformOriginCenter')}</p>
                 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2 sm:col-span-1">
@@ -350,15 +419,18 @@ const BulkTransformModal: React.FC<{ isOpen: boolean, onClose: () => void, onCon
 
                 <div>
                     <label className="block text-sm font-medium mb-1">{t('rotate')}</label>
-                    <input type="number" value={rotation} onChange={e => setRotation(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                    <div className="flex items-center gap-2">
+                        <input type="range" min="-180" max="180" value={rotation} onChange={e => setRotation(e.target.value)} className="flex-grow" />
+                        <input type="number" value={rotation} onChange={e => setRotation(e.target.value)} className="w-16 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-center" />
+                    </div>
                 </div>
 
-                <div className="flex gap-6">
-                     <label className="flex items-center gap-2 cursor-pointer">
+                <div className="flex gap-6 justify-center">
+                     <label className="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded border dark:border-gray-600">
                         <input type="checkbox" checked={flipH} onChange={e => setFlipH(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" />
                         <span>{t('flipHorizontal')}</span>
                     </label>
-                     <label className="flex items-center gap-2 cursor-pointer">
+                     <label className="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded border dark:border-gray-600">
                         <input type="checkbox" checked={flipV} onChange={e => setFlipV(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" />
                         <span>{t('flipVertical')}</span>
                     </label>
