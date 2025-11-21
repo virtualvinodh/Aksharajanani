@@ -41,7 +41,7 @@ export const useAppActions = ({
 
     // 2. Persistence Hook
     const {
-        projectId, setProjectId, setLastSavedState, fullProjectStateForSaving,
+        projectId, setProjectId, setLastSavedState, getProjectState,
         hasUnsavedChanges, handleSaveToDB
     } = useProjectPersistence(projectDataToRestore?.projectId, isScriptDataLoadingState);
 
@@ -82,7 +82,7 @@ export const useAppActions = ({
         isExporting, feaErrorState, testPageFont,
         startExportProcess, handleSaveProject, handleTestClick, downloadFontBlob
     } = useExportActions({
-        fullProjectStateForSaving, projectId, setIsAnimatingExport, downloadTriggerRef,
+        getProjectState, projectId, setIsAnimatingExport, downloadTriggerRef,
         recommendedKerning, positioningRules, markAttachmentRules
     });
 
@@ -122,15 +122,16 @@ export const useAppActions = ({
     const [sessionSnapshot, setSessionSnapshot] = useState<{ data: any, timestamp: number } | null>(null);
 
     const handleTakeSnapshot = useCallback(() => {
-        if (fullProjectStateForSaving) {
+        const currentState = getProjectState();
+        if (currentState) {
             // Deep clone the current state
             setSessionSnapshot({
-                data: JSON.parse(JSON.stringify(fullProjectStateForSaving)),
+                data: JSON.parse(JSON.stringify(currentState)),
                 timestamp: Date.now()
             });
             layout.showNotification("Snapshot taken", 'success');
         }
-    }, [fullProjectStateForSaving, layout]);
+    }, [getProjectState, layout]);
     
     const confirmRestore = useCallback(() => {
          if (sessionSnapshot) {

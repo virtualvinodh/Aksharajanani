@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useKerning } from '../../contexts/KerningContext';
@@ -10,7 +10,6 @@ import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import * as dbService from '../../services/dbService';
 import { ProjectData } from '../../types';
-import { simpleHash } from '../../utils/stringUtils'; // Import from utils
 
 export const useProjectPersistence = (
     initialProjectId: number | undefined, 
@@ -28,8 +27,12 @@ export const useProjectPersistence = (
 
     const [projectId, setProjectId] = useState<number | undefined>(initialProjectId);
     const [lastSavedState, setLastSavedState] = useState<string | null>(null);
+    
+    // Optimization: Track dirty state with a boolean instead of expensive deep comparison on every render.
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-    const fullProjectStateForSaving = useMemo((): Omit<ProjectData, 'projectId' | 'savedAt'> | null => {
+    // Optimization: Construct the project state ONLY when needed (Save/Export), not on every render.
+    const getProjectState = useCallback((): Omit<ProjectData, 'projectId' | 'savedAt'> | null => {
         if (!script || !settings || !metrics || !characterSets || fontRules === null) return null;
         return {
             scriptId: script.id,
@@ -45,16 +48,31 @@ export const useProjectPersistence = (
         };
     }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, markPositioningMap]);
 
-    const hasUnsavedChanges = useMemo(() => {
-        if (lastSavedState === null || fullProjectStateForSaving === null) return false;
-        return JSON.stringify(fullProjectStateForSaving) !== lastSavedState;
-    }, [fullProjectStateForSaving, lastSavedState]);
+    // Detect changes cheaply by watching dependencies
+    useEffect(() => {
+        if (!isScriptDataLoading && lastSavedState !== null) {
+            setHasUnsavedChanges(true);
+        }
+    }, [
+        // These are the dependencies that trigger a "change"
+        glyphDataMap, kerningMap, markPositioningMap, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode,
+        // Dependencies that shouldn't trigger change but are needed for logic
+        isScriptDataLoading, lastSavedState
+    ]);
 
     const saveProjectToDB = useCallback(async () => {
-        if (!fullProjectStateForSaving) return;
+        const currentStateObj = getProjectState();
+        if (!currentStateObj) return;
+
+        // Perform the expensive stringify only when we are actually attempting to save
+        const currentStateString = JSON.stringify(currentStateObj);
+        if (currentStateString === lastSavedState) {
+            setHasUnsavedChanges(false);
+            return;
+        }
 
         const currentState = {
-            ...fullProjectStateForSaving,
+            ...currentStateObj,
             savedAt: new Date().toISOString(),
         };
 
@@ -74,13 +92,14 @@ export const useProjectPersistence = (
                 await dbService.deleteFontCache(currentProjectId);
             }
 
-            setLastSavedState(JSON.stringify(fullProjectStateForSaving));
+            setLastSavedState(currentStateString);
+            setHasUnsavedChanges(false);
             if (hasUnsavedRules) rulesDispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: false });
         } catch (error) {
             console.error("Failed to save project to DB:", error);
             layout.showNotification("Error saving project to database.", 'error');
         }
-    }, [projectId, fullProjectStateForSaving, hasUnsavedRules, rulesDispatch, layout]);
+    }, [projectId, getProjectState, lastSavedState, hasUnsavedRules, rulesDispatch, layout]);
 
     // Autosave Effect
     const autosaveTimeout = React.useRef<number | null>(null);
@@ -93,27 +112,30 @@ export const useProjectPersistence = (
             saveProjectToDB();
         }, 1500);
         return () => { if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current); };
-    }, [fullProjectStateForSaving, hasUnsavedChanges, isScriptDataLoading, script, settings, saveProjectToDB]);
+    }, [hasUnsavedChanges, isScriptDataLoading, script, settings, saveProjectToDB]);
 
-    // Initial Save State Effect
+    // Initial Save State Effect - Sets the baseline for "clean" state
     useEffect(() => {
-        if (!isScriptDataLoading && lastSavedState === null && fullProjectStateForSaving) {
-            setLastSavedState(JSON.stringify(fullProjectStateForSaving));
+        if (!isScriptDataLoading && lastSavedState === null) {
+            const initialState = getProjectState();
+            if (initialState) {
+                setLastSavedState(JSON.stringify(initialState));
+                setHasUnsavedChanges(false);
+            }
         }
-    }, [isScriptDataLoading, fullProjectStateForSaving, lastSavedState]);
+    }, [isScriptDataLoading, getProjectState, lastSavedState]);
 
     const handleSaveToDB = useCallback(async () => {
-        if (!fullProjectStateForSaving) return;
         await saveProjectToDB();
         layout.showNotification(t('projectSaved'));
-    }, [fullProjectStateForSaving, saveProjectToDB, layout, t]);
+    }, [saveProjectToDB, layout, t]);
 
     return {
         projectId,
         setProjectId,
         lastSavedState,
         setLastSavedState,
-        fullProjectStateForSaving,
+        getProjectState, // Expose the getter instead of the object
         hasUnsavedChanges,
         saveProjectToDB,
         handleSaveToDB

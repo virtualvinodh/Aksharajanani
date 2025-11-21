@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useKerning } from '../../contexts/KerningContext';
@@ -12,10 +12,10 @@ import { exportToOtf } from '../../services/fontService';
 import * as dbService from '../../services/dbService';
 import { ProjectData, PositioningRules, RecommendedKerning, MarkAttachmentRules } from '../../types';
 import { useProgressCalculators } from '../useProgressCalculators';
-import { simpleHash } from '../../utils/stringUtils'; // Import from utils
+import { simpleHash } from '../../utils/stringUtils';
 
 interface UseExportActionsProps {
-    fullProjectStateForSaving: Omit<ProjectData, 'projectId' | 'savedAt'> | null;
+    getProjectState: () => Omit<ProjectData, 'projectId' | 'savedAt'> | null;
     projectId: number | undefined;
     setIsAnimatingExport: React.Dispatch<React.SetStateAction<boolean>>;
     downloadTriggerRef: React.MutableRefObject<(() => void) | null>;
@@ -26,7 +26,7 @@ interface UseExportActionsProps {
 }
 
 export const useExportActions = ({
-    fullProjectStateForSaving, projectId, setIsAnimatingExport, downloadTriggerRef,
+    getProjectState, projectId, setIsAnimatingExport, downloadTriggerRef,
     recommendedKerning, positioningRules, markAttachmentRules
 }: UseExportActionsProps) => {
     
@@ -60,10 +60,11 @@ export const useExportActions = ({
     }, []);
 
     const handleSaveProject = useCallback(async () => {
-        if (!settings || !fullProjectStateForSaving) return;
+        const projectState = getProjectState();
+        if (!settings || !projectState) return;
 
         const projectDataWithTimestamp: ProjectData = {
-            ...fullProjectStateForSaving,
+            ...projectState,
             projectId,
             savedAt: new Date().toISOString(),
         };
@@ -79,15 +80,17 @@ export const useExportActions = ({
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         
         layout.showNotification(t('projectSavedAsJson'));
-    }, [settings, fullProjectStateForSaving, projectId, layout, t]);
+    }, [settings, getProjectState, projectId, layout, t]);
 
     const getCachedOrGeneratedFont = useCallback(async (): Promise<{ blob: Blob; feaError: string | null } | null> => {
-        if (!fullProjectStateForSaving || !settings || !metrics || !characterSets) {
+        const projectState = getProjectState();
+
+        if (!projectState || !settings || !metrics || !characterSets) {
             layout.showNotification('Project data is not ready.', 'error');
             return null;
         }
     
-        const projectString = JSON.stringify(fullProjectStateForSaving);
+        const projectString = JSON.stringify(projectState);
         const currentHash = simpleHash(projectString);
         let feaError: string | null = null;
         let fontBlob: Blob | null = null;
@@ -110,7 +113,7 @@ export const useExportActions = ({
         
         if (!fontBlob) return null;
         return { blob: fontBlob, feaError: feaError };
-    }, [fullProjectStateForSaving, projectId, settings, metrics, characterSets, glyphDataMap, t, fontRules, kerningMap, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification]);
+    }, [getProjectState, projectId, settings, metrics, characterSets, glyphDataMap, t, fontRules, kerningMap, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification]);
 
     const performExportAfterAnimation = useCallback(async () => {
         setIsExporting(true);
