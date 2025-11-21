@@ -341,9 +341,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
             title={t('confirmSnapshotRestore')} 
             message={t('snapshotRestoreMessage', { time: new Date(layout.activeModal.props.timestamp).toLocaleTimeString() })}
             confirmActionText={t('restore')}
-            saveAndConfirmActionText={t('cancel')}
             onConfirm={layout.activeModal.props.onConfirm}
-            onSaveAndConfirm={layout.closeModal}
+            closeOnBackdropClick={false}
         />
       )}
     </div>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import Modal from './Modal';
@@ -6,14 +7,15 @@ interface ConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  onSaveAndConfirm: () => void;
+  onSaveAndConfirm?: () => void;
   title: string;
   message: string;
   confirmActionText: string;
-  saveAndConfirmActionText: string;
+  saveAndConfirmActionText?: string;
+  closeOnBackdropClick?: boolean;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, onSaveAndConfirm, title, message, confirmActionText, saveAndConfirmActionText }) => {
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, onSaveAndConfirm, title, message, confirmActionText, saveAndConfirmActionText, closeOnBackdropClick }) => {
   const { t } = useLocale();
 
   return (
@@ -21,6 +23,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      closeOnBackdropClick={closeOnBackdropClick}
       footer={
         <>
           <button onClick={onClose} className="px-4 py-2 bg-gray-500 dark:bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-600 dark:hover:bg-gray-500 transition-colors">
@@ -29,9 +32,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
           <button onClick={onConfirm} className="px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 transition-colors">
             {confirmActionText}
           </button>
-          <button onClick={onSaveAndConfirm} className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
-            {saveAndConfirmActionText}
-          </button>
+          {onSaveAndConfirm && saveAndConfirmActionText && (
+            <button onClick={onSaveAndConfirm} className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+              {saveAndConfirmActionText}
+            </button>
+          )}
         </>
       }
     >
