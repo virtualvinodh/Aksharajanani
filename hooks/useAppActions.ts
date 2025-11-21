@@ -130,6 +130,26 @@ export const useAppActions = ({
         settingsDispatch({ type: 'UPDATE_SETTINGS', payload: s => s ? { ...s, editorMode: mode } : null });
     }, [workspace, setWorkspace, script, settingsDispatch]);
 
+    // --- Session Snapshot Logic ---
+    const [sessionSnapshot, setSessionSnapshot] = useState<any | null>(null);
+
+    const handleTakeSnapshot = useCallback(() => {
+        if (fullProjectStateForSaving) {
+            // Deep clone the current state
+            setSessionSnapshot(JSON.parse(JSON.stringify(fullProjectStateForSaving)));
+            layout.showNotification("Snapshot taken", 'success');
+        }
+    }, [fullProjectStateForSaving, layout]);
+
+    const handleRestoreSnapshot = useCallback(() => {
+        if (sessionSnapshot) {
+            // Restore using the load logic
+            initializeProjectState(sessionSnapshot);
+            layout.showNotification("Session restored from snapshot", 'info');
+        }
+    }, [sessionSnapshot, initializeProjectState, layout]);
+
+
     return {
         // State
         isScriptDataLoading,
@@ -172,5 +192,10 @@ export const useAppActions = ({
         startExportProcess,
         handleSaveToDB,
         handleTestClick,
+        
+        // Snapshot
+        handleTakeSnapshot,
+        handleRestoreSnapshot,
+        hasSnapshot: !!sessionSnapshot
     };
 };

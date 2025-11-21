@@ -105,7 +105,10 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       startExportProcess,
       handleSaveToDB,
       handleTestClick,
-      testPageFont
+      testPageFont,
+      handleTakeSnapshot,
+      handleRestoreSnapshot,
+      hasSnapshot
   } = appActions;
 
 
@@ -226,6 +229,9 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         kerningMap={kerningMap}
         allCharsByUnicode={allCharsByUnicode}
         recommendedKerning={recommendedKerning}
+        onTakeSnapshot={handleTakeSnapshot}
+        onRestoreSnapshot={handleRestoreSnapshot}
+        hasSnapshot={hasSnapshot}
        />
 
       <main className="flex-1 flex flex-col overflow-hidden">

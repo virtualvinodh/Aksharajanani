@@ -4,7 +4,7 @@ import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, Rec
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, ImportIcon, SearchIcon, BatchIcon } from '../constants';
+import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import CommandPalette from './CommandPalette';
 
@@ -44,6 +44,9 @@ interface AppHeaderProps {
     kerningMap?: KerningMap;
     allCharsByUnicode?: Map<number, Character>;
     recommendedKerning?: RecommendedKerning[] | null;
+    onTakeSnapshot: () => void;
+    onRestoreSnapshot: () => void;
+    hasSnapshot: boolean;
 }
 
 const WorkspaceTab: React.FC<{
@@ -84,7 +87,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     onTestClick, onCompareClick, onSettingsClick, onChangeScriptClick, onShowAbout,
     onShowHelp, onShowTestCases, onEditorModeChange, onWorkspaceChange, activeWorkspace, hasUnsavedChanges, hasUnsavedRules,
     hasPositioning, hasKerning, drawingProgress, positioningProgress, kerningProgress, rulesProgress, positioningRules,
-    kerningMap, allCharsByUnicode, recommendedKerning
+    kerningMap, allCharsByUnicode, recommendedKerning, onTakeSnapshot, onRestoreSnapshot, hasSnapshot
 }) => {
     const { t } = useLocale();
     const { dispatch: settingsDispatch } = useSettings();
@@ -168,6 +171,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                             <button onClick={() => { onSaveProject(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CodeBracketsIcon /> {t('exportJson')}</button>
                             <button onClick={() => { onLoadProject(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><LoadIcon /> {t('load')}</button>
                             <button onClick={() => { onImportGlyphsClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ImportIcon /> {t('importFromProject')}</button>
+                            <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+
+                            <button onClick={() => { onTakeSnapshot(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CameraIcon /> Take Snapshot</button>
+                            <button onClick={() => { onRestoreSnapshot(); setIsMoreMenuOpen(false); }} disabled={!hasSnapshot} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"><HistoryIcon /> Restore Snapshot</button>
                             <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
 
                             <button onClick={() => { onSettingsClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><SettingsIcon /> {t('settings')}</button>
