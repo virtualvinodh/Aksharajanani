@@ -1,3 +1,4 @@
+
 [
     { "id": "init_load_script", "category": "App Initialization & File I/O", "description": "Select a standard script (e.g., Tamil). The main application workspace should load correctly without errors.", "priority": "high" },
     { 
@@ -114,6 +115,7 @@
     { "id": "cmd_palette_search_positioning_pair", "category": "General UI & Navigation", "description": "Open Command Palette. Type a base+mark pair name (e.g., 'ka' and 'i'). If both glyphs are drawn, the 'Positioning' result for that pair should appear. Selecting it should open the Positioning editor for that pair.", "priority": "high" },
     { "id": "cmd_palette_search_kerning_pair", "category": "General UI & Navigation", "description": "Open Command Palette. Type a kerning pair (e.g., 'AV'). If kerning is active and the pair exists, a result should appear. Selecting it should open the Kerning workspace and focus that pair.", "priority": "high" },
     { "id": "cmd_palette_empty_state", "category": "General UI & Navigation", "description": "Open Command Palette. Type a nonsense string (e.g., 'xyz123'). Verify the list shows 'No results found'.", "priority": "low" },
+    { "id": "cmd_palette_navigation", "category": "General UI & Navigation", "description": "Use the Command Palette to search for a specific Positioning Pair (e.g., 'ka + i') that exists in the font. Select it. Verify the app switches to the Positioning workspace AND opens the specific editor modal for that pair.", "priority": "high" },
 
     {
       "id": "draw_linked_glyph_creation_and_lock",
@@ -146,6 +148,12 @@
       "priority": "high"
     },
     {
+        "id": "draw_cascade_deep_nesting",
+        "category": "Drawing Workspace: Glyph Management",
+        "description": "1. Create a glyph A. 2. Create glyph B using A as a linked component. 3. Create glyph C using B as a linked component. 4. Modify A and save. 5. Verify that both B and C update their appearance correctly to reflect the change in A.",
+        "priority": "high"
+    },
+    {
       "id": "draw_composite_transform_touching",
       "category": "Drawing Workspace: Glyph Management",
       "description": "1. Find or create a character with `\"compositeTransform\": [[1], [1, \"touching\"]]` (e.g., Malayalam 'ള്ള' from 'ള'+'ള'). 2. Draw the component glyph 'ള'. 3. Open the editor for 'ള്ള'. 4. Verify it's pre-filled with two 'ള' shapes, with the right edge of the first touching the left edge of the second.",
@@ -156,6 +164,12 @@
       "category": "Drawing Workspace: Glyph Management",
       "description": "1. Find or create a character with `\"compositeTransform\": [[1], [0.6, 200, \"absolute\"]]` (e.g., Malayalam 'സ്സ' from 'സ'+'സ'). 2. Draw the component glyph 'സ'. 3. Open the editor for 'സ്സ'. 4. Verify the second 'സ' component is scaled down and positioned at an absolute Y-coordinate, not relative to the first component.",
       "priority": "medium"
+    },
+    {
+        "id": "draw_circular_dependency_prevention",
+        "category": "Drawing Workspace: Glyph Management",
+        "description": "ADVANCED: Attempt to create a custom glyph 'A' that links to 'B', where 'B' already links to 'A'. The system should either prevent this assignment or handle the render gracefully without crashing the browser (e.g. rendering limit depth).",
+        "priority": "low"
     },
     { "id": "glyph_composite_prefill", "category": "Drawing Workspace: Glyph Management", "description": "Draw the components of a composite character (e.g., 'க' and '்'). Open the editor for the composite ('க்'). It should be pre-filled with the component paths.", "priority": "high" },
     {
@@ -184,6 +198,7 @@
     { "id": "file_load_project_with_custom_glyphs", "category": "Drawing Workspace: Glyph Management", "description": "Load a project file that contains custom glyphs added via the 'Add Glyph' modal. Verify they load correctly into a 'Dynamic Ligatures' or similar set.", "priority": "medium" },
     { "id": "glyph_add_supplementary", "category": "Drawing Workspace: Glyph Management", "description": "ADVANCED: In the 'Add New Glyph' modal, add a supplementary plane character (e.g., U+1F600). The glyph should be added to a 'Dynamic' character set and be editable.", "priority": "low" },
     { "id": "draw_all_tools", "category": "Drawing Workspace: Editor & Tools", "description": "Sequentially use each drawing tool (Pen, Line, Circle, Ellipse, Curve, Dot) to create shapes on the canvas.", "priority": "high" },
+    { "id": "draw_path_winding_holes", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a shape like an 'O' or 'e'. Ensure the outer path is drawn clockwise and the inner path (hole) is drawn counter-clockwise. Export the font and test it to verify the hole is rendered transparently (not filled black).", "priority": "high" },
     { "id": "draw_svg_import_and_edit", "category": "Drawing Workspace: Editor & Tools", "description": "In the drawing editor, use 'Import SVG' to load a simple vector file. The SVG should appear on the canvas. Switch to Advanced mode and use the 'Edit Points' tool to verify that the imported shape is a native, editable outline path with anchor and control points.", "priority": "high" },
     {
         "id": "draw_svg_import_robustness",
@@ -208,6 +223,7 @@
     { "id": "draw_edit_points_tool", "category": "Drawing Workspace: Editor & Tools", "description": "ADVANCED: Use Edit Points tool. Select a path, drag its anchor (red) and control (yellow) points. Double-click a segment to add a point. Double-click a point to delete it.", "priority": "high" },
     { "id": "draw_undo_redo", "category": "Drawing Workspace: Editor & Tools", "description": "Perform an action (e.g., draw a stroke), click Undo, then click Redo. The action should be reversed and then restored.", "priority": "high" },
     { "id": "draw_image_trace", "category": "Drawing Workspace: Editor & Tools", "description": "In the drawing editor, use 'Trace Image'. Upload a simple black and white image. In the trace modal, adjust detail/noise sliders and see the live preview update. Toggle 'Remove white background'. Click 'Insert as Vector Path'. Verify the traced outline is added to the canvas and is selectable/editable.", "priority": "high" },
+    { "id": "draw_manual_counters", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a shape (e.g., a circle). Draw a smaller shape completely inside it (e.g., another circle). Export the font and verify that the inner shape creates a transparent hole (counter) in the glyph, testing correct path winding directions.", "priority": "medium" },
     {
         "id": "draw_keyboard_shortcuts_modal",
         "category": "Drawing Workspace: Editor & Tools",
@@ -234,6 +250,7 @@
     { "id": "draw_edit_points_edge_cases", "category": "Drawing Workspace: Editor & Tools", "description": "ADVANCED: In Edit Points mode, delete the very first or last point of a multi-point path. The path should remain valid.", "priority": "low" },
     { "id": "draw_calligraphy_tool_options", "category": "Drawing Workspace: Editor & Tools", "description": "ADVANCED: Use the Calligraphy Pen. Click the tool icon again to open the angle picker and select a new angle. Verify stroke thickness changes with direction.", "priority": "low" },
     { "id": "draw_svg_import_invalid", "category": "Drawing Workspace: Editor & Tools", "description": "In the drawing editor, attempt to import an empty or malformed SVG file. Verify that an appropriate error notification appears and the canvas remains unchanged.", "priority": "medium" },
+    { "id": "draw_zero_point_handling", "category": "Drawing Workspace: Editor & Tools", "description": "Use the Pen tool to create paths with 0 or 1 points (clicks without drag). Save and reload the glyph. Verify these degenerate paths are cleaned up or handled without error.", "priority": "medium" },
     { "id": "draw_eraser_complex", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a filled `outline` shape (e.g., from an SVG import). Attempt to use the eraser on it. Verify the eraser is ignored and an informational notification appears. Draw a self-intersecting path and verify the eraser correctly splits it into multiple valid segments.", "priority": "low" },
     { "id": "pos_edit_position", "category": "Positioning Workspace", "description": "Select a base character, click a combination card, and move the mark in the editor. Save/go back. The card should reflect the new position.", "priority": "high" },
     { "id": "pos_nav_unsaved_modal", "category": "Positioning Workspace", "description": "Disable Autosave. In the Positioning editor, make a change to a pair's position. Click the 'Next', 'Previous', or 'Back' buttons. The 'Unsaved Changes' modal should appear. Test all three options: Save, Discard, and Cancel.", "priority": "high" },
@@ -285,10 +302,12 @@
     { "id": "pos_reuse_function", "category": "Positioning Workspace", "description": "Fully position all marks for one base character. Go to an un-positioned base character, click 'Reuse', and select the completed character. All corresponding mark positions should be copied.", "priority": "medium" },
     { "id": "pos_default_attachment", "category": "Positioning Workspace", "description": "For a script with `markAttachment` rules, open an un-positioned pair in the editor. The mark should appear at a default position based on the rule (e.g., top-center), not at the origin (0,0).", "priority": "medium" },
     { "id": "pos_component_deleted", "category": "Positioning Workspace", "description": "Position a mark on a base. Then, go to the Drawing workspace and delete the mark glyph. Return to Positioning. The combination card should now be disabled or reflect the missing glyph gracefully.", "priority": "medium" },
+    { "id": "pos_empty_glyph_crash", "category": "Positioning Workspace", "description": "Position a mark on a base where the base glyph has valid metadata but NO drawn paths. The positioning editor should open without crashing (showing just the mark).", "priority": "medium" },
     { "id": "pos_mark_class_independence", "category": "Positioning Workspace", "description": "1. Ensure a script is loaded that has at least two separate `markAttachmentClass` groups (e.g., `[ु, ू]` and `[े, ै]`). 2. Position a mark from the first class (`ु`) on a base. 3. Verify that only other marks from the *same* class (`ू`) are pre-filled, and marks from the other class (`े`, `ै`) remain un-positioned.", "priority": "medium" },
     { "id": "pos_properties_panel_visibility", "category": "Positioning Workspace", "description": "ADVANCED: Load a script with both GPOS-based (`gpos` tag) and GSUB-based (`gsub` tag) positioning rules. Open the editor for a GPOS pair; the properties button (LSB/RSB) should be hidden. Open the editor for a GSUB pair; the properties button must be visible and functional.", "priority": "medium" },
     { "id": "pos_view_switch", "category": "Positioning Workspace", "description": "Switch between 'View by Base' and 'View by Mark'. The grouping of combination cards should update correctly.", "priority": "low" },
     { "id": "pos_ligature_map_override", "category": "Positioning Workspace", "description": "Create a custom script where a positioning rule's `ligatureMap` explicitly names a ligature (e.g., `k` + `i` -> `k_i_ligature`). Verify that when positioning this pair, the app creates a glyph with the name `k_i_ligature` instead of the default `ki`.", "priority": "low" },
+    { "id": "pos_dynamic_ligature_generation", "category": "Positioning Workspace", "description": "1. Load a script with GSUB-based positioning rules. 2. Position a mark on a base to create a combination (e.g. 'k' + 'i'). 3. Save. 4. Go to the Drawing Workspace. 5. Verify that a new glyph (e.g. 'ki') has been created in the 'Positioned Glyphs' (or 'Dynamic Ligatures') tab.", "priority": "high" },
     { "id": "kern_edit_pair", "category": "Kerning Workspace", "description": "ADVANCED: Click a recommended pair. In the modal, enter a value (e.g., -50) and save. The card should update with the new value.", "priority": "high" },
     { "id": "kern_toggle_unkerned", "category": "Kerning Workspace", "description": "In the Kerning workspace, set a value for a few pairs. Enable the \"Show unkerned only\" toggle. Verify that the kerned pairs disappear from view. Disable the toggle and verify they reappear.", "priority": "high" },
     {
@@ -307,6 +326,7 @@
     { "id": "kern_extreme_values", "category": "Kerning Workspace", "description": "ADVANCED: In the kerning modal, enter a very large positive (e.g., 500) and a very large negative (e.g., -500) value. Verify the preview updates correctly and the value is saved.", "priority": "low" },
     { "id": "kern_search_functionality", "category": "Kerning Workspace", "description": "ADVANCED: In the kerning workspace, use the search bar in both the left and right character selection panels to filter the character lists.", "priority": "low" },
     { "id": "kern_simple_mode_ui", "category": "Kerning Workspace", "description": "For a script with kerning enabled (e.g., Malayalam), switch to \"Simple\" editor mode. Verify the workspace tab and modal titles change from \"Kerning\" to \"Spacing\". Confirm that adjusting values still functions correctly.", "priority": "low" },
+    { "id": "rules_lookup_flags", "category": "Rules Workspace (GUI)", "description": "ADVANCED: Manually edit the 'Lookup Flags' in the FEA code or via future GUI support. Export the font and verify that flags like 'IgnoreMarks' are respected in the generated OpenType tables (e.g., marks don't interfere with ligatures).", "priority": "high" },
     {
         "id": "rules_lookup_lifecycle_and_ordering",
         "category": "Rules Workspace (GUI)",
@@ -323,8 +343,10 @@
         "description": "In the 'Add New Rule' form for each rule type (ligature, single, etc.), use the `<GlyphSelect>` dropdown/search component to select input and output glyphs. Also test selecting a group (e.g., @virama). Verify the rule can be saved correctly with the selected glyphs/groups.",
         "priority": "high"
     },
+    { "id": "rules_stress_large_group", "category": "Rules Workspace (GUI)", "description": "Create a glyph group with >100 members. Use it in a substitution rule. Verify that the UI remains responsive and the font compiles successfully.", "priority": "high" },
     { "id": "rules_replace_existing_glyph", "category": "Rules Workspace (GUI)", "description": "ADVANCED: In any rule editor (ligature, contextual, etc.), click on a glyph that has already been placed in a slot. Verify the selection modal opens, allowing the glyph to be replaced.", "priority": "high" },
     { "id": "rules_group_pane_lifecycle", "category": "Rules Workspace (GUI)", "description": "ADVANCED: In the Rules workspace, switch to the 'Groups' tab. Create a new group, add members, and save it. Then, edit the group to change its name and members. Finally, delete the group. Verify all operations succeed.", "priority": "high" },
+    { "id": "rules_group_lifecycle", "category": "Rules Workspace (GUI)", "description": "1. Navigate to the 'Groups' sub-tab in Rules workspace. 2. Create a new group '@test'. 3. Add members. 4. Save. 5. Go to GUI rules and use '@test' in a rule. 6. Go back to Groups tab and delete '@test'. 7. Verify the rule editor handles the missing group gracefully.", "priority": "high" },
     { "id": "rules_circular_group_dependency", "category": "Rules Workspace (GUI)", "description": "Create group @A containing @B. Create group @B containing @A. Verify app handles/prevents infinite loop/crash.", "priority": "medium" },
     { "id": "rules_lookup_delete_reference", "category": "Rules Workspace (GUI)", "description": "Delete a lookup definition that is referenced by a feature. Verify reference is removed or handled gracefully in Feature view.", "priority": "medium" },
     { "id": "rules_invalid_ligature_error", "category": "Rules Workspace (GUI)", "description": "ADVANCED: Attempt to save a ligature rule with no input components or no output glyph. Verify an error notification appears.", "priority": "high" },
@@ -352,12 +374,19 @@
     { "id": "metrics_bulk_edit", "category": "Metrics Workspace", "description": "1. Go to Metrics Workspace. 2. Click 'Edit'. 3. Select multiple glyphs. 4. Click 'Edit Properties'. 5. Change the Left Side Bearing. 6. Save. 7. Verify all selected glyphs have the new LSB value.", "priority": "high" },
     { "id": "metrics_selection_visuals", "category": "Metrics Workspace", "description": "Click a glyph. Verify border change/checkmark. Click again to deselect.", "priority": "medium" },
     { "id": "metrics_bulk_edit_partial", "category": "Metrics Workspace", "description": "Select 2 glyphs. Bulk edit. Change only LSB (leave RSB blank). Verify only LSB updated.", "priority": "medium" },
+    {
+        "id": "metrics_upm_scaling",
+        "category": "Settings & Properties Panels",
+        "description": "ADVANCED: Change the 'Units Per Em' in Settings (e.g., from 1000 to 2048). Export the font. Verify that the characters are not visibly tiny or huge compared to standard fonts, ensuring the app scales drawing coordinates to the new UPM correctly.",
+        "priority": "medium"
+    },
     { "id": "export_successful", "category": "Final Views & Export", "description": "With a reasonably complete set of glyphs drawn, click 'Export OTF'. A valid, installable .otf font file should download.", "priority": "high" },
     { "id": "export_metadata_check", "category": "Final Views & Export", "description": "In Settings, fill out Font Meta Data (Designer, License, etc.). Export the font, install it, and check its properties in your OS to confirm the metadata is embedded correctly.", "priority": "high" },
     { "id": "export_required_glyphs", "category": "Final Views & Export", "description": "Export a font with at least one drawn character. Use an external font editor (like FontForge or Glyphs) to inspect the OTF file. Verify that: 1. A `.notdef` glyph exists and has a visible shape (e.g., a rectangle). 2. Glyphs for 'space', ZWJ (U+200D), and ZWNJ (U+200C) exist. 3. The advance width for ZWJ and ZWNJ is exactly 0.", "priority": "high" },
     { "id": "export_with_custom_script_fea", "category": "Final Views & Export", "description": "Create a custom script project that uses a manually uploaded FEA file. Draw the necessary glyphs. Export the OTF. Install and test the font to verify the custom FEA features are working.", "priority": "high" },
     { "id": "export_font_cache_hit", "category": "Final Views & Export", "description": "Click 'Test' to generate a font. Close the test page. Without making any changes, click 'Test' again. The font should load almost instantly, skipping the 'Generating font...' notification.", "priority": "high" },
     { "id": "export_font_cache_invalidation_glyph_change", "category": "Final Views & Export", "description": "Test a font. Return to the editor and make a visible change to a glyph. Test the font again. The 'Generating font...' notification must appear, and the preview must show the updated glyph.", "priority": "high" },
+    { "id": "export_offline_resilience", "category": "Final Views & Export", "description": "Simulate an offline state (disconnect internet). Attempt to export a font. Verify the application provides a graceful error message if the Python environment cannot be loaded, rather than crashing.", "priority": "high" },
     {
         "id": "export_smp_glyph_name",
         "category": "Final Views & Export",
@@ -374,6 +403,12 @@
     { "id": "export_incomplete_warning", "category": "Final Views & Export", "description": "Draw only one character and click 'Export OTF'. The 'Incomplete Font Warning' modal should appear. Test 'Export Anyway'.", "priority": "medium" },
     { "id": "export_fea_error_warning", "category": "Final Views & Export", "description": "ADVANCED: In manual FEA mode, enter invalid syntax (e.g., 'sub a b c;') and click 'Export OTF'. The 'OpenType Feature Error' modal must appear. Test the 'Export Anyway' button to confirm that a basic font file (without advanced features) is still downloaded.", "priority": "medium" },
     { "id": "export_font_name_special_chars", "category": "Final Views & Export", "description": "Set a font name that includes spaces and special characters (e.g., \"My Awesome Font!\"). Export the OTF. The downloaded filename should be sanitized (e.g., \"my_awesome_font_.otf\"), but the internal font name should be correct.", "priority": "medium" },
+     {
+        "id": "export_name_table_verification",
+        "category": "Final Views & Export",
+        "description": "Change the Font Name, Designer, and Manufacturer in Settings. Export the OTF. Open the file in a font viewer or info tool. Verify that the Naming Table fields (Family Name, Full Name, Unique ID) match your input exactly.",
+        "priority": "medium"
+    },
     { "id": "view_font_test_page", "category": "Final Views & Export", "description": "Click the 'Test' icon. The Font Test Page should open and render a preview. Type text and adjust size/line-height sliders.", "priority": "medium" },
     { "id": "view_comparison_page", "category": "Final Views & Export", "description": "ADVANCED: Open the Comparison View. Select characters from the sidebar. Test the wrap/unwrap toggle and zoom controls.", "priority": "medium" },
     { "id": "view_comparison_large_selection", "category": "Final Views & Export", "description": "ADVANCED: In Comparison View, select a large number of characters (>50). Verify the view remains performant when scrolling and zooming, both in wrapped and unwrapped modes.", "priority": "medium" },
@@ -392,6 +427,12 @@
     { "id": "data_pua_auto_assignment", "category": "Complex Integration & Data Integrity", "description": "1. Create a Custom Script with a `characters.json` file where one character has no `unicode` property. 2. Start the project. 3. Open the Drawing modal for that character. 4. Verify in the UI (Advanced mode header) that it has been assigned a PUA codepoint (U+E000 or higher). 5. Add another character without a unicode via the `characters.json` and reload, verifying it gets the next sequential PUA codepoint.", "priority": "high" },
     { "id": "data_dynamic_ligature_pua_assignment", "category": "Complex Integration & Data Integrity", "description": "1. Load a script with a `rules.json` that defines a ligature (e.g., `ksh`) whose components (`k`, `sh`) exist but the ligature itself is not in `characters.json`. 2. Do *not* draw the ligature. 3. Export the font. 4. Open the exported OTF in a font editor. 5. Verify that a glyph for the ligature (`ksh`) was created and assigned a PUA codepoint separate from any user-defined PUAs.", "priority": "high" },
     {
+        "id": "data_pua_stability_reload",
+        "category": "Complex Integration & Data Integrity",
+        "description": "Create a project with custom glyphs that are assigned PUA codepoints. Export the project to JSON. Clear the browser data or use a new session, then import the project JSON. Verify that the custom glyphs retain the exact same PUA codepoints as before.",
+        "priority": "high"
+    },
+    {
         "id": "data_pua_collision_avoidance",
         "category": "Complex Integration & Data Integrity",
         "description": "1. Manually add a custom glyph and assign it codepoint U+E000. 2. Have a rule that will dynamically generate a ligature (which would normally get U+E000). 3. Export the font. 4. Verify in a font editor that the manually added glyph has U+E000 and the dynamic ligature was assigned the next available PUA (U+E001).",
@@ -400,6 +441,12 @@
     { "id": "data_mode_switch_preservation", "category": "Complex Integration & Data Integrity", "description": "In Advanced mode, create several complex rules and kerning pairs. Switch to Simple mode (which hides these workspaces). Save the project. Reload the app and the project. Switch back to Advanced mode. Verify all rules and kerning pairs are still present and correct.", "priority": "high" },
     { "id": "integration_positioning_gsub_vs_gpos", "category": "Complex Integration & Data Integrity", "description": "ADVANCED: For a positioning rule with `gsub` defined, editing a pair should create/update a dynamic ligature glyph in `glyphDataMap`. For a rule with `gpos` defined (but no `gsub`), editing a pair should only save the offset to `markPositioningMap` and *not* create a new composite glyph in the main drawing grid.", "priority": "high" },
     { "id": "integration_custom_glyph_lifecycle", "category": "Complex Integration & Data Integrity", "description": "ADVANCED: Add a new custom glyph. Draw it. Use it as a component and as an output in a substitution rule. Set a kerning value for it. Use it in the Positioning editor. Export the font. Verify all features involving the custom glyph work.", "priority": "medium" },
+    {
+        "id": "import_missing_components",
+        "category": "Complex Integration & Data Integrity",
+        "description": "In 'Import Glyphs', select a composite/linked glyph (e.g., 'க்') from a source project, but do *not* select its base components ('க', '்'). Import. Verify how the app handles the missing dependencies (Does it import them implicitly? Create empty placeholders? Or break?).",
+        "priority": "high"
+    },
     { "id": "data_integrity_component_bearing_change", "category": "Complex Integration & Data Integrity", "description": "ADVANCED: Change the LSB/RSB of a component glyph (e.g., 'க'). Open a composite glyph that uses it (e.g., 'க்') and verify if its auto-calculated width and bearings adjust appropriately, or if it remains static as designed.", "priority": "medium" },
     { "id": "data_pua_restore", "category": "Complex Integration & Data Integrity", "description": "In a custom script, create a character without a Unicode value, forcing a PUA assignment. Save the project. Load the project in a new session. Verify the character is restored with its correct PUA value and drawing.", "priority": "medium" },
     { "id": "settings_general_autosave_toggle", "category": "Settings & Properties Panels", "description": "In General Settings, toggle 'Enable Autosave' off. Make a change in the drawing editor and attempt to close it. The 'Unsaved Changes' modal must appear. Toggle it back on and repeat; the modal should not appear and changes should save.", "priority": "high" },
@@ -415,6 +462,12 @@
     { "id": "settings_positioning_lsb_rsb", "category": "Settings & Properties Panels", "description": "ADVANCED: In the Positioning editor for a combination, open the properties panel and set a custom LSB and RSB. Export the font and verify the resulting ligature glyph has the correct, custom side bearings.", "priority": "medium" },
     { "id": "settings_general_path_smoothing", "category": "Settings & Properties Panels", "description": "In General Settings, change the 'Path Smoothing' value. Draw a complex freehand shape and confirm the level of detail changes according to the setting.", "priority": "low" },
     { "id": "settings_general_background_hints", "category": "Settings & Properties Panels", "description": "In General Settings, toggle 'Show Background Hints'. Open the drawing editor and verify the large, grey character name in the background appears and disappears.", "priority": "low" },
+    {
+      "id": "settings_theme_persistence",
+      "category": "Settings & Properties Panels",
+      "description": "Switch to Dark Mode. Refresh the page or close/reopen the browser. Verify that the application remains in Dark Mode without reverting to Light Mode.",
+      "priority": "low"
+    },
     { "id": "a11y_modal_focus_trap", "category": "Accessibility", "description": "When a modal is open, continuously press the Tab key. The focus should cycle through the interactive elements within the modal and not escape to the background page content.", "priority": "high" },
     { "id": "a11y_screen_reader_labels", "category": "Accessibility", "description": "Using a screen reader, navigate through the main header buttons and workspace tabs. Verify they have descriptive labels (e.g., \"Save project\", \"Drawing workspace\").", "priority": "medium" },
     { "id": "a11y_keyboard_rule_editor", "category": "Accessibility", "description": "ADVANCED: Navigate the GUI Rule Editor using only the keyboard. Verify it's possible to add a new rule, tab to the drop zones, and (if possible) select glyphs without a mouse.", "priority": "medium" },
@@ -438,6 +491,36 @@
         "id": "draw_cascading_shape_update_with_transform",
         "category": "Drawing Workspace: Glyph Management",
         "description": "1. Create/Find a composite glyph that uses a scaled component (e.g., `compositeTransform: [[0.7, 0]]`). 2. Edit the source component's shape (e.g., add a circle). 3. Save and confirm update. 4. Verify the composite glyph shows the *new* shape (circle) but still applied with the 0.7 scale factor.",
+        "priority": "high"
+    },
+    {
+        "id": "draw_undo_redo_persistence",
+        "category": "Drawing Workspace: Editor & Tools",
+        "description": "1. Enable Autosave. 2. Draw a shape. 3. Autosave triggers. 4. Click Undo. 5. Autosave triggers again. 6. Refresh page and restore session. 7. Verify the state *after* undo is restored.",
+        "priority": "medium"
+    },
+    {
+        "id": "ui_notification_undo_cascade",
+        "category": "General UI & Navigation",
+        "description": "1. Trigger a cascade update (e.g., by editing a base glyph used in many ligatures). 2. Click the 'Undo' button on the success notification. 3. Verify that the changes to the base glyph AND all dependent ligatures are reverted.",
+        "priority": "high"
+    },
+    {
+        "id": "draw_boolean_union_holes",
+        "category": "Drawing Workspace: Editor & Tools",
+        "description": "ADVANCED: Use 'Trace Image' to import a shape with a hole (e.g., letter 'O'). Verify that the resulting path is a single compound path with the hole correctly subtracted (winding rule check).",
+        "priority": "medium"
+    },
+    {
+        "id": "settings_guide_font_rendering",
+        "category": "Settings & Properties Panels",
+        "description": "1. In `scripts.json`, configure a `guideFont` URL. 2. Load the script. 3. Verify the guide font renders correctly in the Drawing Editor background (faint hint) and on character cards.",
+        "priority": "medium"
+    },
+    {
+        "id": "export_fea_compilation_failure_handling",
+        "category": "Final Views & Export",
+        "description": "ADVANCED: Enter invalid FEA code in manual mode. Click Export. Verify that the app does not crash/freeze, but instead shows the specific Pyodide error message in a modal, allowing the user to export the un-patched font anyway.",
         "priority": "high"
     }
 ]
