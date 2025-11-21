@@ -36,18 +36,6 @@ export const useAppActions = ({
     // Dependency Map (Ref) needs to be shared or passed around, typically managed where glyphs are managed
     const dependencyMap = useRef<Map<number, Set<number>>>(new Map());
 
-    // 1. Load Logic Hook (Needs to notify persistence of new state)
-    // We need to execute loading logic, but loading logic sets state that Persistence monitors.
-    
-    // However, useProjectLoad needs setters from Persistence to update projectId.
-    // So we init Persistence first, but we need `isScriptDataLoading` from Load.
-    // Circular dependency? No, Persistence just needs to know *if* loading to skip autosave.
-    // We can hoist the `isScriptDataLoading` state up or let Load manage it and pass it to Persistence.
-
-    // Let's init Load logic first to get the loading state.
-    // Wait, we can't pass setters from Persistence if Persistence isn't init'd.
-    // Refactor: ProjectLoad controls `isScriptDataLoading`.
-    
     // Forward declarations to solve ordering
     const [isScriptDataLoadingState, setIsScriptDataLoadingState] = useState(true);
 
@@ -63,7 +51,7 @@ export const useAppActions = ({
         handleRelinkGlyph, handleImportGlyphs, handleAddBlock, 
         handleCheckGlyphExists, handleCheckNameExists,
         setMarkAttachmentRules, markAttachmentRules
-    } = useGlyphActions(dependencyMap);
+    } = useGlyphActions(dependencyMap, projectId);
 
     // 4. Load Hook
     const {

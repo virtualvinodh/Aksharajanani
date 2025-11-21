@@ -10,6 +10,7 @@ import { Character, GlyphData, Path, Point, CharacterSet } from '../../types';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
 import { generateCompositeGlyphData, updateComponentInPaths } from '../../services/glyphRenderService';
 import { VEC } from '../../utils/vectorUtils';
+import * as dbService from '../../services/dbService';
 
 declare var UnicodeProperties: any;
 
@@ -18,7 +19,10 @@ export interface SaveOptions {
     silent?: boolean;   // If true, do not show success notifications (unless critical cascade).
 }
 
-export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number, Set<number>>>) => {
+export const useGlyphActions = (
+    dependencyMap: React.MutableRefObject<Map<number, Set<number>>>,
+    projectId: number | undefined
+) => {
     const { t } = useLocale();
     const layout = useLayout();
     const { characterSets, allCharsByUnicode, allCharsByName, dispatch: characterDispatch } = useCharacter();
@@ -331,11 +335,15 @@ export const useGlyphActions = (dependencyMap: React.MutableRefObject<Map<number
             }
             return newMap;
         }});
+
+        if (projectId !== undefined) {
+            dbService.deleteFontCache(projectId);
+        }
         
         layout.showNotification(t('glyphsImportedSuccess', { count: glyphsToImport.length }));
         layout.closeModal();
     
-    }, [glyphDataDispatch, layout, t]);
+    }, [glyphDataDispatch, layout, t, projectId]);
 
     const handleAddBlock = useCallback((charsToAdd: Character[]) => {
         if (!characterSets) return;
