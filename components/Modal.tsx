@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useRef } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -28,13 +29,36 @@ const Modal: React.FC<ModalProps> = ({
   titleClassName, 
   closeOnBackdropClick = true 
 }) => {
+  const mouseDownTargetIsBackdrop = useRef(false);
+
   if (!isOpen) return null;
+
+  const handleBackdropMouseDown = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      mouseDownTargetIsBackdrop.current = true;
+    } else {
+      mouseDownTargetIsBackdrop.current = false;
+    }
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (!closeOnBackdropClick) return;
+    
+    // Only close if the mouse down happened on the backdrop AND the click happened on the backdrop.
+    // This prevents closing when selecting text (mousedown inside -> mouseup outside).
+    if (mouseDownTargetIsBackdrop.current && e.target === e.currentTarget) {
+      onClose();
+    }
+    // Reset for next interaction
+    mouseDownTargetIsBackdrop.current = false;
+  };
 
   return (
     <div 
       className="fixed inset-0 bg-black/60 dark:bg-gray-900/80 z-50 flex items-center justify-center p-4 animate-fade-in-up" 
       style={{ animationDuration: '0.2s' }}
-      onClick={closeOnBackdropClick ? onClose : undefined}
+      onMouseDown={handleBackdropMouseDown}
+      onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -42,6 +66,7 @@ const Modal: React.FC<ModalProps> = ({
       <div 
         className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full ${sizeClasses[size]}`} 
         onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <header className="flex justify-between items-center mb-4">
           <h2 id="modal-title" className={`text-2xl font-bold ${titleClassName || 'text-gray-900 dark:text-white'}`}>{title}</h2>
