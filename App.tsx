@@ -334,6 +334,18 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       {layout.activeModal?.name === 'feaError' && feaErrorState && <FeaErrorModal isOpen={true} onClose={() => { layout.closeModal(); }} onConfirm={() => { downloadFontBlob(feaErrorState.blob, settings.fontName); layout.closeModal(); }} errorMessage={feaErrorState.error} />}
       {layout.activeModal?.name === 'unsavedRules' && ( <UnsavedRulesModal isOpen={true} onClose={layout.closeModal} onDiscard={() => { layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} onSave={() => { handleSaveToDB(); layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} /> )}
       {layout.activeModal?.name === 'testCases' && <TestCasePage onClose={layout.closeModal} />}
+      {layout.activeModal?.name === 'confirmSnapshotRestore' && (
+        <ConfirmationModal 
+            isOpen={true} 
+            onClose={layout.closeModal} 
+            title={t('confirmSnapshotRestore')} 
+            message={t('snapshotRestoreMessage', { time: new Date(layout.activeModal.props.timestamp).toLocaleTimeString() })}
+            confirmActionText={t('restore')}
+            saveAndConfirmActionText={t('cancel')}
+            onConfirm={layout.activeModal.props.onConfirm}
+            onSaveAndConfirm={layout.closeModal}
+        />
+      )}
     </div>
   );
 };

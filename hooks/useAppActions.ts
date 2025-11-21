@@ -131,23 +131,36 @@ export const useAppActions = ({
     }, [workspace, setWorkspace, script, settingsDispatch]);
 
     // --- Session Snapshot Logic ---
-    const [sessionSnapshot, setSessionSnapshot] = useState<any | null>(null);
+    const [sessionSnapshot, setSessionSnapshot] = useState<{ data: any, timestamp: number } | null>(null);
 
     const handleTakeSnapshot = useCallback(() => {
         if (fullProjectStateForSaving) {
             // Deep clone the current state
-            setSessionSnapshot(JSON.parse(JSON.stringify(fullProjectStateForSaving)));
+            setSessionSnapshot({
+                data: JSON.parse(JSON.stringify(fullProjectStateForSaving)),
+                timestamp: Date.now()
+            });
             layout.showNotification("Snapshot taken", 'success');
         }
     }, [fullProjectStateForSaving, layout]);
+    
+    const confirmRestore = useCallback(() => {
+         if (sessionSnapshot) {
+            // Restore using the load logic
+            initializeProjectState(sessionSnapshot.data);
+            layout.showNotification("Session restored from snapshot", 'info');
+            layout.closeModal();
+        }
+    }, [sessionSnapshot, initializeProjectState, layout]);
 
     const handleRestoreSnapshot = useCallback(() => {
         if (sessionSnapshot) {
-            // Restore using the load logic
-            initializeProjectState(sessionSnapshot);
-            layout.showNotification("Session restored from snapshot", 'info');
+            layout.openModal('confirmSnapshotRestore', {
+                timestamp: sessionSnapshot.timestamp,
+                onConfirm: confirmRestore
+            });
         }
-    }, [sessionSnapshot, initializeProjectState, layout]);
+    }, [sessionSnapshot, layout, confirmRestore]);
 
 
     return {

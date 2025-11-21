@@ -1,3 +1,4 @@
+
 {
 	"about": "About",
 	"aboutAdvancedContent": "While designed for simplicity, the tool does not sacrifice capability. For experts who require granular control, Aksharajanani offers a full suite of advanced features, including a precise Bézier curve editor, detailed kerning workspaces, and a manual OpenType feature code editor.",
@@ -609,5 +610,8 @@
     "flipHorizontal": "Flip Horizontal",
     "flipVertical": "Flip Vertical",
     "scaleX": "Scale X",
-    "scaleY": "Scale Y"
+    "scaleY": "Scale Y",
+    "confirmSnapshotRestore": "Restore Snapshot?",
+    "snapshotRestoreMessage": "Are you sure you want to restore from the snapshot taken at {time}? All unsaved changes made since then will be lost.",
+    "restore": "Restore"
 }

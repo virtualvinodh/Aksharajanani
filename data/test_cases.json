@@ -116,6 +116,12 @@
     { "id": "cmd_palette_search_kerning_pair", "category": "General UI & Navigation", "description": "Open Command Palette. Type a kerning pair (e.g., 'AV'). If kerning is active and the pair exists, a result should appear. Selecting it should open the Kerning workspace and focus that pair.", "priority": "high" },
     { "id": "cmd_palette_empty_state", "category": "General UI & Navigation", "description": "Open Command Palette. Type a nonsense string (e.g., 'xyz123'). Verify the list shows 'No results found'.", "priority": "low" },
     { "id": "cmd_palette_navigation", "category": "General UI & Navigation", "description": "Use the Command Palette to search for a specific Positioning Pair (e.g., 'ka + i') that exists in the font. Select it. Verify the app switches to the Positioning workspace AND opens the specific editor modal for that pair.", "priority": "high" },
+    {
+        "id": "session_snapshot_restore",
+        "category": "General UI & Navigation",
+        "description": "1. Modify the project (e.g., draw a glyph). 2. Go to 'More' menu -> 'Take Snapshot'. 3. Make further changes or delete the glyph. 4. Go to 'More' menu -> 'Restore Snapshot'. 5. Verify a confirmation modal appears showing the timestamp. 6. Confirm and verify the project reverts exactly to the snapshot state.",
+        "priority": "high"
+    },
 
     {
       "id": "draw_linked_glyph_creation_and_lock",
@@ -429,7 +435,7 @@
     {
         "id": "data_pua_stability_reload",
         "category": "Complex Integration & Data Integrity",
-        "description": "Create a project with custom glyphs that are assigned PUA codepoints. Export the project to JSON. Clear the browser data or use a new session, then import the project JSON. Verify that the custom glyphs retain the exact same PUA codepoints as before.",
+        "description": "Create a project with custom glyphs that are assigned PUA codepoints. Export the project to JSON. Clear the browser data or use a new session, then import the project JSON. Verify that the custom glyphs retain the exact same PUA codepoint as before.",
         "priority": "high"
     },
     {
