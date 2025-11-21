@@ -1,4 +1,3 @@
-
 [
     { "id": "init_load_script", "category": "App Initialization & File I/O", "description": "Select a standard script (e.g., Tamil). The main application workspace should load correctly without errors.", "priority": "high" },
     { 
@@ -423,5 +422,22 @@
     { "id": "perf_memory_leak_check", "category": "Performance", "description": "Open and close the glyph drawing modal for 20 different characters. Monitor browser memory usage. There should not be a significant, sustained increase in memory after closing all modals.", "priority": "medium" },
     { "id": "perf_large_glyph_set", "category": "Performance", "description": "Simulate or load a project with 500+ glyphs defined. Measure the performance of the main Character Grid when scrolling and switching between character sets.", "priority": "medium" },
     { "id": "perf_large_rule_set_export", "category": "Performance", "description": "ADVANCED: Create a project with >200 kerning pairs and >50 complex substitution rules. Measure the time it takes to generate the FEA code and export the final OTF.", "priority": "medium" },
-    { "id": "draw_autosave_debounce", "category": "Drawing Workspace: Glyph Management", "description": "Enable Autosave. Open a glyph. Draw a stroke. Wait 500ms. Verify 'Save' is triggered. Draw two strokes quickly (within 200ms). Verify 'Save' is triggered only once after the second stroke.", "priority": "high" }
+    {
+        "id": "draw_relink_glyph_behavior",
+        "category": "Drawing Workspace: Glyph Management",
+        "description": "1. Unlock a linked glyph (e.g., 'க்'). 2. Manually draw a stroke on it. 3. Click the 'Relink' button in the toolbar. 4. Confirm the warning modal. 5. Verify that the manual stroke is removed and the glyph reverts to displaying its locked components ('க' + '்').",
+        "priority": "high"
+    },
+    {
+        "id": "ui_notification_undo_action",
+        "category": "General UI & Navigation",
+        "description": "1. In the Positioning workspace, move a mark for a base character that triggers a cascade update (e.g., a class-based update). 2. Verify a success notification appears with an 'UNDO' button. 3. Click 'UNDO'. 4. Verify that the positioning change is reverted for both the current pair and all cascaded pairs.",
+        "priority": "medium"
+    },
+    {
+        "id": "draw_cascading_shape_update_with_transform",
+        "category": "Drawing Workspace: Glyph Management",
+        "description": "1. Create/Find a composite glyph that uses a scaled component (e.g., `compositeTransform: [[0.7, 0]]`). 2. Edit the source component's shape (e.g., add a circle). 3. Save and confirm update. 4. Verify the composite glyph shows the *new* shape (circle) but still applied with the 0.7 scale factor.",
+        "priority": "high"
+    }
 ]
