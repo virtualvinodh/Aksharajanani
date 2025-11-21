@@ -6,6 +6,8 @@
 
 
 
+
+
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Path, KerningMap, MarkPositioningMap, PositioningRules, MarkAttachmentRules, Segment } from '../types';
 import { compileFeaturesAndPatch } from './pythonFontService';
 import { generateFea } from './feaService';
@@ -524,6 +526,7 @@ export const exportToOtf = async (
         };`;
         
         // Need to inline the outline expansion logic for the worker
+        // UPDATED: Includes start/end tangent stabilization logic
         const getStrokeOutlinePointsForWorker = `
         const getStrokeOutlinePoints = (points, thickness, contrast = 1.0, angle) => {
              const polyline = curveToPolyline(points, 15);
@@ -535,6 +538,9 @@ export const exportToOtf = async (
              const nibAngleRad = angle !== undefined ? (angle * Math.PI / 180) : (90 * Math.PI / 180);
              const perpToNib = { x: -Math.sin(nibAngleRad), y: Math.cos(nibAngleRad) }; 
              
+             // Smoothing window size for terminals
+             const TERMINAL_SMOOTHING_WINDOW = 4;
+
              for (let i = 0; i < polyline.length; i++) {
                 const p_curr = polyline[i];
                 const p_prev = polyline[i - 1];
@@ -543,11 +549,25 @@ export const exportToOtf = async (
                 let dir;
 
                 if (!p_prev) {
-                  dir = VEC.normalize(VEC.sub(p_next, p_curr));
-                  normal = VEC.perp(dir);
+                    // --- START POINT STABILIZATION ---
+                    const lookAheadIndex = Math.min(polyline.length - 1, i + TERMINAL_SMOOTHING_WINDOW);
+                    const p_lookAhead = polyline[lookAheadIndex];
+                    dir = VEC.normalize(VEC.sub(p_lookAhead, p_curr));
+                    
+                    if (Math.abs(dir.x) < 1e-5 && Math.abs(dir.y) < 1e-5 && p_next) {
+                        dir = VEC.normalize(VEC.sub(p_next, p_curr));
+                    }
+                    normal = VEC.perp(dir);
                 } else if (!p_next) {
-                  dir = VEC.normalize(VEC.sub(p_curr, p_prev));
-                  normal = VEC.perp(dir);
+                    // --- END POINT STABILIZATION ---
+                    const lookBehindIndex = Math.max(0, i - TERMINAL_SMOOTHING_WINDOW);
+                    const p_lookBehind = polyline[lookBehindIndex];
+                    dir = VEC.normalize(VEC.sub(p_curr, p_lookBehind));
+                    
+                    if (Math.abs(dir.x) < 1e-5 && Math.abs(dir.y) < 1e-5 && p_prev) {
+                        dir = VEC.normalize(VEC.sub(p_curr, p_prev));
+                    }
+                    normal = VEC.perp(dir);
                 } else {
                   const dir1 = VEC.normalize(VEC.sub(p_curr, p_prev));
                   const n1 = VEC.perp(dir1);

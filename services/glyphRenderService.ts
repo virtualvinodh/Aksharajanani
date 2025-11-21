@@ -99,26 +99,13 @@ export const getStrokeOutlinePoints = (points: Point[], thickness: number, contr
      const outline1: Point[] = [];
      const outline2: Point[] = [];
      
-     // If angle is provided (Calligraphy tool), use it. Otherwise assume vertical axis (90 deg).
-     // For vertical axis, the nib is wide horizontally (0 deg) and thin vertically.
-     // Wait, no. A vertical nib (like holding a marker straight up) draws thick verticals and thin horizontals.
-     // That means the "wide" part of the nib is horizontal.
-     // So the perp vector to the nib is Vertical.
-     
      const nibAngleRad = angle !== undefined ? (angle * Math.PI / 180) : (90 * Math.PI / 180);
-     const perpToNib = { x: -Math.sin(nibAngleRad), y: Math.cos(nibAngleRad) }; // Normal to nib direction
-     // For 90 deg (Vertical line nib), perp is (-1, 0) -> Horizontal.
-     // Moving Vertically (dir = 0, 1). Dot(dir, perp) = 0. Minimum thickness?
-     // Wait. If I hold a flat pen horizontally (-), moving up/down makes a thin line. Moving left/right makes a thick line.
-     // If I hold a flat pen vertically (|), moving up/down makes a thick line. Moving left/right makes a thin line.
-     // Standard contrast (Times New Roman): Vertical strokes are thick. Horizontal are thin.
-     // This implies the "pen" is effectively a horizontal flat shape that we drag.
-     // Or rather, we calculate thickness based on projection onto the X-axis.
+     const perpToNib = { x: -Math.sin(nibAngleRad), y: Math.cos(nibAngleRad) }; 
      
-     // Let's use the expansion formula directly without "nib" analogy to avoid confusion.
-     // Thick verticals -> thickness depends on x-component of normal vector.
-     // Thin horizontals -> thickness depends on y-component of normal vector.
-     
+     // Smoothing window size for terminals. 
+     // Since curveToPolyline generates dense points, 4 points covers a small but stable distance.
+     const TERMINAL_SMOOTHING_WINDOW = 4;
+
      for (let i = 0; i < polyline.length; i++) {
         const p_curr = polyline[i];
         const p_prev = polyline[i - 1];
@@ -127,12 +114,34 @@ export const getStrokeOutlinePoints = (points: Point[], thickness: number, contr
         let dir: Point;
 
         if (!p_prev) {
-          dir = VEC.normalize(VEC.sub(p_next, p_curr));
-          normal = VEC.perp(dir);
+            // --- START POINT STABILIZATION ---
+            // Instead of just p_next - p_curr, we average the direction over the first few points
+            // to avoid "flaring" from micro-hooks at the start of a stroke.
+            const lookAheadIndex = Math.min(polyline.length - 1, i + TERMINAL_SMOOTHING_WINDOW);
+            const p_lookAhead = polyline[lookAheadIndex];
+            dir = VEC.normalize(VEC.sub(p_lookAhead, p_curr));
+            
+            // Fallback if lookahead point is same as current (zero length start)
+            if (Math.abs(dir.x) < 1e-5 && Math.abs(dir.y) < 1e-5 && p_next) {
+                 dir = VEC.normalize(VEC.sub(p_next, p_curr));
+            }
+            
+            normal = VEC.perp(dir);
         } else if (!p_next) {
-          dir = VEC.normalize(VEC.sub(p_curr, p_prev));
-          normal = VEC.perp(dir);
+            // --- END POINT STABILIZATION ---
+            // Similar logic for the end, looking backwards.
+            const lookBehindIndex = Math.max(0, i - TERMINAL_SMOOTHING_WINDOW);
+            const p_lookBehind = polyline[lookBehindIndex];
+            dir = VEC.normalize(VEC.sub(p_curr, p_lookBehind));
+            
+            if (Math.abs(dir.x) < 1e-5 && Math.abs(dir.y) < 1e-5 && p_prev) {
+                 dir = VEC.normalize(VEC.sub(p_curr, p_prev));
+            }
+
+            normal = VEC.perp(dir);
         } else {
+            // --- MIDDLE POINTS (Standard Miter Join) ---
+            // We keep the precise local geometry for corners to ensure sharp turns are preserved.
           const dir1 = VEC.normalize(VEC.sub(p_curr, p_prev));
           const n1 = VEC.perp(dir1);
           const dir2 = VEC.normalize(VEC.sub(p_next, p_curr));
@@ -155,26 +164,13 @@ export const getStrokeOutlinePoints = (points: Point[], thickness: number, contr
         let thicknessAtPoint = thickness;
         
         if (angle !== undefined) {
-            // Explicit Calligraphy Tool (fixed angle nib)
-            // Existing logic: dot product with nib normal.
-            // If stroke moves parallel to nib angle -> thin. Perpendicular -> thick.
+            // Explicit Calligraphy Tool
              thicknessAtPoint = thickness * Math.max(0.1, Math.abs(VEC.dot(dir, perpToNib))); 
-             // Ensure it doesn't disappear completely
         } else if (contrast < 1.0) {
-            // Global Contrast Mode (Vertical Axis Stress)
-            // Vertical lines (dir y dominated, normal x dominated) -> Thick
-            // Horizontal lines (dir x dominated, normal y dominated) -> Thin
-            // Normal vector (nx, ny). Vertical line has normal (~1, 0). Horizontal has normal (0, ~1).
-            // We want thickness to be max when normal.x is 1.
-            // We want thickness to be min when normal.y is 1.
-            
-            // Let's use the unit normal for thickness calculation to avoid miter scaling artifacts affecting ratio
+            // Global Contrast Mode
             const unitNormal = VEC.normalize(normal);
-            
-            // Interpolation factor based on horizontal-ness of the normal (which means vertical-ness of the stroke)
             const verticalFactor = Math.abs(unitNormal.x); 
             
-            // Thickness = Min + (Max - Min) * verticalFactor
             const minThickness = thickness * contrast;
             thicknessAtPoint = minThickness + (thickness - minThickness) * verticalFactor;
         }
