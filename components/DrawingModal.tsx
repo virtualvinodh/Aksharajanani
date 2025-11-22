@@ -21,6 +21,7 @@ import { useCanvasOperations } from '../hooks/drawing/useCanvasOperations';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
 import { VEC } from '../utils/vectorUtils';
 import ContextualToolbar from './ContextualToolbar';
+import { isGlyphDrawn } from '../utils/glyphUtils';
 
 declare var paper: any;
 
@@ -244,9 +245,46 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
 
   // Setup tool and reset view on init (since we remount on char change now, this is safe)
   useEffect(() => {
-      if (character.link) setCurrentTool('select'); else setCurrentTool('pen');
-      setZoom(1); setViewOffset({ x: 0, y: 0 }); setSelectedPathIds(new Set()); setIsImageSelected(false);
-      setBackgroundImage(null); setImageTransform(null); setBackgroundImageOpacity(0.5);
+      setZoom(1); 
+      setViewOffset({ x: 0, y: 0 }); 
+      setIsImageSelected(false);
+      setBackgroundImage(null); 
+      setImageTransform(null); 
+      setBackgroundImageOpacity(0.5);
+
+      // Detect if this is a fresh prefill (data was empty in DB, but paths exist now)
+      const initiallyDrawn = isGlyphDrawn(glyphData);
+      const isFreshPrefill = !initiallyDrawn && currentPaths.length > 0;
+      
+      if (isFreshPrefill) {
+          // Attempt to select the last component of the composite
+          const components = character.composite || character.link || [];
+          if (components.length > 0) {
+              const lastIndex = components.length - 1;
+              // Match the groupId format used in generateCompositeGlyphData
+              const targetGroupId = `component-${lastIndex}`;
+              
+              const idsToSelect = new Set<string>();
+              currentPaths.forEach(p => {
+                  if (p.groupId === targetGroupId) {
+                      idsToSelect.add(p.id);
+                  }
+              });
+              
+              setSelectedPathIds(idsToSelect);
+              // Always switch to select tool for prefilled composites so user can adjust immediately
+              setCurrentTool('select');
+          } else {
+               // Fallback if no components found (unlikely for prefill)
+               setSelectedPathIds(new Set());
+               setCurrentTool('select'); 
+          }
+      } else {
+          // Normal load
+          setSelectedPathIds(new Set());
+          if (character.link) setCurrentTool('select'); else setCurrentTool('pen');
+      }
+
       if (character.link) showNotification(t('linkedGlyphLocked', { components: character.link.join(' + ') }), 'info');
   }, []);
 
