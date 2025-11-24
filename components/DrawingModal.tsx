@@ -81,7 +81,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const [isUnlockConfirmOpen, setIsUnlockConfirmOpen] = useState(false);
   const [isRelinkConfirmOpen, setIsRelinkConfirmOpen] = useState(false);
   const [isConstructionWarningOpen, setIsConstructionWarningOpen] = useState(false);
-  const [pendingConstruction, setPendingConstruction] = useState<{type: 'drawing' | 'composite' | 'link', components: string[]} | null>(null);
+  const [pendingConstruction, setPendingConstruction] = useState<{type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]} | null>(null);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -136,27 +136,10 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   });
 
   // --- Construction Logic ---
-  const executeConstructionUpdate = (type: 'drawing' | 'composite' | 'link', components: string[]) => {
+  const executeConstructionUpdate = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => {
       if (character.unicode === undefined) return;
 
       // 1. Update Character Definition (Metadata)
-      characterDispatch({
-          type: 'UPDATE_CHARACTER_BEARINGS',
-          payload: {
-              unicode: character.unicode,
-              // This is a bit of a hack to reuse the reducer, but we need a proper action.
-              // Ideally, add a 'UPDATE_CONSTRUCTION' action.
-              // For now, we simulate unlinking/relinking logic or just manual update if we had access.
-              // Since we don't have a generic update action exposed easily, let's assume we add one or handle it via relink.
-              // Wait, `character` props are immutable from parent state. We need to dispatch an update.
-              // Let's use a new action 'UPDATE_CHARACTER_CONSTRUCTION' if available, or extend 'UPDATE_CHARACTER_BEARINGS'.
-              // The reducer in CharacterContext is limited.
-              // Let's assume we can use a direct update via sets injection if needed, or add action.
-              // I will use a temporary workaround: Assuming I can add a new action or modify state directly via a generic update.
-              // Let's look at `CharacterContext.tsx`. It has `UPDATE_CHARACTER_SETS`.
-          }
-      });
-      
       // We need to inject a custom update using UPDATE_CHARACTER_SETS
       characterDispatch({
           type: 'UPDATE_CHARACTER_SETS',
@@ -170,12 +153,17 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                           if (type === 'drawing') {
                               delete updated.link;
                               delete updated.composite;
+                              delete updated.compositeTransform;
                           } else if (type === 'link') {
                               updated.link = components;
                               delete updated.composite;
+                              if (transforms && transforms.length > 0) updated.compositeTransform = transforms;
+                              else delete updated.compositeTransform;
                           } else if (type === 'composite') {
                               updated.composite = components;
                               delete updated.link;
+                              if (transforms && transforms.length > 0) updated.compositeTransform = transforms;
+                              else delete updated.compositeTransform;
                           }
                           return updated;
                       }
@@ -187,7 +175,12 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
 
       // 2. Handle Path Regeneration
       if (type === 'link' || type === 'composite') {
-          const tempChar: Character = { ...character, link: type === 'link' ? components : undefined, composite: type === 'composite' ? components : undefined };
+          const tempChar: Character = { 
+              ...character, 
+              link: type === 'link' ? components : undefined, 
+              composite: type === 'composite' ? components : undefined,
+              compositeTransform: transforms
+          };
           
           const compositeData = generateCompositeGlyphData({
               character: tempChar,
@@ -215,17 +208,17 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       setPendingConstruction(null);
   };
 
-  const handleSaveConstruction = (type: 'drawing' | 'composite' | 'link', components: string[]) => {
+  const handleSaveConstruction = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => {
       const hasContent = currentPaths.length > 0;
       const wasVisual = isLocked || isComposite;
       
       // Warning condition: Switching TO a constructed mode FROM a manual drawing mode that has content.
       // This implies overwriting the manual work with generated components.
       if (!wasVisual && (type === 'link' || type === 'composite') && hasContent) {
-          setPendingConstruction({ type, components });
+          setPendingConstruction({ type, components, transforms });
           setIsConstructionWarningOpen(true);
       } else {
-          executeConstructionUpdate(type, components);
+          executeConstructionUpdate(type, components, transforms);
       }
   };
 
@@ -477,7 +470,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         footer={
           <>
              <button onClick={() => { setIsConstructionWarningOpen(false); setPendingConstruction(null); }} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button>
-             <button onClick={() => pendingConstruction && executeConstructionUpdate(pendingConstruction.type, pendingConstruction.components)} className="px-4 py-2 bg-red-600 text-white rounded-lg">Overwrite & Reconstruct</button>
+             <button onClick={() => pendingConstruction && executeConstructionUpdate(pendingConstruction.type, pendingConstruction.components, pendingConstruction.transforms)} className="px-4 py-2 bg-red-600 text-white rounded-lg">Overwrite & Reconstruct</button>
           </>
         }
       >

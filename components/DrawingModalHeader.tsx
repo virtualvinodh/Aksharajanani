@@ -25,7 +25,7 @@ interface DrawingModalHeaderProps {
   isComposite?: boolean;
   onRefresh?: () => void;
   allCharacterSets: CharacterSet[];
-  onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[]) => void;
+  onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => void;
 }
 
 const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
@@ -37,7 +37,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
 
   return (
-    <header className="bg-gray-50 dark:bg-gray-800 p-4 flex justify-between items-center shadow-md w-full flex-shrink-0">
+    <header className="bg-gray-5 dark:bg-gray-800 p-4 flex justify-between items-center shadow-md w-full flex-shrink-0">
       <div className="flex-1 flex justify-start">
           <button
           onClick={onBackClick}
