@@ -202,14 +202,13 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.setLineDash([]);
         
         if (handles && transformMode !== 'move-only' && !previewTransform) {
-            const mobileMultiplier = isMobile ? 1.5 : 1;
-            const adjustedHandleSize = HANDLE_SIZE * mobileMultiplier;
-            const scaledHandleSize = adjustedHandleSize / zoom;
+            // Removed extra multiplier here; HANDLE_SIZE is now correctly set in useSelectTool
+            const scaledHandleSize = HANDLE_SIZE / zoom;
 
             Object.values(handles).forEach((handle: Handle & Point) => {
                 if (handle.type === 'rotate') {
                     ctx.save(); ctx.strokeStyle = '#6366F1'; ctx.lineWidth = 1.5 / zoom;
-                    const radius = (adjustedHandleSize / 2 + 10) / zoom;
+                    const radius = (HANDLE_SIZE / 2 + 10) / zoom;
                     ctx.beginPath(); ctx.arc(handle.x, handle.y, radius, 0.25 * Math.PI, 1.9 * Math.PI); ctx.stroke();
                     const arrowAngle = 1.9 * Math.PI; const arrowSize = 6 / zoom;
                     const arrowX = handle.x + radius * Math.cos(arrowAngle); const arrowY = handle.y + radius * Math.sin(arrowAngle);

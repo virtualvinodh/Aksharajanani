@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Character, GlyphData, FontMetrics, CharacterSet, KerningMap, RecommendedKerning, AppSettings } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { SparklesIcon, LeftArrowIcon, RightArrowIcon } from '../constants';
+import { SparklesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon } from '../constants';
 import { calculateAutoKerning } from '../services/kerningService';
 import KerningModal from './KerningModal';
 import PairCard from './PairCard';
@@ -16,6 +16,7 @@ import { useLayout } from '../contexts/LayoutContext';
 import { isGlyphDrawn as isGlyphDrawnUtil } from '../utils/glyphUtils';
 import AutoKerningProgressModal from './AutoKerningProgressModal';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import Modal from './Modal';
 
 interface KerningPageProps {
   recommendedKerning: RecommendedKerning[] | null;
@@ -41,6 +42,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
     const [kerningProgressValue, setKerningProgressValue] = useState(0);
     const [showOnlyUnkerned, setShowOnlyUnkerned] = useState(false);
+    const [isResetVisibleConfirmOpen, setIsResetVisibleConfirmOpen] = useState(false);
 
     const [currentPage, setCurrentPage] = useState(1);
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
@@ -142,6 +144,13 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             return !kerningMap.has(key);
         });
     }, [allPairsToDisplay, showOnlyUnkerned, kerningMap]);
+    
+    const visibleKernedCount = useMemo(() => {
+        return filteredPairsToDisplay.reduce((count, pair) => {
+            const key = `${pair.left.unicode}-${pair.right.unicode}`;
+            return kerningMap.has(key) ? count + 1 : count;
+        }, 0);
+    }, [filteredPairsToDisplay, kerningMap]);
 
     const totalPages = useMemo(() => Math.ceil(filteredPairsToDisplay.length / PAGE_SIZE), [filteredPairsToDisplay.length, PAGE_SIZE]);
 
@@ -269,6 +278,24 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         setIsAutoKerning(false);
     };
     
+    const handleResetVisibleKerning = () => {
+        const newMap = new Map(kerningMap);
+        let count = 0;
+        filteredPairsToDisplay.forEach(pair => {
+            const key = `${pair.left.unicode}-${pair.right.unicode}`;
+            if (newMap.has(key)) {
+                newMap.delete(key);
+                count++;
+            }
+        });
+    
+        if (count > 0) {
+            kerningDispatch({ type: 'SET_MAP', payload: newMap });
+            showNotification(t('kerningResetSuccess', { count }), 'success');
+        }
+        setIsResetVisibleConfirmOpen(false);
+    };
+
     if (!settings || !metrics) return null;
 
     const noCharsDrawnText = editorMode === 'simple' ? t('spacingNoCharsDrawn') : t('kerningNoCharsDrawn');
@@ -430,6 +457,16 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                                 <SparklesIcon />
                                 {isAutoKerning ? t('autoKerningInProgress') : t('autoKern')} 
                             </button>
+                            
+                            <button 
+                                onClick={() => setIsResetVisibleConfirmOpen(true)}
+                                disabled={visibleKernedCount === 0}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 disabled:bg-yellow-400 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <UndoIcon />
+                                {t('resetVisible')}
+                            </button>
+
                             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                                 <span>{t('kerningShowUnkernedOnly')}</span>
                                 <div className="relative inline-flex items-center">
@@ -482,6 +519,19 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             {isProgressModalOpen && (
                 <AutoKerningProgressModal isOpen={isProgressModalOpen} progress={kerningProgressValue} />
             )}
+            <Modal
+                isOpen={isResetVisibleConfirmOpen}
+                onClose={() => setIsResetVisibleConfirmOpen(false)}
+                title={t('resetVisibleTitle')}
+                footer={
+                    <>
+                        <button onClick={() => setIsResetVisibleConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors">{t('cancel')}</button>
+                        <button onClick={handleResetVisibleKerning} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">{t('reset')}</button>
+                    </>
+                }
+            >
+                <p>{t('resetVisibleMessage', { count: visibleKernedCount })}</p>
+            </Modal>
         </div>
     );
 };

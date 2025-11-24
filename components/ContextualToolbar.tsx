@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { BoundingBox, Point, TransformState } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -122,7 +123,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
 
     const TOOLBAR_HEIGHT = 44; 
     // Clamp 30 pixels above the bounding box
-    const GAP = 50; 
+    const GAP = 30; 
     const VISUAL_MARGIN_TOP = 10;
     
     const TOOLBAR_HALF_WIDTH = 110; // Half-width guess for clamping

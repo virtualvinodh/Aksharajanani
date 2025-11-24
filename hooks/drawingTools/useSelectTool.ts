@@ -23,8 +23,11 @@ export const useSelectTool = ({
     const [hoveredHandle, setHoveredHandle] = useState<Handle | null>(null);
 
 
-    const HANDLE_SIZE = isMobile ? 20 : 14;
-    const ROTATE_HANDLE_OFFSET = isMobile ? 30 : 25;
+    // Consolidated size configuration for visual AND hit-testing consistency.
+    // Mobile handles increased to 30px for better touch accessibility.
+    const HANDLE_SIZE = isMobile ? 30 : 14;
+    const ROTATE_HANDLE_OFFSET = isMobile ? 40 : 25;
+    
     const ROTATE_CURSOR_SVG_STRING = (color: string) => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.5 12C22.5 17.799 17.799 22.5 12 22.5C6.201 22.5 1.5 17.799 1.5 12C1.5 6.201 6.201 1.5 12 1.5" stroke="${color}" stroke-width="2" stroke-linecap="round"/><path d="M12 4.5V1.5L8.25 5.25" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     const ROTATE_CURSOR_URL = `url('data:image/svg+xml;utf8,${encodeURIComponent(ROTATE_CURSOR_SVG_STRING(theme === 'dark' ? 'white' : 'black'))}') 12 12, auto`;
 
@@ -137,6 +140,7 @@ export const useSelectTool = ({
         // Check rotate handle first due to different size and offset
         const rotateHandle = (handles as any).rotate;
         if (rotateHandle) {
+            // Rotate handle hit area is slightly larger than visual
             if (VEC.len(VEC.sub(point, rotateHandle)) < ((HANDLE_SIZE + 4) / zoom)) {
                 return rotateHandle;
             }
@@ -145,7 +149,9 @@ export const useSelectTool = ({
         for (const key in handles) {
             const handle = (handles as any)[key];
             if (handle.type === 'scale' || handle.type === 'move') {
-                if (VEC.len(VEC.sub(point, handle)) < (handleSize / 1.5)) { // larger touch area for mobile
+                // Check distance from center of handle
+                // Using handleSize directly gives us a circular hit area roughly matching the square handle
+                if (VEC.len(VEC.sub(point, handle)) < (handleSize * 0.8)) { 
                     return handle;
                 }
             }

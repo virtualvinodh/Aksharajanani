@@ -5,7 +5,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ZoomInIcon, ZoomOutIcon, SparklesIcon, SaveIcon, TrashIcon } from '../constants';
 import { calculateAutoKerning } from '../services/kerningService';
-import { renderPaths, getAccurateGlyphBBox, getGlyphSubBBoxes, BoundingBox } from '../services/glyphRenderService';
+import { renderPaths, getAccurateGlyphBBox, getGlyphSubBBoxes, BoundingBox, BBox } from '../services/glyphRenderService';
 
 interface KerningModalProps {
     pair: { left: Character, right: Character };
