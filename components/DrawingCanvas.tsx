@@ -1,5 +1,4 @@
 
-
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -69,7 +68,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   });
 
   const drawControlPoints = useCallback((ctx: CanvasRenderingContext2D, pathsToDraw: Path[], focusedId: string | null, selectedPoint: DraggedPointInfo | null) => {
-    const mobileMultiplier = isMobile ? 2.5 : 1;
+    const mobileMultiplier = isMobile ? 1.5 : 1;
     const anchorRadiusBase = (4 * mobileMultiplier) / zoom;
     const controlRadiusBase = (3 * mobileMultiplier) / zoom;
     ctx.save();
@@ -203,14 +202,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.setLineDash([]);
         
         if (handles && transformMode !== 'move-only' && !previewTransform) {
-            const mobileMultiplier = isMobile ? 3 : 1;
+            const mobileMultiplier = isMobile ? 1.5 : 1;
             const adjustedHandleSize = HANDLE_SIZE * mobileMultiplier;
             const scaledHandleSize = adjustedHandleSize / zoom;
 
             Object.values(handles).forEach((handle: Handle & Point) => {
                 if (handle.type === 'rotate') {
                     ctx.save(); ctx.strokeStyle = '#6366F1'; ctx.lineWidth = 1.5 / zoom;
-                    const radius = (adjustedHandleSize + 2) / zoom;
+                    const radius = (adjustedHandleSize / 2 + 10) / zoom;
                     ctx.beginPath(); ctx.arc(handle.x, handle.y, radius, 0.25 * Math.PI, 1.9 * Math.PI); ctx.stroke();
                     const arrowAngle = 1.9 * Math.PI; const arrowSize = 6 / zoom;
                     const arrowX = handle.x + radius * Math.cos(arrowAngle); const arrowY = handle.y + radius * Math.sin(arrowAngle);
