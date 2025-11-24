@@ -5,7 +5,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ZoomInIcon, ZoomOutIcon, SparklesIcon, SaveIcon, TrashIcon } from '../constants';
 import { calculateAutoKerning } from '../services/kerningService';
-import { renderPaths, getAccurateGlyphBBox, getGlyphSubBBoxes, BBox } from '../services/glyphRenderService';
+import { renderPaths, getAccurateGlyphBBox, getGlyphSubBBoxes, BoundingBox } from '../services/glyphRenderService';
 
 interface KerningModalProps {
     pair: { left: Character, right: Character };
@@ -528,10 +528,12 @@ const KerningModal: React.FC<KerningModalProps> = ({
                         onTouchCancel={handleTouchEnd}
                     />
                 </div>
-                <div className="flex items-center gap-4">
-                    <button onClick={() => setZoom(z => z * 1.2)} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><ZoomInIcon/></button>
-                    <button onClick={() => setZoom(z => z / 1.2)} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><ZoomOutIcon/></button>
-                    <div className="flex-grow flex items-center justify-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="flex gap-2">
+                        <button onClick={() => setZoom(z => z * 1.2)} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><ZoomInIcon/></button>
+                        <button onClick={() => setZoom(z => z / 1.2)} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"><ZoomOutIcon/></button>
+                    </div>
+                    <div className="flex-grow flex flex-wrap items-center justify-center gap-4">
                         {settings.editorMode === 'advanced' && (
                             <div className="flex items-center gap-2"> 
                                 <label htmlFor="kerning-value" className="text-sm font-medium text-gray-700 dark:text-gray-300">{inputLabel}:</label>
