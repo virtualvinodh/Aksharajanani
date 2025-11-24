@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
@@ -31,8 +32,7 @@ export const useAppActions = ({
     const { script } = useCharacter();
     const { settings, dispatch: settingsDispatch } = useSettings();
     const { workspace, setWorkspace } = layout;
-    const [testText, setTestText] = useState('');
-
+    
     // Dependency Map (Ref) needs to be shared or passed around, typically managed where glyphs are managed
     const dependencyMap = useRef<Map<number, Set<number>>>(new Map());
 
@@ -63,8 +63,7 @@ export const useAppActions = ({
         setProjectId, 
         setLastSavedState, 
         setMarkAttachmentRules,
-        dependencyMap,
-        setTestText
+        dependencyMap
     });
 
     // Sync the local loading state for Persistence to see
@@ -150,6 +149,11 @@ export const useAppActions = ({
             });
         }
     }, [sessionSnapshot, layout, confirmRestore]);
+    
+    const testText = settings?.customSampleText || '';
+    const setTestText = (text: string) => {
+        settingsDispatch({ type: 'UPDATE_SETTINGS', payload: s => s ? ({ ...s, customSampleText: text }) : null });
+    };
 
 
     return {

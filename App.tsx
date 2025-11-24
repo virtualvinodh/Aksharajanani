@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import DrawingModal from './components/DrawingModal';
@@ -55,7 +56,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const { script, characterSets, allCharsByUnicode, allCharsByName } = useCharacter();
   const { glyphDataMap } = useGlyphData();
   const { kerningMap } = useKerning();
-  const { settings, metrics } = useSettings();
+  const { settings, metrics, dispatch: settingsDispatch } = useSettings();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   const { markPositioningMap } = usePositioning();
   const { state: rulesState } = useRules();
@@ -329,7 +330,23 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       {layout.activeModal?.name === 'confirmChangeScript' && <ConfirmationModal isOpen={true} onClose={layout.closeModal} title={t('confirmChangeScriptTitle')} message={t('confirmChangeScriptMessage')} {...layout.activeModal.props} />}
       {layout.activeModal?.name === 'confirmLoadProject' && <ConfirmationModal isOpen={true} onClose={layout.closeModal} title={t('confirmLoadProjectTitle')} message={t('confirmLoadProjectMessage')} {...layout.activeModal.props} />}
       {layout.activeModal?.name === 'incompleteWarning' && <IncompleteFontWarningModal isOpen={true} onClose={layout.closeModal} {...layout.activeModal.props} />}
-      {layout.activeModal?.name === 'testPage' && <FontTestPage onClose={layout.closeModal} fontBlob={testPageFont.blob} feaError={testPageFont.feaError} settings={settings} testText={testText} onTestTextChange={setTestText} testPageConfig={script.testPage} />}
+      {layout.activeModal?.name === 'testPage' && (
+         <FontTestPage 
+            onClose={layout.closeModal} 
+            fontBlob={testPageFont.blob} 
+            feaError={testPageFont.feaError} 
+            settings={settings} 
+            onSettingsChange={(newSettings) => settingsDispatch({ type: 'SET_SETTINGS', payload: newSettings })}
+            testText={testText} 
+            onTestTextChange={setTestText} 
+            testPageConfig={script.testPage} 
+            defaults={{
+                fontSize: script.testPage.fontSize.default,
+                lineHeight: script.testPage.lineHeight.default,
+                sampleText: script.sampleText
+            }}
+         />
+      )}
       {layout.activeModal?.name === 'positioningUpdateWarning' && <PositioningUpdateWarningModal isOpen={true} onClose={() => layout.closeModal()} {...layout.activeModal.props} />}
       {layout.activeModal?.name === 'feaError' && feaErrorState && <FeaErrorModal isOpen={true} onClose={() => { layout.closeModal(); }} onConfirm={() => { downloadFontBlob(feaErrorState.blob, settings.fontName); layout.closeModal(); }} errorMessage={feaErrorState.error} />}
       {layout.activeModal?.name === 'unsavedRules' && ( <UnsavedRulesModal isOpen={true} onClose={layout.closeModal} onDiscard={() => { layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} onSave={() => { handleSaveToDB(); layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} /> )}

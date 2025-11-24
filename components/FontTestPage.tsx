@@ -1,30 +1,39 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AppSettings, TestPageConfig } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { BackIcon, TEST_PAGE_RANGES } from '../constants';
+import { useTheme } from '../contexts/ThemeContext';
+import { BackIcon, TEST_PAGE_RANGES, UndoIcon } from '../constants';
 import Footer from './Footer';
 
 interface FontTestPageProps {
   fontBlob: Blob | null;
   feaError: string | null;
   settings: AppSettings;
+  onSettingsChange: (settings: AppSettings) => void;
   onClose: () => void;
   testText: string;
   onTestTextChange: (text: string) => void;
   testPageConfig: TestPageConfig;
+  defaults: {
+    fontSize: number;
+    lineHeight: number;
+    sampleText: string;
+  };
 }
 
 const FONT_FACE_ID = 'dynamic-font-test-style';
 
 const FontTestPage: React.FC<FontTestPageProps> = ({ 
-    fontBlob, feaError, settings, onClose, testText, onTestTextChange, testPageConfig
+    fontBlob, feaError, settings, onSettingsChange, onClose, testText, onTestTextChange, testPageConfig, defaults
 }) => {
   const { t } = useLocale();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [feaWarning, setFeaWarning] = useState<string | null>(null);
-  const [fontSize, setFontSize] = useState(testPageConfig.fontSize.default);
-  const [lineHeight, setLineHeight] = useState(testPageConfig.lineHeight.default);
+  
+  // Use settings directly instead of local state for persistence
+  const fontSize = settings.testPage?.fontSize.default ?? defaults.fontSize;
+  const lineHeight = settings.testPage?.lineHeight.default ?? defaults.lineHeight;
 
   const fontUrlRef = useRef<string | null>(null);
 
@@ -77,6 +86,37 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
       }
     };
   }, [fontBlob, feaError, settings.fontName, t]);
+
+  const handleSettingChange = (key: 'fontSize' | 'lineHeight', value: number) => {
+      const newSettings = { ...settings };
+      if (!newSettings.testPage) {
+          newSettings.testPage = JSON.parse(JSON.stringify(testPageConfig));
+      }
+      if (newSettings.testPage) {
+          newSettings.testPage[key].default = value;
+          onSettingsChange(newSettings);
+      }
+  };
+
+  const handleReset = () => {
+      const newSettings = { ...settings };
+      
+      // Reset Text
+      // We update the settings directly to ensure atomic update with the sliders.
+      // The parent App component will propagate this change back to the 'testText' prop.
+      newSettings.customSampleText = defaults.sampleText;
+      
+      // Reset Sliders
+      if (!newSettings.testPage) {
+           newSettings.testPage = JSON.parse(JSON.stringify(testPageConfig));
+      }
+      if (newSettings.testPage) {
+          newSettings.testPage.fontSize.default = defaults.fontSize;
+          newSettings.testPage.lineHeight.default = defaults.lineHeight;
+      }
+      
+      onSettingsChange(newSettings);
+  };
 
   const renderContent = () => {
     if (isLoading) {
@@ -164,7 +204,16 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
         <div className="text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('fontTestGround')}</h2>
         </div>
-        <div className="w-24 hidden sm:block"></div>
+        <div className="w-24 flex justify-end">
+             <button 
+                onClick={handleReset}
+                title="Reset to Default"
+                className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+            >
+                <UndoIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('reset')}</span>
+            </button>
+        </div>
       </header>
       <main className="flex-grow overflow-y-auto p-6">
         <div className="max-w-4xl mx-auto">
@@ -181,7 +230,7 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
                         max={TEST_PAGE_RANGES.fontSize.range.max}
                         step="1"
                         value={fontSize}
-                        onChange={(e) => setFontSize(Number(e.target.value))}
+                        onChange={(e) => handleSettingChange('fontSize', Number(e.target.value))}
                         className="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
                         disabled={isLoading || !!error}
                     />
@@ -197,7 +246,7 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
                         max={TEST_PAGE_RANGES.lineHeight.range.max}
                         step={TEST_PAGE_RANGES.lineHeight.range.step}
                         value={lineHeight}
-                        onChange={(e) => setLineHeight(Number(e.target.value))}
+                        onChange={(e) => handleSettingChange('lineHeight', Number(e.target.value))}
                         className="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
                         disabled={isLoading || !!error}
                     />

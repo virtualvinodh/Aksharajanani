@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useKerning } from '../../contexts/KerningContext';
@@ -17,11 +16,10 @@ interface UseProjectLoadProps {
     setLastSavedState: (state: string | null) => void;
     setMarkAttachmentRules: (rules: any) => void;
     dependencyMap: React.MutableRefObject<Map<number, Set<number>>>;
-    setTestText: (text: string) => void;
 }
 
 export const useProjectLoad = ({ 
-    allScripts, setProjectId, setLastSavedState, setMarkAttachmentRules, dependencyMap, setTestText 
+    allScripts, setProjectId, setLastSavedState, setMarkAttachmentRules, dependencyMap 
 }: UseProjectLoadProps) => {
     
     const { t } = useLocale();
@@ -42,8 +40,16 @@ export const useProjectLoad = ({
     const [baseAttachmentClasses, setBaseAttachmentClasses] = useState<AttachmentClass[] | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Use a ref to hold the current script to avoid dependency cycles in initializeProjectState
+    const scriptRef = useRef(script);
+    useEffect(() => {
+        scriptRef.current = script;
+    }, [script]);
+
     const initializeProjectState = useCallback(async (projectToLoad: ProjectData | null) => {
-        if (!script) return;
+        const currentScript = scriptRef.current;
+        if (!currentScript) return;
+
         setIsScriptDataLoading(true);
         setScriptDataError(null);
     
@@ -55,18 +61,18 @@ export const useProjectLoad = ({
         try {
             let characterDefinitions: CharacterDefinition[], positioningDefinitions: CharacterDefinition[], rulesData: any, feaFileData: string | null = null, isFeaOnly = false;
 
-            const isStandardScript = allScripts.some(s => s.id === script.id);
+            const isStandardScript = allScripts.some(s => s.id === currentScript.id);
 
-            if (script.characterSetData) {
-                characterDefinitions = script.characterSetData.filter(d => 'characters' in d);
-                positioningDefinitions = script.characterSetData.filter(d => !('characters' in d));
+            if (currentScript.characterSetData) {
+                characterDefinitions = currentScript.characterSetData.filter(d => 'characters' in d);
+                positioningDefinitions = currentScript.characterSetData.filter(d => !('characters' in d));
             } else {
-                const charactersPath = `/data/characters_${script.id}.json`;
+                const charactersPath = `/data/characters_${currentScript.id}.json`;
                 const charResponse = await fetch(charactersPath);
                 if (!charResponse.ok) throw new Error(`Failed to load character set from ${charactersPath}`);
                 characterDefinitions = await charResponse.json();
 
-                const positioningPath = `/data/positioning_${script.id}.json`;
+                const positioningPath = `/data/positioning_${currentScript.id}.json`;
                 const posResponse = await fetch(positioningPath);
                 positioningDefinitions = posResponse.ok ? await posResponse.json() : [];
             }
@@ -74,8 +80,8 @@ export const useProjectLoad = ({
             const charDefinition = [...characterDefinitions, ...positioningDefinitions];
             
             if (isStandardScript) {
-                const rulesPath = script.rulesPath || `/data/rules_${script.id}.json`;
-                const rulesFeaPath = script.rulesFeaPath;
+                const rulesPath = currentScript.rulesPath || `/data/rules_${currentScript.id}.json`;
+                const rulesFeaPath = currentScript.rulesFeaPath;
                 
                 if (rulesFeaPath) {
                     const feaResponse = await fetch(rulesFeaPath);
@@ -91,11 +97,11 @@ export const useProjectLoad = ({
                     rulesData = { 'DFLT': {} }
                 }    
             } else {
-                if (script.rulesFeaContent) {
-                    feaFileData = script.rulesFeaContent;
+                if (currentScript.rulesFeaContent) {
+                    feaFileData = currentScript.rulesFeaContent;
                     isFeaOnly = true;
                 }
-                rulesData = script.rulesData || {};
+                rulesData = currentScript.rulesData || {};
             }
 
             // Data Migration for Ordered Feature Children
@@ -147,7 +153,7 @@ export const useProjectLoad = ({
             }));
 
             const finalCharacterSets = projectToLoad?.characterSets || processedCharSets;
-            characterDispatch({ type: 'SET_CHARACTER_SETS', payload: finalCharacterSets });
+            
             
             // Rebuild local lookups needed for expansion
             const allCharSetsByName = new Map<string, CharacterSet>();
@@ -313,6 +319,16 @@ export const useProjectLoad = ({
             setMarkAttachmentClasses(expandAttachmentClass((charDefinition.find(i => 'markAttachmentClass' in i) as any)?.markAttachmentClass));
             setBaseAttachmentClasses(expandAttachmentClass((charDefinition.find(i => 'baseAttachmentClass' in i) as any)?.baseAttachmentClass));
             setPositioningRules(rawPositioningRules);
+
+            // Update script with loaded/calculated data so resets work against the current context
+            const updatedScriptConfig = {
+                ...currentScript,
+                characterSetData: [
+                     ...finalCharacterSets,
+                     ...(currentScript.characterSetData?.filter(d => !('characters' in d)) || [])
+                ]
+            };
+            characterDispatch({ type: 'SET_SCRIPT', payload: updatedScriptConfig });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: finalCharacterSets });
 
             // Build Dependency Map
@@ -330,10 +346,10 @@ export const useProjectLoad = ({
             });
             dependencyMap.current = newDependencyMap;
             
-            // Sample Text
-            let sampleText = script.sampleText;
+            // Sample Text Logic
+            let sampleText = currentScript.sampleText;
             try {
-                const sampleTextResponse = await fetch(`/data/sample_${script.id}.txt`);
+                const sampleTextResponse = await fetch(`/data/sample_${currentScript.id}.txt`);
                 if (sampleTextResponse.ok) sampleText = await sampleTextResponse.text();
             } catch (e) { /* Ignore */ }
 
@@ -342,21 +358,30 @@ export const useProjectLoad = ({
                 const allChars = finalCharacterSets.flatMap(cs => cs.characters);
                 const basesAndLigs = allChars.filter(c => c.unicode !== undefined && (c.glyphClass === 'base' || c.glyphClass === 'ligature')).filter(c => c.name !== '◌');
                 
-                // Create two versions of the test text: one spaced, one unspaced (for ligatures/conjuncts)
                 const withSpaces = basesAndLigs.map(c => c.name).join(' ');
                 const withoutSpaces = basesAndLigs.map(c => c.name).join('');
                 sampleText = `${withSpaces}\n\n${withoutSpaces}`;
             }
-            setTestText(sampleText);
+            
+            // Also update the script config to include the resolved sample text, so Reset buttons work
+            if (sampleText && sampleText !== currentScript.sampleText) {
+                characterDispatch({ type: 'SET_SCRIPT', payload: { ...updatedScriptConfig, sampleText } });
+            }
 
             // Final Settings Hydration
-            const baseSettings = { ...script.defaults };
+            const baseSettings = { ...currentScript.defaults };
             if (projectToLoad) {
                 const newSettings = { ...FONT_META_DEFAULTS, ...baseSettings, ...projectToLoad.settings };
-                newSettings.testPage = { ...script.testPage, ...(newSettings.testPage || {}), fontSize: { ...script.testPage.fontSize, ...(newSettings.testPage?.fontSize || {}) }, lineHeight: { ...script.testPage.lineHeight, ...(newSettings.testPage?.lineHeight || {}) } };
-                if (!newSettings.description) newSettings.description = `${newSettings.fontName} - ${t(script.nameKey)}`;
+                newSettings.testPage = { ...currentScript.testPage, ...(newSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(newSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(newSettings.testPage?.lineHeight || {}) } };
+                
+                // Ensure customSampleText is populated if missing
+                if (!newSettings.customSampleText) {
+                    newSettings.customSampleText = sampleText;
+                }
+                
+                if (!newSettings.description) newSettings.description = `${newSettings.fontName} - ${t(currentScript.nameKey)}`;
                 settingsDispatch({ type: 'SET_SETTINGS', payload: newSettings });
-                settingsDispatch({ type: 'SET_METRICS', payload: { ...script.metrics, ...projectToLoad.metrics } });
+                settingsDispatch({ type: 'SET_METRICS', payload: { ...currentScript.metrics, ...projectToLoad.metrics } });
                 glyphDataDispatch({ type: 'SET_MAP', payload: new Map(projectToLoad.glyphs) });
                 if (projectToLoad.kerning) kerningDispatch({ type: 'SET_MAP', payload: new Map(projectToLoad.kerning) });
                 if (projectToLoad.markPositioning) positioningDispatch({ type: 'SET_MAP', payload: new Map(projectToLoad.markPositioning) });
@@ -365,12 +390,16 @@ export const useProjectLoad = ({
                 const { projectId: loadedProjectId, savedAt, ...loadedState } = projectToLoad;
                 setLastSavedState(JSON.stringify(loadedState));
             } else {
-                const savedSettingsRaw = localStorage.getItem(`font-creator-settings-${script.id}`);
+                const savedSettingsRaw = localStorage.getItem(`font-creator-settings-${currentScript.id}`);
                 const savedSettings = savedSettingsRaw ? JSON.parse(savedSettingsRaw) : {};
                 const newSettings = { ...FONT_META_DEFAULTS, ...baseSettings, ...savedSettings };
-                newSettings.testPage = { ...script.testPage, ...(savedSettings.testPage || {}), fontSize: { ...script.testPage.fontSize, ...(savedSettings.testPage?.fontSize || {}) }, lineHeight: { ...script.testPage.lineHeight, ...(savedSettings.testPage?.lineHeight || {}) } };
+                newSettings.testPage = { ...currentScript.testPage, ...(savedSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(savedSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(savedSettings.testPage?.lineHeight || {}) } };
+                
+                // Set initial sample text for new project
+                newSettings.customSampleText = sampleText;
+
                 settingsDispatch({ type: 'SET_SETTINGS', payload: newSettings });
-                settingsDispatch({ type: 'SET_METRICS', payload: script.metrics });
+                settingsDispatch({ type: 'SET_METRICS', payload: currentScript.metrics });
                 rulesDispatch({ type: 'SET_FEA_EDIT_MODE', payload: isFeaOnly });
                 rulesDispatch({ type: 'SET_MANUAL_FEA_CODE', payload: isFeaOnly ? feaFileData || '' : '' });
                 setLastSavedState(null);
@@ -381,7 +410,7 @@ export const useProjectLoad = ({
         } finally {
             setIsScriptDataLoading(false);
         }
-    }, [script, allScripts, characterDispatch, rulesDispatch, settingsDispatch, glyphDataDispatch, kerningDispatch, positioningDispatch, t, setProjectId, setLastSavedState, setMarkAttachmentRules, dependencyMap, setTestText]);
+    }, [allScripts, characterDispatch, rulesDispatch, settingsDispatch, glyphDataDispatch, kerningDispatch, positioningDispatch, t, setProjectId, setLastSavedState, setMarkAttachmentRules, dependencyMap]);
 
     const handleLoadProject = () => fileInputRef.current?.click();
 
@@ -390,10 +419,11 @@ export const useProjectLoad = ({
         reader.onload = (event) => {
             try {
                 const projectData: ProjectData = JSON.parse(event.target?.result as string);
-                if (projectData.scriptId && projectData.scriptId !== script?.id) {
+                const currentScript = scriptRef.current; // Use ref for current script check
+                if (projectData.scriptId && projectData.scriptId !== currentScript?.id) {
                     const loadedScript = allScripts.find(s => s.id === projectData.scriptId);
                     const loadedScriptName = loadedScript ? t(loadedScript.nameKey) : `'${projectData.scriptId}'`;
-                    const currentScriptName = script ? t(script.nameKey) : 'unknown';
+                    const currentScriptName = currentScript ? t(currentScript.nameKey) : 'unknown';
                     layout.showNotification(t('mismatchedScriptError', { loadedScript: loadedScriptName, currentScript: currentScriptName }), 'error');
                     return;
                 }
@@ -406,7 +436,7 @@ export const useProjectLoad = ({
             }
         };
         reader.readAsText(file);
-    }, [script, initializeProjectState, layout, t, allScripts]);
+    }, [initializeProjectState, layout, t, allScripts]);
 
     const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, hasUnsavedChanges: boolean, handleSaveToDB: () => void) => {
         const file = e.target.files?.[0];

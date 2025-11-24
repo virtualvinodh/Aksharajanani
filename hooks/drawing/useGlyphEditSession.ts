@@ -72,12 +72,10 @@ export const useGlyphEditSession = ({
     const hasPendingCascade = useRef(false);
     
     // Was it empty when we started? Used for background guide visibility.
-    // If prefilled, it counts as "not empty" (guide hidden) for the purpose of drawing tools,
-    // but for saving logic, we care about persistence status.
+    // Modified to ensure guides remain visible for prefilled composite glyphs that haven't been saved yet.
+    // We base this strictly on whether the glyph was present in the database (glyphData), ignoring dynamic prefill content.
     const [wasEmptyOnLoad] = useState(() => {
-        const initiallyDrawn = isGlyphDrawn(glyphData);
-        // If paths are populated (either from data or prefill), it's not empty visually
-        return !initiallyDrawn && currentPaths.length === 0;
+        return !isGlyphDrawn(glyphData);
     });
 
     const [history, setHistory] = useState<Path[][]>([currentPaths]);
