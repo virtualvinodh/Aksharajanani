@@ -227,11 +227,10 @@ export const useSelectTool = ({
                             groupIds.forEach(id => newSelection.add(id));
                         }
                     } else { // Not shift
-                        const isAllInGroupSelected = groupIds.every(id => selectedPathIds.has(id));
-                        if (!isAllInGroupSelected) {
-                            newSelection.clear();
-                            groupIds.forEach(id => newSelection.add(id));
-                        }
+                        // Always select the group. If it was already selected, this effectively keeps it selected.
+                        // If it wasn't, it selects it and deselects others (since newSelection is fresh).
+                        newSelection.clear();
+                        groupIds.forEach(id => newSelection.add(id));
                     }
                 } else { // Not a grouped path
                     if (isShift) {
@@ -460,13 +459,28 @@ export const useSelectTool = ({
             const minY = Math.min(marqueeBox.start.y, endPoint.y);
             const maxX = Math.max(marqueeBox.start.x, endPoint.x);
             const maxY = Math.max(marqueeBox.start.y, endPoint.y);
+            
             const selectedIds = new Set<string>();
+            const groupsFound = new Set<string>();
+
             currentPaths.forEach(path => {
                 const box = getAccurateGlyphBBox([path], settings.strokeThickness);
                 if (box && box.x < maxX && box.x + box.width > minX && box.y < maxY && box.y + box.height > minY) {
                     selectedIds.add(path.id);
+                    if (path.groupId) {
+                        groupsFound.add(path.groupId);
+                    }
                 }
             });
+
+            if (groupsFound.size > 0) {
+                currentPaths.forEach(path => {
+                   if (path.groupId && groupsFound.has(path.groupId)) {
+                       selectedIds.add(path.id);
+                   }
+                });
+           }
+
             onSelectionChange(selectedIds);
         }
         
