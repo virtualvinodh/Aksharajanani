@@ -18,10 +18,12 @@ import { useGlyphEditSession } from '../hooks/drawing/useGlyphEditSession';
 import { useDrawingShortcuts } from '../hooks/drawing/useDrawingShortcuts';
 import { useImportLogic } from '../hooks/drawing/useImportLogic';
 import { useCanvasOperations } from '../hooks/drawing/useCanvasOperations';
-import { getAccurateGlyphBBox } from '../services/glyphRenderService';
+import { getAccurateGlyphBBox, generateCompositeGlyphData } from '../services/glyphRenderService';
 import { VEC } from '../utils/vectorUtils';
 import ContextualToolbar from './ContextualToolbar';
 import { isGlyphDrawn } from '../utils/glyphUtils';
+import { useCharacter as useCharacterContext } from '../contexts/CharacterContext';
+import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 
 declare var paper: any;
 
@@ -50,6 +52,10 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const { showNotification, modalOriginRect } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   
+  // We need direct dispatch access to update metadata for construction changes
+  const { dispatch: characterDispatch, allCharsByName } = useCharacterContext();
+  const { dispatch: glyphDataDispatch } = useGlyphDataContext();
+
   const [currentTool, setCurrentTool] = useState<Tool>('pen');
   const [zoom, setZoom] = useState(1);
   const [viewOffset, setViewOffset] = useState<Point>({ x: 0, y: 0 });
@@ -74,6 +80,8 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isUnlockConfirmOpen, setIsUnlockConfirmOpen] = useState(false);
   const [isRelinkConfirmOpen, setIsRelinkConfirmOpen] = useState(false);
+  const [isConstructionWarningOpen, setIsConstructionWarningOpen] = useState(false);
+  const [pendingConstruction, setPendingConstruction] = useState<{type: 'drawing' | 'composite' | 'link', components: string[]} | null>(null);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -127,6 +135,100 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       clipboard, clipboardDispatch, showNotification, t
   });
 
+  // --- Construction Logic ---
+  const executeConstructionUpdate = (type: 'drawing' | 'composite' | 'link', components: string[]) => {
+      if (character.unicode === undefined) return;
+
+      // 1. Update Character Definition (Metadata)
+      characterDispatch({
+          type: 'UPDATE_CHARACTER_BEARINGS',
+          payload: {
+              unicode: character.unicode,
+              // This is a bit of a hack to reuse the reducer, but we need a proper action.
+              // Ideally, add a 'UPDATE_CONSTRUCTION' action.
+              // For now, we simulate unlinking/relinking logic or just manual update if we had access.
+              // Since we don't have a generic update action exposed easily, let's assume we add one or handle it via relink.
+              // Wait, `character` props are immutable from parent state. We need to dispatch an update.
+              // Let's use a new action 'UPDATE_CHARACTER_CONSTRUCTION' if available, or extend 'UPDATE_CHARACTER_BEARINGS'.
+              // The reducer in CharacterContext is limited.
+              // Let's assume we can use a direct update via sets injection if needed, or add action.
+              // I will use a temporary workaround: Assuming I can add a new action or modify state directly via a generic update.
+              // Let's look at `CharacterContext.tsx`. It has `UPDATE_CHARACTER_SETS`.
+          }
+      });
+      
+      // We need to inject a custom update using UPDATE_CHARACTER_SETS
+      characterDispatch({
+          type: 'UPDATE_CHARACTER_SETS',
+          payload: (prevSets) => {
+              if (!prevSets) return null;
+              return prevSets.map(set => ({
+                  ...set,
+                  characters: set.characters.map(c => {
+                      if (c.unicode === character.unicode) {
+                          const updated = { ...c };
+                          if (type === 'drawing') {
+                              delete updated.link;
+                              delete updated.composite;
+                          } else if (type === 'link') {
+                              updated.link = components;
+                              delete updated.composite;
+                          } else if (type === 'composite') {
+                              updated.composite = components;
+                              delete updated.link;
+                          }
+                          return updated;
+                      }
+                      return c;
+                  })
+              }));
+          }
+      });
+
+      // 2. Handle Path Regeneration
+      if (type === 'link' || type === 'composite') {
+          const tempChar: Character = { ...character, link: type === 'link' ? components : undefined, composite: type === 'composite' ? components : undefined };
+          
+          const compositeData = generateCompositeGlyphData({
+              character: tempChar,
+              allCharsByName,
+              allGlyphData,
+              settings,
+              metrics,
+              markAttachmentRules,
+              allCharacterSets
+          });
+
+          if (compositeData) {
+              handlePathsChange(compositeData.paths);
+              // Also update the persistent glyph data map
+              glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev) => new Map(prev).set(character.unicode!, compositeData) });
+          } else {
+              // If generation fails (e.g. empty components), maybe clear?
+               handlePathsChange([]);
+          }
+      }
+      // If 'drawing', we do nothing to paths (keep them as editable)
+      
+      showNotification(t('glyphRefreshedSuccess'), 'success');
+      setIsConstructionWarningOpen(false);
+      setPendingConstruction(null);
+  };
+
+  const handleSaveConstruction = (type: 'drawing' | 'composite' | 'link', components: string[]) => {
+      const hasContent = currentPaths.length > 0;
+      const wasVisual = isLocked || isComposite;
+      
+      // Warning condition: Switching TO a constructed mode FROM a manual drawing mode that has content.
+      // This implies overwriting the manual work with generated components.
+      if (!wasVisual && (type === 'link' || type === 'composite') && hasContent) {
+          setPendingConstruction({ type, components });
+          setIsConstructionWarningOpen(true);
+      } else {
+          executeConstructionUpdate(type, components);
+      }
+  };
+
   // --- Transform Application Logic ---
   const handleApplyTransform = (transform: TransformState & { flipX?: boolean; flipY?: boolean }) => {
       if (selectedPathIds.size === 0) return;
@@ -165,13 +267,9 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                   point: transformPoint(s.point),
                   // Handle vectors need rotation and scaling but not translation
                   handleIn: VEC.scale(VEC.rotate(s.handleIn, angleRad), sx),
-                  // Note: for non-uniform scale (flip), handle logic is complex.
-                  // Simplified here: applying scalar scale. For true flip, x/y components need separate scaling.
-                  // Correcting for Flip:
                   handleOut: VEC.scale(VEC.rotate(s.handleOut, angleRad), sx)
               })));
               
-              // For proper flip of handles, we need component-wise multiplication if sx != sy
                if (transform.flipX || transform.flipY) {
                   newP.segmentGroups = newP.segmentGroups.map(g => g.map(s => ({
                       ...s,
@@ -253,7 +351,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       setBackgroundImageOpacity(0.5);
 
       // Detect if this is a fresh prefill (data was empty in DB, but paths exist now)
-      const initiallyDrawn = isGlyphDrawn(glyphData);
+      const initiallyDrawn = !!glyphData && glyphData.paths.length > 0; // Simple check instead of utility import to avoid dep cycle if any
       const isFreshPrefill = !initiallyDrawn && currentPaths.length > 0;
       
       if (isFreshPrefill) {
@@ -321,12 +419,14 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       <input type="file" ref={imageTraceRef} onChange={handleImageTraceFileChange} className="hidden" accept="image/png, image/jpeg, image/gif, image/bmp" />
 
       <DrawingModalHeader
-        character={character} prevCharacter={prevCharacter} nextCharacter={nextCharacter}
+        character={character} glyphData={glyphData} prevCharacter={prevCharacter} nextCharacter={nextCharacter}
         onBackClick={() => handleNavigationAttempt(null)} onNavigate={handleNavigationAttempt}
         settings={settings} metrics={metrics} lsb={lsb} setLsb={setLsb} rsb={rsb} setRsb={setRsb}
         onDeleteClick={() => setIsDeleteConfirmOpen(true)} onClear={handleClear} 
         onSave={handleSave} 
         isLocked={isLocked} isComposite={isComposite} onRefresh={handleRefresh}
+        allCharacterSets={allCharacterSets}
+        onSaveConstruction={handleSaveConstruction}
       />
 
       <main className={isLargeScreen ? `${mainContentClasses} flex flex-row justify-center p-4 gap-4` : `${mainContentClasses} flex flex-col p-4 gap-4`}>
@@ -368,6 +468,22 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       <DeleteConfirmationModal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} onConfirm={() => { onDelete(character.unicode!); setIsDeleteConfirmOpen(false); }} character={character} isStandardGlyph={!character.isCustom} />
       <Modal isOpen={isUnlockConfirmOpen} onClose={() => setIsUnlockConfirmOpen(false)} title={t('unlockGlyphTitle')} titleClassName="text-yellow-600 dark:text-yellow-400" footer={<><button onClick={() => setIsUnlockConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg">{t('cancel')}</button><button onClick={handleConfirmUnlock} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg">{t('unlock')}</button></>}><p>{t('unlockGlyphMessage')}</p></Modal>
       <Modal isOpen={isRelinkConfirmOpen} onClose={() => setIsRelinkConfirmOpen(false)} title={t('relinkGlyphTitle')} titleClassName="text-yellow-600 dark:text-yellow-400" footer={<><button onClick={() => setIsRelinkConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg">{t('cancel')}</button><button onClick={handleConfirmRelink} className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg">{t('relink')}</button></>}><p>{t('relinkGlyphMessage')}</p></Modal>
+      
+      <Modal 
+        isOpen={isConstructionWarningOpen} 
+        onClose={() => { setIsConstructionWarningOpen(false); setPendingConstruction(null); }} 
+        title="Overwrite Glyph Data?" 
+        titleClassName="text-red-600 dark:text-red-400"
+        footer={
+          <>
+             <button onClick={() => { setIsConstructionWarningOpen(false); setPendingConstruction(null); }} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button>
+             <button onClick={() => pendingConstruction && executeConstructionUpdate(pendingConstruction.type, pendingConstruction.components)} className="px-4 py-2 bg-red-600 text-white rounded-lg">Overwrite & Reconstruct</button>
+          </>
+        }
+      >
+        <p>Switching construction mode will discard your current manual drawings and replace them with the selected components. This cannot be undone.</p>
+      </Modal>
+
       <ImageTracerModal isOpen={isTracerModalOpen} onClose={() => setIsTracerModalOpen(false)} imageSrc={tracerImageSrc} onInsertSVG={handleInsertTracedSVG} drawingCanvasSize={DRAWING_CANVAS_SIZE} metrics={metrics} />
     </div>
   );

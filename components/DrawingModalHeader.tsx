@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
-import { Character, AppSettings, FontMetrics } from '../types';
+import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon } from '../constants';
 import GlyphPropertiesPanel from './GlyphPropertiesPanel';
 
 interface DrawingModalHeaderProps {
   character: Character;
+  glyphData: GlyphData | undefined;
   prevCharacter: Character | null;
   nextCharacter: Character | null;
   onBackClick: () => void;
@@ -23,12 +24,14 @@ interface DrawingModalHeaderProps {
   isLocked?: boolean;
   isComposite?: boolean;
   onRefresh?: () => void;
+  allCharacterSets: CharacterSet[];
+  onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[]) => void;
 }
 
 const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
-  character, prevCharacter, nextCharacter, onBackClick, onNavigate,
+  character, glyphData, prevCharacter, nextCharacter, onBackClick, onNavigate,
   settings, metrics, lsb, setLsb, rsb, setRsb, onDeleteClick, onClear, onSave,
-  isLocked = false, isComposite = false, onRefresh
+  isLocked = false, isComposite = false, onRefresh, allCharacterSets, onSaveConstruction
 }) => {
   const { t } = useLocale();
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
@@ -66,7 +69,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               {character.name}
               </h2>
               {settings.editorMode === 'advanced' && (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">U+{character.unicode?.toString(16).toUpperCase().padStart(4, '0')}</p>
               )}
           </div>
            <button
@@ -100,6 +103,10 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
                   setRsb={setRsb}
                   metrics={metrics}
                   onClose={() => setIsPropertiesPanelOpen(false)}
+                  character={character}
+                  glyphData={glyphData}
+                  allCharacterSets={allCharacterSets}
+                  onSaveConstruction={onSaveConstruction}
                 />
               )}
             </div>
