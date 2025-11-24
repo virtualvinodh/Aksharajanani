@@ -350,7 +350,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       if (isFreshPrefill) {
           // Attempt to select the last component of the composite
           const components = character.composite || character.link || [];
-          if (components.length > 0) {
+          if (components.length > 1) {
               const lastIndex = components.length - 1;
               // Match the groupId format used in generateCompositeGlyphData
               const targetGroupId = `component-${lastIndex}`;
