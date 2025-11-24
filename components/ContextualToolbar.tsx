@@ -117,34 +117,21 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
     const domSelLeft = (selectionBox.x * zoom + viewOffset.x) * domScale;
     const domSelTop = (selectionBox.y * zoom + viewOffset.y) * domScale;
     const domSelWidth = (selectionBox.width * zoom) * domScale;
-    const domSelHeight = (selectionBox.height * zoom) * domScale;
 
     const domSelCenterX = domSelLeft + domSelWidth / 2;
-    const domSelBottom = domSelTop + domSelHeight;
 
     const TOOLBAR_HEIGHT = 44; 
-    // GAP needs to be large enough to clear the Rotation Handle which sits ~30px above the box
-    const ROTATION_HANDLE_CLEARANCE = 30;
-    const VISUAL_PADDING = 20;
-    const GAP = ROTATION_HANDLE_CLEARANCE + VISUAL_PADDING; // 50px
+    // Clamp 30 pixels above the bounding box
+    const GAP = 30; 
+    const VISUAL_MARGIN_TOP = 10;
     
     const TOOLBAR_HALF_WIDTH = 110; // Half-width guess for clamping
 
-    let top, transform;
+    // Calculate intended top position (above selection)
+    let top = domSelTop - TOOLBAR_HEIGHT - GAP;
 
-    // Check if there is space ABOVE
-    // We need: Toolbar Height + Gap
-    if (domSelTop - (TOOLBAR_HEIGHT + GAP) > 0) {
-        // Position: Top edge of selection
-        top = domSelTop;
-        // Shift: Centered horizontally (-50%), Moved UP by 100% of height + GAP
-        transform = `translate(-50%, calc(-100% - ${GAP}px))`;
-    } else {
-        // Position: Bottom edge of selection
-        top = domSelBottom;
-        // Shift: Centered horizontally (-50%), Moved DOWN by smaller GAP (no rotation handle at bottom usually)
-        transform = `translate(-50%, 20px)`;
-    }
+    // Clamp to viewport top edge to keep it visible
+    top = Math.max(VISUAL_MARGIN_TOP, top);
 
     // Clamp Horizontal Position to keep it inside the container
     let left = domSelCenterX;
@@ -154,7 +141,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         position: 'absolute',
         top: `${top}px`,
         left: `${left}px`,
-        transform: transform,
+        transform: 'translateX(-50%)',
         width: 'fit-content',
         pointerEvents: 'auto',
         zIndex: 40 
