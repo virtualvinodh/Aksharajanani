@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
-import { AppSettings, BoundingBox, Point, TransformState } from '../types';
+import { BoundingBox, Point, TransformState } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
-import { VEC } from '../utils/vectorUtils';
 import { CheckCircleIcon } from '../constants';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 interface ContextualToolbarProps {
   selectionBox: BoundingBox;
@@ -11,9 +10,10 @@ interface ContextualToolbarProps {
   viewOffset: Point;
   onApplyTransform: (transform: TransformState & { flipX?: boolean; flipY?: boolean }) => void;
   previewTransform: TransformState | null;
-  setPreviewTransform: (transform: TransformState | null) => void;
+  setPreviewTransform: (transform: TransformState & { flipX?: boolean; flipY?: boolean } | null) => void;
   containerWidth: number;
   containerHeight: number;
+  internalCanvasSize: number;
 }
 
 const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
@@ -24,11 +24,15 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
   previewTransform,
   setPreviewTransform,
   containerWidth,
-  containerHeight
+  containerHeight,
+  internalCanvasSize
 }) => {
   const { theme } = useTheme();
   const [rotateInput, setRotateInput] = useState('0');
   const [scaleInput, setScaleInput] = useState('1.0');
+  
+  // Detect mobile screens to switch between docking modes
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Reset inputs when selection changes (new selection box)
   useEffect(() => {
@@ -36,7 +40,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
       setRotateInput('0');
       setScaleInput('1.0');
     }
-  }, [previewTransform, selectionBox]); // selectionBox dependency ensures reset on new selection
+  }, [previewTransform, selectionBox]);
 
   const handleTransformChange = (type: 'rotate' | 'scale', value: string) => {
     if (type === 'rotate') setRotateInput(value);
@@ -88,41 +92,83 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
     }
   };
 
-  // Calculate Screen Position
-  // 1. Convert Selection Center to Screen Coordinates
-  const selCenterX = (selectionBox.x + selectionBox.width / 2) * zoom + viewOffset.x;
-  const selTopY = selectionBox.y * zoom + viewOffset.y;
+  // --- Positioning Logic ---
+  let style: React.CSSProperties = {};
 
-  // 2. Determine Toolbar Position (Above the selection, centered horizontally)
-  const TOOLBAR_HEIGHT = 50;
-  const PADDING = 15;
-  
-  // Default to above, flip to below if too close to top edge
-  let top = selTopY - TOOLBAR_HEIGHT - PADDING;
-  if (top < 10) {
-      const selBottomY = (selectionBox.y + selectionBox.height) * zoom + viewOffset.y;
-      top = selBottomY + PADDING;
+  if (isMobile) {
+    // Mobile: Absolute docking at the bottom center of the container
+    style = {
+        position: 'absolute', 
+        bottom: '16px', 
+        left: '0',
+        right: '0',
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        width: 'fit-content',
+        maxWidth: '95%',
+        pointerEvents: 'auto',
+        zIndex: 40
+    };
+  } else {
+    // Desktop: Contextual positioning relative to selection
+    const domScale = internalCanvasSize > 0 ? containerWidth / internalCanvasSize : 1;
+    
+    // Coordinates in DOM pixels
+    const domSelLeft = (selectionBox.x * zoom + viewOffset.x) * domScale;
+    const domSelTop = (selectionBox.y * zoom + viewOffset.y) * domScale;
+    const domSelWidth = (selectionBox.width * zoom) * domScale;
+    const domSelHeight = (selectionBox.height * zoom) * domScale;
+
+    const domSelCenterX = domSelLeft + domSelWidth / 2;
+    const domSelBottom = domSelTop + domSelHeight;
+
+    const TOOLBAR_HEIGHT = 44; 
+    // GAP needs to be large enough to clear the Rotation Handle which sits ~30px above the box
+    const ROTATION_HANDLE_CLEARANCE = 30;
+    const VISUAL_PADDING = 20;
+    const GAP = ROTATION_HANDLE_CLEARANCE + VISUAL_PADDING; // 50px
+    
+    const TOOLBAR_HALF_WIDTH = 110; // Half-width guess for clamping
+
+    let top, transform;
+
+    // Check if there is space ABOVE
+    // We need: Toolbar Height + Gap
+    if (domSelTop - (TOOLBAR_HEIGHT + GAP) > 0) {
+        // Position: Top edge of selection
+        top = domSelTop;
+        // Shift: Centered horizontally (-50%), Moved UP by 100% of height + GAP
+        transform = `translate(-50%, calc(-100% - ${GAP}px))`;
+    } else {
+        // Position: Bottom edge of selection
+        top = domSelBottom;
+        // Shift: Centered horizontally (-50%), Moved DOWN by smaller GAP (no rotation handle at bottom usually)
+        transform = `translate(-50%, 20px)`;
+    }
+
+    // Clamp Horizontal Position to keep it inside the container
+    let left = domSelCenterX;
+    left = Math.max(TOOLBAR_HALF_WIDTH, Math.min(left, containerWidth - TOOLBAR_HALF_WIDTH));
+
+    style = {
+        position: 'absolute',
+        top: `${top}px`,
+        left: `${left}px`,
+        transform: transform,
+        width: 'fit-content',
+        pointerEvents: 'auto',
+        zIndex: 40 
+    };
   }
 
-  // Clamp horizontal position to keep inside container
-  const TOOLBAR_WIDTH = 280; // Approx width
-  let left = selCenterX - TOOLBAR_WIDTH / 2;
-  
-  // Simple clamping
-  left = Math.max(10, Math.min(left, containerWidth - TOOLBAR_WIDTH - 10));
-
-  const buttonClass = "p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors";
-  const activeButtonClass = "p-1.5 rounded-md bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-500 transition-colors";
+  const buttonClass = "p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors flex-shrink-0";
+  const activeButtonClass = "p-1.5 rounded-md bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-500 transition-colors flex-shrink-0";
   const inputClass = "w-12 p-1 text-xs border rounded bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-indigo-500 focus:outline-none";
 
   return (
     <div
-      className="absolute z-30 flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded-full shadow-xl border border-gray-200 dark:border-gray-700 animate-pop-in"
-      style={{
-        top: `${top}px`,
-        left: `${left}px`,
-        transformOrigin: 'bottom center'
-      }}
+      className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded-full shadow-xl border border-gray-200 dark:border-gray-700 animate-pop-in overflow-x-auto no-scrollbar"
+      style={style}
       onMouseDown={(e) => e.stopPropagation()} // Prevent canvas drag start
     >
       {/* Flip Controls */}
@@ -174,7 +220,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
       {(previewTransform && (previewTransform.rotate !== 0 || previewTransform.scale !== 1.0 || previewTransform.flipX || previewTransform.flipY)) && (
         <button
           onClick={commitTransform}
-          className="ml-1 p-1.5 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-sm transition-colors"
+          className="ml-1 p-1.5 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-sm transition-colors flex-shrink-0"
           title="Apply Transformation"
         >
           <CheckCircleIcon className="w-4 h-4" />

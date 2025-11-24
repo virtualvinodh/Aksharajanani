@@ -83,8 +83,12 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const [isConstructionWarningOpen, setIsConstructionWarningOpen] = useState(false);
   const [pendingConstruction, setPendingConstruction] = useState<{type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]} | null>(null);
 
+  // Container dimensions state
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
   const modalRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const canvasWrapperRef = useRef<HTMLDivElement>(null); // Ref for the inner square wrapper
   const animationTimeoutRef = useRef<number | null>(null);
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
   
@@ -247,7 +251,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
           px = rx * sx;
           py = ry * sy;
           
-          return { x: px + center.x, y: py + center.y };
+          return { x: px + center.x, y: ry + center.y };
       };
 
       const newPaths = currentPaths.map(p => {
@@ -292,6 +296,22 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       canUndo, canRedo, hasSelection: selectedPathIds.size > 0, hasClipboard: !!clipboard,
       canNavigatePrev: !!prevCharacter, canNavigateNext: !!nextCharacter
   });
+
+  // Measure container for Contextual Toolbar
+  useEffect(() => {
+    if (canvasWrapperRef.current) {
+        const { clientWidth, clientHeight } = canvasWrapperRef.current;
+        setContainerSize({ width: clientWidth, height: clientHeight });
+        
+        const resizeObserver = new ResizeObserver((entries) => {
+            if (entries[0]) {
+                setContainerSize({ width: entries[0].contentRect.width, height: entries[0].contentRect.height });
+            }
+        });
+        resizeObserver.observe(canvasWrapperRef.current);
+        return () => resizeObserver.disconnect();
+    }
+  }, []);
 
   // Animation handling
   useLayoutEffect(() => {
@@ -445,19 +465,20 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
              />
          </div>
         <div className="flex-1 min-w-0 min-h-0 flex justify-center items-center relative" ref={canvasContainerRef}>
-            {settings.editorMode === 'advanced' && activeSelectionBBox && canvasContainerRef.current && (
-                <ContextualToolbar 
-                    selectionBox={activeSelectionBBox}
-                    zoom={zoom}
-                    viewOffset={viewOffset}
-                    onApplyTransform={handleApplyTransform}
-                    previewTransform={previewTransform}
-                    setPreviewTransform={setPreviewTransform}
-                    containerWidth={canvasContainerRef.current.clientWidth}
-                    containerHeight={canvasContainerRef.current.clientHeight}
-                />
-            )}
-            <div className="rounded-md overflow-hidden shadow-lg aspect-square max-w-full max-h-full">
+            <div className="rounded-md overflow-hidden shadow-lg aspect-square max-w-full max-h-full relative" ref={canvasWrapperRef}>
+                {settings.editorMode === 'advanced' && activeSelectionBBox && (
+                    <ContextualToolbar 
+                        selectionBox={activeSelectionBBox}
+                        zoom={zoom}
+                        viewOffset={viewOffset}
+                        onApplyTransform={handleApplyTransform}
+                        previewTransform={previewTransform}
+                        setPreviewTransform={setPreviewTransform}
+                        containerWidth={containerSize.width}
+                        containerHeight={containerSize.height}
+                        internalCanvasSize={DRAWING_CANVAS_SIZE}
+                    />
+                )}
                 {canvasComponent}
             </div>
         </div>

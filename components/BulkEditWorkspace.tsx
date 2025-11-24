@@ -12,6 +12,8 @@ import { EditIcon, CheckCircleIcon, TrashIcon, SettingsIcon, LeftArrowIcon, Righ
 import { useLayout } from '../contexts/LayoutContext';
 import { VEC } from '../utils/vectorUtils';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
+import { useKerning } from '../contexts/KerningContext';
+import { usePositioning } from '../contexts/PositioningContext';
 
 // --- Helper Logic for Transformation (Shared between Preview and Apply) ---
 const transformGlyphPaths = (
@@ -79,6 +81,8 @@ const transformGlyphPaths = (
 const BulkEditWorkspace: React.FC = () => {
     const { characterSets, dispatch: characterDispatch } = useCharacter();
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
+    const { kerningMap, dispatch: kerningDispatch } = useKerning();
+    const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { settings, metrics } = useSettings();
     const { t } = useLocale();
     const { showNotification, metricsSelection, setMetricsSelection } = useLayout();
@@ -155,26 +159,47 @@ const BulkEditWorkspace: React.FC = () => {
     const handleBulkDelete = () => {
         if (metricsSelection.size === 0) return;
 
-        // Snapshot for Undo
-        const previousGlyphData = new Map(glyphDataMap);
-        // Although delete doesn't change char sets directly in visual appearance, 
-        // it's good practice to snapshot if delete logic might affect metadata in future.
-        // For now, bulk delete only removes drawing data in the dispatcher.
-        // However, `useGlyphActions` handles full deletion (metadata + drawing).
-        // Here we are just deleting drawing data based on the dispatcher call below.
-        // Let's stick to just glyphDataMap snapshot since we only call DELETE_GLYPH.
-        // Actually, `DELETE_GLYPH` usually implies clearing the drawing, not removing the char from set?
-        // Looking at `glyphDataReducer`, `DELETE_GLYPH` removes it from the map.
-        // The character remains in `characterSets` but becomes undrawn.
-        
+        // 1. Snapshot for Undo (All contexts)
+        const glyphDataSnapshot = new Map(glyphDataMap);
+        const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
+        const kerningSnapshot = new Map(kerningMap);
+        const positioningSnapshot = new Map(markPositioningMap);
+
         const undo = () => {
-            glyphDataDispatch({ type: 'SET_MAP', payload: previousGlyphData });
+            glyphDataDispatch({ type: 'SET_MAP', payload: glyphDataSnapshot });
+            characterDispatch({ type: 'SET_CHARACTER_SETS', payload: characterSetsSnapshot });
+            kerningDispatch({ type: 'SET_MAP', payload: kerningSnapshot });
+            positioningDispatch({ type: 'SET_MAP', payload: positioningSnapshot });
         };
-        
-        metricsSelection.forEach(unicode => {
-             // Delete glyph drawing data
-             glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
+
+        // 2. Calculate Cascading Deletes
+        const newKerningMap = new Map(kerningMap);
+        const newPositioningMap = new Map(markPositioningMap);
+
+        // Filter Kerning: Remove any pair involving ANY selected unicode
+        newKerningMap.forEach((value, key) => {
+            const [left, right] = key.split('-').map(Number);
+            if (metricsSelection.has(left) || metricsSelection.has(right)) {
+                newKerningMap.delete(key);
+            }
         });
+
+        // Filter Positioning: Remove any pair involving ANY selected unicode
+        newPositioningMap.forEach((value, key) => {
+            const [base, mark] = key.split('-').map(Number);
+            if (metricsSelection.has(base) || metricsSelection.has(mark)) {
+                newPositioningMap.delete(key);
+            }
+        });
+        
+        // 3. Dispatch Updates
+        metricsSelection.forEach(unicode => {
+             glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
+             characterDispatch({ type: 'DELETE_CHARACTER', payload: { unicode } });
+        });
+        
+        kerningDispatch({ type: 'SET_MAP', payload: newKerningMap });
+        positioningDispatch({ type: 'SET_MAP', payload: newPositioningMap });
 
         showNotification(t('glyphDeletedSuccess', { name: `${metricsSelection.size} glyphs` }), 'success', { onUndo: undo });
         setIsDeleteConfirmOpen(false);

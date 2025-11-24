@@ -4,6 +4,7 @@ import { useCharacter } from '../../contexts/CharacterContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { usePositioning } from '../../contexts/PositioningContext';
+import { useKerning } from '../../contexts/KerningContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { Character, GlyphData, Path, Point, CharacterSet } from '../../types';
@@ -29,6 +30,7 @@ export const useGlyphActions = (
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
     const { settings, metrics, dispatch: settingsDispatch } = useSettings();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
+    const { kerningMap, dispatch: kerningDispatch } = useKerning();
     
     const [markAttachmentRules, setMarkAttachmentRules] = useState<any>(null);
 
@@ -205,17 +207,44 @@ export const useGlyphActions = (
     const handleDeleteGlyph = useCallback((unicode: number) => {
         const charToDelete = allCharsByUnicode.get(unicode); if (!charToDelete) return;
         
-        // Snapshot for Undo
+        // 1. Snapshot for Undo (All affected contexts)
         const glyphDataSnapshot = new Map(glyphDataMap);
         const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
+        const kerningSnapshot = new Map(kerningMap);
+        const positioningSnapshot = new Map(markPositioningMap);
         
         const undo = () => {
             glyphDataDispatch({ type: 'SET_MAP', payload: glyphDataSnapshot });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: characterSetsSnapshot });
+            kerningDispatch({ type: 'SET_MAP', payload: kerningSnapshot });
+            positioningDispatch({ type: 'SET_MAP', payload: positioningSnapshot });
         };
 
+        // 2. Cascade Delete Logic
+        
+        // Filter Kerning Map
+        const newKerningMap = new Map<string, number>();
+        kerningMap.forEach((value, key) => {
+            const [left, right] = key.split('-').map(Number);
+            if (left !== unicode && right !== unicode) {
+                newKerningMap.set(key, value);
+            }
+        });
+
+        // Filter Positioning Map
+        const newPositioningMap = new Map<string, Point>();
+        markPositioningMap.forEach((value, key) => {
+            const [base, mark] = key.split('-').map(Number);
+            if (base !== unicode && mark !== unicode) {
+                newPositioningMap.set(key, value);
+            }
+        });
+
+        // 3. Dispatch Updates
         glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode }});
         characterDispatch({ type: 'DELETE_CHARACTER', payload: { unicode } });
+        kerningDispatch({ type: 'SET_MAP', payload: newKerningMap });
+        positioningDispatch({ type: 'SET_MAP', payload: newPositioningMap });
         
         layout.closeCharacterModal();
         layout.showNotification(
@@ -223,7 +252,7 @@ export const useGlyphActions = (
             'success',
             { onUndo: undo }
         );
-    }, [allCharsByUnicode, t, glyphDataDispatch, characterDispatch, layout, glyphDataMap, characterSets]);
+    }, [allCharsByUnicode, t, glyphDataDispatch, characterDispatch, kerningDispatch, positioningDispatch, layout, glyphDataMap, characterSets, kerningMap, markPositioningMap]);
 
     const handleAddGlyph = useCallback((charData: { unicode?: number; name: string }) => {
         let finalUnicode = charData.unicode;
