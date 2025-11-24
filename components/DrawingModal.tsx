@@ -363,12 +363,19 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
               });
               
               setSelectedPathIds(idsToSelect);
-              // Always switch to select tool for prefilled composites so user can adjust immediately
+              // Always switch to select tool for multi-component prefilled composites so user can adjust immediately
               setCurrentTool('select');
           } else {
-               // Fallback if no components found (unlikely for prefill)
+               // Fallback if no components found (unlikely for prefill) or single component
                setSelectedPathIds(new Set());
-               setCurrentTool('select'); 
+               
+               // Only switch to select tool if it is a linked (locked) glyph.
+               // For editable composites (single component), stay in default tool (Pen).
+               if (character.link) {
+                   setCurrentTool('select'); 
+               } else {
+                   setCurrentTool('pen');
+               }
           }
       } else {
           // Normal load
