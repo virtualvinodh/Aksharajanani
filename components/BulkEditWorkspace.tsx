@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useCharacter } from '../contexts/CharacterContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
@@ -118,6 +119,12 @@ const BulkEditWorkspace: React.FC = () => {
 
     // --- Metrics (Properties) Handlers ---
     const handleSaveMetrics = (newLSB: string, newRSB: string, newAdvWidth: string) => {
+        // Snapshot state for Undo
+        const previousCharSets = JSON.parse(JSON.stringify(characterSets));
+        const undo = () => {
+            characterDispatch({ type: 'SET_CHARACTER_SETS', payload: previousCharSets });
+        };
+
         const lsbVal = newLSB.trim() === '' ? undefined : parseInt(newLSB, 10);
         const rsbVal = newRSB.trim() === '' ? undefined : parseInt(newRSB, 10);
         
@@ -139,7 +146,7 @@ const BulkEditWorkspace: React.FC = () => {
              }
         });
         
-        showNotification(t('updateComplete'), 'success');
+        showNotification(t('updateComplete'), 'success', { onUndo: undo });
         setIsPropertiesModalOpen(false);
         setMetricsSelection(new Set());
     };
@@ -147,13 +154,29 @@ const BulkEditWorkspace: React.FC = () => {
     // --- Delete Handlers ---
     const handleBulkDelete = () => {
         if (metricsSelection.size === 0) return;
+
+        // Snapshot for Undo
+        const previousGlyphData = new Map(glyphDataMap);
+        // Although delete doesn't change char sets directly in visual appearance, 
+        // it's good practice to snapshot if delete logic might affect metadata in future.
+        // For now, bulk delete only removes drawing data in the dispatcher.
+        // However, `useGlyphActions` handles full deletion (metadata + drawing).
+        // Here we are just deleting drawing data based on the dispatcher call below.
+        // Let's stick to just glyphDataMap snapshot since we only call DELETE_GLYPH.
+        // Actually, `DELETE_GLYPH` usually implies clearing the drawing, not removing the char from set?
+        // Looking at `glyphDataReducer`, `DELETE_GLYPH` removes it from the map.
+        // The character remains in `characterSets` but becomes undrawn.
+        
+        const undo = () => {
+            glyphDataDispatch({ type: 'SET_MAP', payload: previousGlyphData });
+        };
         
         metricsSelection.forEach(unicode => {
              // Delete glyph drawing data
              glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
         });
 
-        showNotification(t('glyphDeletedSuccess', { name: `${metricsSelection.size} glyphs` }), 'success');
+        showNotification(t('glyphDeletedSuccess', { name: `${metricsSelection.size} glyphs` }), 'success', { onUndo: undo });
         setIsDeleteConfirmOpen(false);
         setMetricsSelection(new Set());
     };
@@ -164,6 +187,12 @@ const BulkEditWorkspace: React.FC = () => {
         rotation: number, 
         flipH: boolean, flipV: boolean
     ) => {
+        // Snapshot for Undo
+        const previousGlyphData = new Map(glyphDataMap);
+        const undo = () => {
+            glyphDataDispatch({ type: 'SET_MAP', payload: previousGlyphData });
+        };
+
         const newMap = new Map(glyphDataMap);
         const strokeThickness = settings?.strokeThickness || 15;
         let transformCount = 0;
@@ -180,7 +209,7 @@ const BulkEditWorkspace: React.FC = () => {
 
         if (transformCount > 0) {
             glyphDataDispatch({ type: 'SET_MAP', payload: newMap });
-            showNotification(t('updateComplete'), 'success');
+            showNotification(t('updateComplete'), 'success', { onUndo: undo });
         }
 
         setIsTransformModalOpen(false);

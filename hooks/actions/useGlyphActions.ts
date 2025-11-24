@@ -190,7 +190,7 @@ export const useGlyphActions = (
             layout.showNotification(
                 t('updatedDependents', { count: totalDependents }),
                 'success',
-                // { onUndo: undoChanges, duration: 7000 }
+                { onUndo: undoChanges, duration: 7000 }
             );
             
         } else if (!silent) {
@@ -204,11 +204,26 @@ export const useGlyphActions = (
 
     const handleDeleteGlyph = useCallback((unicode: number) => {
         const charToDelete = allCharsByUnicode.get(unicode); if (!charToDelete) return;
+        
+        // Snapshot for Undo
+        const glyphDataSnapshot = new Map(glyphDataMap);
+        const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
+        
+        const undo = () => {
+            glyphDataDispatch({ type: 'SET_MAP', payload: glyphDataSnapshot });
+            characterDispatch({ type: 'SET_CHARACTER_SETS', payload: characterSetsSnapshot });
+        };
+
         glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode }});
         characterDispatch({ type: 'DELETE_CHARACTER', payload: { unicode } });
+        
         layout.closeCharacterModal();
-        layout.showNotification(t('glyphDeletedSuccess', { name: charToDelete.name }));
-    }, [allCharsByUnicode, t, glyphDataDispatch, characterDispatch, layout]);
+        layout.showNotification(
+            t('glyphDeletedSuccess', { name: charToDelete.name }),
+            'success',
+            { onUndo: undo }
+        );
+    }, [allCharsByUnicode, t, glyphDataDispatch, characterDispatch, layout, glyphDataMap, characterSets]);
 
     const handleAddGlyph = useCallback((charData: { unicode?: number; name: string }) => {
         let finalUnicode = charData.unicode;
