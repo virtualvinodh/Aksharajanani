@@ -116,7 +116,6 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
             className="p-2 rounded-md transition-colors bg-orange-500 text-white hover:bg-orange-600 flex items-center gap-1"
         >
             <BrokenLinkIcon />
-            <span className="text-xs font-bold sm:hidden">{t('unlock')}</span>
         </button>
       </>
     ) : character.sourceLink ? (
@@ -128,7 +127,6 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
             className="p-2 rounded-md transition-colors bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1"
         >
             <LinkIcon />
-            <span className="text-xs font-bold sm:hidden">{t('relink')}</span>
         </button>
       </>
     ) : null;
