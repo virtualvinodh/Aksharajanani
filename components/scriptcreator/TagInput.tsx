@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { AddIcon } from '../../constants';
@@ -52,7 +51,7 @@ const TagInput: React.FC<TagInputProps> = ({ tags, setTags, placeholder, availab
                     onChange={e => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
-                    className="flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    className="flex-grow p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600"
                 />
                 <button type="button" onClick={handleAddTag} className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
                     <AddIcon className="w-5 h-5" />

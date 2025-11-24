@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { FontMetrics, Character, CharacterSet, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -316,7 +315,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 value="" 
                                 onChange={handleAddComponent} 
                                 label="Select Glyph..."
-                                className="text-xs p-1"
+                                className="text-xs p-1 bg-white dark:bg-gray-700"
                             />
                             <button onClick={() => setIsAddingComp(false)} className="p-1 text-red-500">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
@@ -343,9 +342,9 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                             <div className="flex flex-col gap-1.5 flex-grow min-w-0">
                                                 <div className="flex items-center gap-1">
                                                     <span className="text-gray-500">S:</span>
-                                                    <input type="number" step="0.1" value={transforms[idx]?.scale} onChange={e => updateTransform(idx, 'scale', parseFloat(e.target.value))} className="w-10 p-0.5 border rounded dark:bg-gray-600 dark:border-gray-500" />
+                                                    <input type="number" step="0.1" value={transforms[idx]?.scale} onChange={e => updateTransform(idx, 'scale', parseFloat(e.target.value))} className="w-10 p-0.5 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                                     <span className="text-gray-500 ml-1">Y:</span>
-                                                    <input type="number" value={transforms[idx]?.y} onChange={e => updateTransform(idx, 'y', parseInt(e.target.value))} className="w-10 p-0.5 border rounded dark:bg-gray-600 dark:border-gray-500" />
+                                                    <input type="number" value={transforms[idx]?.y} onChange={e => updateTransform(idx, 'y', parseInt(e.target.value))} className="w-10 p-0.5 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                                 </div>
                                                 
                                                 {/* Position Mode Segmented Control */}
@@ -410,4 +409,4 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   );
 };
 
-export default React.memo(GlyphPropertiesPanel);
+export default GlyphPropertiesPanel;

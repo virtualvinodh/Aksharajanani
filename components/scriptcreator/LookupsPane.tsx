@@ -116,7 +116,7 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
             {!isAdding && !editingNameKey && (<button onClick={handleAddClick} disabled={isAdding || !!editingNameKey} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <AddIcon className="w-5 h-5"/> {t('add')} Lookup
             </button>)}
-            {isAdding && (<div className="p-4 border-2 border-dashed border-indigo-400 rounded-lg flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/20"><input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && handleSaveName()} placeholder="new_lookup" className="w-full p-2 text-lg font-mono border rounded dark:bg-gray-900 dark:border-gray-600" /><button onClick={handleSaveName}><SaveIcon /></button><button onClick={handleCancelNameEdit}><ClearIcon /></button></div>)}
+            {isAdding && (<div className="p-4 border-2 border-dashed border-indigo-400 rounded-lg flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/20"><input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && handleSaveName()} placeholder="new_lookup" className="w-full p-2 text-lg font-mono border rounded bg-white dark:bg-gray-900 dark:border-gray-600" /><button onClick={handleSaveName}><SaveIcon /></button><button onClick={handleCancelNameEdit}><ClearIcon /></button></div>)}
             
             <div className="space-y-4">
                 {Object.keys(lookups).sort().map(key => {
@@ -127,7 +127,7 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                         <div key={key} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border dark:border-gray-700">
                              <div className="flex justify-between items-center">
                                 {editingNameKey === key ? (
-                                    <div className="flex items-center gap-1 flex-grow"><input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && handleSaveName()} className="w-full p-2 text-lg font-mono border rounded dark:bg-gray-900 dark:border-gray-600" /><button onClick={handleSaveName}><SaveIcon /></button><button onClick={handleCancelNameEdit}><ClearIcon /></button></div>
+                                    <div className="flex items-center gap-1 flex-grow"><input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && handleSaveName()} className="w-full p-2 text-lg font-mono border rounded bg-white dark:bg-gray-900 dark:border-gray-600" /><button onClick={handleSaveName}><SaveIcon /></button><button onClick={handleCancelNameEdit}><ClearIcon /></button></div>
                                 ) : (
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-xl font-bold font-mono text-indigo-700 dark:text-indigo-400">{key}</h3>

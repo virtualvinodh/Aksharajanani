@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { Character, CharacterSet } from '../../types';
@@ -102,12 +101,12 @@ const DistRuleCreator: React.FC<DistRuleCreatorProps> = ({ rules, setRules, scri
                     <GlyphSelect characterSets={allCharacterSets} value={formState.target} onChange={val => setFormState(s => ({...s, target: val}))} label={t('targetCharacter')} />
                     <div>
                         <label className="block text-sm font-medium">{t('ruleValue')}</label>
-                        <input type="number" value={formState.value} onChange={e => setFormState(s => ({...s, value: e.target.value}))} className="w-24 p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                        <input type="number" value={formState.value} onChange={e => setFormState(s => ({...s, value: e.target.value}))} className="w-24 p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
                     </div>
                 </div>
             ) : (
                 <div className="space-y-3">
-                    <div className="flex items-end gap-4"><GlyphSelect characterSets={allCharacterSets} value={formState.target} onChange={val => setFormState(s => ({...s, target: val}))} label={t('targetCharacter')} /><div className="flex-shrink-0"><label className="block text-sm font-medium">{t('space')}</label><input type="number" value={formState.value} onChange={e => setFormState(s => ({...s, value: e.target.value}))} className="w-24 p-2 border rounded dark:bg-gray-700 dark:border-gray-600"/></div></div>
+                    <div className="flex items-end gap-4"><GlyphSelect characterSets={allCharacterSets} value={formState.target} onChange={val => setFormState(s => ({...s, target: val}))} label={t('targetCharacter')} /><div className="flex-shrink-0"><label className="block text-sm font-medium">{t('space')}</label><input type="number" value={formState.value} onChange={e => setFormState(s => ({...s, value: e.target.value}))} className="w-24 p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600"/></div></div>
                     <div><label className="font-semibold text-sm">{t('leftContext')}</label>{formState.left.map((g, i) => <div key={i} className="flex items-center gap-2 mt-1"><GlyphSelect characterSets={allCharacterSets} value={g} onChange={val => setFormState(s => ({...s, left: s.left.map((item, idx) => idx === i ? val : item)}))} label={`${t('leftContext')} ${i+1}`} /><button onClick={() => setFormState(s => ({...s, left: s.left.filter((_, idx) => idx !== i)}))} className="p-1 text-red-500"><TrashIcon /></button></div>)}<button onClick={() => setFormState(s => ({...s, left: [...s.left, '']}))} className="mt-1 text-xs flex items-center gap-1"><AddIcon className="w-4 h-4" /> Add</button></div>
                     <div><label className="font-semibold text-sm">{t('rightContext')}</label>{formState.right.map((g, i) => <div key={i} className="flex items-center gap-2 mt-1"><GlyphSelect characterSets={allCharacterSets} value={g} onChange={val => setFormState(s => ({...s, right: s.right.map((item, idx) => idx === i ? val : item)}))} label={`${t('rightContext')} ${i+1}`} /><button onClick={() => setFormState(s => ({...s, right: s.right.filter((_, idx) => idx !== i)}))} className="p-1 text-red-500"><TrashIcon /></button></div>)}<button onClick={() => setFormState(s => ({...s, right: [...s.right, '']}))} className="mt-1 text-xs flex items-center gap-1"><AddIcon className="w-4 h-4" /> Add</button></div>
                 </div>

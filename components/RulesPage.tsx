@@ -395,7 +395,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                             <div className="flex items-center justify-center gap-4">
                                 <select
                                     id={`add-lookup-select-${activeFeature}`}
-                                    className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                                    className="p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600"
                                     value={lookupToAdd}
                                     onChange={e => setLookupToAdd(e.target.value)}
                                 >

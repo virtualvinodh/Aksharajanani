@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { RecommendedKerning, MarkAttachmentRules, PositioningRules, AttachmentClass, CharacterSet, AttachmentPoint } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -78,10 +77,10 @@ const PositioningRuleEditor: React.FC<{
             <div><label className="font-semibold text-sm">{t('baseGlyphs')}</label><TagInput tags={base} setTags={setBase} placeholder="Add base glyph or $set..." availableSets={availableSets}/></div>
             <div><label className="font-semibold text-sm">{t('markGlyphs')}</label><TagInput tags={mark} setTags={setMark} placeholder="Add mark glyph or $set..." availableSets={availableSets}/></div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input type="text" placeholder={t('gposFeatureTag')} value={gpos} onChange={e => setGpos(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
-                <input type="text" placeholder={t('gsubFeatureTag')} value={gsub} onChange={e => setGsub(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                <input type="text" placeholder={t('gposFeatureTag')} value={gpos} onChange={e => setGpos(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
+                <input type="text" placeholder={t('gsubFeatureTag')} value={gsub} onChange={e => setGsub(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
                  <div>
-                    <select value={movement} onChange={e => setMovement(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 h-full">
+                    <select value={movement} onChange={e => setMovement(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 h-full">
                         <option value="none">{t('movementNone')}</option>
                         <option value="horizontal">{t('movementHorizontal')}</option>
                         <option value="vertical">{t('movementVertical')}</option>
@@ -103,7 +102,7 @@ const PositioningRuleEditor: React.FC<{
                                             placeholder={`${baseName}${markName}`}
                                             value={ligatureMap[baseName]?.[markName] || ''}
                                             onChange={e => handleLigatureMapChange(baseName, markName, e.target.value)}
-                                            className="w-32 p-1 border rounded dark:bg-gray-800 dark:border-gray-600 text-xs"
+                                            className="w-32 p-1 border rounded bg-white dark:bg-gray-800 dark:border-gray-600 text-xs"
                                         />
                                     </div>
                                 ))}
@@ -245,12 +244,12 @@ const ManualAttachmentForm: React.FC<{onAdd: (base: string, mark: string, rule: 
             <div className="flex-grow"><label className="text-xs">{t('baseChar')}</label><GlyphSelect characterSets={characterSets} value={base} onChange={setBase} label={t('baseChar')} groups={groups} /></div>
             <div className="flex-grow"><label className="text-xs">{t('markChar')}</label><GlyphSelect characterSets={characterSets} value={mark} onChange={setMark} label={t('markChar')} groups={groups} /></div>
             
-            <div className="flex-grow"><label className="text-xs">{t('basePoint')}</label><select value={basePoint} onChange={e => setBasePoint(e.target.value as AttachmentPoint)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">{attachmentPoints.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+            <div className="flex-grow"><label className="text-xs">{t('basePoint')}</label><select value={basePoint} onChange={e => setBasePoint(e.target.value as AttachmentPoint)} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600">{attachmentPoints.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
             <div className="self-center pt-5 text-lg font-bold text-gray-400 dark:text-gray-500">→</div>
-            <div className="flex-grow"><label className="text-xs">{t('markPoint')}</label><select value={markPoint} onChange={e => setMarkPoint(e.target.value as AttachmentPoint)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">{attachmentPoints.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+            <div className="flex-grow"><label className="text-xs">{t('markPoint')}</label><select value={markPoint} onChange={e => setMarkPoint(e.target.value as AttachmentPoint)} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600">{attachmentPoints.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
             <div className="flex items-center gap-1 pt-5">
-                <input type="number" value={xOffset} onChange={e => setXOffset(e.target.value)} placeholder="x" className="w-14 p-2 border rounded dark:bg-gray-700 dark:border-gray-600"/>
-                <input type="number" value={yOffset} onChange={e => setYOffset(e.target.value)} placeholder="y" className="w-14 p-2 border rounded dark:bg-gray-700 dark:border-gray-600"/>
+                <input type="number" value={xOffset} onChange={e => setXOffset(e.target.value)} placeholder="x" className="w-14 p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600"/>
+                <input type="number" value={yOffset} onChange={e => setYOffset(e.target.value)} placeholder="y" className="w-14 p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600"/>
             </div>
             
             <button onClick={handleAdd} className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"><AddIcon className="w-5 h-5"/></button>
@@ -275,7 +274,7 @@ const KerningForm: React.FC<{onAdd: (left: string, right: string, distance?: str
         <div className="p-2 border-t dark:border-gray-700 flex items-end gap-2 flex-wrap">
             <div className="flex-grow"><label className="text-xs">{t('leftChar')}</label><GlyphSelect characterSets={characterSets} value={left} onChange={setLeft} label={t('leftChar')} groups={groups} /></div>
             <div className="flex-grow"><label className="text-xs">{t('rightChar')}</label><GlyphSelect characterSets={characterSets} value={right} onChange={setRight} label={t('rightChar')} groups={groups} /></div>
-            <div className="w-28"><label className="text-xs">Distance</label><input type="text" value={distance} onChange={e => setDistance(e.target.value)} placeholder="e.g., 0 or lsb" className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"/></div>
+            <div className="w-28"><label className="text-xs">Distance</label><input type="text" value={distance} onChange={e => setDistance(e.target.value)} placeholder="e.g., 0 or lsb" className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600"/></div>
             <button onClick={handleAdd} className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"><AddIcon className="w-5 h-5"/></button>
         </div>
     );
@@ -303,7 +302,7 @@ const KerningPairEditor: React.FC<{
         <div className="p-2 border rounded-md flex flex-wrap justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 gap-2">
             <div className="flex-grow min-w-[120px]"><GlyphSelect characterSets={characterSets} value={editedPair[0]} onChange={val => setEditedPair(p => [val, p[1], p[2] as any])} label={t('leftChar')} groups={groups} /></div>
             <div className="flex-grow min-w-[120px]"><GlyphSelect characterSets={characterSets} value={editedPair[1]} onChange={val => setEditedPair(p => [p[0], val, p[2] as any])} label={t('rightChar')} groups={groups} /></div>
-            <div className="w-28"><input type="text" value={editedPair[2] ?? ''} onChange={e => setEditedPair(p => [p[0], p[1], e.target.value])} placeholder="dist (opt.)" className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"/></div>
+            <div className="w-28"><input type="text" value={editedPair[2] ?? ''} onChange={e => setEditedPair(p => [p[0], p[1], e.target.value])} placeholder="dist (opt.)" className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600"/></div>
             <div className="flex gap-1">
                 <button onClick={handleSaveClick} className="p-2 text-green-500 rounded-full hover:bg-green-100 dark:hover:bg-green-900/50" title={t('save')}><SaveIcon /></button>
                 <button onClick={onCancel} className="px-3 py-1 bg-gray-500 text-white rounded text-sm">{t('cancel')}</button>
@@ -464,11 +463,11 @@ const PositioningPane: React.FC<PositioningPaneProps> = ({
                                         <td className="p-2">{mark}</td>
                                         <td className="p-2">
                                             <div className="flex items-center gap-1 flex-wrap">
-                                                <select value={editedAttachmentData.basePoint} onChange={e => setEditedAttachmentData(d => ({ ...d, basePoint: e.target.value as AttachmentPoint }))} className="p-1 border rounded dark:bg-gray-700 dark:border-gray-600 text-xs">{attachmentPoints.map(p => <option key={`base-${p}`} value={p}>{p}</option>)}</select>
+                                                <select value={editedAttachmentData.basePoint} onChange={e => setEditedAttachmentData(d => ({ ...d, basePoint: e.target.value as AttachmentPoint }))} className="p-1 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-xs">{attachmentPoints.map(p => <option key={`base-${p}`} value={p}>{p}</option>)}</select>
                                                 <span>→</span>
-                                                <select value={editedAttachmentData.markPoint} onChange={e => setEditedAttachmentData(d => ({ ...d, markPoint: e.target.value as AttachmentPoint }))} className="p-1 border rounded dark:bg-gray-700 dark:border-gray-600 text-xs">{attachmentPoints.map(p => <option key={`mark-${p}`} value={p}>{p}</option>)}</select>
-                                                <input type="number" value={editedAttachmentData.xOffset} onChange={e => setEditedAttachmentData(d => ({ ...d, xOffset: e.target.value }))} placeholder="x" className="w-14 p-1 border rounded dark:bg-gray-700 dark:border-gray-600 text-xs"/>
-                                                <input type="number" value={editedAttachmentData.yOffset} onChange={e => setEditedAttachmentData(d => ({ ...d, yOffset: e.target.value }))} placeholder="y" className="w-14 p-1 border rounded dark:bg-gray-700 dark:border-gray-600 text-xs"/>
+                                                <select value={editedAttachmentData.markPoint} onChange={e => setEditedAttachmentData(d => ({ ...d, markPoint: e.target.value as AttachmentPoint }))} className="p-1 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-xs">{attachmentPoints.map(p => <option key={`mark-${p}`} value={p}>{p}</option>)}</select>
+                                                <input type="number" value={editedAttachmentData.xOffset} onChange={e => setEditedAttachmentData(d => ({ ...d, xOffset: e.target.value }))} placeholder="x" className="w-14 p-1 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-xs"/>
+                                                <input type="number" value={editedAttachmentData.yOffset} onChange={e => setEditedAttachmentData(d => ({ ...d, yOffset: e.target.value }))} placeholder="y" className="w-14 p-1 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-xs"/>
                                             </div>
                                         </td>
                                         <td className="p-2 text-right">

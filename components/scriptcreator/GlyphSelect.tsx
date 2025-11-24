@@ -27,7 +27,7 @@ const GlyphSelect: React.FC<GlyphSelectProps> = ({ characterSets, value, onChang
             value={value}
             onChange={e => onChange(e.target.value)}
             aria-label={label}
-            className={`w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 ${className}`}
+            className={`w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 ${className}`}
             style={fontStyle}
         >
             <option value="" style={fontStyle}>{label}</option>

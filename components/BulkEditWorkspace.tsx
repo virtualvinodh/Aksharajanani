@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useCharacter } from '../contexts/CharacterContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
@@ -311,11 +310,11 @@ const BulkPropertiesModal: React.FC<{ isOpen: boolean, onClose: () => void, onSa
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium mb-1">{t('leftSpace')} (LSB)</label>
-                        <input type="number" value={lsb} onChange={e => setLsb(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                        <input type="number" value={lsb} onChange={e => setLsb(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1">{t('rightSpace')} (RSB)</label>
-                        <input type="number" value={rsb} onChange={e => setRsb(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                        <input type="number" value={rsb} onChange={e => setRsb(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
                     </div>
                 </div>
             </div>
@@ -404,11 +403,11 @@ const BulkTransformModal: React.FC<BulkTransformModalProps> = ({ isOpen, onClose
                 <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2 sm:col-span-1">
                         <label className="block text-sm font-medium mb-1">{t('scaleX')}</label>
-                        <input type="number" step="0.1" value={scaleX} onChange={e => handleScaleXChange(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                        <input type="number" step="0.1" value={scaleX} onChange={e => handleScaleXChange(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
                     </div>
                     <div className="col-span-2 sm:col-span-1">
                         <label className="block text-sm font-medium mb-1">{t('scaleY')}</label>
-                        <input type="number" step="0.1" value={scaleY} onChange={e => setScaleY(e.target.value)} disabled={lockAspect} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50" />
+                        <input type="number" step="0.1" value={scaleY} onChange={e => setScaleY(e.target.value)} disabled={lockAspect} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50" />
                     </div>
                      <div className="col-span-2 flex items-center">
                         <input type="checkbox" id="lockAspect" checked={lockAspect} onChange={e => setLockAspect(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" />
@@ -420,7 +419,7 @@ const BulkTransformModal: React.FC<BulkTransformModalProps> = ({ isOpen, onClose
                     <label className="block text-sm font-medium mb-1">{t('rotate')}</label>
                     <div className="flex items-center gap-2">
                         <input type="range" min="-180" max="180" value={rotation} onChange={e => setRotation(e.target.value)} className="flex-grow" />
-                        <input type="number" value={rotation} onChange={e => setRotation(e.target.value)} className="w-16 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-center" />
+                        <input type="number" value={rotation} onChange={e => setRotation(e.target.value)} className="w-16 p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-center" />
                     </div>
                 </div>
 
