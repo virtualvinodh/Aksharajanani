@@ -514,7 +514,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                                      return (
                                         <div
                                             key={p.projectId}
-                                            className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-between text-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-900 focus-within:ring-indigo-500"
+                                            className="relative select-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-between text-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-900 focus-within:ring-indigo-500"
                                             onTouchStart={() => p.projectId !== undefined && handleTouchStart(p.projectId)}
                                             onTouchEnd={handleTouchInteractionEnd}
                                             onTouchMove={handleTouchInteractionEnd}
