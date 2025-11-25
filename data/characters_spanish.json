@@ -268,83 +268,98 @@
     "nameKey": "SpanishLetters",
     "characters": [
       {
+        "name": "̃",
+        "glyphClass": "mark",
+        "advWidth": 0
+      },
+      {
+        "name": "́",
+        "glyphClass": "mark",
+        "advWidth": 0      
+      },
+      {
+        "name": "̈",
+        "glyphClass": "mark",
+        "advWidth": 0      
+      },      
+      {
         "name": "Ñ",
         "glyphClass": "base",
         "unicode": 209,
-        "composite": [
-          "N"
+        "link": [
+          "N", "̃"
         ]
       },
       {
         "name": "ñ",
         "glyphClass": "base",
         "unicode": 241,
-        "composite": [
-          "n"
+        "link": [
+          "n", "̃"
         ]
       },
       {
         "name": "Á",
         "glyphClass": "base",
         "unicode": 193,
-        "composite": [
-          "A"
+        "link": [
+          "A", "́"
         ]
       },
       {
         "name": "É",
         "glyphClass": "base",
         "unicode": 201,
-        "composite": [
-          "E"
+        "link": [
+          "E", "́"
         ]
       },
       {
         "name": "Í",
         "glyphClass": "base",
         "unicode": 205,
-        "composite": [
-          "I"
+        "link": [
+          "I", "́"
         ]
       },
       {
         "name": "Ó",
         "glyphClass": "base",
         "unicode": 211,
-        "composite": [
-          "O"
+        "link": [
+          "O", "́"
         ]
       },
       {
         "name": "Ú",
         "glyphClass": "base",
         "unicode": 218,
-        "composite": [
-          "U"
+        "link": [
+          "U", "́"
         ]
       },
       {
         "name": "Ü",
         "glyphClass": "base",
         "unicode": 220,
-        "composite": [
-          "U"
+        "link": [
+          "U", "̈"
         ]
       },
       {
         "name": "á",
         "glyphClass": "base",
         "unicode": 225,
-        "composite": [
-          "a"
+        "link": [
+          "a", "́"
         ]
       },
       {
         "name": "é",
         "glyphClass": "base",
         "unicode": 233,
-        "composite": [
-          "e"
+        "link": [
+          "e", "́"
         ]
       },
       {
@@ -352,31 +367,31 @@
         "glyphClass": "base",
         "unicode": 237,
         "composite": [
-          "i"
+          "i", "́"
         ]
       },
       {
         "name": "ó",
         "glyphClass": "base",
         "unicode": 243,
-        "composite": [
-          "o"
+        "compsite": [
+          "o", "́"
         ]
       },
       {
         "name": "ú",
         "glyphClass": "base",
         "unicode": 250,
-        "composite": [
-          "u"
+        "link": [
+          "u", "́"
         ]
       },
       {
         "name": "ü",
         "glyphClass": "base",
         "unicode": 252,
-        "composite": [
-          "u"
+        "link": [
+          "u", "̈"
         ]
       }
     ]
