@@ -1,9 +1,7 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
 import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, ControlPointsIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, LinkIcon, BrokenLinkIcon, GroupIcon, UngroupIcon, SparklesIcon } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
-import { useMediaQuery } from '../hooks/useMediaQuery';
 
 interface DrawingToolbarProps {
   character: Character;
@@ -110,7 +108,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     
     const lockOrLinkButton = character.link ? (
       <>
-        <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2' : 'border-l h-6 mx-2'}`}></div>
+        <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
          <button
             onClick={onUnlockClick}
             title={t('unlockForDetailedEditing')}
@@ -121,7 +119,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
       </>
     ) : character.sourceLink ? (
       <>
-        <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2' : 'border-l h-6 mx-2'}`}></div>
+        <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
          <button
             onClick={onRelinkClick}
             title={t('relinkGlyphTitle')}
@@ -178,7 +176,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
             <ToolButton tool="ellipse" currentTool={currentTool} label="Ellipse" onClick={setCurrentTool} disabled={isLocked}><EllipseIcon /></ToolButton>
             <ToolButton tool="curve" currentTool={currentTool} label="Curve" onClick={setCurrentTool} disabled={isLocked}><CurveIcon /></ToolButton>
             <ToolButton tool="dot" currentTool={currentTool} label="Dot" onClick={setCurrentTool} disabled={isLocked}><DotIcon /></ToolButton>
-            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2' : 'border-l h-6 mx-2'}`}></div>
+            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
             <ToolButton tool="eraser" currentTool={currentTool} label="Eraser" onClick={setCurrentTool} disabled={isLocked}><EraserIcon /></ToolButton>
         </>
     );
@@ -187,16 +185,16 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
         <>
             <ActionButton onClick={onUndo} title="Undo" disabled={!canUndo}><UndoIcon /></ActionButton>
             <ActionButton onClick={onRedo} title="Redo" disabled={!canRedo}><RedoIcon /></ActionButton>
-            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2' : 'border-l h-6 mx-2'}`}></div>
+            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
             <ActionButton onClick={onCut} title={t('cut')} disabled={selectedPathIds.size === 0 || isLocked}><CutIcon /></ActionButton>
             <ActionButton onClick={onCopy} title={t('copy')} disabled={isLocked}><CopyIcon /></ActionButton>
             <ActionButton onClick={onPaste} title={t('paste')} disabled={!clipboard || isLocked}><PasteIcon /></ActionButton>
             <ActionButton onClick={onGroup} title={t('group')} disabled={!canGroup || isLocked}><GroupIcon /></ActionButton>
             <ActionButton onClick={onUngroup} title={t('ungroup')} disabled={!canUngroup || isLocked}><UngroupIcon /></ActionButton>
-            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2' : 'border-l h-6 mx-2'}`}></div>
+            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
             <ActionButton onClick={() => onZoom(1.25)} title={t('zoomIn')}><ZoomInIcon /></ActionButton>
             <ActionButton onClick={() => onZoom(0.8)} title={t('zoomOut')}><ZoomOutIcon /></ActionButton>
-            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2' : 'border-l h-6 mx-2'}`}></div>
+            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
             <ActionButton onClick={onImageImportClick} title={t('importGuide')}><ImageIcon/></ActionButton>
             <ActionButton onClick={onImageTraceClick} title={t('traceImage')} disabled={isLocked}><SparklesIcon/></ActionButton>
             <ActionButton onClick={onSvgImportClick} title={t('importSvg')} disabled={isLocked}><ImportIcon/></ActionButton>
@@ -204,13 +202,12 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     );
 
     if(isLargeScreen) {
-        // Standard single column sidebar (displayed only when height is sufficient)
         return (
-            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-l-lg flex flex-col items-center justify-center gap-2 shadow-inner max-h-full overflow-y-auto no-scrollbar">
+            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-l-lg grid grid-cols-2 gap-2 justify-items-center content-start shadow-inner max-h-full overflow-y-auto no-scrollbar">
                  {commonTools}
-                 <div className="border-t w-full border-gray-400 dark:border-gray-600 my-1"></div>
+                 <div className="border-t w-full border-gray-400 dark:border-gray-600 my-1 col-span-2"></div>
                  {drawingTools}
-                 <div className="border-t w-full border-gray-400 dark:border-gray-600 my-1"></div>
+                 <div className="border-t w-full border-gray-400 dark:border-gray-600 my-1 col-span-2"></div>
                  {actionTools}
             </div>
         );

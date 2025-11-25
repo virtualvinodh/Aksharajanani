@@ -85,6 +85,14 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
 
   // Container dimensions state
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  
+  // DEBUG: Screen Dimensions
+  const [debugDims, setDebugDims] = useState({ w: window.innerWidth, h: window.innerHeight });
+  useEffect(() => {
+    const handleResize = () => setDebugDims({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
