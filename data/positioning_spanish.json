@@ -2,9 +2,9 @@
    {
     "markAttachment": {
         "$basicLatinLetters":  { 
-          "̃": ["topCenter", "bottomCenter", -30],
-          "́": ["topCenter", "bottomCenter", -30],
-          "̈": ["topCenter", "bottomCenter", -30]
+          "̃": ["topCenter", "bottomCenter", 0, -30],
+          "́": ["topCenter", "bottomCenter", 0, -30],
+          "̈": ["topCenter", "bottomCenter", 0, -30]
           }
     }
    },
