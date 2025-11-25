@@ -104,7 +104,7 @@
       { "unicode": 224, "name": "à", "glyphClass": "base", "link": ["a", "̀"] },
       { "unicode": 226, "name": "â", "glyphClass": "base", "link": ["a",  "́"] },
       { "unicode": 230, "name": "æ", "glyphClass": "ligature", "composite": ["a", "e"] },
-      { "unicode": 231, "name": "ç", "glyphClass": "base", "link": ["c", "u"] },
+      { "unicode": 231, "name": "ç", "glyphClass": "base", "link": ["c", "̧"] },
       { "unicode": 232, "name": "è", "glyphClass": "base", "link": ["e", "̀"] },
       { "unicode": 233, "name": "é", "glyphClass": "base", "link": ["e", "́"] },
       { "unicode": 234, "name": "ê", "glyphClass": "base", "link": ["e", "̂"] },
