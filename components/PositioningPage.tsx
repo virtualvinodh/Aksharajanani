@@ -311,7 +311,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         targetLigature: Character,
         newGlyphData: GlyphData,
         newOffset: Point,
-        newBearings: { lsb?: number, rsb?: number }
+        newBearings: { lsb?: number, rsb?: number },
+        isAutosave: boolean = false
     ) => {
         if (!characterSets) return;
     
@@ -373,7 +374,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             positioningDispatch({ type: 'SET_MAP', payload: result.updatedMarkPositioningMap });
             glyphDataDispatch({ type: 'SET_MAP', payload: result.updatedGlyphDataMap });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: result.updatedCharacterSets });
-            showNotification(t('saveGlyphSuccess'), 'success');
+            if (!isAutosave) {
+                showNotification(t('saveGlyphSuccess'), 'success');
+            }
         }
     
     }, [
@@ -382,9 +385,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         characterDispatch, showNotification, t
     ]);
 
-    const handleSavePair = useCallback((targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }) => {
+    const handleSavePair = useCallback((targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => {
         if (!editingPair) return;
-        savePositioningUpdate(editingPair.base, editingPair.mark, targetLigature, newGlyphData, newOffset, newBearings);
+        savePositioningUpdate(editingPair.base, editingPair.mark, targetLigature, newGlyphData, newOffset, newBearings, isAutosave);
     }, [editingPair, savePositioningUpdate]);
 
     const handleConfirmPosition = useCallback((base: Character, mark: Character, ligature: Character) => {

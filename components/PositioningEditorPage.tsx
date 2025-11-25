@@ -21,7 +21,7 @@ interface PositioningEditorPageProps {
     targetLigature: Character;
     glyphDataMap: Map<number, GlyphData>;
     markPositioningMap: MarkPositioningMap;
-    onSave: (targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }) => void;
+    onSave: (targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => void;
     onClose: () => void;
     onReset: (baseChar: Character, markChar: Character, targetLigature: Character) => void;
     settings: AppSettings;
@@ -189,7 +189,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         };
       }, [isPropertiesPanelOpen]);
     
-    const handleSave = useCallback((pathsToSave: Path[]) => {
+    const handleSave = useCallback((pathsToSave: Path[], isAutosave: boolean = false) => {
         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
         const originalBbox = getAccurateGlyphBBox(originalMarkPaths, settings.strokeThickness);
         const finalBbox = getAccurateGlyphBBox(pathsToSave, settings.strokeThickness);
@@ -203,7 +203,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         }
         
         const combinedPaths = [...(baseGlyph?.paths ?? []), ...pathsToSave];
-        onSave(targetLigature, { paths: combinedPaths }, finalOffset, { lsb, rsb });
+        onSave(targetLigature, { paths: combinedPaths }, finalOffset, { lsb, rsb }, isAutosave);
         setInitialMarkPaths(JSON.parse(JSON.stringify(pathsToSave))); // After saving, update initial state
     }, [glyphDataMap, markChar.unicode, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, settings.strokeThickness]);
 
@@ -227,7 +227,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                 clearTimeout(autosaveTimeout.current);
             }
             autosaveTimeout.current = window.setTimeout(() => {
-                handleSave(newPaths);
+                handleSave(newPaths, true);
             }, 500);
         }
     }, [settings.isAutosaveEnabled, handleSave]);
@@ -238,7 +238,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                 clearTimeout(autosaveTimeout.current);
             }
             autosaveTimeout.current = window.setTimeout(() => {
-                handleSave(markPaths);
+                handleSave(markPaths, true);
             }, 500);
         }
     }, [lsb, rsb, settings.isAutosaveEnabled, hasBearingChanges, handleSave, markPaths]);
