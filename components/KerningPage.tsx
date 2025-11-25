@@ -1,10 +1,8 @@
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Character, GlyphData, FontMetrics, CharacterSet, KerningMap, RecommendedKerning, AppSettings } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { SparklesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon } from '../constants';
 import { calculateAutoKerning } from '../services/kerningService';
-import KerningModal from './KerningModal';
 import PairCard from './PairCard';
 import CharacterSelectionPanel from './kerning/CharacterSelectionPanel';
 import CharacterSelectionRow from './kerning/CharacterSelectionRow';
@@ -17,6 +15,7 @@ import { isGlyphDrawn as isGlyphDrawnUtil } from '../utils/glyphUtils';
 import AutoKerningProgressModal from './AutoKerningProgressModal';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import Modal from './Modal';
+import KerningEditorPage from './KerningEditorPage';
 
 interface KerningPageProps {
   recommendedKerning: RecommendedKerning[] | null;
@@ -33,8 +32,8 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
     const { settings, metrics } = useSettings();
     
-    const [selectedPair, setSelectedPair] = useState<{ left: Character, right: Character } | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    // Changed: Track index in filtered list instead of object
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
     
     const [selectedLeftChars, setSelectedLeftChars] = useState(new Set<number>());
     const [selectedRightChars, setSelectedRightChars] = useState(new Set<number>());
@@ -155,8 +154,11 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     const totalPages = useMemo(() => Math.ceil(filteredPairsToDisplay.length / PAGE_SIZE), [filteredPairsToDisplay.length, PAGE_SIZE]);
 
     useEffect(() => {
-        setCurrentPage(1);
-    }, [filteredPairsToDisplay]); // Reset page when filters or total pairs change
+        // Don't reset page if we are returning from editor (preserving context)
+        if (editingIndex === null) {
+             setCurrentPage(1);
+        }
+    }, [filteredPairsToDisplay.length, mode, selectedLeftChars, selectedRightChars, showOnlyUnkerned]); 
 
     const paginatedPairs = useMemo(() => {
         const startIndex = (currentPage - 1) * PAGE_SIZE;
@@ -167,56 +169,34 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     useEffect(() => {
         if (!pendingNavigationTarget) return;
         
-        // Check if the target matches the kerning key format (unicode-unicode)
-        // and check if we have valid characters for it.
         const [leftId, rightId] = pendingNavigationTarget.split('-').map(Number);
-        if (!isNaN(leftId) && !isNaN(rightId)) {
-            const leftChar = allCharsByUnicode.get(leftId);
-            const rightChar = allCharsByUnicode.get(rightId);
-            
-            if (leftChar && rightChar) {
-                // If we found the characters, open the modal immediately.
-                setSelectedPair({ left: leftChar, right: rightChar });
-                setIsModalOpen(true);
-                // Clear the target so we don't re-open it if the user closes and stays on the page.
-                setPendingNavigationTarget(null);
-            }
+        // Find index in current list (might need to switch view/filters if not found, but basic handling first)
+        const index = filteredPairsToDisplay.findIndex(p => p.left.unicode === leftId && p.right.unicode === rightId);
+        
+        if (index !== -1) {
+            setEditingIndex(index);
+            setPendingNavigationTarget(null);
+        } else {
+             // If not in current view, maybe we need to switch modes? 
+             // For now, simple deep linking assumes user can find it via search which sets correct workspace state.
         }
-    }, [pendingNavigationTarget, allCharsByUnicode, setPendingNavigationTarget]);
+    }, [pendingNavigationTarget, filteredPairsToDisplay, setPendingNavigationTarget]);
 
 
-    const handlePairClick = (pair: { left: Character, right: Character }) => {
-        setSelectedPair(pair);
-        setIsModalOpen(true);
+    const handleSaveKerning = (pair: {left: Character, right: Character}, value: number) => {
+        const key = `${pair.left.unicode}-${pair.right.unicode}`;
+        const newMap = new Map(kerningMap);
+        newMap.set(key, value);
+        kerningDispatch({ type: 'SET_MAP', payload: newMap });
     };
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setSelectedPair(null);
-    };
-
-    const handleSaveKerning = (value: number) => {
-        if (selectedPair) {
-            const key = `${selectedPair.left.unicode}-${selectedPair.right.unicode}`;
-            const newMap = new Map(kerningMap);
-            newMap.set(key, value);
+    const handleRemoveKerning = (pair: {left: Character, right: Character}) => {
+        const key = `${pair.left.unicode}-${pair.right.unicode}`;
+        const newMap = new Map(kerningMap);
+        if (newMap.has(key)) {
+            newMap.delete(key);
             kerningDispatch({ type: 'SET_MAP', payload: newMap });
         }
-        if (!settings?.isAutosaveEnabled) {
-             handleCloseModal();
-        }
-    };
-
-    const handleRemoveKerning = () => {
-        if (selectedPair) {
-            const key = `${selectedPair.left.unicode}-${selectedPair.right.unicode}`;
-            const newMap = new Map(kerningMap);
-            if (newMap.has(key)) {
-                newMap.delete(key);
-                kerningDispatch({ type: 'SET_MAP', payload: newMap });
-            }
-        }
-        handleCloseModal();
     };
 
     const handleLeftSelectionChange = useCallback((unicode: number, isSelected: boolean) => {
@@ -296,15 +276,48 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         setIsResetVisibleConfirmOpen(false);
     };
 
+    const handleNavigateEditor = (direction: 'prev' | 'next') => {
+        if (editingIndex === null) return;
+        if (direction === 'prev' && editingIndex > 0) setEditingIndex(editingIndex - 1);
+        if (direction === 'next' && editingIndex < filteredPairsToDisplay.length - 1) setEditingIndex(editingIndex + 1);
+    };
+
     if (!settings || !metrics) return null;
 
     const noCharsDrawnText = editorMode === 'simple' ? t('spacingNoCharsDrawn') : t('kerningNoCharsDrawn');
-    const pageSubtitle = editorMode === 'simple' ? t('spacingPageSubtitle') : t('kerningPageSubtitle');
     const showOnlyCompleteText = editorMode === 'simple' ? t('spacingShowOnlyComplete') : t('kerningShowOnlyComplete');
 
     const leftTitleKey = mode === 'recommended' ? 'kerningFilterLeftChars' : 'kerningSelectLeftChars';
     const rightTitleKey = mode === 'recommended' ? 'kerningFilterRightChars' : 'kerningSelectRightChars';
 
+    // --- Render Editor ---
+    if (editingIndex !== null) {
+        const pair = filteredPairsToDisplay[editingIndex];
+        if (!pair) { setEditingIndex(null); return null; } // Safety check
+
+        const key = `${pair.left.unicode}-${pair.right.unicode}`;
+        const initialValue = kerningMap.get(key) ?? 0;
+
+        return (
+            <KerningEditorPage
+                pair={pair}
+                initialValue={initialValue}
+                glyphDataMap={glyphDataMap}
+                strokeThickness={settings.strokeThickness}
+                metrics={metrics}
+                settings={settings}
+                recommendedKerning={recommendedKerning}
+                onSave={(val) => handleSaveKerning(pair, val)}
+                onRemove={() => { handleRemoveKerning(pair); setEditingIndex(null); }}
+                onClose={() => setEditingIndex(null)}
+                onNavigate={handleNavigateEditor}
+                hasPrev={editingIndex > 0}
+                hasNext={editingIndex < filteredPairsToDisplay.length - 1}
+            />
+        );
+    }
+
+    // --- Render Grid ---
     const renderContent = () => {
         if (drawnCharacters.length === 0) {
             return (
@@ -322,11 +335,14 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                                 if (!pair.left || !pair.right) return null;
                                 const key = `${pair.left.unicode}-${pair.right.unicode}`;
                                 const isRec = recommendedKerning?.some(rec => rec[0] === pair.left.name && rec[1] === pair.right.name);
+                                // Calculate actual index in full list for click handler
+                                const realIndex = ((currentPage - 1) * PAGE_SIZE) + index;
+                                
                                 return (
                                     <PairCard
                                         key={key + index}
                                         pair={pair}
-                                        onClick={() => handlePairClick(pair)}
+                                        onClick={() => setEditingIndex(realIndex)}
                                         isRecommended={!!isRec}
                                         showRecommendedLabel={showRecommendedLabel}
                                         kerningValue={kerningMap.get(key)}
@@ -371,7 +387,6 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
 
             if (isReviewMode) {
                 if (kerningMap.size === 0) {
-                    // No custom pairs exist yet. Show call to action.
                     return (
                         <div className="flex-grow flex items-center justify-center text-center p-8">
                             <div className="max-w-md">
@@ -381,7 +396,6 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                         </div>
                     );
                 } else {
-                    // Pairs exist but were filtered out (likely by 'Show unkerned only' being active in review mode)
                     return (
                         <div className="flex-grow flex items-center justify-center text-center p-8">
                              <p className="text-gray-500 dark:text-gray-400">{t('noResultsFound')}</p>
@@ -391,7 +405,6 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             }
             
             if (isPartialSelection) {
-                 // User has started selecting but needs to select on both sides
                  return (
                     <div className="flex-grow flex items-center justify-center text-center p-8">
                         <div className="max-w-md">
@@ -501,21 +514,6 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                     />
                 </div>
             </div>
-            {isModalOpen && selectedPair && (
-                <KerningModal
-                    pair={selectedPair}
-                    isOpen={isModalOpen}
-                    onClose={handleCloseModal}
-                    onSave={handleSaveKerning}
-                    onRemove={handleRemoveKerning}
-                    initialValue={kerningMap.get(`${selectedPair.left.unicode}-${selectedPair.right.unicode}`) ?? 0}
-                    glyphDataMap={glyphDataMap}
-                    strokeThickness={settings.strokeThickness}
-                    metrics={metrics}
-                    settings={settings}
-                    recommendedKerning={recommendedKerning}
-                />
-            )}
             {isProgressModalOpen && (
                 <AutoKerningProgressModal isOpen={isProgressModalOpen} progress={kerningProgressValue} />
             )}
