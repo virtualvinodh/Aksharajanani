@@ -192,7 +192,7 @@ export const useGlyphActions = (
             layout.showNotification(
                 t('updatedDependents', { count: totalDependents }),
                 'success',
-                { onUndo: undoChanges, duration: 7000 }
+                // { onUndo: undoChanges, duration: 7000 }
             );
             
         } else if (!silent) {
