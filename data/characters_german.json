@@ -60,14 +60,20 @@
   {
     "nameKey": "GermanLetters",
     "characters": [
-      { "unicode": 196, "name": "Ä", "glyphClass": "base", "composite": ["A"] },
-      { "unicode": 214, "name": "Ö", "glyphClass": "base", "composite": ["O"] },
-      { "unicode": 220, "name": "Ü", "glyphClass": "base", "composite": ["U"] },
+      {
+        "name": "̈",
+        "glyphClass": "mark",
+        "advWidth": 0      
+      },        
+      { "unicode": 196, "name": "Ä", "glyphClass": "base", "link": ["A", "̈"] },
+      { "unicode": 214, "name": "Ö", "glyphClass": "base", "link": ["O", "̈"] },
+      { "unicode": 220, "name": "Ü", "glyphClass": "base", "link": ["U", "̈"] },
       { "unicode": 223, "name": "ß", "glyphClass": "base" },
-      { "unicode": 7838, "name": "ẞ", "glyphClass": "base" },
-      { "unicode": 228, "name": "ä", "glyphClass": "base", "composite": ["a"] },
-      { "unicode": 246, "name": "ö", "glyphClass": "base", "composite": ["o"] },
-      { "unicode": 252, "name": "ü", "glyphClass": "base", "composite": ["u"] }
+      { "unicode": 228, "name": "ä", "glyphClass": "base", "link": ["a", "̈"] },
+      { "unicode": 246, "name": "ö", "glyphClass": "base", "link": ["o", "̈"] },
+      { "unicode": 252, "name": "ü", "glyphClass": "base", "link": ["u", "̈"] },
+      { "unicode": 7838, "name": "ẞ", "glyphClass": "base" }
+
     ]
   }
 ]
