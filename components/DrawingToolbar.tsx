@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
 import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, ControlPointsIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, LinkIcon, BrokenLinkIcon, GroupIcon, UngroupIcon, SparklesIcon } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 interface DrawingToolbarProps {
   character: Character;
@@ -203,20 +204,19 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     );
 
     if(isLargeScreen) {
+        // Standard single column sidebar (displayed only when height is sufficient)
         return (
-            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-l-lg flex flex-row items-start justify-center gap-2 shadow-inner">
-                <div className="flex flex-col items-center justify-center gap-2">
-                    {commonTools}
-                    <div className="border-t w-full border-gray-400 dark:border-gray-600 my-2"></div>
-                    {drawingTools}
-                </div>
-                <div className="flex flex-col items-center justify-center gap-2">
-                    {actionTools}
-                </div>
+            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-l-lg flex flex-col items-center justify-center gap-2 shadow-inner max-h-full overflow-y-auto no-scrollbar">
+                 {commonTools}
+                 <div className="border-t w-full border-gray-400 dark:border-gray-600 my-1"></div>
+                 {drawingTools}
+                 <div className="border-t w-full border-gray-400 dark:border-gray-600 my-1"></div>
+                 {actionTools}
             </div>
         );
     }
 
+    // Horizontal layout for mobile/tablet or short desktop screens
     return (
         <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-t-lg flex flex-col items-center justify-center gap-2 shadow-inner">
              <div className="flex items-center justify-center flex-wrap gap-2">

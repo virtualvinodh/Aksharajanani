@@ -90,7 +90,10 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasWrapperRef = useRef<HTMLDivElement>(null); // Ref for the inner square wrapper
   const animationTimeoutRef = useRef<number | null>(null);
-  const isLargeScreen = useMediaQuery('(min-width: 1024px)');
+  
+  // Requires both width AND height to use the vertical sidebar layout.
+  // If screen is wide but short, use the horizontal top toolbar to avoid scrolling.
+  const isLargeScreen = useMediaQuery('(min-width: 1024px) and (min-height: 900px)');
   
   const isLocked = !!character.link;
   const isComposite = !!character.composite && character.composite.length > 0;
@@ -452,19 +455,21 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       />
 
       <main className={isLargeScreen ? `${mainContentClasses} flex flex-row justify-center p-4 gap-4` : `${mainContentClasses} flex flex-col p-4 gap-4`}>
-         <div className={isLargeScreen ? "flex flex-col justify-center" : ""}>
-             <DrawingToolbar
-                character={character} currentTool={currentTool} setCurrentTool={setCurrentTool} settings={settings} isLargeScreen={isLargeScreen}
-                onUndo={undo} canUndo={canUndo} onRedo={redo} canRedo={canRedo}
-                onCut={handleCut} selectedPathIds={selectedPathIds} onCopy={handleCopy} onPaste={handlePaste} clipboard={clipboard}
-                onGroup={handleGroup} canGroup={canGroup} onUngroup={handleUngroup} canUngroup={canUngroup}
-                onZoom={handleZoom} onImageImportClick={() => imageImportRef.current?.click()} onSvgImportClick={() => svgImportRef.current?.click()}
-                onImageTraceClick={() => imageTraceRef.current?.click()} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
-                onUnlockClick={() => setIsUnlockConfirmOpen(true)} onRelinkClick={() => setIsRelinkConfirmOpen(true)}
-                onApplyTransform={handleApplyTransform}
-                previewTransform={previewTransform}
-                setPreviewTransform={setPreviewTransform}
-             />
+         <div className={isLargeScreen ? "flex flex-col overflow-y-auto max-h-full no-scrollbar" : ""}>
+             <div className={isLargeScreen ? "my-auto" : ""}>
+                 <DrawingToolbar
+                    character={character} currentTool={currentTool} setCurrentTool={setCurrentTool} settings={settings} isLargeScreen={isLargeScreen}
+                    onUndo={undo} canUndo={canUndo} onRedo={redo} canRedo={canRedo}
+                    onCut={handleCut} selectedPathIds={selectedPathIds} onCopy={handleCopy} onPaste={handlePaste} clipboard={clipboard}
+                    onGroup={handleGroup} canGroup={canGroup} onUngroup={handleUngroup} canUngroup={canUngroup}
+                    onZoom={handleZoom} onImageImportClick={() => imageImportRef.current?.click()} onSvgImportClick={() => svgImportRef.current?.click()}
+                    onImageTraceClick={() => imageTraceRef.current?.click()} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
+                    onUnlockClick={() => setIsUnlockConfirmOpen(true)} onRelinkClick={() => setIsRelinkConfirmOpen(true)}
+                    onApplyTransform={handleApplyTransform}
+                    previewTransform={previewTransform}
+                    setPreviewTransform={setPreviewTransform}
+                 />
+             </div>
          </div>
         <div className="flex-1 min-w-0 min-h-0 flex justify-center items-center relative" ref={canvasContainerRef}>
             <div className="rounded-md overflow-hidden shadow-lg aspect-square max-w-full max-h-full relative" ref={canvasWrapperRef}>
