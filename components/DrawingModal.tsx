@@ -403,7 +403,9 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
           if (character.link) setCurrentTool('select'); else setCurrentTool('pen');
       }
 
-      if (character.link) showNotification(t('linkedGlyphLocked', { components: character.link.join(' + ') }), 'info');
+      if (character.link && currentPaths.length > 0) {
+        showNotification(t('linkedGlyphLocked', { components: character.link.join(' + ') }), 'info');
+      }
   }, []);
 
   // Compute the current selection bounding box for the contextual toolbar
