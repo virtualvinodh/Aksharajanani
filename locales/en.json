@@ -367,6 +367,7 @@
 	"positioningShowOnlyComplete": "Some potential combinations are hidden because their required glyphs have not been drawn.",
 	"positioningTabDescription": "Define how marks attach to base characters, recommended kerning pairs, and other GPOS-related features.",
 	"positionsCopied": "Positions copied successfully!",
+	"positionResetSuccess": "Positions for '{name}' have been reset.",
 	"positionsResetSuccess": "Positions for '{name}' have been reset.",
 	"propagatedPositions": "Propagated position to {count} similar pairs.",
 	"PortugueseLetters": "Portuguese Letters",
