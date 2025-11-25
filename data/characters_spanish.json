@@ -374,8 +374,8 @@
         "name": "ó",
         "glyphClass": "base",
         "unicode": 243,
-        "compsite": [
-          "o", "́"
+        "link": [
+          "o",  "́"
         ]
       },
       {
