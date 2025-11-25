@@ -410,7 +410,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         const newBearings = { lsb: ligature.lsb, rsb: ligature.rsb };
     
         savePositioningUpdate(base, mark, ligature, newGlyphData, offset, newBearings);
-        showNotification(`${t('positioningUpdated')} for ${ligature.name}`, 'success');
+        showNotification(`${t('positioningUpdated')} ${ligature.name}`, 'success');
     }, [glyphDataMap, markAttachmentRules, savePositioningUpdate, showNotification, t, metrics, characterSets, settings]);
 
     const handleOpenReuseModal = (sourceItem: Character) => {
