@@ -101,12 +101,45 @@ export const useGlyphEditSession = ({
     const [pendingNavigation, setPendingNavigation] = useState<Character | null>(null);
     const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
 
-    // --- NOTIFICATION ON MOUNT (Prefill) ---
+    // --- NOTIFICATIONS ON MOUNT ---
     useEffect(() => {
+        const componentNames = character.link || character.composite;
+        
+        // 1. Check for missing components if composite/linked and currently empty
+        if (componentNames && componentNames.length > 0 && currentPaths.length === 0) {
+             const missingComponents: string[] = [];
+             
+             // Create a quick lookup for name -> char to get unicode
+             const tempAllCharsByName = new Map<string, Character>();
+             allCharacterSets.flatMap(set => set.characters).forEach(char => tempAllCharsByName.set(char.name, char));
+
+             componentNames.forEach(name => {
+                 const compChar = tempAllCharsByName.get(name);
+                 if (compChar && compChar.unicode !== undefined) {
+                     const compData = allGlyphData.get(compChar.unicode);
+                     if (!isGlyphDrawn(compData)) {
+                         missingComponents.push(name);
+                     }
+                 } else {
+                     // If char not found or no unicode, assume missing/undrawn
+                     missingComponents.push(name);
+                 }
+             });
+
+             if (missingComponents.length > 0) {
+                 // Use setTimeout to ensure this notification appears after any initial info notifications from parent components
+                 setTimeout(() => {
+                     showNotification(t('errorComponentsNotDrawn', { components: missingComponents.join(', ') }), 'error');
+                 }, 100);
+                 return; // Don't show prefill message if there's an error
+             }
+        }
+
+        // 2. Existing Prefill Notification
         const isPrefilled = currentPaths.length > 0 && !isGlyphDrawn(glyphData);
         if (isPrefilled && !character.link) {
-            const componentNames = (character.composite || []).join(' + ');
-            showNotification(t('compositeGlyphPrefilled', { components: componentNames }), 'info');
+            const componentNamesStr = (character.composite || []).join(' + ');
+            showNotification(t('compositeGlyphPrefilled', { components: componentNamesStr }), 'info');
         }
     }, []); // Run once on mount
 
