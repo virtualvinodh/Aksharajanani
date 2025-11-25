@@ -528,5 +528,13 @@
         "category": "Final Views & Export",
         "description": "ADVANCED: Enter invalid FEA code in manual mode. Click Export. Verify that the app does not crash/freeze, but instead shows the specific Pyodide error message in a modal, allowing the user to export the un-patched font anyway.",
         "priority": "high"
-    }
+    },
+    { "id": "view_font_test_page", "category": "Final Views & Export", "description": "Click the 'Test' icon. The Font Test Page should open and render a preview. Type text and adjust size/line-height sliders.", "priority": "medium" },
+    { "id": "view_font_test_persistence_and_reset", "category": "Final Views & Export", "description": "Open the Font Test Page. Modify the font size, line height, and input text. Close the modal and re-open it; verify your changes persisted. Click the 'Reset' button (undo icon) in the header; verify that size, height, and text revert to the script defaults.", "priority": "medium" },
+    { "id": "kerning_pair_generation", "category": "Kerning", "description": "Go to Kerning Workspace. Switch to 'All Pairs' tab. Select at least one character from the Left panel and one from the Right panel. Verify that a pair card appears in the grid representing that combination.", "priority": "high" },
+    { "id": "kerning_auto_kern_batch", "category": "Kerning", "description": "In Kerning grid view with unkerned pairs visible, click the 'Auto-kern' button in the toolbar. Verify that the app calculates values and the pair cards update with new numeric values.", "priority": "medium" },
+    { "id": "kerning_manual_interaction", "category": "Kerning", "description": "Open a pair in the Kerning Editor. Drag the right glyph horizontally. Verify that the glyph moves and the 'Kerning' input value updates in real-time. Click 'Save' (or verify Autosave).", "priority": "high" },
+    { "id": "kerning_x_distance_logic", "category": "Kerning", "description": "In the Kerning Editor, hover over the gap between glyphs to see the green X-Distance line. Modify the 'x-dist' input field value in the header. Verify that the main 'Kerning' value updates automatically to achieve the desired optical distance.", "priority": "medium" },
+    { "id": "kerning_editor_navigation", "category": "Kerning", "description": "Open a pair in the Kerning Editor. Use the Left/Right arrow buttons (or keyboard keys) to switch to the next pair without closing the editor. Verify that the previous pair's changes are saved.", "priority": "medium" },
+    { "id": "kerning_reset_actions", "category": "Kerning", "description": "Test the 'Delete' (Trash icon) in the Editor to reset a single pair to 0. Back in the grid, test the 'Reset Visible' button to clear all kerning for the currently filtered view.", "priority": "low" }
 ]
