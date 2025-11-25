@@ -375,7 +375,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             glyphDataDispatch({ type: 'SET_MAP', payload: result.updatedGlyphDataMap });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: result.updatedCharacterSets });
             if (!isAutosave) {
-                showNotification(t('saveGlyphSuccess'), 'success');
+                showNotification(t('positioningUpdated'), 'success');
             }
         }
     
@@ -410,7 +410,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         const newBearings = { lsb: ligature.lsb, rsb: ligature.rsb };
     
         savePositioningUpdate(base, mark, ligature, newGlyphData, offset, newBearings);
-        showNotification(`${t('saveGlyphSuccess')} for ${ligature.name}`, 'success');
+        showNotification(`${t('positioningUpdated')} for ${ligature.name}`, 'success');
     }, [glyphDataMap, markAttachmentRules, savePositioningUpdate, showNotification, t, metrics, characterSets, settings]);
 
     const handleOpenReuseModal = (sourceItem: Character) => {

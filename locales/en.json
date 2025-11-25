@@ -355,6 +355,7 @@
 	"pastedSelection": "Pasted from clipboard.",
 	"pathSmoothing": "Path Smoothing",
 	"positioning": "Positioning",
+	"positioningUpdated": "Positioning saved.",
 	"positioningJsonFile": "positioning.json",
 	"positioningNoBasesDrawn": "No base characters have been drawn yet. Please go to the main editor to draw them before positioning.",
 	"positioningNoMarksDrawn": "No mark characters have been drawn yet. Please go to the main editor to draw them before positioning.",
