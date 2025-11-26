@@ -376,7 +376,7 @@
         "name": "í",
         "glyphClass": "base",
         "unicode": 237,
-        "composite": [
+        "link": [
           "ı", "́"
         ]
       },
