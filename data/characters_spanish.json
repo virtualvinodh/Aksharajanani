@@ -173,9 +173,19 @@
         "glyphClass": "base"
       },
       {
+        "name": "ı",
+        "glyphClass": "base"
+      },
+      {
+        "name": "̇",
+        "glyphClass": "mark",
+        "advWidth": 0
+      },      
+      {
         "unicode": 105,
         "name": "i",
-        "glyphClass": "base"
+        "glyphClass": "base",
+        "link": ["ı", "̇"]
       },
       {
         "unicode": 106,
@@ -367,7 +377,7 @@
         "glyphClass": "base",
         "unicode": 237,
         "composite": [
-          "i", "́"
+          "ı", "́"
         ]
       },
       {
