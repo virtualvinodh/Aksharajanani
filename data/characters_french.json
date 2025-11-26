@@ -51,7 +51,8 @@
         "name": "i",
         "glyphClass": "base",
         "link": ["ı", "̇"]
-      },      { "unicode": 106, "name": "j", "glyphClass": "base" },
+      },      
+      { "unicode": 106, "name": "j", "glyphClass": "base" },
       { "unicode": 107, "name": "k", "glyphClass": "base" },
       { "unicode": 108, "name": "l", "glyphClass": "base" },
       { "unicode": 109, "name": "m", "glyphClass": "base" },

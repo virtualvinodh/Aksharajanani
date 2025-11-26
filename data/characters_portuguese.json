@@ -37,7 +37,21 @@
       { "unicode": 102, "name": "f", "glyphClass": "base" },
       { "unicode": 103, "name": "g", "glyphClass": "base" },
       { "unicode": 104, "name": "h", "glyphClass": "base" },
-      { "unicode": 105, "name": "i", "glyphClass": "base" },
+      {
+        "name": "ı",
+        "glyphClass": "base"
+      },
+      {
+        "name": "̇",
+        "glyphClass": "mark",
+        "advWidth": 0
+      },      
+      {
+        "unicode": 105,
+        "name": "i",
+        "glyphClass": "base",
+        "link": ["ı", "̇"]
+      }, 
       { "unicode": 106, "name": "j", "glyphClass": "base" },
       { "unicode": 107, "name": "k", "glyphClass": "base" },
       { "unicode": 108, "name": "l", "glyphClass": "base" },
@@ -60,6 +74,36 @@
   {
     "nameKey": "PortugueseLetters",
     "characters": [
+      {
+        "name": "̃",
+        "glyphClass": "mark",
+        "advWidth": 0
+      },      
+      {
+        "name": "̀",
+        "glyphClass": "mark",
+        "advWidth": 0
+      },      
+      {
+        "name": "́",
+        "glyphClass": "mark",
+        "advWidth": 0      
+      },      
+      {
+        "name": "̂",
+        "glyphClass": "mark",
+        "advWidth": 0      
+      },
+      {
+        "name": "̈",
+        "glyphClass": "mark",
+        "advWidth": 0      
+      },      
+      {
+        "name": "̧",
+        "glyphClass": "mark",
+        "advWidth": 0      
+      },        
       { "unicode": 192, "name": "À", "glyphClass": "base", "composite": ["A"] },
       { "unicode": 193, "name": "Á", "glyphClass": "base", "composite": ["A"] },
       { "unicode": 194, "name": "Â", "glyphClass": "base", "composite": ["A"] },
