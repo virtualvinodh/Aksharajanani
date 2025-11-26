@@ -1,0 +1,19 @@
+  [
+   {
+    "markAttachment": {
+        "$basicLatinLetters":  { 
+          "̃": ["topCenter", "bottomCenter", 0, -30],
+          "̀": ["topCenter", "bottomCenter", 0, -30],
+          "́": ["topCenter", "bottomCenter", 0, -30],
+          "̂": ["topCenter", "bottomCenter", 0, -30],
+          "̈": ["topCenter", "bottomCenter", 0, -30],
+          "̧̈": ["bottomCenter", "topCenter"],
+          "̇": ["topCenter", "bottomCenter", 0, -30]
+          }
+    }
+   },
+  {
+    "recommendedKerning": [
+    ]
+  }   
+]
