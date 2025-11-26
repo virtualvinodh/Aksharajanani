@@ -37,8 +37,21 @@
       { "unicode": 102, "name": "f", "glyphClass": "base" },
       { "unicode": 103, "name": "g", "glyphClass": "base" },
       { "unicode": 104, "name": "h", "glyphClass": "base" },
-      { "unicode": 105, "name": "i", "glyphClass": "base" },
-      { "unicode": 106, "name": "j", "glyphClass": "base" },
+      {
+        "name": "ı",
+        "glyphClass": "base"
+      },
+      {
+        "name": "̇",
+        "glyphClass": "mark",
+        "advWidth": 0
+      },      
+      {
+        "unicode": 105,
+        "name": "i",
+        "glyphClass": "base",
+        "link": ["ı", "̇"]
+      },      { "unicode": 106, "name": "j", "glyphClass": "base" },
       { "unicode": 107, "name": "k", "glyphClass": "base" },
       { "unicode": 108, "name": "l", "glyphClass": "base" },
       { "unicode": 109, "name": "m", "glyphClass": "base" },
@@ -109,8 +122,8 @@
       { "unicode": 233, "name": "é", "glyphClass": "base", "link": ["e", "́"] },
       { "unicode": 234, "name": "ê", "glyphClass": "base", "link": ["e", "̂"] },
       { "unicode": 235, "name": "ë", "glyphClass": "base", "link": ["e",  "̈"] },
-      { "unicode": 238, "name": "î", "glyphClass": "base", "link": ["i", "̂"] },
-      { "unicode": 239, "name": "ï", "glyphClass": "base", "link": ["i",  "̈"] },
+      { "unicode": 238, "name": "î", "glyphClass": "base", "link": ["ı", "̂"] },
+      { "unicode": 239, "name": "ï", "glyphClass": "base", "link": ["ı",  "̈"] },
       { "unicode": 244, "name": "ô", "glyphClass": "base", "link": ["o", "̂"] },
       { "unicode": 339, "name": "œ", "glyphClass": "ligature", "composite": ["o", "e"] },
       { "unicode": 249, "name": "ù", "glyphClass": "base", "link": ["u", "̀"] },
