@@ -74,9 +74,11 @@ export const useGlyphActions = (
             return;
         }
 
-        // 4. COMMIT Logic (Navigation or Manual Save) - Run Cascade
+        // 4. COMMIT Logic (Navigation or Manual Save) - Run Recursive Cascade
         
-        const dependents = dependencyMap.current.get(unicode);
+        // Determine if we need to run cascade at all
+        // We can check immediate dependents first to save time
+        const immediateDependents = dependencyMap.current.get(unicode);
         
         // Check for positioned pairs that might need updates (visual cascade)
         let positionedPairCount = 0;
@@ -89,10 +91,9 @@ export const useGlyphActions = (
             }
         });
 
-        const totalDependents = (dependents ? dependents.size : 0) + positionedPairCount;
-        const hasCascade = totalDependents > 0;
+        const hasDependents = (immediateDependents && immediateDependents.size > 0) || positionedPairCount > 0;
 
-        if (hasCascade) {
+        if (hasDependents) {
             // 1. Snapshot state before making changes for Undo
             const glyphDataSnapshot = new Map(glyphDataMap.entries());
             const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
@@ -105,92 +106,125 @@ export const useGlyphActions = (
                 layout.showNotification(t('glyphUpdateReverted'), 'info');
             };
 
-            // 2. Perform Cascade Update
+            // 2. Perform Recursive Cascade Update
+            let totalUpdatedCount = 0;
+
             glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prevGlyphData) => {
                 const newGlyphDataMap = new Map(prevGlyphData);
                 // Ensure the source is updated in the map used for regeneration
                 newGlyphDataMap.set(unicode, newGlyphData);
         
-                dependents?.forEach(depUnicode => {
-                    const dependentChar = allCharsByUnicode.get(depUnicode);
-                    if (!dependentChar || !dependentChar.link) return;
-        
-                    const dependentGlyphData = newGlyphDataMap.get(depUnicode);
-                    
-                    // If dependent isn't drawn yet, attempt full regeneration
-                    if (!dependentGlyphData || !isGlyphDrawn(dependentGlyphData)) {
-                         const regenerated = generateCompositeGlyphData({ 
-                            character: dependentChar, 
-                            allCharsByName, 
-                            allGlyphData: newGlyphDataMap, 
-                            settings: settings!, 
-                            metrics: metrics!, 
-                            markAttachmentRules, 
-                            allCharacterSets: characterSets! 
+                // BFS Queue for recursive updates
+                // Queue holds unicodes that have been updated and need their dependents checked
+                const queue: number[] = [unicode];
+                const visited = new Set<number>([unicode]);
+
+                while (queue.length > 0) {
+                    const currentSourceUnicode = queue.shift()!;
+                    const currentDependents = dependencyMap.current.get(currentSourceUnicode);
+
+                    if (!currentDependents) continue;
+
+                    currentDependents.forEach(depUnicode => {
+                        if (visited.has(depUnicode)) return; // Cycle detection / already processed
+
+                        const dependentChar = allCharsByUnicode.get(depUnicode);
+                        if (!dependentChar || !dependentChar.link) return;
+            
+                        const dependentGlyphData = newGlyphDataMap.get(depUnicode);
+                        
+                        // --- Regeneration Logic ---
+                        // This logic mimics the original single-level update but applies recursively
+
+                        // If dependent isn't drawn yet, attempt full regeneration
+                        if (!dependentGlyphData || !isGlyphDrawn(dependentGlyphData)) {
+                             const regenerated = generateCompositeGlyphData({ 
+                                character: dependentChar, 
+                                allCharsByName, 
+                                allGlyphData: newGlyphDataMap, 
+                                settings: settings!, 
+                                metrics: metrics!, 
+                                markAttachmentRules, 
+                                allCharacterSets: characterSets! 
+                            });
+                            if(regenerated) {
+                                newGlyphDataMap.set(depUnicode, regenerated);
+                                visited.add(depUnicode);
+                                queue.push(depUnicode);
+                                totalUpdatedCount++;
+                            }
+                            return;
+                        }
+            
+                        // SMART CASCADE: Preserve offsets/transforms
+                        // Find which components of the dependent char correspond to the *currently updated* source char
+                        const indicesToUpdate: number[] = [];
+                        dependentChar.link.forEach((name, index) => {
+                            if (allCharsByName.get(name)?.unicode === currentSourceUnicode) {
+                                indicesToUpdate.push(index);
+                            }
                         });
-                        if(regenerated) {
-                            newGlyphDataMap.set(depUnicode, regenerated);
+                
+                        if (indicesToUpdate.length === 0) return;
+                
+                        let pathsNeedRegeneration = false;
+                        let tempPaths = dependentGlyphData.paths;
+                        const strokeThickness = settings?.strokeThickness ?? 1;
+                        
+                        // Fetch the *new* data for the current source (it might be an intermediate node in the chain)
+                        const sourceGlyphData = newGlyphDataMap.get(currentSourceUnicode);
+                        if (!sourceGlyphData) return;
+
+                        for (const index of indicesToUpdate) {
+                            const updatedPaths = updateComponentInPaths(
+                                tempPaths,
+                                index,
+                                sourceGlyphData.paths,
+                                strokeThickness,
+                                dependentChar.compositeTransform
+                            );
+
+                            if (!updatedPaths) {
+                                // If transformation fails (e.g. missing bounding boxes), flag for full regeneration
+                                pathsNeedRegeneration = true;
+                                break;
+                            }
+
+                            tempPaths = updatedPaths;
                         }
-                        return;
-                    }
-        
-                    // SMART CASCADE: Preserve offsets/transforms
-                    const indicesToUpdate: number[] = [];
-                    dependentChar.link.forEach((name, index) => {
-                        if (allCharsByName.get(name)?.unicode === unicode) {
-                            indicesToUpdate.push(index);
+                
+                        if (pathsNeedRegeneration) {
+                            const regenerated = generateCompositeGlyphData({ 
+                                character: dependentChar, 
+                                allCharsByName, 
+                                allGlyphData: newGlyphDataMap, 
+                                settings: settings!, 
+                                metrics: metrics!, 
+                                markAttachmentRules, 
+                                allCharacterSets: characterSets! 
+                            });
+                            if(regenerated) {
+                                newGlyphDataMap.set(depUnicode, regenerated);
+                            }
+                        } else {
+                            newGlyphDataMap.set(depUnicode, { paths: tempPaths });
                         }
+
+                        visited.add(depUnicode);
+                        queue.push(depUnicode);
+                        totalUpdatedCount++;
                     });
-            
-                    if (indicesToUpdate.length === 0) return;
-            
-                    let pathsNeedRegeneration = false;
-                    let tempPaths = dependentGlyphData.paths;
-                    const strokeThickness = settings?.strokeThickness ?? 1;
-            
-                    for (const index of indicesToUpdate) {
-                        const updatedPaths = updateComponentInPaths(
-                            tempPaths,
-                            index,
-                            newGlyphData.paths,
-                            strokeThickness,
-                            dependentChar.compositeTransform
-                        );
-
-                        if (!updatedPaths) {
-                            // If transformation fails (e.g. missing bounding boxes), flag for full regeneration
-                            pathsNeedRegeneration = true;
-                            break;
-                        }
-
-                        tempPaths = updatedPaths;
-                    }
-            
-                    if (pathsNeedRegeneration) {
-                        const regenerated = generateCompositeGlyphData({ 
-                            character: dependentChar, 
-                            allCharsByName, 
-                            allGlyphData: newGlyphDataMap, 
-                            settings: settings!, 
-                            metrics: metrics!, 
-                            markAttachmentRules, 
-                            allCharacterSets: characterSets! 
-                        });
-                        if(regenerated) {
-                            newGlyphDataMap.set(depUnicode, regenerated);
-                        }
-                    } else {
-                        newGlyphDataMap.set(depUnicode, { paths: tempPaths });
-                    }
-                });
+                }
                 
                 return newGlyphDataMap;
             }});
 
-            // 3. Notification: ALWAYS show if there was a cascade, even if silent=true (e.g. navigation)
-            // This is crucial so the user knows other glyphs were affected and can Undo.
+            // Add positioned pairs count to total
+            totalUpdatedCount += positionedPairCount;
+
+            // 3. Notification: ALWAYS show if there was a cascade
             layout.showNotification(
-                t('updatedDependents', { count: totalDependents }),
+                t('updatedDependents', { count: totalUpdatedCount }),
                 'success',
                 // { onUndo: undoChanges, duration: 7000 }
             );
