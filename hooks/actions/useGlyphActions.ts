@@ -368,6 +368,36 @@ export const useGlyphActions = (
             });
         }
     }, [characterDispatch, glyphDataDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap]);
+    
+    // NEW: Handle manual update of dependencies (e.g. via properties panel)
+    const handleUpdateDependencies = useCallback((unicode: number, newLinkComponents: string[] | null) => {
+        // 1. Clean up existing dependencies (from current character definition)
+        const currentChar = allCharsByUnicode.get(unicode);
+        if (currentChar && currentChar.link) {
+            currentChar.link.forEach(compName => {
+                const compChar = allCharsByName.get(compName);
+                if (compChar && compChar.unicode !== undefined) {
+                    const dependents = dependencyMap.current.get(compChar.unicode);
+                    if (dependents) {
+                        dependents.delete(unicode);
+                    }
+                }
+            });
+        }
+
+        // 2. Register new dependencies if provided (i.e. we are linking)
+        if (newLinkComponents && newLinkComponents.length > 0) {
+            newLinkComponents.forEach(compName => {
+                const compChar = allCharsByName.get(compName);
+                if (compChar && compChar.unicode !== undefined) {
+                    if (!dependencyMap.current.has(compChar.unicode)) {
+                        dependencyMap.current.set(compChar.unicode, new Set());
+                    }
+                    dependencyMap.current.get(compChar.unicode)!.add(unicode);
+                }
+            });
+        }
+    }, [allCharsByUnicode, allCharsByName, dependencyMap]);
 
     const handleImportGlyphs = useCallback((glyphsToImport: [number, GlyphData][]) => {
         if (!glyphsToImport || glyphsToImport.length === 0) return;
@@ -421,6 +451,7 @@ export const useGlyphActions = (
         handleAddGlyph,
         handleUnlockGlyph,
         handleRelinkGlyph,
+        handleUpdateDependencies, // Exposed new function
         handleImportGlyphs,
         handleAddBlock,
         handleCheckGlyphExists,

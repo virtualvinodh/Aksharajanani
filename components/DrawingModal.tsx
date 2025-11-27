@@ -45,9 +45,10 @@ interface DrawingModalProps {
   markAttachmentRules: MarkAttachmentRules | null;
   onUnlockGlyph: (unicode: number) => void;
   onRelinkGlyph: (unicode: number) => void;
+  onUpdateDependencies: (unicode: number, newLinkComponents: string[] | null) => void;
 }
 
-const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, onUnlockGlyph, onRelinkGlyph }) => {
+const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, onUnlockGlyph, onRelinkGlyph, onUpdateDependencies }) => {
   const { t } = useLocale();
   const { showNotification, modalOriginRect } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
@@ -179,8 +180,16 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
               }));
           }
       });
+      
+      // 2. Update Dependencies (Graph)
+      if (type === 'link') {
+          onUpdateDependencies(character.unicode, components);
+      } else {
+          // If changing to drawing/composite, remove existing link dependencies (pass null/empty)
+          onUpdateDependencies(character.unicode, null);
+      }
 
-      // 2. Handle Path Regeneration
+      // 3. Handle Path Regeneration
       if (type === 'link' || type === 'composite') {
           const tempChar: Character = { 
               ...character, 

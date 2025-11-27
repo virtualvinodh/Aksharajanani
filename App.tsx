@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import DrawingModal from './components/DrawingModal';
@@ -96,6 +95,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       handleDeleteGlyph,
       handleUnlockGlyph,
       handleRelinkGlyph,
+      handleUpdateDependencies, // Added
       handleEditorModeChange,
       downloadFontBlob,
       handleAddGlyph,
@@ -286,6 +286,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
           onDelete={handleDeleteGlyph}
           onUnlockGlyph={handleUnlockGlyph}
           onRelinkGlyph={handleRelinkGlyph}
+          onUpdateDependencies={handleUpdateDependencies}
           onNavigate={selectCharacter}
           settings={settings}
           metrics={metrics}

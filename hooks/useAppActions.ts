@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
@@ -48,7 +47,7 @@ export const useAppActions = ({
     // 3. Glyph Actions Hook
     const {
         handleSaveGlyph, handleDeleteGlyph, handleAddGlyph, handleUnlockGlyph, 
-        handleRelinkGlyph, handleImportGlyphs, handleAddBlock, 
+        handleRelinkGlyph, handleUpdateDependencies, handleImportGlyphs, handleAddBlock, 
         handleCheckGlyphExists, handleCheckNameExists,
         setMarkAttachmentRules, markAttachmentRules
     } = useGlyphActions(dependencyMap, projectId);
@@ -188,6 +187,7 @@ export const useAppActions = ({
         handleDeleteGlyph,
         handleUnlockGlyph,
         handleRelinkGlyph,
+        handleUpdateDependencies, // Exposed
         handleEditorModeChange,
         downloadFontBlob,
         handleAddGlyph,
