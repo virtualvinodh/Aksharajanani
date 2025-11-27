@@ -1,0 +1,24 @@
+
+[
+   {
+    "markAttachment": {
+        "$basicCyrillic":  { 
+          "̆": ["topCenter", "bottomCenter", 0, -30],
+          "̈": ["topCenter", "bottomCenter", 0, -30],
+          "̄": ["topCenter", "bottomCenter", 0, -30],
+          "́": ["topCenter", "bottomCenter", 0, -30],
+          "̩": ["bottomRight", "topCenter", 0, 0]
+          },
+        "І": {
+          "̈": ["topCenter", "bottomCenter", 0, -30]
+        },
+        "і": {
+          "̈": ["topCenter", "bottomCenter", 0, -30]
+        }
+    }
+   },
+  {
+    "recommendedKerning": [
+    ]
+  }   
+]

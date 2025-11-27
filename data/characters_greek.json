@@ -1,3 +1,4 @@
+
 [
   {
     "nameKey": "GreekLetters",
@@ -56,26 +57,36 @@
   {
     "nameKey": "GreekAccentedLetters",
     "characters": [
-      { "unicode": 902, "name": "Ά", "glyphClass": "base", "composite": ["Α"] },
-      { "unicode": 904, "name": "Έ", "glyphClass": "base", "composite": ["Ε"] },
-      { "unicode": 905, "name": "Ή", "glyphClass": "base", "composite": ["Η"] },
-      { "unicode": 906, "name": "Ί", "glyphClass": "base", "composite": ["Ι"] },
-      { "unicode": 908, "name": "Ό", "glyphClass": "base", "composite": ["Ο"] },
-      { "unicode": 910, "name": "Ύ", "glyphClass": "base", "composite": ["Υ"] },
-      { "unicode": 911, "name": "Ώ", "glyphClass": "base", "composite": ["Ω"] },
-      { "unicode": 938, "name": "Ϊ", "glyphClass": "base", "composite": ["Ι"] },
-      { "unicode": 939, "name": "Ϋ", "glyphClass": "base", "composite": ["Υ"] },
-      { "unicode": 940, "name": "ά", "glyphClass": "base", "composite": ["α"] },
-      { "unicode": 941, "name": "έ", "glyphClass": "base", "composite": ["ε"] },
-      { "unicode": 942, "name": "ή", "glyphClass": "base", "composite": ["η"] },
-      { "unicode": 943, "name": "ί", "glyphClass": "base", "composite": ["ι"] },
-      { "unicode": 972, "name": "ό", "glyphClass": "base", "composite": ["ο"] },
-      { "unicode": 973, "name": "ύ", "glyphClass": "base", "composite": ["υ"] },
-      { "unicode": 974, "name": "ώ", "glyphClass": "base", "composite": ["ω"] },
-      { "unicode": 970, "name": "ϊ", "glyphClass": "base", "composite": ["ι"] },
-      { "unicode": 971, "name": "ϋ", "glyphClass": "base", "composite": ["υ"] },
-      { "unicode": 912, "name": "ΐ", "glyphClass": "base", "composite": ["ι"] },
-      { "unicode": 944, "name": "ΰ", "glyphClass": "base", "composite": ["υ"] }
+      {
+        "name": "́",
+        "glyphClass": "mark",
+        "advWidth": 0
+      },
+      {
+        "name": "̈",
+        "glyphClass": "mark",
+        "advWidth": 0
+      },
+      { "unicode": 902, "name": "Ά", "glyphClass": "base", "link": ["Α", "́"] },
+      { "unicode": 904, "name": "Έ", "glyphClass": "base", "link": ["Ε", "́"] },
+      { "unicode": 905, "name": "Ή", "glyphClass": "base", "link": ["Η", "́"] },
+      { "unicode": 906, "name": "Ί", "glyphClass": "base", "link": ["Ι", "́"] },
+      { "unicode": 908, "name": "Ό", "glyphClass": "base", "link": ["Ο", "́"] },
+      { "unicode": 910, "name": "Ύ", "glyphClass": "base", "link": ["Υ", "́"] },
+      { "unicode": 911, "name": "Ώ", "glyphClass": "base", "link": ["Ω", "́"] },
+      { "unicode": 938, "name": "Ϊ", "glyphClass": "base", "link": ["Ι", "̈"] },
+      { "unicode": 939, "name": "Ϋ", "glyphClass": "base", "link": ["Υ", "̈"] },
+      { "unicode": 940, "name": "ά", "glyphClass": "base", "link": ["α", "́"] },
+      { "unicode": 941, "name": "έ", "glyphClass": "base", "link": ["ε", "́"] },
+      { "unicode": 942, "name": "ή", "glyphClass": "base", "link": ["η", "́"] },
+      { "unicode": 943, "name": "ί", "glyphClass": "base", "link": ["ι", "́"] },
+      { "unicode": 972, "name": "ό", "glyphClass": "base", "link": ["ο", "́"] },
+      { "unicode": 973, "name": "ύ", "glyphClass": "base", "link": ["υ", "́"] },
+      { "unicode": 974, "name": "ώ", "glyphClass": "base", "link": ["ω", "́"] },
+      { "unicode": 970, "name": "ϊ", "glyphClass": "base", "link": ["ι", "̈"] },
+      { "unicode": 971, "name": "ϋ", "glyphClass": "base", "link": ["υ", "̈"] },
+      { "unicode": 912, "name": "ΐ", "glyphClass": "base", "link": ["ϊ", "́"] },
+      { "unicode": 944, "name": "ΰ", "glyphClass": "base", "link": ["ϋ", "́"] }
     ]
   }
 ]
