@@ -214,11 +214,15 @@ export const useGlyphActions = (
 
             totalUpdatedCount += positionedPairCount;
 
-            layout.showNotification(
-                t('updatedDependents', { count: totalUpdatedCount }),
-                'success',
-                // { onUndo: undoChanges, duration: 7000 } // Undo disabled for heavy ops for now to avoid state desync risks
-            );
+            if (totalUpdatedCount > 0) {
+                layout.showNotification(
+                    t('updatedDependents', { count: totalUpdatedCount }),
+                    'success',
+                    // { onUndo: undoChanges, duration: 7000 } // Undo disabled for heavy ops for now to avoid state desync risks
+                );
+            } else if (!silent) {
+                layout.showNotification(t('saveGlyphSuccess'));
+            }
             
         } else {
              // No dependents, just dispatch the single update
