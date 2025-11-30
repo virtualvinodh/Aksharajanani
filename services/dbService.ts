@@ -1,10 +1,12 @@
-import { ProjectData } from '../types';
+
+import { ProjectData, ProjectSnapshot } from '../types';
 import { IDBPDatabase, openDB } from 'idb';
 
 const DB_NAME = 'FontCreatorDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'projects';
 const CACHE_STORE_NAME = 'fontCache';
+const SNAPSHOT_STORE_NAME = 'snapshots';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -25,6 +27,11 @@ const getDb = (): Promise<IDBPDatabase> => {
                 if (oldVersion < 2) {
                     if (!db.objectStoreNames.contains(CACHE_STORE_NAME)) {
                         db.createObjectStore(CACHE_STORE_NAME, { keyPath: 'projectId' });
+                    }
+                }
+                if (oldVersion < 3) {
+                    if (!db.objectStoreNames.contains(SNAPSHOT_STORE_NAME)) {
+                        db.createObjectStore(SNAPSHOT_STORE_NAME, { keyPath: 'projectId' });
                     }
                 }
             },
@@ -70,9 +77,10 @@ export const getRecentProjects = async (limit: number = 5): Promise<ProjectData[
 
 export const deleteProject = async (projectId: number): Promise<void> => {
     const db = await getDb();
-    const tx = db.transaction([STORE_NAME, CACHE_STORE_NAME], 'readwrite');
+    const tx = db.transaction([STORE_NAME, CACHE_STORE_NAME, SNAPSHOT_STORE_NAME], 'readwrite');
     await tx.objectStore(STORE_NAME).delete(projectId);
     await tx.objectStore(CACHE_STORE_NAME).delete(projectId);
+    await tx.objectStore(SNAPSHOT_STORE_NAME).delete(projectId);
     await tx.done;
 };
 
@@ -99,4 +107,23 @@ export const setFontCache = async (projectId: number, hash: string, fontBinary: 
 export const deleteFontCache = async (projectId: number): Promise<void> => {
     const db = await getDb();
     await db.delete(CACHE_STORE_NAME, projectId);
+};
+
+// --- Snapshot Functions ---
+
+export const saveSnapshot = async (snapshot: ProjectSnapshot): Promise<void> => {
+    const db = await getDb();
+    const tx = db.transaction(SNAPSHOT_STORE_NAME, 'readwrite');
+    await tx.store.put(snapshot);
+    await tx.done;
+};
+
+export const getSnapshot = async (projectId: number): Promise<ProjectSnapshot | undefined> => {
+    const db = await getDb();
+    return db.get(SNAPSHOT_STORE_NAME, projectId);
+};
+
+export const deleteSnapshot = async (projectId: number): Promise<void> => {
+    const db = await getDb();
+    await db.delete(SNAPSHOT_STORE_NAME, projectId);
 };

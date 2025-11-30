@@ -1,5 +1,4 @@
 
-
 export interface Point {
   x: number;
   y: number;
@@ -137,6 +136,12 @@ export interface ProjectData {
   manualFeaCode?: string;
   metrics?: FontMetrics;
   savedAt?: string;
+}
+
+export interface ProjectSnapshot {
+  projectId: number;
+  data: ProjectData;
+  timestamp: number;
 }
 
 export interface FontMetrics {

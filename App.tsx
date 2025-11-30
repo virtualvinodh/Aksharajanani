@@ -75,7 +75,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       recommendedKerning, 
       positioningRules, 
       markAttachmentRules, 
-      markAttachmentClasses,
+      markAttachmentClasses, 
       baseAttachmentClasses,
       isFeaOnlyMode,
       testText, 
@@ -357,7 +357,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
             isOpen={true} 
             onClose={layout.closeModal} 
             title={t('confirmSnapshotRestore')} 
-            message={t('snapshotRestoreMessage', { time: new Date(layout.activeModal.props.timestamp).toLocaleTimeString() })}
+            message={t('snapshotRestoreMessage', { time: new Date(layout.activeModal.props.timestamp).toLocaleString() })}
             confirmActionText={t('restore')}
             onConfirm={layout.activeModal.props.onConfirm}
             closeOnBackdropClick={false}

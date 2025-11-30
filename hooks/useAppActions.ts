@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -11,6 +11,7 @@ import { useProjectPersistence } from './actions/useProjectPersistence';
 import { useGlyphActions } from './actions/useGlyphActions';
 import { useProjectLoad } from './actions/useProjectLoad';
 import { useExportActions } from './actions/useExportActions';
+import * as dbService from '../services/dbService';
 
 interface UseAppActionsProps {
     projectDataToRestore: ProjectData | null;
@@ -117,37 +118,74 @@ export const useAppActions = ({
     }, [workspace, setWorkspace, script, settingsDispatch]);
 
     // --- Session Snapshot Logic ---
-    const [sessionSnapshot, setSessionSnapshot] = useState<{ data: any, timestamp: number } | null>(null);
+    const [snapshotTimestamp, setSnapshotTimestamp] = useState<number | null>(null);
 
-    const handleTakeSnapshot = useCallback(() => {
+    // Check for existing snapshot on mount or when project ID changes
+    useEffect(() => {
+        if (projectId) {
+            dbService.getSnapshot(projectId).then(snapshot => {
+                if (snapshot) {
+                    setSnapshotTimestamp(snapshot.timestamp);
+                } else {
+                    setSnapshotTimestamp(null);
+                }
+            }).catch(err => console.error("Error fetching snapshot", err));
+        } else {
+            setSnapshotTimestamp(null);
+        }
+    }, [projectId]);
+
+    const handleTakeSnapshot = useCallback(async () => {
+        if (!projectId) {
+            layout.showNotification("Please save the project before taking a snapshot.", 'error');
+            return;
+        }
         const currentState = getProjectState();
         if (currentState) {
-            // Deep clone the current state
-            setSessionSnapshot({
-                data: JSON.parse(JSON.stringify(currentState)),
-                timestamp: Date.now()
-            });
-            layout.showNotification("Snapshot taken", 'success');
+            const fullData = { ...currentState, projectId };
+            const timestamp = Date.now();
+            try {
+                await dbService.saveSnapshot({
+                    projectId,
+                    data: fullData,
+                    timestamp
+                });
+                setSnapshotTimestamp(timestamp);
+                layout.showNotification("Snapshot saved to database", 'success');
+            } catch (error) {
+                console.error("Failed to save snapshot:", error);
+                layout.showNotification("Failed to save snapshot", 'error');
+            }
         }
-    }, [getProjectState, layout]);
+    }, [getProjectState, layout, projectId]);
     
-    const confirmRestore = useCallback(() => {
-         if (sessionSnapshot) {
-            // Restore using the load logic
-            initializeProjectState(sessionSnapshot.data);
-            layout.showNotification("Session restored from snapshot", 'info');
-            layout.closeModal();
+    const confirmRestore = useCallback(async () => {
+         if (projectId) {
+            try {
+                const snapshot = await dbService.getSnapshot(projectId);
+                if (snapshot) {
+                    initializeProjectState(snapshot.data);
+                    layout.showNotification("Restored from snapshot", 'info');
+                    layout.closeModal();
+                } else {
+                     layout.showNotification("Snapshot not found", 'error');
+                     layout.closeModal();
+                }
+            } catch (error) {
+                 console.error("Failed to restore snapshot:", error);
+                 layout.showNotification("Failed to restore snapshot", 'error');
+            }
         }
-    }, [sessionSnapshot, initializeProjectState, layout]);
+    }, [projectId, initializeProjectState, layout]);
 
     const handleRestoreSnapshot = useCallback(() => {
-        if (sessionSnapshot) {
+        if (snapshotTimestamp) {
             layout.openModal('confirmSnapshotRestore', {
-                timestamp: sessionSnapshot.timestamp,
+                timestamp: snapshotTimestamp,
                 onConfirm: confirmRestore
             });
         }
-    }, [sessionSnapshot, layout, confirmRestore]);
+    }, [snapshotTimestamp, layout, confirmRestore]);
     
     const testText = settings?.customSampleText || '';
     const setTestText = (text: string) => {
@@ -202,6 +240,6 @@ export const useAppActions = ({
         // Snapshot
         handleTakeSnapshot,
         handleRestoreSnapshot,
-        hasSnapshot: !!sessionSnapshot
+        hasSnapshot: !!snapshotTimestamp
     };
 };
