@@ -485,6 +485,7 @@
 	"settingsTabGeneral": "பொது",
 	"settingsTabMetaData": "எழுத்துரு மெட்டா தரவு",
 	"settingsTabMetrics": "அளவீடுகள்",
+	"settingsTabEditor": "திருத்தி",
 	"showBackgroundHints": "பின்னணி குறிப்புகளைக் காட்டுக",
 	"showControlPoints": "கட்டுப்பாட்டு புள்ளிகளைக் காட்டுக",
 	"simpleMode": "எளிய",
@@ -603,5 +604,6 @@
 	"subConsAdd": "Sub. Cons Add.",
     "bulkEdit": "மொத்த தொகுப்பு",
     "batch": "தொகுப்பு",
-    "batchOperations": "தொகுப்பு செயல்பாடுகள்"
+    "batchOperations": "தொகுப்பு செயல்பாடுகள்",
+    "editorSettings": "Editor Settings"
 }

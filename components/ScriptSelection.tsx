@@ -420,7 +420,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
         try {
             await dbService.deleteProject(projectToDelete.projectId);
             setRecentProjects(prev => prev.filter(p => p.projectId !== projectToDelete.projectId));
-            showNotification(`Project "${projectToDelete.settings.fontName}" deleted.`, 'success');
+            showNotification(`Project "${projectToDelete.name || projectToDelete.settings.fontName}" deleted.`, 'success');
         } catch (error) {
             console.error("Failed to delete project:", error);
             showNotification("Error deleting project.", 'error');
@@ -511,6 +511,9 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                                  {recentProjects.map(p => {
                                      const scriptForSubtitle = scripts.find(s => s.id === p.scriptId) || (p.scriptId?.startsWith('custom_blocks_') ? { nameKey: 'customBlockFont' } : { nameKey: '' });
                                      const isDeleteVisible = longPressedProjectId === p.projectId;
+                                     // Use the new 'name' field if available, otherwise fallback to fontName for backward compatibility
+                                     const displayName = p.name || p.settings.fontName;
+                                     
                                      return (
                                         <div
                                             key={p.projectId}
@@ -531,7 +534,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                                                 <TrashIcon />
                                             </button>
                                             <div onClick={() => handleProjectClick(p)} className="w-full h-full flex flex-col items-center justify-between text-center">
-                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate w-full">{p.settings.fontName}</h3>
+                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate w-full" title={displayName}>{displayName}</h3>
                                                 <RecentProjectPreview project={p} />
                                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t(scriptForSubtitle.nameKey)}</p>
                                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{new Date(p.savedAt!).toLocaleString()}</p>
@@ -673,7 +676,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                     isOpen={!!projectToDelete}
                     onClose={() => setProjectToDelete(null)}
                     onConfirm={handleConfirmDelete}
-                    projectName={projectToDelete.settings.fontName}
+                    projectName={projectToDelete.name || projectToDelete.settings.fontName}
                 />
             )}
 

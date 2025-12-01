@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useMemo } from 'react';
 import { 
     GlyphData, KerningMap, CharacterSet, Path, 
@@ -23,6 +24,8 @@ interface ProjectContextType {
     projectDataToRestore: ProjectData | null;
     setProjectDataToRestore: React.Dispatch<React.SetStateAction<ProjectData | null>>;
     setScript: React.Dispatch<React.SetStateAction<ScriptConfig | null>>;
+    projectName: string;
+    setProjectName: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -36,6 +39,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [metrics, setMetrics] = useState<FontMetrics | null>(null);
     const [projectDataToRestore, setProjectDataToRestore] = useState<ProjectData | null>(null);
+    const [projectName, setProjectName] = useState<string>('My Project');
 
     const allCharsByUnicode = useMemo(() => {
         if (!characterSets) return new Map<number, Character>();
@@ -62,6 +66,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         allCharsByUnicode,
         allCharsByName,
         projectDataToRestore, setProjectDataToRestore,
+        projectName, setProjectName
     };
 
     return (

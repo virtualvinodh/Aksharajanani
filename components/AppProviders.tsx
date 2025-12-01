@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { LocaleProvider } from '../contexts/LocaleContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
@@ -9,28 +10,31 @@ import { GlyphDataProvider } from '../contexts/GlyphDataContext';
 import { KerningProvider } from '../contexts/KerningContext';
 import { SettingsProvider } from '../contexts/SettingsContext';
 import { ClipboardProvider } from '../contexts/ClipboardContext';
+import { ProjectProvider } from '../contexts/ProjectContext';
 
 const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <ThemeProvider>
       <LocaleProvider>
-        <LayoutProvider>
-          <CharacterProvider>
-            <GlyphDataProvider>
-              <KerningProvider>
-                <SettingsProvider>
-                  <ClipboardProvider>
-                    <PositioningProvider>
-                      <RulesProvider>
-                        {children}
-                      </RulesProvider>
-                    </PositioningProvider>
-                  </ClipboardProvider>
-                </SettingsProvider>
-              </KerningProvider>
-            </GlyphDataProvider>
-          </CharacterProvider>
-        </LayoutProvider>
+        <ProjectProvider>
+          <LayoutProvider>
+            <CharacterProvider>
+              <GlyphDataProvider>
+                <KerningProvider>
+                  <SettingsProvider>
+                    <ClipboardProvider>
+                      <PositioningProvider>
+                        <RulesProvider>
+                          {children}
+                        </RulesProvider>
+                      </PositioningProvider>
+                    </ClipboardProvider>
+                  </SettingsProvider>
+                </KerningProvider>
+              </GlyphDataProvider>
+            </CharacterProvider>
+          </LayoutProvider>
+        </ProjectProvider>
       </LocaleProvider>
     </ThemeProvider>
   );

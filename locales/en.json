@@ -486,6 +486,7 @@
 	"settingsTabGeneral": "General",
 	"settingsTabMetaData": "Font Meta Data",
 	"settingsTabMetrics": "Metrics",
+	"settingsTabEditor": "Editor",
 	"showBackgroundHints": "Show Background Hints",
 	"showControlPoints": "Show Control Points",
 	"simpleMode": "Simple",
@@ -620,5 +621,6 @@
     "scaleY": "Scale Y",
     "confirmSnapshotRestore": "Restore Snapshot?",
     "snapshotRestoreMessage": "Are you sure you want to restore from the snapshot taken at {time}? All unsaved changes made since then will be lost.",
-    "restore": "Restore"
+    "restore": "Restore",
+    "editorSettings": "Editor Settings"
 }

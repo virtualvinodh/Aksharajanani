@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -7,6 +8,7 @@ import { usePositioning } from '../../contexts/PositioningContext';
 import { useRules } from '../../contexts/RulesContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { ScriptConfig, ProjectData, Character, CharacterSet, CharacterDefinition, AttachmentClass, RecommendedKerning, MarkAttachmentRules, PositioningRules } from '../../types';
 import { FONT_META_DEFAULTS } from '../../constants';
 
@@ -30,6 +32,7 @@ export const useProjectLoad = ({
     const { dispatch: settingsDispatch } = useSettings();
     const { dispatch: positioningDispatch } = usePositioning();
     const { dispatch: rulesDispatch } = useRules();
+    const { setProjectName } = useProject();
 
     const [isScriptDataLoading, setIsScriptDataLoading] = useState(true);
     const [scriptDataError, setScriptDataError] = useState<string | null>(null);
@@ -389,6 +392,9 @@ export const useProjectLoad = ({
                 rulesDispatch({ type: 'SET_MANUAL_FEA_CODE', payload: isFeaOnly ? (feaFileData || '') : (projectToLoad.manualFeaCode ?? '') });
                 const { projectId: loadedProjectId, savedAt, ...loadedState } = projectToLoad;
                 setLastSavedState(JSON.stringify(loadedState));
+                
+                // Set project name (distinct from font family)
+                setProjectName(projectToLoad.name || projectToLoad.settings.fontName);
             } else {
                 const savedSettingsRaw = localStorage.getItem(`font-creator-settings-${currentScript.id}`);
                 const savedSettings = savedSettingsRaw ? JSON.parse(savedSettingsRaw) : {};
@@ -403,6 +409,9 @@ export const useProjectLoad = ({
                 rulesDispatch({ type: 'SET_FEA_EDIT_MODE', payload: isFeaOnly });
                 rulesDispatch({ type: 'SET_MANUAL_FEA_CODE', payload: isFeaOnly ? feaFileData || '' : '' });
                 setLastSavedState(null);
+                
+                // Set default project name for new project
+                setProjectName(baseSettings.fontName);
             }
 
         } catch (err) {
@@ -410,7 +419,7 @@ export const useProjectLoad = ({
         } finally {
             setIsScriptDataLoading(false);
         }
-    }, [allScripts, characterDispatch, rulesDispatch, settingsDispatch, glyphDataDispatch, kerningDispatch, positioningDispatch, t, setProjectId, setLastSavedState, setMarkAttachmentRules, dependencyMap]);
+    }, [allScripts, characterDispatch, rulesDispatch, settingsDispatch, glyphDataDispatch, kerningDispatch, positioningDispatch, t, setProjectId, setLastSavedState, setMarkAttachmentRules, dependencyMap, setProjectName]);
 
     const handleLoadProject = () => fileInputRef.current?.click();
 

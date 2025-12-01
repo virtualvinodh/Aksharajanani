@@ -126,6 +126,7 @@ export type MarkPositioningMap = Map<string, Point>;
 export interface ProjectData {
   projectId?: number;
   scriptId?: string;
+  name?: string; // Display name for the project file (distinct from fontName)
   settings: AppSettings;
   glyphs: [number, GlyphData][];
   kerning?: [string, number][];

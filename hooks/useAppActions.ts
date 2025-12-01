@@ -5,6 +5,7 @@ import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useRules } from '../contexts/RulesContext';
 import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { ScriptConfig, ProjectData } from '../types';
 
 import { useProjectPersistence } from './actions/useProjectPersistence';
@@ -32,6 +33,7 @@ export const useAppActions = ({
     const { script } = useCharacter();
     const { settings, dispatch: settingsDispatch } = useSettings();
     const { workspace, setWorkspace } = layout;
+    const { projectName, setProjectName } = useProject();
     
     // Dependency Map (Ref) needs to be shared or passed around, typically managed where glyphs are managed
     const dependencyMap = useRef<Map<number, Set<number>>>(new Map());
@@ -191,8 +193,10 @@ export const useAppActions = ({
         const currentState = getProjectState();
         if (!currentState) return;
 
-        // Update font name in state
-        currentState.settings.fontName = newName;
+        // Update Project Name (Dashboard Name)
+        currentState.name = newName;
+        // Note: We DO NOT change settings.fontName here. 
+        // The copy retains the internal font family name unless changed in settings.
         
         // Prepare for new DB entry (remove ID)
         const newData = {
@@ -206,8 +210,8 @@ export const useAppActions = ({
             
             // Switch context
             setProjectId(newId);
+            setProjectName(newName);
             setLastSavedState(JSON.stringify(newData));
-            settingsDispatch({ type: 'UPDATE_SETTINGS', payload: s => s ? ({ ...s, fontName: newName }) : null });
             
             // Close modal and notify
             layout.closeModal();
@@ -220,15 +224,15 @@ export const useAppActions = ({
             console.error("Failed to save copy:", error);
             layout.showNotification("Failed to save copy", 'error');
         }
-    }, [getProjectState, layout, setProjectId, setLastSavedState, settingsDispatch]);
+    }, [getProjectState, layout, setProjectId, setLastSavedState, setProjectName]);
 
     const openSaveAsModal = useCallback(() => {
-        if (!settings) return;
+        // Default the input to the current project name (not font family name)
         layout.openModal('saveAs', {
-            currentName: settings.fontName,
+            currentName: projectName,
             onConfirm: handleSaveAs
         });
-    }, [layout, settings, handleSaveAs]);
+    }, [layout, projectName, handleSaveAs]);
 
     
     const testText = settings?.customSampleText || '';

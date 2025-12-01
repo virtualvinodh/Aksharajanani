@@ -8,6 +8,7 @@ import { usePositioning } from '../../contexts/PositioningContext';
 import { useRules } from '../../contexts/RulesContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
+import { useProject } from '../../contexts/ProjectContext';
 import * as dbService from '../../services/dbService';
 import { ProjectData } from '../../types';
 
@@ -24,6 +25,7 @@ export const useProjectPersistence = (
     const { markPositioningMap } = usePositioning();
     const { state: rulesState, dispatch: rulesDispatch } = useRules();
     const { fontRules, isFeaEditMode, manualFeaCode, hasUnsavedRules } = rulesState;
+    const { projectName } = useProject();
 
     const [projectId, setProjectId] = useState<number | undefined>(initialProjectId);
     const [lastSavedState, setLastSavedState] = useState<string | null>(null);
@@ -36,6 +38,7 @@ export const useProjectPersistence = (
         if (!script || !settings || !metrics || !characterSets || fontRules === null) return null;
         return {
             scriptId: script.id,
+            name: projectName,
             settings,
             metrics,
             characterSets,
@@ -46,7 +49,7 @@ export const useProjectPersistence = (
             kerning: Array.from(kerningMap.entries()),
             markPositioning: Array.from(markPositioningMap.entries()),
         };
-    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, markPositioningMap]);
+    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, markPositioningMap, projectName]);
 
     // Detect changes cheaply by watching dependencies
     useEffect(() => {
@@ -55,7 +58,7 @@ export const useProjectPersistence = (
         }
     }, [
         // These are the dependencies that trigger a "change"
-        glyphDataMap, kerningMap, markPositioningMap, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode,
+        glyphDataMap, kerningMap, markPositioningMap, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, projectName,
         // Dependencies that shouldn't trigger change but are needed for logic
         isScriptDataLoading, lastSavedState
     ]);

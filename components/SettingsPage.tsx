@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { AppSettings, ToolRanges, FontMetrics } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon } from '../constants';
 import Footer from './Footer';
 import GeneralSettings from './settings/GeneralSettings';
+import EditorSettings from './settings/EditorSettings';
 import MetaDataSettings from './settings/MetaDataSettings';
 import TestPageSettings from './settings/TestPageSettings';
 import MetricsSettings from './settings/MetricsSettings';
@@ -14,7 +16,7 @@ interface SettingsPageProps {
   toolRanges: ToolRanges;
 }
 
-type ActiveTab = 'general' | 'meta' | 'testPage' | 'metrics';
+type ActiveTab = 'general' | 'editor' | 'meta' | 'testPage' | 'metrics';
 
 const TabButton: React.FC<{
     tabId: ActiveTab;
@@ -67,14 +69,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
 
       <main className="flex-grow overflow-y-auto p-6 md:p-10 text-gray-700 dark:text-gray-300">
         <div className="max-w-2xl mx-auto">
-            <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="mb-6 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
                 <nav className="-mb-px flex space-x-6" aria-label="Tabs">
                     <TabButton tabId="general" label={t('settingsTabGeneral')} activeTab={activeTab} onClick={setActiveTab} />
+                    <TabButton tabId="editor" label={t('editorSettings')} activeTab={activeTab} onClick={setActiveTab} />
                     <TabButton tabId="meta" label={t('settingsTabMetaData')} activeTab={activeTab} onClick={setActiveTab} />
           
                      {settings?.editorMode === 'advanced' && (
                         <TabButton tabId="metrics" label={t('settingsTabMetrics')} activeTab={activeTab} onClick={setActiveTab} />
                     )}
+                    <TabButton tabId="testPage" label={t('testPageSettings')} activeTab={activeTab} onClick={setActiveTab} />
                 </nav>
             </div>
 
@@ -84,6 +88,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
                         settings={localSettings} 
                         onSettingsChange={setLocalSettings} 
                         toolRanges={toolRanges} 
+                    />
+                )}
+                {activeTab === 'editor' && (
+                    <EditorSettings
+                        settings={localSettings}
+                        onSettingsChange={setLocalSettings}
                     />
                 )}
                 {activeTab === 'meta' && (

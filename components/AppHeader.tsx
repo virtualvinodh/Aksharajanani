@@ -4,6 +4,7 @@ import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, Rec
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useProject } from '../contexts/ProjectContext';
 import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, CopyIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import CommandPalette from './CommandPalette';
@@ -91,7 +92,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     kerningMap, allCharsByUnicode, recommendedKerning, onTakeSnapshot, onRestoreSnapshot, hasSnapshot, onSaveAs
 }) => {
     const { t } = useLocale();
-    const { dispatch: settingsDispatch } = useSettings();
+    const { projectName, setProjectName } = useProject();
     const [isEditingFontName, setIsEditingFontName] = useState(false);
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
     const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -203,7 +204,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 ꦄ
                             </span>
                         </div>
-                        {/* FIX: Hidden by default on small screens, shown on sm screens and up. */}
                         <h1 className="text-2xl font-bold text-gray-700 dark:text-gray-200 whitespace-nowrap hidden sm:block group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{t('appTitle')}</h1>
                     </button>
                     <div className="border-l h-6 border-gray-300 dark:border-gray-600"></div>
@@ -235,14 +235,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     </div>
                 </div>
                 
-                {/* Center: Font Name - order-3 on mobile, order-2 on desktop */}
+                {/* Center: Project Name (Editable) - order-3 on mobile, order-2 on desktop */}
                 <div className="text-center flex-shrink-0 px-2 order-3 md:order-2">
                     <div className="text-center">
                         {isEditingFontName ? (
                             <input
                                 type="text"
-                                value={settings.fontName}
-                                onChange={(e) => settingsDispatch({ type: 'UPDATE_SETTINGS', payload: s => s ? {...s, fontName: e.target.value} : null })}
+                                value={projectName}
+                                onChange={(e) => setProjectName(e.target.value)}
                                 onBlur={() => setIsEditingFontName(false)}
                                 onKeyDown={(e) => e.key === 'Enter' && setIsEditingFontName(false)}
                                 className="text-xl font-bold text-center bg-transparent border-b-2 border-indigo-500 focus:outline-none"
@@ -250,8 +250,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                             />
                         ) : (
                             <div className="flex items-center justify-center gap-2">
-                                <h1 className="text-xl font-bold">{settings.fontName}{hasUnsavedChanges && !settings.isAutosaveEnabled && <span className="text-yellow-400 ml-1" title="Unsaved changes">•</span>}</h1>
-                                <button onClick={() => setIsEditingFontName(true)} title={t('editFontName')} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><EditIcon /></button>
+                                <h1 className="text-xl font-bold">{projectName}{hasUnsavedChanges && !settings.isAutosaveEnabled && <span className="text-yellow-400 ml-1" title="Unsaved changes">•</span>}</h1>
+                                <button onClick={() => setIsEditingFontName(true)} title="Rename Project" className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><EditIcon /></button>
                             </div>
                         )}
                         <p className="text-sm text-gray-500 dark:text-gray-400">{t(script.nameKey)}</p>
