@@ -186,6 +186,51 @@ export const useAppActions = ({
         }
     }, [hasSnapshot, projectId, layout, handleRestoreAction]);
     
+    // --- Save As Logic ---
+    const handleSaveAs = useCallback(async (newName: string) => {
+        const currentState = getProjectState();
+        if (!currentState) return;
+
+        // Update font name in state
+        currentState.settings.fontName = newName;
+        
+        // Prepare for new DB entry (remove ID)
+        const newData = {
+            ...currentState,
+            savedAt: new Date().toISOString()
+        };
+
+        try {
+            // Add as new project
+            const newId = await dbService.addProject(newData);
+            
+            // Switch context
+            setProjectId(newId);
+            setLastSavedState(JSON.stringify(newData));
+            settingsDispatch({ type: 'UPDATE_SETTINGS', payload: s => s ? ({ ...s, fontName: newName }) : null });
+            
+            // Close modal and notify
+            layout.closeModal();
+            layout.showNotification(`Saved copy as "${newName}"`, 'success');
+            
+            // Check snapshots for new ID (should be empty)
+            setHasSnapshot(false);
+
+        } catch (error) {
+            console.error("Failed to save copy:", error);
+            layout.showNotification("Failed to save copy", 'error');
+        }
+    }, [getProjectState, layout, setProjectId, setLastSavedState, settingsDispatch]);
+
+    const openSaveAsModal = useCallback(() => {
+        if (!settings) return;
+        layout.openModal('saveAs', {
+            currentName: settings.fontName,
+            onConfirm: handleSaveAs
+        });
+    }, [layout, settings, handleSaveAs]);
+
+    
     const testText = settings?.customSampleText || '';
     const setTestText = (text: string) => {
         settingsDispatch({ type: 'UPDATE_SETTINGS', payload: s => s ? ({ ...s, customSampleText: text }) : null });
@@ -239,6 +284,9 @@ export const useAppActions = ({
         // Snapshot
         handleTakeSnapshot,
         handleRestoreSnapshot,
-        hasSnapshot
+        hasSnapshot,
+
+        // Save As
+        openSaveAsModal
     };
 };

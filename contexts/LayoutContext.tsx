@@ -6,7 +6,7 @@ export type Workspace = 'drawing' | 'positioning' | 'kerning' | 'rules' | 'metri
 type View = 'grid' | 'comparison' | 'settings';
 
 interface ModalState {
-  name: 'confirmChangeScript' | 'incompleteWarning' | 'mismatchedScript' | 'testPage' | 'addGlyph' | 'positioningUpdateWarning' | 'feaError' | 'unsavedRules' | 'about' | 'help' | 'restoreSession' | 'testCases' | 'confirmLoadProject' | 'addBlock' | 'importGlyphs' | 'confirmSnapshotRestore' | 'snapshotRestore';
+  name: 'confirmChangeScript' | 'incompleteWarning' | 'mismatchedScript' | 'testPage' | 'addGlyph' | 'positioningUpdateWarning' | 'feaError' | 'unsavedRules' | 'about' | 'help' | 'restoreSession' | 'testCases' | 'confirmLoadProject' | 'addBlock' | 'importGlyphs' | 'confirmSnapshotRestore' | 'snapshotRestore' | 'saveAs';
   props?: any;
 }
 

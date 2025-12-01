@@ -24,6 +24,7 @@ import TestCasePage from './components/TestCasePage';
 import ExportAnimation from './components/ExportAnimation';
 import ImportGlyphsModal from './components/ImportGlyphsModal';
 import SnapshotRestoreModal from './components/SnapshotRestoreModal';
+import SaveAsModal from './components/SaveAsModal';
 import { useLocale } from './contexts/LocaleContext';
 import { useLayout } from './contexts/LayoutContext';
 import { useCharacter } from './contexts/CharacterContext';
@@ -96,7 +97,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       handleDeleteGlyph,
       handleUnlockGlyph,
       handleRelinkGlyph,
-      handleUpdateDependencies, // Added
+      handleUpdateDependencies,
       handleEditorModeChange,
       downloadFontBlob,
       handleAddGlyph,
@@ -110,7 +111,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       testPageFont,
       handleTakeSnapshot,
       handleRestoreSnapshot,
-      hasSnapshot
+      hasSnapshot,
+      openSaveAsModal
   } = appActions;
 
 
@@ -234,6 +236,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         onTakeSnapshot={handleTakeSnapshot}
         onRestoreSnapshot={handleRestoreSnapshot}
         hasSnapshot={hasSnapshot}
+        onSaveAs={openSaveAsModal}
        />
 
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -369,6 +372,13 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
             confirmActionText={t('restore')}
             onConfirm={layout.activeModal.props.onConfirm}
             closeOnBackdropClick={false}
+        />
+      )}
+      {layout.activeModal?.name === 'saveAs' && (
+        <SaveAsModal 
+            isOpen={true} 
+            onClose={layout.closeModal} 
+            {...layout.activeModal.props}
         />
       )}
     </div>

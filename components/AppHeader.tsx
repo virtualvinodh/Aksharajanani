@@ -4,7 +4,7 @@ import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, Rec
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon } from '../constants';
+import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, CopyIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import CommandPalette from './CommandPalette';
 
@@ -47,6 +47,7 @@ interface AppHeaderProps {
     onTakeSnapshot: () => void;
     onRestoreSnapshot: () => void;
     hasSnapshot: boolean;
+    onSaveAs: () => void;
 }
 
 const WorkspaceTab: React.FC<{
@@ -87,7 +88,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     onTestClick, onCompareClick, onSettingsClick, onChangeScriptClick, onShowAbout,
     onShowHelp, onShowTestCases, onEditorModeChange, onWorkspaceChange, activeWorkspace, hasUnsavedChanges, hasUnsavedRules,
     hasPositioning, hasKerning, drawingProgress, positioningProgress, kerningProgress, rulesProgress, positioningRules,
-    kerningMap, allCharsByUnicode, recommendedKerning, onTakeSnapshot, onRestoreSnapshot, hasSnapshot
+    kerningMap, allCharsByUnicode, recommendedKerning, onTakeSnapshot, onRestoreSnapshot, hasSnapshot, onSaveAs
 }) => {
     const { t } = useLocale();
     const { dispatch: settingsDispatch } = useSettings();
@@ -108,6 +109,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
     const handleCommandAction = (action: string) => {
         if (action === 'save') onSaveToDB();
+        if (action === 'save-as') onSaveAs();
         if (action === 'export-json') onSaveProject();
         if (action === 'load-json') onLoadProject();
         if (action === 'export') onExportClick();
@@ -169,6 +171,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     {isMoreMenuOpen && (
                         <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-30 max-h-[80vh] overflow-y-auto">
                             <button onClick={() => { onSaveProject(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CodeBracketsIcon /> {t('exportJson')}</button>
+                            <button onClick={() => { onSaveAs(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CopyIcon /> Save Copy...</button>
                             <button onClick={() => { onImportGlyphsClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ImportIcon /> {t('importFromProject')}</button>
                             <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
 
