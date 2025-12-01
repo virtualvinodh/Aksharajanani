@@ -20,22 +20,9 @@ const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsCha
 
     return (
         <div className="space-y-8">
-            <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-4">
-                <h4 className="text-lg font-bold text-gray-900 dark:text-white">{t('editorSettings')}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="font-semibold text-gray-700 dark:text-gray-300">{t('editorMode')}:</label>
-                        <select 
-                            value={settings.editorMode} 
-                            onChange={(e) => onSettingsChange(prev => ({ ...prev, editorMode: e.target.value as 'simple' | 'advanced' }))} 
-                            className="w-full p-2 border rounded mt-1 bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white"
-                        >
-                            <option value="simple">{t('simpleMode')}</option>
-                            <option value="advanced">{t('advancedMode')}</option>
-                        </select>
-                    </div>
-                    
-                    <div>
+            <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">                
+                <div className="flex flex-col gap-6">
+                    <div className="max-w-sm">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t('language')}
                         </label>
@@ -46,10 +33,10 @@ const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsCha
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t('theme')}
                         </label>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="flex gap-3">
                             <button
                                 onClick={() => setTheme('light')}
-                                className={`px-4 py-2 rounded-md font-semibold border-2 transition-colors ${
+                                className={`px-3 py-1.5 rounded-md font-medium text-sm border-2 transition-colors ${
                                     theme === 'light' 
                                     ? 'bg-indigo-600 text-white border-indigo-600' 
                                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
@@ -59,7 +46,7 @@ const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsCha
                             </button>
                             <button
                                 onClick={() => setTheme('dark')}
-                                className={`px-4 py-2 rounded-md font-semibold border-2 transition-colors ${
+                                className={`px-3 py-1.5 rounded-md font-medium text-sm border-2 transition-colors ${
                                     theme === 'dark' 
                                     ? 'bg-indigo-500 text-white border-indigo-500' 
                                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
@@ -70,16 +57,16 @@ const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsCha
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 col-span-1 md:col-span-2 flex-wrap mt-2">
-                        <label className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+                    <div className="flex items-center gap-6 flex-wrap pt-2">
+                        <label className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300 select-none">
                             <input type="checkbox" checked={settings.showGridOutlines} onChange={handleToggleChange('showGridOutlines')} className="h-4 w-4 rounded accent-indigo-500" />
                             <span>{t('showBackgroundHints')}</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+                        <label className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300 select-none">
                             <input type="checkbox" checked={settings.isAutosaveEnabled} onChange={handleToggleChange('isAutosaveEnabled')} className="h-4 w-4 rounded accent-indigo-500" />
                             <span>{t('enableAutosave')}</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+                        <label className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300 select-none">
                             <input type="checkbox" checked={settings.isPrefillEnabled !== false} onChange={handleToggleChange('isPrefillEnabled')} className="h-4 w-4 rounded accent-indigo-500" />
                             <span>{t('enableCompositePrefill')}</span>
                         </label>
