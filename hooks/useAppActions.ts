@@ -135,7 +135,7 @@ export const useAppActions = ({
 
     const handleTakeSnapshot = useCallback(async () => {
         if (!projectId) {
-            layout.showNotification("Please save the project before taking a snapshot.", 'error');
+            layout.showNotification(t('snapshotSaveError'), 'error');
             return;
         }
         const currentState = getProjectState();
@@ -160,24 +160,24 @@ export const useAppActions = ({
                     timestamp
                 });
                 setHasSnapshot(true);
-                layout.showNotification("Snapshot saved to history", 'success');
+                layout.showNotification(t('snapshotSavedSuccess'), 'success');
             } catch (error) {
                 console.error("Failed to save snapshot:", error);
-                layout.showNotification("Failed to save snapshot", 'error');
+                layout.showNotification(t('snapshotSaveFailed'), 'error');
             }
         }
-    }, [getProjectState, layout, projectId]);
+    }, [getProjectState, layout, projectId, t]);
     
     const handleRestoreAction = useCallback(async (data: ProjectData) => {
         try {
             initializeProjectState(data);
-            layout.showNotification("Restored from snapshot", 'info');
+            layout.showNotification(t('snapshotRestoredSuccess'), 'info');
             layout.closeModal();
         } catch (error) {
              console.error("Failed to restore snapshot:", error);
-             layout.showNotification("Failed to restore snapshot", 'error');
+             layout.showNotification(t('snapshotRestoreFailed'), 'error');
         }
-    }, [initializeProjectState, layout]);
+    }, [initializeProjectState, layout, t]);
 
     const handleRestoreSnapshot = useCallback(() => {
         if (hasSnapshot && projectId) {
@@ -215,16 +215,16 @@ export const useAppActions = ({
             
             // Close modal and notify
             layout.closeModal();
-            layout.showNotification(`Saved copy as "${newName}"`, 'success');
+            layout.showNotification(t('saveCopySuccess', { name: newName }), 'success');
             
             // Check snapshots for new ID (should be empty)
             setHasSnapshot(false);
 
         } catch (error) {
             console.error("Failed to save copy:", error);
-            layout.showNotification("Failed to save copy", 'error');
+            layout.showNotification(t('saveCopyFailed'), 'error');
         }
-    }, [getProjectState, layout, setProjectId, setLastSavedState, setProjectName]);
+    }, [getProjectState, layout, setProjectId, setLastSavedState, setProjectName, t]);
 
     const openSaveAsModal = useCallback(() => {
         // Default the input to the current project name (not font family name)

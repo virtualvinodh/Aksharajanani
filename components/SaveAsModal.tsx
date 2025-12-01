@@ -17,9 +17,9 @@ const SaveAsModal: React.FC<SaveAsModalProps> = ({ isOpen, onClose, onConfirm, c
 
   useEffect(() => {
     if (isOpen) {
-      setName(`Copy of ${currentName}`);
+      setName(`${t('copyOfPrefix')} ${currentName}`);
     }
-  }, [isOpen, currentName]);
+  }, [isOpen, currentName, t]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +32,7 @@ const SaveAsModal: React.FC<SaveAsModalProps> = ({ isOpen, onClose, onConfirm, c
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Save Project As"
+      title={t('saveProjectAs')}
       size="sm"
       footer={
         <>
@@ -58,7 +58,7 @@ const SaveAsModal: React.FC<SaveAsModalProps> = ({ isOpen, onClose, onConfirm, c
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
             <label htmlFor="project-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                New Project Name
+                {t('newProjectName')}
             </label>
             <input 
                 id="project-name" 
@@ -70,7 +70,7 @@ const SaveAsModal: React.FC<SaveAsModalProps> = ({ isOpen, onClose, onConfirm, c
                 onFocus={(e) => e.target.select()}
             />
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                This will save a copy of your current project and switch to it. Your original project will remain unchanged.
+                {t('saveAsDescription')}
             </p>
         </div>
       </form>

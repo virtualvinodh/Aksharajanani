@@ -622,5 +622,25 @@
     "confirmSnapshotRestore": "Restore Snapshot?",
     "snapshotRestoreMessage": "Are you sure you want to restore from the snapshot taken at {time}? All unsaved changes made since then will be lost.",
     "restore": "Restore",
-    "editorSettings": "Editor Settings"
+    "editorSettings": "Editor Settings",
+
+    "versionHistory": "Version History",
+    "snapshotRestoreDescription": "Select a snapshot to restore. This will overwrite your current unsaved work. A maximum of 5 snapshots are kept.",
+    "loading": "Loading...",
+    "noSnapshotsFound": "No snapshots found.",
+    "latestSnapshot": "Latest Snapshot",
+    "snapshotLabel": "Snapshot {index}",
+    "glyphCount": "{count} glyphs",
+    "deleteSnapshot": "Delete Snapshot",
+    "saveProjectAs": "Save Project As",
+    "newProjectName": "New Project Name",
+    "saveAsDescription": "This will save a copy of your current project and switch to it. Your original project will remain unchanged.",
+    "copyOfPrefix": "Copy of",
+    "snapshotSaveError": "Please save the project before taking a snapshot.",
+    "snapshotSavedSuccess": "Snapshot saved to history",
+    "snapshotSaveFailed": "Failed to save snapshot",
+    "snapshotRestoredSuccess": "Restored from snapshot",
+    "snapshotRestoreFailed": "Failed to restore snapshot",
+    "saveCopySuccess": "Saved copy as \"{name}\"",
+    "saveCopyFailed": "Failed to save copy"
 }

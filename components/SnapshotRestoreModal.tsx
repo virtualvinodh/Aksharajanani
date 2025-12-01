@@ -64,7 +64,7 @@ const SnapshotRestoreModal: React.FC<SnapshotRestoreModalProps> = ({ isOpen, onC
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Version History"
+      title={t('versionHistory')}
       size="md"
       footer={
         <>
@@ -83,15 +83,14 @@ const SnapshotRestoreModal: React.FC<SnapshotRestoreModalProps> = ({ isOpen, onC
     >
       <div className="space-y-4">
         <p className="text-sm text-gray-600 dark:text-gray-400">
-            Select a snapshot to restore. This will overwrite your current unsaved work.
-            A maximum of 5 snapshots are kept.
+            {t('snapshotRestoreDescription')}
         </p>
         
         {isLoading ? (
-            <div className="flex justify-center p-8 text-gray-500">Loading...</div>
+            <div className="flex justify-center p-8 text-gray-500">{t('loading')}</div>
         ) : snapshots.length === 0 ? (
             <div className="text-center p-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-gray-500">
-                No snapshots found.
+                {t('noSnapshotsFound')}
             </div>
         ) : (
             <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
@@ -110,19 +109,19 @@ const SnapshotRestoreModal: React.FC<SnapshotRestoreModalProps> = ({ isOpen, onC
                         </div>
                         <div className="flex-grow">
                             <h4 className="font-bold text-gray-900 dark:text-white">
-                                {index === 0 ? "Latest Snapshot" : `Snapshot ${snapshots.length - index}`}
+                                {index === 0 ? t('latestSnapshot') : t('snapshotLabel', { index: snapshots.length - index })}
                             </h4>
                             <p className="text-sm text-gray-500 dark:text-gray-400">
                                 {new Date(snapshot.timestamp).toLocaleString()}
                             </p>
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                {snapshot.data.glyphs.length} glyphs
+                                {t('glyphCount', { count: snapshot.data.glyphs.length })}
                             </p>
                         </div>
                         <button 
                             onClick={(e) => handleDelete(e, snapshot.id!)}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                            title="Delete Snapshot"
+                            title={t('deleteSnapshot')}
                         >
                             <TrashIcon />
                         </button>

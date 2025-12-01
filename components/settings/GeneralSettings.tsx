@@ -20,7 +20,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, onSettingsC
     };
     
     return (
-        <div className="space-y-8">
+        <div className="space-y-1">
             {/* Font Name Section - Moved to top as requested */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

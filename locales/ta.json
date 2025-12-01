@@ -605,5 +605,25 @@
     "bulkEdit": "மொத்த தொகுப்பு",
     "batch": "தொகுப்பு",
     "batchOperations": "தொகுப்பு செயல்பாடுகள்",
-    "editorSettings": "Editor Settings"
+    "editorSettings": "Editor Settings",
+
+    "versionHistory": "பதிப்பு வரலாறு",
+    "snapshotRestoreDescription": "மீட்டெடுக்க ஒரு ஸ்னாப்ஷாட்டைத் தேர்ந்தெடுக்கவும். இது உங்கள் தற்போதைய சேமிக்கப்படாத வேலையை மேலெழுதும். அதிகபட்சம் 5 ஸ்னாப்ஷாட்கள் வைக்கப்படும்.",
+    "loading": "ஏற்றுகிறது...",
+    "noSnapshotsFound": "ஸ்னாப்ஷாட்கள் எதுவும் கிடைக்கவில்லை.",
+    "latestSnapshot": "சமீபத்திய ஸ்னாப்ஷாட்",
+    "snapshotLabel": "ஸ்னாப்ஷாட் {index}",
+    "glyphCount": "{count} கிளிஃப்கள்",
+    "deleteSnapshot": "ஸ்னாப்ஷாட்டை நீக்கு",
+    "saveProjectAs": "திட்டத்தை இவ்வாறு சேமிக்கவும்",
+    "newProjectName": "புதிய திட்டப் பெயர்",
+    "saveAsDescription": "இது உங்கள் தற்போதைய திட்டத்தின் நகலைச் சேமித்து அதற்கு மாறும். உங்கள் அசல் திட்டம் மாறாமல் இருக்கும்.",
+    "copyOfPrefix": "நகல் -",
+    "snapshotSaveError": "ஸ்னாப்ஷாட் எடுப்பதற்கு முன் திட்டத்தைச் சேமிக்கவும்.",
+    "snapshotSavedSuccess": "ஸ்னாப்ஷாட் வரலாற்றில் சேமிக்கப்பட்டது",
+    "snapshotSaveFailed": "ஸ்னாப்ஷாட்டைச் சேமிக்க முடியவில்லை",
+    "snapshotRestoredSuccess": "ஸ்னாப்ஷாட்டில் இருந்து மீட்டெடுக்கப்பட்டது",
+    "snapshotRestoreFailed": "ஸ்னாப்ஷாட்டை மீட்டெடுக்க முடியவில்லை",
+    "saveCopySuccess": "\"{name}\" என நகல் சேமிக்கப்பட்டது",
+    "saveCopyFailed": "நகலைச் சேமிக்க முடியவில்லை"
 }
