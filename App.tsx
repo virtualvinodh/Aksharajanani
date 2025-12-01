@@ -91,6 +91,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       scriptDataError,
       hasUnsavedChanges,
       handleSaveProject,
+      handleSaveTemplate,
       handleLoadProject,
       handleFileChange,
       handleChangeScriptClick,
@@ -239,6 +240,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         onRestoreSnapshot={handleRestoreSnapshot}
         hasSnapshot={hasSnapshot}
         onSaveAs={openSaveAsModal}
+        onExportTemplate={handleSaveTemplate}
        />
 
       <main className="flex-1 flex flex-col overflow-hidden">

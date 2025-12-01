@@ -147,6 +147,7 @@ export interface ProjectData {
   recommendedKerning?: RecommendedKerning[];
   // Although fontRules contains groups, we sometimes track them separately in UI state
   groups?: Record<string, string[]>; 
+  guideFont?: GuideFont;
 }
 
 export interface ProjectSnapshot {

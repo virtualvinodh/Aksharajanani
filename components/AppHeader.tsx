@@ -49,6 +49,7 @@ interface AppHeaderProps {
     onRestoreSnapshot: () => void;
     hasSnapshot: boolean;
     onSaveAs: () => void;
+    onExportTemplate: () => void;
 }
 
 const WorkspaceTab: React.FC<{
@@ -89,7 +90,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     onTestClick, onCompareClick, onSettingsClick, onChangeScriptClick, onShowAbout,
     onShowHelp, onShowTestCases, onEditorModeChange, onWorkspaceChange, activeWorkspace, hasUnsavedChanges, hasUnsavedRules,
     hasPositioning, hasKerning, drawingProgress, positioningProgress, kerningProgress, rulesProgress, positioningRules,
-    kerningMap, allCharsByUnicode, recommendedKerning, onTakeSnapshot, onRestoreSnapshot, hasSnapshot, onSaveAs
+    kerningMap, allCharsByUnicode, recommendedKerning, onTakeSnapshot, onRestoreSnapshot, hasSnapshot, onSaveAs, onExportTemplate
 }) => {
     const { t } = useLocale();
     const { projectName, setProjectName } = useProject();
@@ -112,6 +113,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         if (action === 'save') onSaveToDB();
         if (action === 'save-as') onSaveAs();
         if (action === 'export-json') onSaveProject();
+        if (action === 'export-template') onExportTemplate();
         if (action === 'load-json') onLoadProject();
         if (action === 'export') onExportClick();
         if (action === 'test') onTestClick();
@@ -172,6 +174,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     {isMoreMenuOpen && (
                         <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-30 max-h-[80vh] overflow-y-auto">
                             <button onClick={() => { onSaveProject(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CodeBracketsIcon /> {t('exportJson')}</button>
+                            <button onClick={() => { onExportTemplate(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ExportIcon className="h-4 w-4" /> {t('exportTemplate')}</button>
                             <button onClick={() => { onSaveAs(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CopyIcon /> Save Copy...</button>
                             <button onClick={() => { onImportGlyphsClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ImportIcon /> {t('importFromProject')}</button>
                             <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>

@@ -332,7 +332,8 @@ export const useProjectLoad = ({
                 characterSetData: [
                      ...finalCharacterSets,
                      ...(currentScript.characterSetData?.filter(d => !('characters' in d)) || [])
-                ]
+                ],
+                guideFont: projectToLoad?.guideFont || currentScript.guideFont // Prefer project's guide font if available
             };
             characterDispatch({ type: 'SET_SCRIPT', payload: updatedScriptConfig });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: finalCharacterSets });
