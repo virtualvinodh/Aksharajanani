@@ -34,6 +34,7 @@ import { useSettings } from './contexts/SettingsContext';
 import { useClipboard } from './contexts/ClipboardContext';
 import { usePositioning } from './contexts/PositioningContext';
 import { useRules } from './contexts/RulesContext';
+import { useProject } from './contexts/ProjectContext';
 import { useProgressCalculators } from './hooks/useProgressCalculators';
 import { useAppActions } from './hooks/useAppActions';
 import { TOOL_RANGES } from './constants';
@@ -61,6 +62,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   const { markPositioningMap } = usePositioning();
   const { state: rulesState } = useRules();
+  const { projectName } = useProject();
   const { fontRules, isFeaEditMode, manualFeaCode, hasUnsavedRules } = rulesState;
   const { workspace, currentView, setCurrentView, selectedCharacter, selectCharacter, closeCharacterModal } = layout;
 
@@ -353,7 +355,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
          />
       )}
       {layout.activeModal?.name === 'positioningUpdateWarning' && <PositioningUpdateWarningModal isOpen={true} onClose={() => layout.closeModal()} {...layout.activeModal.props} />}
-      {layout.activeModal?.name === 'feaError' && feaErrorState && <FeaErrorModal isOpen={true} onClose={() => { layout.closeModal(); }} onConfirm={() => { downloadFontBlob(feaErrorState.blob, settings.fontName); layout.closeModal(); }} errorMessage={feaErrorState.error} />}
+      {layout.activeModal?.name === 'feaError' && feaErrorState && <FeaErrorModal isOpen={true} onClose={() => { layout.closeModal(); }} onConfirm={() => { downloadFontBlob(feaErrorState.blob, projectName); layout.closeModal(); }} errorMessage={feaErrorState.error} />}
       {layout.activeModal?.name === 'unsavedRules' && ( <UnsavedRulesModal isOpen={true} onClose={layout.closeModal} onDiscard={() => { layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} onSave={() => { handleSaveToDB(); layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} /> )}
       {layout.activeModal?.name === 'testCases' && <TestCasePage onClose={layout.closeModal} />}
       {layout.activeModal?.name === 'snapshotRestore' && (

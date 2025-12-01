@@ -17,6 +17,7 @@ import { simpleHash } from '../../utils/stringUtils';
 interface UseExportActionsProps {
     getProjectState: () => Omit<ProjectData, 'projectId' | 'savedAt'> | null;
     projectId: number | undefined;
+    projectName: string;
     setIsAnimatingExport: React.Dispatch<React.SetStateAction<boolean>>;
     downloadTriggerRef: React.MutableRefObject<(() => void) | null>;
     // State from Load/Other hooks that isn't in context but needed for calculation
@@ -26,7 +27,7 @@ interface UseExportActionsProps {
 }
 
 export const useExportActions = ({
-    getProjectState, projectId, setIsAnimatingExport, downloadTriggerRef,
+    getProjectState, projectId, projectName, setIsAnimatingExport, downloadTriggerRef,
     recommendedKerning, positioningRules, markAttachmentRules
 }: UseExportActionsProps) => {
     
@@ -49,13 +50,14 @@ export const useExportActions = ({
         allCharsByName, fontRules, kerningMap, positioningRules 
     });
 
-    const downloadFontBlob = useCallback((blob: Blob, fontName: string) => {
+    const downloadFontBlob = useCallback((blob: Blob, fileNameBase: string) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        const safeFontName = fontName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        // Use the provided name (Project Name) for the file, sanitizing it for OS file systems
+        const safeFileName = fileNameBase.replace(/[^a-z0-9\- ]/gi, '_').trim();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        a.download = `${safeFontName}_${timestamp}.otf`;
+        a.download = `${safeFileName}_${timestamp}.otf`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     }, []);
 
@@ -74,13 +76,16 @@ export const useExportActions = ({
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        const safeFontName = settings.fontName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        
+        // Use Project Name for the JSON filename
+        const safeFileName = projectName.replace(/[^a-z0-9\- ]/gi, '_').trim();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        a.download = `${safeFontName}_${timestamp}.json`;
+        a.download = `${safeFileName}_${timestamp}.json`;
+        
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         
         layout.showNotification(t('projectSavedAsJson'));
-    }, [settings, getProjectState, projectId, layout, t]);
+    }, [settings, getProjectState, projectId, layout, t, projectName]);
 
     const getCachedOrGeneratedFont = useCallback(async (): Promise<{ blob: Blob; feaError: string | null } | null> => {
         const projectState = getProjectState();
@@ -128,14 +133,15 @@ export const useExportActions = ({
                 setFeaErrorState({ error: feaError, blob });
                 layout.openModal('feaError');
             } else {
-                downloadFontBlob(blob, settings!.fontName);
+                // Use Project Name for the OTF filename
+                downloadFontBlob(blob, projectName);
                 layout.showNotification(t('fontExportedSuccess'));
             }
         } else {
             layout.showNotification(t('errorFontGeneration', { error: 'Failed to generate font.' }), 'error');
         }
         setIsExporting(false);
-    }, [getCachedOrGeneratedFont, downloadFontBlob, layout, settings, t]);
+    }, [getCachedOrGeneratedFont, downloadFontBlob, layout, t, projectName]);
 
     const startExportProcess = useCallback(() => {
         const triggerAnimation = () => {

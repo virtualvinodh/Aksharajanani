@@ -83,7 +83,7 @@ export const useAppActions = ({
         isExporting, feaErrorState, testPageFont,
         startExportProcess, handleSaveProject, handleTestClick, downloadFontBlob
     } = useExportActions({
-        getProjectState, projectId, setIsAnimatingExport, downloadTriggerRef,
+        getProjectState, projectId, projectName, setIsAnimatingExport, downloadTriggerRef,
         recommendedKerning, positioningRules, markAttachmentRules
     });
 

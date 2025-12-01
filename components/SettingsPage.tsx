@@ -78,7 +78,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
                      {settings?.editorMode === 'advanced' && (
                         <TabButton tabId="metrics" label={t('settingsTabMetrics')} activeTab={activeTab} onClick={setActiveTab} />
                     )}
-                    <TabButton tabId="testPage" label={t('testPageSettings')} activeTab={activeTab} onClick={setActiveTab} />
                 </nav>
             </div>
 
