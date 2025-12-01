@@ -7,6 +7,7 @@ import { usePositioning } from '../../contexts/PositioningContext';
 import { useKerning } from '../../contexts/KerningContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { Character, GlyphData, Path, Point, CharacterSet } from '../../types';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
 import { generateCompositeGlyphData, updateComponentInPaths } from '../../services/glyphRenderService';
@@ -16,8 +17,8 @@ import * as dbService from '../../services/dbService';
 declare var UnicodeProperties: any;
 
 export interface SaveOptions {
-    isDraft?: boolean;  // If true, skip cascade updates (fast/autosave). If false, run cascade (commit).
-    silent?: boolean;   // If true, do not show success notifications (unless critical cascade).
+    isDraft?: boolean;
+    silent?: boolean;
 }
 
 export const useGlyphActions = (
@@ -31,8 +32,7 @@ export const useGlyphActions = (
     const { settings, metrics, dispatch: settingsDispatch } = useSettings();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
-    
-    const [markAttachmentRules, setMarkAttachmentRules] = useState<any>(null);
+    const { markAttachmentRules } = useProject(); // Consumed from Context
 
     const handleSaveGlyph = useCallback((
         unicode: number,
@@ -100,8 +100,7 @@ export const useGlyphActions = (
         const hasDependents = (immediateDependents && immediateDependents.size > 0) || positionedPairCount > 0;
 
         if (hasDependents) {
-             // Snapshot for Undo (using the state *before* we messed with newGlyphDataMap further)
-             // Note: glyphDataMap (from context) is the clean previous state.
+            // Snapshot for Undo
             const glyphDataSnapshot = new Map(glyphDataMap);
             const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
             const markPositioningSnapshot = new Map(markPositioningMap.entries());
@@ -113,7 +112,7 @@ export const useGlyphActions = (
                 layout.showNotification(t('glyphUpdateReverted'), 'info');
             };
 
-            // BFS Traversal on newGlyphDataMap
+            // BFS Traversal
             const queue: number[] = [unicode];
             const visited = new Set<number>([unicode]);
 
@@ -131,14 +130,12 @@ export const useGlyphActions = (
         
                     const dependentGlyphData = newGlyphDataMap.get(depUnicode);
                     
-                    // --- Regeneration Logic ---
-
                     // Case A: Not drawn yet -> Full Generate
                     if (!dependentGlyphData || !isGlyphDrawn(dependentGlyphData)) {
                          const regenerated = generateCompositeGlyphData({ 
                             character: dependentChar, 
                             allCharsByName, 
-                            allGlyphData: newGlyphDataMap, // Use working copy
+                            allGlyphData: newGlyphDataMap, 
                             settings: settings!, 
                             metrics: metrics!, 
                             markAttachmentRules, 
@@ -153,7 +150,7 @@ export const useGlyphActions = (
                         return;
                     }
         
-                    // Case B: Smart Update (Preserve offsets)
+                    // Case B: Smart Update
                     const indicesToUpdate: number[] = [];
                     dependentChar.link.forEach((name, index) => {
                         if (allCharsByName.get(name)?.unicode === currentSourceUnicode) {
@@ -209,7 +206,6 @@ export const useGlyphActions = (
                 });
             }
 
-            // Dispatch the fully calculated map
             glyphDataDispatch({ type: 'SET_MAP', payload: newGlyphDataMap });
 
             totalUpdatedCount += positionedPairCount;
@@ -218,14 +214,12 @@ export const useGlyphActions = (
                 layout.showNotification(
                     t('updatedDependents', { count: totalUpdatedCount }),
                     'success',
-                    // { onUndo: undoChanges, duration: 7000 } // Undo disabled for heavy ops for now to avoid state desync risks
                 );
             } else if (!silent) {
                 layout.showNotification(t('saveGlyphSuccess'));
             }
             
         } else {
-             // No dependents, just dispatch the single update
              if (hasPathChanges) {
                  glyphDataDispatch({ type: 'SET_MAP', payload: newGlyphDataMap });
              }
@@ -241,49 +235,38 @@ export const useGlyphActions = (
     const handleDeleteGlyph = useCallback((unicode: number) => {
         const charToDelete = allCharsByUnicode.get(unicode); if (!charToDelete) return;
         
-        // 1. Snapshot for Undo (All affected contexts)
         const glyphDataSnapshot = new Map(glyphDataMap);
         const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
         const kerningSnapshot = new Map(kerningMap);
         const positioningSnapshot = new Map(markPositioningMap);
-        const dependencySnapshot = new Map(dependencyMap.current); // Shallow copy of map structure
+        const dependencySnapshot = new Map(dependencyMap.current);
         
         const undo = () => {
             glyphDataDispatch({ type: 'SET_MAP', payload: glyphDataSnapshot });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: characterSetsSnapshot });
             kerningDispatch({ type: 'SET_MAP', payload: kerningSnapshot });
             positioningDispatch({ type: 'SET_MAP', payload: positioningSnapshot });
-            dependencyMap.current = dependencySnapshot; // Restore dependency graph
+            dependencyMap.current = dependencySnapshot;
         };
 
-        // 2. Handle Dependents (Bake and Unlink)
-        // If this glyph is a component for others, those others need to become independent now.
         const dependents = dependencyMap.current.get(unicode);
         if (dependents && dependents.size > 0) {
-            // We must perform updates to the dependents BEFORE deleting the source glyph from data maps,
-            // otherwise generation logic might fail to find the source.
-            
-            // Set of unicode IDs that need to be updated
             const dependentUnicodes = Array.from(dependents);
             
-            // A. Update Glyph Data (Bake shapes)
             glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev) => {
                 const next = new Map(prev);
                 dependentUnicodes.forEach(depUni => {
                     const depChar = allCharsByUnicode.get(depUni);
-                    // If it's a linked glyph, we need to ensure its current shape is captured as static paths
                     if (depChar && (depChar.link || depChar.composite)) {
                         const compositeData = generateCompositeGlyphData({
                             character: depChar,
                             allCharsByName,
-                            allGlyphData: prev, // Use current state before deletion
+                            allGlyphData: prev, 
                             settings: settings!,
                             metrics: metrics!,
                             markAttachmentRules,
                             allCharacterSets: characterSets!
                         });
-                        // If we successfully generated data, save it. 
-                        // If not (maybe it was already empty), keep what we have or empty it.
                         if (compositeData) {
                             next.set(depUni, compositeData);
                         }
@@ -292,7 +275,6 @@ export const useGlyphActions = (
                 return next;
             }});
 
-            // B. Update Metadata (Remove links)
             characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prevSets) => {
                 if (!prevSets) return null;
                 return prevSets.map(set => ({
@@ -304,7 +286,6 @@ export const useGlyphActions = (
                             delete newChar.composite;
                             delete newChar.compositeTransform;
                             delete newChar.sourceLink;
-                            // It effectively becomes a standard base glyph
                             return newChar;
                         }
                         return char;
@@ -312,13 +293,9 @@ export const useGlyphActions = (
                 }));
             }});
             
-            // C. Clean up dependency map
             dependencyMap.current.delete(unicode);
         }
 
-        // 3. Cascade Delete Logic (Kerning & Positioning)
-        
-        // Filter Kerning Map
         const newKerningMap = new Map<string, number>();
         kerningMap.forEach((value, key) => {
             const [left, right] = key.split('-').map(Number);
@@ -327,7 +304,6 @@ export const useGlyphActions = (
             }
         });
 
-        // Filter Positioning Map
         const newPositioningMap = new Map<string, Point>();
         markPositioningMap.forEach((value, key) => {
             const [base, mark] = key.split('-').map(Number);
@@ -336,7 +312,6 @@ export const useGlyphActions = (
             }
         });
 
-        // 4. Dispatch Updates
         glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode }});
         characterDispatch({ type: 'DELETE_CHARACTER', payload: { unicode } });
         kerningDispatch({ type: 'SET_MAP', payload: newKerningMap });
@@ -431,7 +406,6 @@ export const useGlyphActions = (
 
         characterDispatch({ type: 'RELINK_GLYPH', payload: { unicode } });
         
-        // Regenerate the composite data from the components
         if (relinkedChar.link && settings && metrics && characterSets) {
             const compositeData = generateCompositeGlyphData({
                 character: relinkedChar,
@@ -465,9 +439,7 @@ export const useGlyphActions = (
         }
     }, [characterDispatch, glyphDataDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap]);
     
-    // NEW: Handle manual update of dependencies (e.g. via properties panel)
     const handleUpdateDependencies = useCallback((unicode: number, newLinkComponents: string[] | null) => {
-        // 1. Clean up existing dependencies (from current character definition)
         const currentChar = allCharsByUnicode.get(unicode);
         if (currentChar && currentChar.link) {
             currentChar.link.forEach(compName => {
@@ -481,7 +453,6 @@ export const useGlyphActions = (
             });
         }
 
-        // 2. Register new dependencies if provided (i.e. we are linking)
         if (newLinkComponents && newLinkComponents.length > 0) {
             newLinkComponents.forEach(compName => {
                 const compChar = allCharsByName.get(compName);
@@ -547,12 +518,10 @@ export const useGlyphActions = (
         handleAddGlyph,
         handleUnlockGlyph,
         handleRelinkGlyph,
-        handleUpdateDependencies, // Exposed new function
+        handleUpdateDependencies,
         handleImportGlyphs,
         handleAddBlock,
         handleCheckGlyphExists,
         handleCheckNameExists,
-        setMarkAttachmentRules, 
-        markAttachmentRules
     };
 };

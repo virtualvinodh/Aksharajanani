@@ -137,6 +137,16 @@ export interface ProjectData {
   manualFeaCode?: string;
   metrics?: FontMetrics;
   savedAt?: string;
+  
+  // Unified Model Additions:
+  // These fields allow the project to be self-contained without relying on external static JSONs.
+  positioningRules?: PositioningRules[];
+  markAttachmentRules?: MarkAttachmentRules;
+  markAttachmentClasses?: AttachmentClass[];
+  baseAttachmentClasses?: AttachmentClass[];
+  recommendedKerning?: RecommendedKerning[];
+  // Although fontRules contains groups, we sometimes track them separately in UI state
+  groups?: Record<string, string[]>; 
 }
 
 export interface ProjectSnapshot {

@@ -16,12 +16,11 @@ interface UseProjectLoadProps {
     allScripts: ScriptConfig[];
     setProjectId: (id: number | undefined) => void;
     setLastSavedState: (state: string | null) => void;
-    setMarkAttachmentRules: (rules: any) => void;
     dependencyMap: React.MutableRefObject<Map<number, Set<number>>>;
 }
 
 export const useProjectLoad = ({ 
-    allScripts, setProjectId, setLastSavedState, setMarkAttachmentRules, dependencyMap 
+    allScripts, setProjectId, setLastSavedState, dependencyMap 
 }: UseProjectLoadProps) => {
     
     const { t } = useLocale();
@@ -32,15 +31,20 @@ export const useProjectLoad = ({
     const { dispatch: settingsDispatch } = useSettings();
     const { dispatch: positioningDispatch } = usePositioning();
     const { dispatch: rulesDispatch } = useRules();
-    const { setProjectName } = useProject();
+    
+    // Context setters from ProjectContext
+    const { 
+        setProjectName,
+        setPositioningRules,
+        setMarkAttachmentRules,
+        setMarkAttachmentClasses,
+        setBaseAttachmentClasses,
+        setRecommendedKerning
+    } = useProject();
 
     const [isScriptDataLoading, setIsScriptDataLoading] = useState(true);
     const [scriptDataError, setScriptDataError] = useState<string | null>(null);
     const [isFeaOnlyMode, setIsFeaOnlyMode] = useState(false);
-    const [recommendedKerning, setRecommendedKerning] = useState<RecommendedKerning[] | null>(null);
-    const [positioningRules, setPositioningRules] = useState<PositioningRules[] | null>(null);
-    const [markAttachmentClasses, setMarkAttachmentClasses] = useState<AttachmentClass[] | null>(null);
-    const [baseAttachmentClasses, setBaseAttachmentClasses] = useState<AttachmentClass[] | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Use a ref to hold the current script to avoid dependency cycles in initializeProjectState
@@ -157,7 +161,6 @@ export const useProjectLoad = ({
 
             const finalCharacterSets = projectToLoad?.characterSets || processedCharSets;
             
-            
             // Rebuild local lookups needed for expansion
             const allCharSetsByName = new Map<string, CharacterSet>();
             finalCharacterSets.forEach(set => allCharSetsByName.set(set.nameKey, set));
@@ -247,7 +250,7 @@ export const useProjectLoad = ({
                     }
                 }));
             });
-            setRecommendedKerning(expandedKerning);
+            setRecommendedKerning(projectToLoad?.recommendedKerning || expandedKerning);
 
             // Process Positioning Rules & Create Dynamic Ligatures
             const rawPositioningRules = (charDefinition.filter(i => 'positioning' in i) as any[])?.flatMap(i => i.positioning) || null;
@@ -318,10 +321,10 @@ export const useProjectLoad = ({
                 }
             }
             
-            setMarkAttachmentRules(expandMarkAttachmentRules((charDefinition.find(i => 'markAttachment' in i) as any)?.markAttachment));
-            setMarkAttachmentClasses(expandAttachmentClass((charDefinition.find(i => 'markAttachmentClass' in i) as any)?.markAttachmentClass));
-            setBaseAttachmentClasses(expandAttachmentClass((charDefinition.find(i => 'baseAttachmentClass' in i) as any)?.baseAttachmentClass));
-            setPositioningRules(rawPositioningRules);
+            setMarkAttachmentRules(projectToLoad?.markAttachmentRules || expandMarkAttachmentRules((charDefinition.find(i => 'markAttachment' in i) as any)?.markAttachment));
+            setMarkAttachmentClasses(projectToLoad?.markAttachmentClasses || expandAttachmentClass((charDefinition.find(i => 'markAttachmentClass' in i) as any)?.markAttachmentClass));
+            setBaseAttachmentClasses(projectToLoad?.baseAttachmentClasses || expandAttachmentClass((charDefinition.find(i => 'baseAttachmentClass' in i) as any)?.baseAttachmentClass));
+            setPositioningRules(projectToLoad?.positioningRules || rawPositioningRules);
 
             // Update script with loaded/calculated data so resets work against the current context
             const updatedScriptConfig = {
@@ -419,7 +422,7 @@ export const useProjectLoad = ({
         } finally {
             setIsScriptDataLoading(false);
         }
-    }, [allScripts, characterDispatch, rulesDispatch, settingsDispatch, glyphDataDispatch, kerningDispatch, positioningDispatch, t, setProjectId, setLastSavedState, setMarkAttachmentRules, dependencyMap, setProjectName]);
+    }, [allScripts, characterDispatch, rulesDispatch, settingsDispatch, glyphDataDispatch, kerningDispatch, positioningDispatch, t, setProjectId, setLastSavedState, setMarkAttachmentRules, setMarkAttachmentClasses, setBaseAttachmentClasses, setPositioningRules, setRecommendedKerning, dependencyMap, setProjectName]);
 
     const handleLoadProject = () => fileInputRef.current?.click();
 
@@ -468,10 +471,6 @@ export const useProjectLoad = ({
         scriptDataError,
         fileInputRef,
         isFeaOnlyMode,
-        recommendedKerning,
-        positioningRules,
-        markAttachmentClasses,
-        baseAttachmentClasses,
         initializeProjectState,
         handleFileChange,
         handleLoadProject

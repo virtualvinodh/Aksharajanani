@@ -2,7 +2,8 @@
 import React, { createContext, useState, useContext, ReactNode, useMemo } from 'react';
 import { 
     GlyphData, KerningMap, CharacterSet, Path, 
-    ProjectData, ScriptConfig, AppSettings, FontMetrics, Character 
+    ProjectData, ScriptConfig, AppSettings, FontMetrics, Character,
+    PositioningRules, MarkAttachmentRules, AttachmentClass, RecommendedKerning
 } from '../types';
 
 interface ProjectContextType {
@@ -26,6 +27,18 @@ interface ProjectContextType {
     setScript: React.Dispatch<React.SetStateAction<ScriptConfig | null>>;
     projectName: string;
     setProjectName: React.Dispatch<React.SetStateAction<string>>;
+    
+    // New Unified Data Fields
+    positioningRules: PositioningRules[] | null;
+    setPositioningRules: React.Dispatch<React.SetStateAction<PositioningRules[] | null>>;
+    markAttachmentRules: MarkAttachmentRules | null;
+    setMarkAttachmentRules: React.Dispatch<React.SetStateAction<MarkAttachmentRules | null>>;
+    markAttachmentClasses: AttachmentClass[] | null;
+    setMarkAttachmentClasses: React.Dispatch<React.SetStateAction<AttachmentClass[] | null>>;
+    baseAttachmentClasses: AttachmentClass[] | null;
+    setBaseAttachmentClasses: React.Dispatch<React.SetStateAction<AttachmentClass[] | null>>;
+    recommendedKerning: RecommendedKerning[] | null;
+    setRecommendedKerning: React.Dispatch<React.SetStateAction<RecommendedKerning[] | null>>;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -40,6 +53,13 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [metrics, setMetrics] = useState<FontMetrics | null>(null);
     const [projectDataToRestore, setProjectDataToRestore] = useState<ProjectData | null>(null);
     const [projectName, setProjectName] = useState<string>('My Project');
+
+    // New Unified Data Fields
+    const [positioningRules, setPositioningRules] = useState<PositioningRules[] | null>(null);
+    const [markAttachmentRules, setMarkAttachmentRules] = useState<MarkAttachmentRules | null>(null);
+    const [markAttachmentClasses, setMarkAttachmentClasses] = useState<AttachmentClass[] | null>(null);
+    const [baseAttachmentClasses, setBaseAttachmentClasses] = useState<AttachmentClass[] | null>(null);
+    const [recommendedKerning, setRecommendedKerning] = useState<RecommendedKerning[] | null>(null);
 
     const allCharsByUnicode = useMemo(() => {
         if (!characterSets) return new Map<number, Character>();
@@ -66,7 +86,13 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         allCharsByUnicode,
         allCharsByName,
         projectDataToRestore, setProjectDataToRestore,
-        projectName, setProjectName
+        projectName, setProjectName,
+        
+        positioningRules, setPositioningRules,
+        markAttachmentRules, setMarkAttachmentRules,
+        markAttachmentClasses, setMarkAttachmentClasses,
+        baseAttachmentClasses, setBaseAttachmentClasses,
+        recommendedKerning, setRecommendedKerning
     };
 
     return (

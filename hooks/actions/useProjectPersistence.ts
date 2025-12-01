@@ -25,15 +25,23 @@ export const useProjectPersistence = (
     const { markPositioningMap } = usePositioning();
     const { state: rulesState, dispatch: rulesDispatch } = useRules();
     const { fontRules, isFeaEditMode, manualFeaCode, hasUnsavedRules } = rulesState;
-    const { projectName } = useProject();
+    
+    // Consume Unified Data from ProjectContext
+    const { 
+        projectName, 
+        positioningRules, 
+        markAttachmentRules, 
+        markAttachmentClasses, 
+        baseAttachmentClasses, 
+        recommendedKerning 
+    } = useProject();
 
     const [projectId, setProjectId] = useState<number | undefined>(initialProjectId);
     const [lastSavedState, setLastSavedState] = useState<string | null>(null);
     
-    // Optimization: Track dirty state with a boolean instead of expensive deep comparison on every render.
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-    // Optimization: Construct the project state ONLY when needed (Save/Export), not on every render.
+    // Update: Include all structural definitions in the saved project state
     const getProjectState = useCallback((): Omit<ProjectData, 'projectId' | 'savedAt'> | null => {
         if (!script || !settings || !metrics || !characterSets || fontRules === null) return null;
         return {
@@ -48,18 +56,27 @@ export const useProjectPersistence = (
             glyphs: Array.from(glyphDataMap.entries()),
             kerning: Array.from(kerningMap.entries()),
             markPositioning: Array.from(markPositioningMap.entries()),
+            
+            // New Fields
+            positioningRules: positioningRules || undefined,
+            markAttachmentRules: markAttachmentRules || undefined,
+            markAttachmentClasses: markAttachmentClasses || undefined,
+            baseAttachmentClasses: baseAttachmentClasses || undefined,
+            recommendedKerning: recommendedKerning || undefined,
+            groups: fontRules.groups || undefined,
+            guideFont: script.guideFont || undefined
         };
-    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, markPositioningMap, projectName]);
+    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning]);
 
-    // Detect changes cheaply by watching dependencies
     useEffect(() => {
         if (!isScriptDataLoading && lastSavedState !== null) {
             setHasUnsavedChanges(true);
         }
     }, [
-        // These are the dependencies that trigger a "change"
+        // Trigger dependencies
         glyphDataMap, kerningMap, markPositioningMap, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, projectName,
-        // Dependencies that shouldn't trigger change but are needed for logic
+        positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning,
+        // Logic dependencies
         isScriptDataLoading, lastSavedState
     ]);
 
@@ -67,7 +84,6 @@ export const useProjectPersistence = (
         const currentStateObj = getProjectState();
         if (!currentStateObj) return;
 
-        // Perform the expensive stringify only when we are actually attempting to save
         const currentStateString = JSON.stringify(currentStateObj);
         if (currentStateString === lastSavedState) {
             setHasUnsavedChanges(false);
@@ -90,7 +106,6 @@ export const useProjectPersistence = (
                 await dbService.updateProject(currentProjectId, projectWithId);
             }
 
-            // Invalidate font cache after any save.
             if (currentProjectId !== undefined) {
                 await dbService.deleteFontCache(currentProjectId);
             }
@@ -117,7 +132,7 @@ export const useProjectPersistence = (
         return () => { if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current); };
     }, [hasUnsavedChanges, isScriptDataLoading, script, settings, saveProjectToDB]);
 
-    // Initial Save State Effect - Sets the baseline for "clean" state
+    // Initial Save State Effect
     useEffect(() => {
         if (!isScriptDataLoading && lastSavedState === null) {
             const initialState = getProjectState();
@@ -138,7 +153,7 @@ export const useProjectPersistence = (
         setProjectId,
         lastSavedState,
         setLastSavedState,
-        getProjectState, // Expose the getter instead of the object
+        getProjectState,
         hasUnsavedChanges,
         saveProjectToDB,
         handleSaveToDB

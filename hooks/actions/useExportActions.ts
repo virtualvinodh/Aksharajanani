@@ -8,9 +8,10 @@ import { usePositioning } from '../../contexts/PositioningContext';
 import { useRules } from '../../contexts/RulesContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { exportToOtf } from '../../services/fontService';
 import * as dbService from '../../services/dbService';
-import { ProjectData, PositioningRules, RecommendedKerning, MarkAttachmentRules } from '../../types';
+import { ProjectData } from '../../types';
 import { useProgressCalculators } from '../useProgressCalculators';
 import { simpleHash } from '../../utils/stringUtils';
 
@@ -20,15 +21,10 @@ interface UseExportActionsProps {
     projectName: string;
     setIsAnimatingExport: React.Dispatch<React.SetStateAction<boolean>>;
     downloadTriggerRef: React.MutableRefObject<(() => void) | null>;
-    // State from Load/Other hooks that isn't in context but needed for calculation
-    recommendedKerning: RecommendedKerning[] | null;
-    positioningRules: PositioningRules[] | null;
-    markAttachmentRules: MarkAttachmentRules | null;
 }
 
 export const useExportActions = ({
     getProjectState, projectId, projectName, setIsAnimatingExport, downloadTriggerRef,
-    recommendedKerning, positioningRules, markAttachmentRules
 }: UseExportActionsProps) => {
     
     const { t } = useLocale();
@@ -40,6 +36,7 @@ export const useExportActions = ({
     const { markPositioningMap } = usePositioning();
     const { state: rulesState } = useRules();
     const { fontRules, isFeaEditMode, manualFeaCode } = rulesState;
+    const { positioningRules, markAttachmentRules, recommendedKerning } = useProject();
 
     const [isExporting, setIsExporting] = useState(false);
     const [feaErrorState, setFeaErrorState] = useState<{ error: string, blob: Blob } | null>(null);
@@ -54,7 +51,6 @@ export const useExportActions = ({
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        // Use the provided name (Project Name) for the file, sanitizing it for OS file systems
         const safeFileName = fileNameBase.replace(/[^a-z0-9\- ]/gi, '_').trim();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         a.download = `${safeFileName}_${timestamp}.otf`;
@@ -77,7 +73,6 @@ export const useExportActions = ({
         const a = document.createElement('a');
         a.href = url;
         
-        // Use Project Name for the JSON filename
         const safeFileName = projectName.replace(/[^a-z0-9\- ]/gi, '_').trim();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         a.download = `${safeFileName}_${timestamp}.json`;
@@ -86,6 +81,45 @@ export const useExportActions = ({
         
         layout.showNotification(t('projectSavedAsJson'));
     }, [settings, getProjectState, projectId, layout, t, projectName]);
+    
+    // NEW: Export as Template (Structure only, no paths)
+    const handleSaveTemplate = useCallback(async () => {
+        const projectState = getProjectState();
+        if (!settings || !projectState) return;
+
+        // Create a clean copy
+        const templateData: ProjectData = { ...projectState };
+        
+        // 1. Strip Glyph Paths
+        templateData.glyphs = templateData.glyphs.map(([unicode, _]) => [unicode, { paths: [] }]);
+        
+        // 2. Reset Positioning Vectors (Optional: we keep the logic but remove coordinate data to force re-calculation based on new glyphs?)
+        // Actually, if the user is making a template based on their adjustments, they might want to keep relative offsets.
+        // But offsets depend on bounding boxes. If shapes change, offsets are wrong.
+        // Safer to reset positioning map.
+        templateData.markPositioning = []; 
+        
+        // 3. Reset Kerning (Visual spacing depends on shapes)
+        templateData.kerning = [];
+        
+        // 4. Clean Metadata
+        delete templateData.projectId;
+        delete templateData.savedAt;
+        templateData.name = `${projectName} Template`;
+
+        const jsonString = JSON.stringify(templateData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        const safeFileName = projectName.replace(/[^a-z0-9\- ]/gi, '_').trim();
+        a.download = `${safeFileName}_Template.json`;
+        
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        layout.showNotification("Template saved successfully!");
+
+    }, [settings, getProjectState, projectName, layout]);
 
     const getCachedOrGeneratedFont = useCallback(async (): Promise<{ blob: Blob; feaError: string | null } | null> => {
         const projectState = getProjectState();
@@ -133,7 +167,6 @@ export const useExportActions = ({
                 setFeaErrorState({ error: feaError, blob });
                 layout.openModal('feaError');
             } else {
-                // Use Project Name for the OTF filename
                 downloadFontBlob(blob, projectName);
                 layout.showNotification(t('fontExportedSuccess'));
             }
@@ -197,6 +230,7 @@ export const useExportActions = ({
         startExportProcess,
         performExportAfterAnimation,
         handleSaveProject,
+        handleSaveTemplate, // Exposed
         handleTestClick,
         downloadFontBlob
     };

@@ -33,15 +33,13 @@ export const useAppActions = ({
     const { script } = useCharacter();
     const { settings, dispatch: settingsDispatch } = useSettings();
     const { workspace, setWorkspace } = layout;
-    const { projectName, setProjectName } = useProject();
+    const { projectName, setProjectName, positioningRules, recommendedKerning, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses } = useProject();
     
-    // Dependency Map (Ref) needs to be shared or passed around, typically managed where glyphs are managed
     const dependencyMap = useRef<Map<number, Set<number>>>(new Map());
-
-    // Forward declarations to solve ordering
     const [isScriptDataLoadingState, setIsScriptDataLoadingState] = useState(true);
 
     // 2. Persistence Hook
+    // Note: We no longer need to pass rules/positioning here, as useProjectPersistence consumes them from Context directly
     const {
         projectId, setProjectId, setLastSavedState, getProjectState,
         hasUnsavedChanges, handleSaveToDB
@@ -51,40 +49,35 @@ export const useAppActions = ({
     const {
         handleSaveGlyph, handleDeleteGlyph, handleAddGlyph, handleUnlockGlyph, 
         handleRelinkGlyph, handleUpdateDependencies, handleImportGlyphs, handleAddBlock, 
-        handleCheckGlyphExists, handleCheckNameExists,
-        setMarkAttachmentRules, markAttachmentRules
+        handleCheckGlyphExists, handleCheckNameExists
     } = useGlyphActions(dependencyMap, projectId);
 
     // 4. Load Hook
     const {
         isScriptDataLoading, scriptDataError, fileInputRef, isFeaOnlyMode,
-        recommendedKerning, positioningRules, markAttachmentClasses, baseAttachmentClasses,
         initializeProjectState, handleFileChange, handleLoadProject
     } = useProjectLoad({
         allScripts, 
         setProjectId, 
         setLastSavedState, 
-        setMarkAttachmentRules,
         dependencyMap
     });
 
-    // Sync the local loading state for Persistence to see
     React.useEffect(() => {
         setIsScriptDataLoadingState(isScriptDataLoading);
     }, [isScriptDataLoading]);
 
-    // Init project on mount
     React.useEffect(() => {
         initializeProjectState(projectDataToRestore);
     }, [projectDataToRestore, initializeProjectState]);
 
     // 5. Export Actions Hook
+    // Note: useExportActions also consumes from Context now
     const {
         isExporting, feaErrorState, testPageFont,
-        startExportProcess, handleSaveProject, handleTestClick, downloadFontBlob
+        startExportProcess, handleSaveProject, handleSaveTemplate, handleTestClick, downloadFontBlob
     } = useExportActions({
-        getProjectState, projectId, projectName, setIsAnimatingExport, downloadTriggerRef,
-        recommendedKerning, positioningRules, markAttachmentRules
+        getProjectState, projectId, projectName, setIsAnimatingExport, downloadTriggerRef
     });
 
     // --- Coordinator Logic (Navigation, Shortcuts) ---
@@ -122,7 +115,6 @@ export const useAppActions = ({
     // --- Session Snapshot Logic ---
     const [hasSnapshot, setHasSnapshot] = useState(false);
 
-    // Check for existing snapshots on mount or when project ID changes
     useEffect(() => {
         if (projectId) {
             dbService.getSnapshots(projectId).then(list => {
@@ -143,17 +135,11 @@ export const useAppActions = ({
             const fullData = { ...currentState, projectId };
             const timestamp = Date.now();
             try {
-                // 1. Get current list
                 const existing = await dbService.getSnapshots(projectId);
-                
-                // 2. Limit to 5 (Delete oldest if needed)
                 if (existing.length >= 5) {
-                    // Existing list is sorted desc (newest first), so pop the last one (oldest)
                     const oldest = existing[existing.length - 1];
                     if (oldest.id) await dbService.deleteSnapshot(oldest.id);
                 }
-
-                // 3. Save new
                 await dbService.saveSnapshot({
                     projectId,
                     data: fullData,
@@ -188,38 +174,22 @@ export const useAppActions = ({
         }
     }, [hasSnapshot, projectId, layout, handleRestoreAction]);
     
-    // --- Save As Logic ---
     const handleSaveAs = useCallback(async (newName: string) => {
         const currentState = getProjectState();
         if (!currentState) return;
-
-        // Update Project Name (Dashboard Name)
         currentState.name = newName;
-        // Note: We DO NOT change settings.fontName here. 
-        // The copy retains the internal font family name unless changed in settings.
-        
-        // Prepare for new DB entry (remove ID)
         const newData = {
             ...currentState,
             savedAt: new Date().toISOString()
         };
-
         try {
-            // Add as new project
             const newId = await dbService.addProject(newData);
-            
-            // Switch context
             setProjectId(newId);
             setProjectName(newName);
             setLastSavedState(JSON.stringify(newData));
-            
-            // Close modal and notify
             layout.closeModal();
             layout.showNotification(t('saveCopySuccess', { name: newName }), 'success');
-            
-            // Check snapshots for new ID (should be empty)
             setHasSnapshot(false);
-
         } catch (error) {
             console.error("Failed to save copy:", error);
             layout.showNotification(t('saveCopyFailed'), 'error');
@@ -227,22 +197,18 @@ export const useAppActions = ({
     }, [getProjectState, layout, setProjectId, setLastSavedState, setProjectName, t]);
 
     const openSaveAsModal = useCallback(() => {
-        // Default the input to the current project name (not font family name)
         layout.openModal('saveAs', {
             currentName: projectName,
             onConfirm: handleSaveAs
         });
     }, [layout, projectName, handleSaveAs]);
-
     
     const testText = settings?.customSampleText || '';
     const setTestText = (text: string) => {
         settingsDispatch({ type: 'UPDATE_SETTINGS', payload: s => s ? ({ ...s, customSampleText: text }) : null });
     };
 
-
     return {
-        // State
         isScriptDataLoading,
         scriptDataError,
         hasUnsavedChanges,
@@ -252,19 +218,17 @@ export const useAppActions = ({
         testPageFont,
         testText,
         setTestText,
-        
-        // Refs
         fileInputRef,
         
-        // Data
+        // Exposed Data (from context)
         recommendedKerning,
         positioningRules,
         markAttachmentRules,
         markAttachmentClasses,
         baseAttachmentClasses,
 
-        // Actions
         handleSaveProject,
+        handleSaveTemplate, // Exposed
         handleLoadProject,
         handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(e, hasUnsavedChanges, handleSaveToDB),
         handleChangeScriptClick,
@@ -273,7 +237,7 @@ export const useAppActions = ({
         handleDeleteGlyph,
         handleUnlockGlyph,
         handleRelinkGlyph,
-        handleUpdateDependencies, // Exposed
+        handleUpdateDependencies,
         handleEditorModeChange,
         downloadFontBlob,
         handleAddGlyph,
@@ -284,13 +248,9 @@ export const useAppActions = ({
         startExportProcess,
         handleSaveToDB,
         handleTestClick,
-        
-        // Snapshot
         handleTakeSnapshot,
         handleRestoreSnapshot,
         hasSnapshot,
-
-        // Save As
         openSaveAsModal
     };
 };
