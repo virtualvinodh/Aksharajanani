@@ -23,6 +23,7 @@ import BulkEditWorkspace from './components/BulkEditWorkspace';
 import TestCasePage from './components/TestCasePage';
 import ExportAnimation from './components/ExportAnimation';
 import ImportGlyphsModal from './components/ImportGlyphsModal';
+import SnapshotRestoreModal from './components/SnapshotRestoreModal';
 import { useLocale } from './contexts/LocaleContext';
 import { useLayout } from './contexts/LayoutContext';
 import { useCharacter } from './contexts/CharacterContext';
@@ -352,6 +353,13 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       {layout.activeModal?.name === 'feaError' && feaErrorState && <FeaErrorModal isOpen={true} onClose={() => { layout.closeModal(); }} onConfirm={() => { downloadFontBlob(feaErrorState.blob, settings.fontName); layout.closeModal(); }} errorMessage={feaErrorState.error} />}
       {layout.activeModal?.name === 'unsavedRules' && ( <UnsavedRulesModal isOpen={true} onClose={layout.closeModal} onDiscard={() => { layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} onSave={() => { handleSaveToDB(); layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} /> )}
       {layout.activeModal?.name === 'testCases' && <TestCasePage onClose={layout.closeModal} />}
+      {layout.activeModal?.name === 'snapshotRestore' && (
+        <SnapshotRestoreModal 
+            isOpen={true} 
+            onClose={layout.closeModal} 
+            {...layout.activeModal.props}
+        />
+      )}
       {layout.activeModal?.name === 'confirmSnapshotRestore' && (
         <ConfirmationModal 
             isOpen={true} 

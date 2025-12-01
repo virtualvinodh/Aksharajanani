@@ -139,9 +139,11 @@ export interface ProjectData {
 }
 
 export interface ProjectSnapshot {
+  id?: number; // Auto-incremented ID
   projectId: number;
   data: ProjectData;
   timestamp: number;
+  name?: string; // Optional user-friendly name
 }
 
 export interface FontMetrics {

@@ -3,7 +3,7 @@ import { ProjectData, ProjectSnapshot } from '../types';
 import { IDBPDatabase, openDB } from 'idb';
 
 const DB_NAME = 'FontCreatorDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4; // Upgraded version
 const STORE_NAME = 'projects';
 const CACHE_STORE_NAME = 'fontCache';
 const SNAPSHOT_STORE_NAME = 'snapshots';
@@ -29,10 +29,14 @@ const getDb = (): Promise<IDBPDatabase> => {
                         db.createObjectStore(CACHE_STORE_NAME, { keyPath: 'projectId' });
                     }
                 }
-                if (oldVersion < 3) {
-                    if (!db.objectStoreNames.contains(SNAPSHOT_STORE_NAME)) {
-                        db.createObjectStore(SNAPSHOT_STORE_NAME, { keyPath: 'projectId' });
+                // Version 3 added single snapshots, Version 4 upgrades to multi-snapshots
+                if (oldVersion < 4) {
+                    if (db.objectStoreNames.contains(SNAPSHOT_STORE_NAME)) {
+                        db.deleteObjectStore(SNAPSHOT_STORE_NAME);
                     }
+                    const snapshotStore = db.createObjectStore(SNAPSHOT_STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                    snapshotStore.createIndex('projectId', 'projectId', { unique: false });
+                    snapshotStore.createIndex('timestamp', 'timestamp', { unique: false });
                 }
             },
         });
@@ -80,7 +84,16 @@ export const deleteProject = async (projectId: number): Promise<void> => {
     const tx = db.transaction([STORE_NAME, CACHE_STORE_NAME, SNAPSHOT_STORE_NAME], 'readwrite');
     await tx.objectStore(STORE_NAME).delete(projectId);
     await tx.objectStore(CACHE_STORE_NAME).delete(projectId);
-    await tx.objectStore(SNAPSHOT_STORE_NAME).delete(projectId);
+    
+    // Delete all snapshots associated with this project
+    const snapshotStore = tx.objectStore(SNAPSHOT_STORE_NAME);
+    const index = snapshotStore.index('projectId');
+    let cursor = await index.openCursor(IDBKeyRange.only(projectId));
+    while (cursor) {
+        await cursor.delete();
+        cursor = await cursor.continue();
+    }
+
     await tx.done;
 };
 
@@ -111,19 +124,30 @@ export const deleteFontCache = async (projectId: number): Promise<void> => {
 
 // --- Snapshot Functions ---
 
-export const saveSnapshot = async (snapshot: ProjectSnapshot): Promise<void> => {
+export const saveSnapshot = async (snapshot: Omit<ProjectSnapshot, 'id'>): Promise<void> => {
     const db = await getDb();
     const tx = db.transaction(SNAPSHOT_STORE_NAME, 'readwrite');
-    await tx.store.put(snapshot);
+    await tx.store.add(snapshot); // Use add to generate new ID
     await tx.done;
 };
 
-export const getSnapshot = async (projectId: number): Promise<ProjectSnapshot | undefined> => {
+export const getSnapshots = async (projectId: number): Promise<ProjectSnapshot[]> => {
     const db = await getDb();
-    return db.get(SNAPSHOT_STORE_NAME, projectId);
+    const tx = db.transaction(SNAPSHOT_STORE_NAME, 'readonly');
+    const index = tx.store.index('projectId');
+    // Return all snapshots for this project, sorted by timestamp desc (newest first)
+    const snapshots: ProjectSnapshot[] = [];
+    // Using 'prev' direction on the index or sorting manually if needed.
+    // Since we didn't strictly index on timestamp compound, manual sort is safer here.
+    let cursor = await index.openCursor(IDBKeyRange.only(projectId));
+    while (cursor) {
+        snapshots.push(cursor.value);
+        cursor = await cursor.continue();
+    }
+    return snapshots.sort((a, b) => b.timestamp - a.timestamp);
 };
 
-export const deleteSnapshot = async (projectId: number): Promise<void> => {
+export const deleteSnapshot = async (snapshotId: number): Promise<void> => {
     const db = await getDb();
-    await db.delete(SNAPSHOT_STORE_NAME, projectId);
+    await db.delete(SNAPSHOT_STORE_NAME, snapshotId);
 };

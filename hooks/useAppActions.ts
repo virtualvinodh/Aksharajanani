@@ -118,20 +118,16 @@ export const useAppActions = ({
     }, [workspace, setWorkspace, script, settingsDispatch]);
 
     // --- Session Snapshot Logic ---
-    const [snapshotTimestamp, setSnapshotTimestamp] = useState<number | null>(null);
+    const [hasSnapshot, setHasSnapshot] = useState(false);
 
-    // Check for existing snapshot on mount or when project ID changes
+    // Check for existing snapshots on mount or when project ID changes
     useEffect(() => {
         if (projectId) {
-            dbService.getSnapshot(projectId).then(snapshot => {
-                if (snapshot) {
-                    setSnapshotTimestamp(snapshot.timestamp);
-                } else {
-                    setSnapshotTimestamp(null);
-                }
-            }).catch(err => console.error("Error fetching snapshot", err));
+            dbService.getSnapshots(projectId).then(list => {
+                setHasSnapshot(list.length > 0);
+            }).catch(err => console.error("Error checking snapshots", err));
         } else {
-            setSnapshotTimestamp(null);
+            setHasSnapshot(false);
         }
     }, [projectId]);
 
@@ -145,13 +141,24 @@ export const useAppActions = ({
             const fullData = { ...currentState, projectId };
             const timestamp = Date.now();
             try {
+                // 1. Get current list
+                const existing = await dbService.getSnapshots(projectId);
+                
+                // 2. Limit to 5 (Delete oldest if needed)
+                if (existing.length >= 5) {
+                    // Existing list is sorted desc (newest first), so pop the last one (oldest)
+                    const oldest = existing[existing.length - 1];
+                    if (oldest.id) await dbService.deleteSnapshot(oldest.id);
+                }
+
+                // 3. Save new
                 await dbService.saveSnapshot({
                     projectId,
                     data: fullData,
                     timestamp
                 });
-                setSnapshotTimestamp(timestamp);
-                layout.showNotification("Snapshot saved to database", 'success');
+                setHasSnapshot(true);
+                layout.showNotification("Snapshot saved to history", 'success');
             } catch (error) {
                 console.error("Failed to save snapshot:", error);
                 layout.showNotification("Failed to save snapshot", 'error');
@@ -159,33 +166,25 @@ export const useAppActions = ({
         }
     }, [getProjectState, layout, projectId]);
     
-    const confirmRestore = useCallback(async () => {
-         if (projectId) {
-            try {
-                const snapshot = await dbService.getSnapshot(projectId);
-                if (snapshot) {
-                    initializeProjectState(snapshot.data);
-                    layout.showNotification("Restored from snapshot", 'info');
-                    layout.closeModal();
-                } else {
-                     layout.showNotification("Snapshot not found", 'error');
-                     layout.closeModal();
-                }
-            } catch (error) {
-                 console.error("Failed to restore snapshot:", error);
-                 layout.showNotification("Failed to restore snapshot", 'error');
-            }
+    const handleRestoreAction = useCallback(async (data: ProjectData) => {
+        try {
+            initializeProjectState(data);
+            layout.showNotification("Restored from snapshot", 'info');
+            layout.closeModal();
+        } catch (error) {
+             console.error("Failed to restore snapshot:", error);
+             layout.showNotification("Failed to restore snapshot", 'error');
         }
-    }, [projectId, initializeProjectState, layout]);
+    }, [initializeProjectState, layout]);
 
     const handleRestoreSnapshot = useCallback(() => {
-        if (snapshotTimestamp) {
-            layout.openModal('confirmSnapshotRestore', {
-                timestamp: snapshotTimestamp,
-                onConfirm: confirmRestore
+        if (hasSnapshot && projectId) {
+            layout.openModal('snapshotRestore', {
+                projectId: projectId,
+                onRestore: handleRestoreAction
             });
         }
-    }, [snapshotTimestamp, layout, confirmRestore]);
+    }, [hasSnapshot, projectId, layout, handleRestoreAction]);
     
     const testText = settings?.customSampleText || '';
     const setTestText = (text: string) => {
@@ -240,6 +239,6 @@ export const useAppActions = ({
         // Snapshot
         handleTakeSnapshot,
         handleRestoreSnapshot,
-        hasSnapshot: !!snapshotTimestamp
+        hasSnapshot
     };
 };
