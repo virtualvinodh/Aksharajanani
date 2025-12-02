@@ -314,6 +314,7 @@
 	"ligatureOverrides": "Ligature Overrides",
 	"ligatureRules": "Ligature Rules",
 	"lsb": "LSB",
+	"manageRules": "Manage Rules",
 	"markAttachmentClasses": "Mark Attachment Classes",
 	"markAttachmentRules": "Manual Mark Attachment Rules",
 	"markChar": "Mark Char",
@@ -660,5 +661,6 @@
     "deleteGroup": "Delete Group",
     "groupName": "Group Name",
     "confirmDeleteGroup": "Are you sure you want to delete the group '{name}' and all its characters? This action cannot be undone.",
-    "cannotDeleteLastGroup": "Cannot delete the last group."
+    "cannotDeleteLastGroup": "Cannot delete the last group.",
+    "manageRules": "Manage Rules"
 }

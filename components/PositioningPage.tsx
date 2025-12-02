@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
-import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon } from '../constants';
+import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon, RulesIcon } from '../constants';
 import CombinationCard from './CombinationCard';
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, AttachmentClass } from '../types';
 import PositioningEditorPage from './PositioningEditorPage';
@@ -15,6 +15,7 @@ import { getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../services/gl
 import { updatePositioningAndCascade } from '../services/positioningService';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import Modal from './Modal';
+import PositioningRulesModal from './PositioningRulesModal';
 
 
 // Main Positioning Page Component
@@ -44,6 +45,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     const [reuseSourceItem, setReuseSourceItem] = useState<Character | null>(null);
     const [showIncompleteNotice, setShowIncompleteNotice] = useState(false);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+    const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
     
     const navContainerRef = useRef<HTMLDivElement>(null);
     const { visibility: showNavArrows, handleScroll } = useHorizontalScroll(navContainerRef);
@@ -686,9 +688,20 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     return (
         <div className="w-full h-full flex flex-col">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                <div className="flex justify-center items-center gap-4 mb-4">
-                    <button onClick={() => setViewBy('base')} className={`px-4 py-2 rounded-md font-semibold ${viewBy === 'base' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{t('viewByBase')}</button>
-                    <button onClick={() => setViewBy('mark')} className={`px-4 py-2 rounded-md font-semibold ${viewBy === 'mark' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{t('viewByMark')}</button>
+                <div className="flex justify-between items-center mb-4 relative">
+                    <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex gap-4">
+                        <button onClick={() => setViewBy('base')} className={`px-4 py-2 rounded-md font-semibold ${viewBy === 'base' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{t('viewByBase')}</button>
+                        <button onClick={() => setViewBy('mark')} className={`px-4 py-2 rounded-md font-semibold ${viewBy === 'mark' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{t('viewByMark')}</button>
+                    </div>
+                    <div className="ml-auto">
+                         <button 
+                            onClick={() => setIsRulesModalOpen(true)} 
+                            className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+                        >
+                            <RulesIcon className="w-4 h-4" />
+                            <span>{t('manageRules')}</span>
+                        </button>
+                    </div>
                 </div>
                 <div className="relative">
                     {showNavArrows.left && (
@@ -828,6 +841,11 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                     <p>{t('confirmResetMessage', { name: activeItem.name })}</p>
                 </Modal>
             )}
+            
+            <PositioningRulesModal 
+                isOpen={isRulesModalOpen}
+                onClose={() => setIsRulesModalOpen(false)}
+            />
         </div>
     );
 };

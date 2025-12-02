@@ -328,8 +328,8 @@ export const PositioningIcon = () => (
   </svg>
 );
 
-export const RulesIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+export const RulesIcon: React.FC<{ className?: string }> = ({ className = 'h-5 w-5' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <rect x="3" y="4" width="6" height="6" rx="1" />
       <rect x="15" y="14" width="6" height="6" rx="1" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 17h-1 M14 17h-1" />
