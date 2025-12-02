@@ -1,5 +1,5 @@
 
-import { useRef, useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { Path, FontMetrics, Segment, ImageTransform } from '../../types';
 import { generateId } from '../drawingTools/types';
 import { VEC } from '../../utils/vectorUtils';

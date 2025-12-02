@@ -64,7 +64,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   } = useDrawingCanvas({
     canvasRef, initialPaths, onPathsChange, tool, zoom, setZoom, viewOffset, setViewOffset,
     settings, backgroundImage, imageTransform, onImageTransformChange, selectedPathIds, onSelectionChange,
-    isImageSelected, onImageSelectionChange, calligraphyAngle, disableTransformations, transformMode, movementConstraint
+    isImageSelected, onImageSelectionChange, 
+    calligraphyAngle: calligraphyAngle as 45 | 30 | 15, // Explicit cast or pass
+    disableTransformations, 
+    transformMode: transformMode as 'all' | 'move-only',
+    movementConstraint: movementConstraint as 'horizontal' | 'vertical' | 'none'
   });
 
   const drawControlPoints = useCallback((ctx: CanvasRenderingContext2D, pathsToDraw: Path[], focusedId: string | null, selectedPoint: DraggedPointInfo | null) => {

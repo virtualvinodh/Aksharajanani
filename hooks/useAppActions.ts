@@ -33,13 +33,13 @@ export const useAppActions = ({
     const { script } = useCharacter();
     const { settings, dispatch: settingsDispatch } = useSettings();
     const { workspace, setWorkspace } = layout;
+    // Removed redundant state fields that are now accessed via context in children
     const { projectName, setProjectName, positioningRules, recommendedKerning, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses } = useProject();
     
     const dependencyMap = useRef<Map<number, Set<number>>>(new Map());
     const [isScriptDataLoadingState, setIsScriptDataLoadingState] = useState(true);
 
     // 2. Persistence Hook
-    // Note: We no longer need to pass rules/positioning here, as useProjectPersistence consumes them from Context directly
     const {
         projectId, setProjectId, setLastSavedState, getProjectState,
         hasUnsavedChanges, handleSaveToDB
@@ -72,7 +72,6 @@ export const useAppActions = ({
     }, [projectDataToRestore, initializeProjectState]);
 
     // 5. Export Actions Hook
-    // Note: useExportActions also consumes from Context now
     const {
         isExporting, feaErrorState, testPageFont,
         startExportProcess, handleSaveProject, handleSaveTemplate, handleTestClick, downloadFontBlob
@@ -220,7 +219,7 @@ export const useAppActions = ({
         setTestText,
         fileInputRef,
         
-        // Exposed Data (from context)
+        // Exposed Data
         recommendedKerning,
         positioningRules,
         markAttachmentRules,
@@ -228,7 +227,7 @@ export const useAppActions = ({
         baseAttachmentClasses,
 
         handleSaveProject,
-        handleSaveTemplate, // Exposed
+        handleSaveTemplate, 
         handleLoadProject,
         handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(e, hasUnsavedChanges, handleSaveToDB),
         handleChangeScriptClick,

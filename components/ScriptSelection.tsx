@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ScriptConfig, CharacterSet, CharacterDefinition, ProjectData, Character } from '../types';
+import { ScriptConfig, CharacterSet, CharacterDefinition, ProjectData, Character, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { AboutIcon, HelpIcon, LoadIcon, SwitchScriptIcon, SpinnerIcon, TrashIcon, DRAWING_CANVAS_SIZE } from '../constants';
 import LanguageSelector from './LanguageSelector';
@@ -51,7 +51,9 @@ const RecentProjectPreview: React.FC<{ project: ProjectData }> = ({ project }) =
     const PREVIEW_SIZE = 44;
 
     const previewChars = useMemo(() => {
-        const glyphDataMap = new Map(project.glyphs);
+        // Explicitly cast to [number, GlyphData][] to ensure Map is correctly typed
+        const glyphEntries = project.glyphs as [number, GlyphData][];
+        const glyphDataMap = new Map<number, GlyphData>(glyphEntries);
         if (!project.characterSets) return [];
 
         let drawnChars: Character[] = [];
@@ -87,7 +89,8 @@ const RecentProjectPreview: React.FC<{ project: ProjectData }> = ({ project }) =
     }, [project]);
 
     useEffect(() => {
-        const glyphDataMap = new Map(project.glyphs);
+        const glyphEntries = project.glyphs as [number, GlyphData][];
+        const glyphDataMap = new Map<number, GlyphData>(glyphEntries);
 
         previewChars.forEach((char, index) => {
             const canvas = canvasRefs[index].current;
@@ -639,50 +642,43 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                         <p className="font-semibold text-gray-700 dark:text-gray-300">&nbsp;</p>
                         <button
                             onClick={() => setIsUploadingScript(true)}
-                            className="w-full max-w-xs mx-auto px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                            className="w-full max-w-xs mx-auto px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                         >
-                            {t('loadCustomScript')}
+                            {t('uploadCustomScript')}
                         </button>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{t('scriptSelectionUploadDescription')}</p>
                     </div>
                 </div>
             </main>
-
-            {isVariantModalOpen && pendingScript && (
-                <ScriptVariantModal
-                    isOpen={isVariantModalOpen}
-                    onClose={() => {
-                        setIsVariantModalOpen(false);
-                        setPendingScript(null);
-                    }}
-                    onConfirm={handleConfirmVariants}
-                    script={pendingScript}
-                    variantGroups={variantGroups}
-                />
-            )}
             
-            {isBlockSelectorOpen && customScriptTemplate && (
-                <UnicodeBlockSelectorModal
-                    isOpen={isBlockSelectorOpen}
-                    onClose={() => setIsBlockSelectorOpen(false)}
-                    onSelectScript={onSelectScript}
-                    customScriptTemplate={customScriptTemplate}
-                    mode="createScript"
-                />
-            )}
-            
-            {projectToDelete && (
-                <DeleteProjectConfirmationModal
-                    isOpen={!!projectToDelete}
-                    onClose={() => setProjectToDelete(null)}
-                    onConfirm={handleConfirmDelete}
-                    projectName={projectToDelete.name || projectToDelete.settings.fontName}
-                />
-            )}
-
             <Footer />
+
+            {/* Modals */}
+            <ScriptVariantModal
+                isOpen={isVariantModalOpen}
+                onClose={() => { setIsVariantModalOpen(false); setPendingScript(null); }}
+                onConfirm={handleConfirmVariants}
+                script={pendingScript || scripts[0]}
+                variantGroups={variantGroups}
+            />
+            
+            <UnicodeBlockSelectorModal 
+                isOpen={isBlockSelectorOpen}
+                onClose={() => setIsBlockSelectorOpen(false)}
+                mode="createScript"
+                onSelectScript={onSelectScript}
+                customScriptTemplate={customScriptTemplate}
+            />
+
+             <DeleteProjectConfirmationModal
+                isOpen={!!projectToDelete}
+                onClose={() => setProjectToDelete(null)}
+                onConfirm={handleConfirmDelete}
+                projectName={projectToDelete?.name || projectToDelete?.settings.fontName || ''}
+            />
+
         </div>
     );
 };
 
-export default React.memo(ScriptSelection);
+export default ScriptSelection;

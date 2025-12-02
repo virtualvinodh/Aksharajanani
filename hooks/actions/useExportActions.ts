@@ -93,13 +93,10 @@ export const useExportActions = ({
         // 1. Strip Glyph Paths
         templateData.glyphs = templateData.glyphs.map(([unicode, _]) => [unicode, { paths: [] }]);
         
-        // 2. Reset Positioning Vectors (Optional: we keep the logic but remove coordinate data to force re-calculation based on new glyphs?)
-        // Actually, if the user is making a template based on their adjustments, they might want to keep relative offsets.
-        // But offsets depend on bounding boxes. If shapes change, offsets are wrong.
-        // Safer to reset positioning map.
+        // 2. Reset Positioning Vectors
         templateData.markPositioning = []; 
         
-        // 3. Reset Kerning (Visual spacing depends on shapes)
+        // 3. Reset Kerning
         templateData.kerning = [];
         
         // 4. Clean Metadata

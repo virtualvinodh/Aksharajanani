@@ -1,3 +1,4 @@
+import React from 'react';
 import { Point, Path, Tool, AppSettings, ImageTransform } from '../../types';
 import { BoundingBox } from '../../services/glyphRenderService';
 
@@ -56,6 +57,8 @@ export interface UseDrawingCanvasProps {
     disableTransformations?: boolean;
     transformMode?: 'all' | 'move-only';
     movementConstraint?: 'horizontal' | 'vertical' | 'none';
+    // New props for live preview
+    previewTransform?: any; // Avoiding circular dep or complex type here if possible, or import TransformState
 }
 
 export interface ToolHookProps extends UseDrawingCanvasProps {

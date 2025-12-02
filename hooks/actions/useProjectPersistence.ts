@@ -50,14 +50,14 @@ export const useProjectPersistence = (
             settings,
             metrics,
             characterSets,
-            fontRules,
+            fontRules, // fontRules is now kept in sync via RulesContext/ProjectContext unification
             isFeaEditMode,
             manualFeaCode,
             glyphs: Array.from(glyphDataMap.entries()),
             kerning: Array.from(kerningMap.entries()),
             markPositioning: Array.from(markPositioningMap.entries()),
             
-            // New Fields
+            // Unified Model Additions
             positioningRules: positioningRules || undefined,
             markAttachmentRules: markAttachmentRules || undefined,
             markAttachmentClasses: markAttachmentClasses || undefined,

@@ -91,7 +91,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       scriptDataError,
       hasUnsavedChanges,
       handleSaveProject,
-      handleSaveTemplate,
+      handleSaveTemplate, // Exposed from hook
       handleLoadProject,
       handleFileChange,
       handleChangeScriptClick,

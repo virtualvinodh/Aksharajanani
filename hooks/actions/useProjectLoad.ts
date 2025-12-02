@@ -70,23 +70,42 @@ export const useProjectLoad = ({
 
             const isStandardScript = allScripts.some(s => s.id === currentScript.id);
 
-            if (currentScript.characterSetData) {
+            // 1. Resolve Character and Positioning Definitions (From Project or Static)
+            // If the project has them embedded, use them. Otherwise fall back to script config/files.
+            
+            // Character Definitions
+            if (projectToLoad?.characterSets) {
+                // If project has character sets, treat them as the definition
+                 characterDefinitions = projectToLoad.characterSets;
+            } else if (currentScript.characterSetData) {
                 characterDefinitions = currentScript.characterSetData.filter(d => 'characters' in d);
-                positioningDefinitions = currentScript.characterSetData.filter(d => !('characters' in d));
             } else {
                 const charactersPath = `/data/characters_${currentScript.id}.json`;
                 const charResponse = await fetch(charactersPath);
                 if (!charResponse.ok) throw new Error(`Failed to load character set from ${charactersPath}`);
                 characterDefinitions = await charResponse.json();
+            }
 
-                const positioningPath = `/data/positioning_${currentScript.id}.json`;
-                const posResponse = await fetch(positioningPath);
-                positioningDefinitions = posResponse.ok ? await posResponse.json() : [];
+            // Positioning Definitions
+            // We collect these to process logic, but we'll prioritize ProjectData fields if present.
+            if (currentScript.characterSetData) {
+                 positioningDefinitions = currentScript.characterSetData.filter(d => !('characters' in d));
+            } else {
+                 const positioningPath = `/data/positioning_${currentScript.id}.json`;
+                 try {
+                    const posResponse = await fetch(positioningPath);
+                    positioningDefinitions = posResponse.ok ? await posResponse.json() : [];
+                 } catch {
+                     positioningDefinitions = [];
+                 }
             }
             
             const charDefinition = [...characterDefinitions, ...positioningDefinitions];
             
-            if (isStandardScript) {
+            // 2. Resolve Rules Data
+            if (projectToLoad?.fontRules) {
+                rulesData = projectToLoad.fontRules;
+            } else if (isStandardScript) {
                 const rulesPath = currentScript.rulesPath || `/data/rules_${currentScript.id}.json`;
                 const rulesFeaPath = currentScript.rulesFeaPath;
                 
@@ -111,7 +130,7 @@ export const useProjectLoad = ({
                 rulesData = currentScript.rulesData || {};
             }
 
-            // Data Migration for Ordered Feature Children
+            // Data Migration for Ordered Feature Children (Legacy support)
             const scriptTagForMigration = Object.keys(rulesData).find(key => key !== 'groups' && key !== 'lookups');
             if (scriptTagForMigration && rulesData[scriptTagForMigration]) {
                 for (const featureTag in rulesData[scriptTagForMigration]) {
@@ -134,8 +153,12 @@ export const useProjectLoad = ({
             const defaultCharSets = charDefinition.filter(i => 'characters' in i) as CharacterSet[];
             
             // PUA Assignment Logic
+            // We need to calculate this based on the final set of characters we are about to use.
             let puaCounter = 0xE000 - 1;
-            const allCharacterLists = [...defaultCharSets, ...(projectToLoad?.characterSets || [])].flatMap(set => set.characters);
+            // If project has characterSets, use them. Otherwise use defaults.
+            const finalCharacterSets = projectToLoad?.characterSets || defaultCharSets;
+            
+            const allCharacterLists = finalCharacterSets.flatMap(set => set.characters);
             allCharacterLists.forEach(char => {
                 const codepoint = char.unicode ?? (([...char.name].length === 1 ? char.name.codePointAt(0) : undefined));
                 if (codepoint !== undefined && codepoint >= 0xE000 && codepoint <= 0xF8FF) {
@@ -143,7 +166,9 @@ export const useProjectLoad = ({
                 }
             });
 
-            const processedCharSets = defaultCharSets.map(set => ({
+            // Only need to assign PUAs if we are using defaults (new project) or migrating.
+            // If loading a project, unicodes should be stable.
+            const processedCharSets = finalCharacterSets.map(set => ({
                 ...set,
                 characters: set.characters.map(char => {
                     if (char.unicode === undefined || char.unicode === null) {
@@ -158,19 +183,20 @@ export const useProjectLoad = ({
                     return char;
                 })
             }));
-
-            const finalCharacterSets = projectToLoad?.characterSets || processedCharSets;
             
             // Rebuild local lookups needed for expansion
             const allCharSetsByName = new Map<string, CharacterSet>();
-            finalCharacterSets.forEach(set => allCharSetsByName.set(set.nameKey, set));
-            const allCharacters = finalCharacterSets.flatMap(set => set.characters);
+            processedCharSets.forEach(set => allCharSetsByName.set(set.nameKey, set));
+            const allCharacters = processedCharSets.flatMap(set => set.characters);
             const allCharsByNameLocal = new Map(allCharacters.map(c => [c.name, c]));
 
             // Groups Expansion
+            // If project has groups in rules, use them. Otherwise merge defaults.
             const positioningGroups = (positioningDefinitions.find(i => 'groups' in i) as { groups: Record<string, string[]> } | undefined)?.groups || {};
             const rulesGroups = rulesData.groups || {};
+            // Prioritize project's groups if they exist within rulesData (which is set to project.fontRules above)
             const customGroups = {...positioningGroups, ...rulesGroups};
+            
             const expandedCustomGroups = new Map<string, string[]>();
 
             const resolveCustomGroup = (groupName: string, visited: Set<string> = new Set()): string[] => {
@@ -207,9 +233,30 @@ export const useProjectLoad = ({
             };
 
             const finalRulesData = { ...rulesData, groups: Object.fromEntries(expandedCustomGroups) };
-            rulesDispatch({ type: 'SET_FONT_RULES', payload: projectToLoad?.fontRules || finalRulesData });
+            rulesDispatch({ type: 'SET_FONT_RULES', payload: finalRulesData });
 
-            // Expand Rules & Definitions
+            // --- Hydrate Positioning & Attachment Rules ---
+            
+            // 1. Recommended Kerning
+            if (projectToLoad?.recommendedKerning) {
+                 setRecommendedKerning(projectToLoad.recommendedKerning);
+            } else {
+                const rawRecommendedKerning = (charDefinition.find(i => 'recommendedKerning' in i) as any)?.recommendedKerning || [];
+                const expandedKerning: RecommendedKerning[] = [];
+                const uniquePairs = new Set<string>();
+                rawRecommendedKerning.forEach(([left, right]: [string, string]) => {
+                    expandGroup(left).forEach(leftChar => expandGroup(right).forEach(rightChar => {
+                        const pairKey = `${leftChar}|${rightChar}`;
+                        if (!uniquePairs.has(pairKey)) {
+                            expandedKerning.push([leftChar, rightChar]);
+                            uniquePairs.add(pairKey);
+                        }
+                    }));
+                });
+                setRecommendedKerning(expandedKerning);
+            }
+
+            // 2. Expand Rules
             const expandMarkAttachmentRules = (rules: MarkAttachmentRules | null): MarkAttachmentRules | null => {
                 if (!rules) return null;
                 const expandedRules: MarkAttachmentRules = {};
@@ -238,28 +285,14 @@ export const useProjectLoad = ({
                 });
             };
 
-            const rawRecommendedKerning = (charDefinition.find(i => 'recommendedKerning' in i) as any)?.recommendedKerning || [];
-            const expandedKerning: RecommendedKerning[] = [];
-            const uniquePairs = new Set<string>();
-            rawRecommendedKerning.forEach(([left, right]: [string, string]) => {
-                expandGroup(left).forEach(leftChar => expandGroup(right).forEach(rightChar => {
-                    const pairKey = `${leftChar}|${rightChar}`;
-                    if (!uniquePairs.has(pairKey)) {
-                        expandedKerning.push([leftChar, rightChar]);
-                        uniquePairs.add(pairKey);
-                    }
-                }));
-            });
-            setRecommendedKerning(projectToLoad?.recommendedKerning || expandedKerning);
-
-            // Process Positioning Rules & Create Dynamic Ligatures
+            // 3. Process Positioning Rules
             const rawPositioningRules = (charDefinition.filter(i => 'positioning' in i) as any[])?.flatMap(i => i.positioning) || null;
-            if (rawPositioningRules) {
+            if (rawPositioningRules && !projectToLoad?.positioningRules) {
                 rawPositioningRules.forEach(rule => {
                     if (rule.base) rule.base = rule.base.flatMap(expandGroup);
                     if (rule.mark) rule.mark = rule.mark.flatMap(expandGroup);
                     if (rule.ligatureMap) {
-                        const expandedLigatureMap: { [base: string]: { [mark: string]: string } } = {};
+                         const expandedLigatureMap: { [base: string]: { [mark: string]: string } } = {};
                         for (const baseOrGroup in rule.ligatureMap) {
                             const baseNames = expandGroup(baseOrGroup);
                             const marksMap = rule.ligatureMap[baseOrGroup];
@@ -287,10 +320,25 @@ export const useProjectLoad = ({
                         rule.ligatureMap = expandedLigatureMap;
                     }
                 });
-                // Dynamic Ligature Creation
-                const scriptTag = Object.keys(rulesData).find(key => key !== 'groups' && key !== 'lookups');
-                if (scriptTag) {
-                    rawPositioningRules.forEach(rule => {
+            }
+            
+            // Create Dynamic Ligatures (if using default/static rules, or if project rules need expansion)
+            // Note: If projectToLoad is present, characterSets (including dynamic ones) should already be there.
+            // We only run this generation if we are initializing from static config or if the project is old.
+            
+            const activePositioningRules = projectToLoad?.positioningRules || rawPositioningRules;
+            const activeMarkAttachmentRules = projectToLoad?.markAttachmentRules || expandMarkAttachmentRules((charDefinition.find(i => 'markAttachment' in i) as any)?.markAttachment);
+
+            setMarkAttachmentRules(activeMarkAttachmentRules);
+            setMarkAttachmentClasses(projectToLoad?.markAttachmentClasses || expandAttachmentClass((charDefinition.find(i => 'markAttachmentClass' in i) as any)?.markAttachmentClass));
+            setBaseAttachmentClasses(projectToLoad?.baseAttachmentClasses || expandAttachmentClass((charDefinition.find(i => 'baseAttachmentClass' in i) as any)?.baseAttachmentClass));
+            setPositioningRules(activePositioningRules);
+
+            if (!projectToLoad?.characterSets) {
+                // Dynamic Ligature Creation - Only needed for new projects or when not loading from full save
+                 const scriptTag = Object.keys(rulesData).find(key => key !== 'groups' && key !== 'lookups');
+                if (scriptTag && activePositioningRules) {
+                    activePositioningRules.forEach(rule => {
                         if (rule.gsub) {
                             if (!rulesData[scriptTag][rule.gsub]) rulesData[scriptTag][rule.gsub] = {};
                             if (!rulesData[scriptTag][rule.gsub].liga) rulesData[scriptTag][rule.gsub].liga = {};
@@ -307,10 +355,10 @@ export const useProjectLoad = ({
                                         composite: componentNames, isCustom: true,
                                     };
                                     const dynamicSetNameKey = 'dynamicLigatures';
-                                    let dynamicSet = finalCharacterSets.find(s => s.nameKey === dynamicSetNameKey);
+                                    let dynamicSet = processedCharSets.find(s => s.nameKey === dynamicSetNameKey);
                                     if (!dynamicSet) {
                                         dynamicSet = { nameKey: dynamicSetNameKey, characters: [] };
-                                        finalCharacterSets.push(dynamicSet);
+                                        processedCharSets.push(dynamicSet);
                                     }
                                     dynamicSet.characters.push(newLigatureChar);
                                     allCharsByNameLocal.set(ligatureName, newLigatureChar);
@@ -321,22 +369,18 @@ export const useProjectLoad = ({
                 }
             }
             
-            setMarkAttachmentRules(projectToLoad?.markAttachmentRules || expandMarkAttachmentRules((charDefinition.find(i => 'markAttachment' in i) as any)?.markAttachment));
-            setMarkAttachmentClasses(projectToLoad?.markAttachmentClasses || expandAttachmentClass((charDefinition.find(i => 'markAttachmentClass' in i) as any)?.markAttachmentClass));
-            setBaseAttachmentClasses(projectToLoad?.baseAttachmentClasses || expandAttachmentClass((charDefinition.find(i => 'baseAttachmentClass' in i) as any)?.baseAttachmentClass));
-            setPositioningRules(projectToLoad?.positioningRules || rawPositioningRules);
-
-            // Update script with loaded/calculated data so resets work against the current context
+            // Update script config with the fully resolved character sets
+            // This ensures that later, if we look at script.characterSets, it's correct.
             const updatedScriptConfig = {
                 ...currentScript,
                 characterSetData: [
-                     ...finalCharacterSets,
+                     ...processedCharSets,
                      ...(currentScript.characterSetData?.filter(d => !('characters' in d)) || [])
                 ],
-                guideFont: projectToLoad?.guideFont || currentScript.guideFont // Prefer project's guide font if available
+                guideFont: projectToLoad?.guideFont || currentScript.guideFont
             };
             characterDispatch({ type: 'SET_SCRIPT', payload: updatedScriptConfig });
-            characterDispatch({ type: 'SET_CHARACTER_SETS', payload: finalCharacterSets });
+            characterDispatch({ type: 'SET_CHARACTER_SETS', payload: processedCharSets });
 
             // Build Dependency Map
             const newDependencyMap = new Map<number, Set<number>>();
@@ -360,9 +404,9 @@ export const useProjectLoad = ({
                 if (sampleTextResponse.ok) sampleText = await sampleTextResponse.text();
             } catch (e) { /* Ignore */ }
 
-            if (!sampleText && finalCharacterSets) {
+            if (!sampleText && processedCharSets) {
                 // Fallback generation logic if sample text missing
-                const allChars = finalCharacterSets.flatMap(cs => cs.characters);
+                const allChars = processedCharSets.flatMap(cs => cs.characters);
                 const basesAndLigs = allChars.filter(c => c.unicode !== undefined && (c.glyphClass === 'base' || c.glyphClass === 'ligature')).filter(c => c.name !== '◌');
                 
                 const withSpaces = basesAndLigs.map(c => c.name).join(' ');
@@ -370,7 +414,6 @@ export const useProjectLoad = ({
                 sampleText = `${withSpaces}\n\n${withoutSpaces}`;
             }
             
-            // Also update the script config to include the resolved sample text, so Reset buttons work
             if (sampleText && sampleText !== currentScript.sampleText) {
                 characterDispatch({ type: 'SET_SCRIPT', payload: { ...updatedScriptConfig, sampleText } });
             }
@@ -381,7 +424,6 @@ export const useProjectLoad = ({
                 const newSettings = { ...FONT_META_DEFAULTS, ...baseSettings, ...projectToLoad.settings };
                 newSettings.testPage = { ...currentScript.testPage, ...(newSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(newSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(newSettings.testPage?.lineHeight || {}) } };
                 
-                // Ensure customSampleText is populated if missing
                 if (!newSettings.customSampleText) {
                     newSettings.customSampleText = sampleText;
                 }
@@ -433,7 +475,9 @@ export const useProjectLoad = ({
             try {
                 const projectData: ProjectData = JSON.parse(event.target?.result as string);
                 const currentScript = scriptRef.current; // Use ref for current script check
-                if (projectData.scriptId && projectData.scriptId !== currentScript?.id) {
+                
+                // Bypass script check if the project contains character sets (self-contained)
+                if (projectData.scriptId && projectData.scriptId !== currentScript?.id && !projectData.characterSets) {
                     const loadedScript = allScripts.find(s => s.id === projectData.scriptId);
                     const loadedScriptName = loadedScript ? t(loadedScript.nameKey) : `'${projectData.scriptId}'`;
                     const currentScriptName = currentScript ? t(currentScript.nameKey) : 'unknown';

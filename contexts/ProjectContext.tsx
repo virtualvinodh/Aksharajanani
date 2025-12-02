@@ -64,7 +64,11 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     const allCharsByUnicode = useMemo(() => {
         if (!characterSets) return new Map<number, Character>();
         const map = new Map<number, Character>();
-        characterSets.flatMap(set => set.characters).forEach(char => map.set(char.unicode, char));
+        characterSets.flatMap(set => set.characters).forEach(char => {
+          if (char.unicode !== undefined) {
+            map.set(char.unicode, char);
+          }
+        });
         return map;
     }, [characterSets]);
 
