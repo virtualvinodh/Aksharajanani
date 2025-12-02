@@ -255,7 +255,7 @@ export const useGlyphActions = (
             
             glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev) => {
                 const next = new Map(prev);
-                dependentUnicodes.forEach(depUni => {
+                dependentUnicodes.forEach((depUni: number) => {
                     const depChar = allCharsByUnicode.get(depUni);
                     if (depChar && (depChar.link || depChar.composite)) {
                         const compositeData = generateCompositeGlyphData({

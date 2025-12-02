@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { AddIcon, EditIcon, TrashIcon } from '../../constants';
@@ -31,7 +32,7 @@ const GroupsPane: React.FC<GroupsPaneProps> = ({ groups, onSave, onDelete, chara
         <div className="space-y-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">Manage glyph groups that can be referenced in your FEA code using an '@' prefix (e.g., @virama). Groups defined here are separate from those in positioning.json.</p>
             
-            {Object.entries(groups).map(([name, members]) => (
+            {Object.entries(groups).map(([name, members]: [string, string[]]) => (
                 editingGroupKey === name ? (
                     <GroupEditor
                         key={name}

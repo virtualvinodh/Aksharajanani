@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import Modal from './Modal';
@@ -88,12 +89,12 @@ const UnicodeBlockSelectorModal: React.FC<UnicodeBlockSelectorModalProps> = ({
     if (selectedBlocks.size === 0) return;
 
     const selectedBlockObjects = blocks.filter(b => selectedBlocks.has(b.name));
-    const allCodepoints = selectedBlockObjects.flatMap(block => getAssignedCodepointsInBlock(block));
+    const allCodepoints: number[] = selectedBlockObjects.flatMap(block => getAssignedCodepointsInBlock(block));
     
     const uniqueCodepoints = [...new Set(allCodepoints)];
 
     const allCharacters: Character[] = uniqueCodepoints
-      .filter(cp => (mode === 'addBlocks' && onCheckExists) ? !onCheckExists(cp) : true)
+      .filter((cp: number) => (mode === 'addBlocks' && onCheckExists) ? !onCheckExists(cp) : true)
       .map(cp => {
         const category = UnicodeProperties.getCategory(cp);
         const glyphClass = (category === 'Mn' || category === 'Mc' || category === 'Me') ? 'mark' : 'base';

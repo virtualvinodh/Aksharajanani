@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
@@ -133,7 +134,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
                     unicode: targetChar.unicode, // IMPORTANT: Use target project's unicode
                     name: sourceName,
                     sourceGlyph: sourceGlyph,
-                    targetIsDrawn: isGlyphDrawn(currentGlyphData.get(targetChar.unicode)),
+                    targetIsDrawn: isGlyphDrawn(currentGlyphData.get(targetChar.unicode) as GlyphData | undefined),
                     targetCharExists: true,
                 });
             }

@@ -653,5 +653,12 @@
     "fontFamily": "Font Family",
     "upm": "Units Per Em",
     "ascender": "Ascender",
-    "descender": "Descender"
+    "descender": "Descender",
+
+    "newGroup": "New Group",
+    "renameGroup": "Rename Group",
+    "deleteGroup": "Delete Group",
+    "groupName": "Group Name",
+    "confirmDeleteGroup": "Are you sure you want to delete the group '{name}' and all its characters? This action cannot be undone.",
+    "cannotDeleteLastGroup": "Cannot delete the last group."
 }

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Character, GlyphData, FontMetrics, CharacterSet, KerningMap, RecommendedKerning, AppSettings } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -64,8 +65,8 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
 
     const drawnCharacters = useMemo(() => {
         return Array.from(allCharsByUnicode.values())
-            .filter(char => !char.hidden && isGlyphDrawn(char))
-            .sort((a,b) => a.unicode! - b.unicode!);
+            .filter((char: Character) => !char.hidden && isGlyphDrawn(char))
+            .sort((a: Character, b: Character) => (a.unicode || 0) - (b.unicode || 0));
     }, [allCharsByUnicode, isGlyphDrawn]);
     
     const areAllRecGlyphsDrawn = useMemo(() => {

@@ -106,7 +106,7 @@
 	"copiedSelection": "தேர்வு கிளிப்போர்டுக்கு நகலெடுக்கப்பட்டது.",
 	"cornerSmoothing": "மூலை மென்மையாக்கம்",
 	"createFromBlocks": "தொகுதிகளிலிருந்து உருவாக்கு",
-	"createScript": "புதிய காலி திட்டம்",
+	"createScript": "புதிய காலி திட்ட",
 	"createScriptTitle": "காட்சி எழுத்துமுறை உருவாக்குநர்",
 	"customBlockFont": "தனிப்பயன் தொகுதி எழுத்துரு",
 	"customCharacters": "தனிப்பயன் எழுத்துக்கள்",
@@ -600,7 +600,7 @@
 	"scriptLao": "லாவோ",
 	"scriptThai": "தாய்",
 	"scriptGurmukhi": "Gurmukhi",
-  "fontMetaLicenseURL": "ஃபாண்ட் காப்புரிமை பக்கம்",
+    "fontMetaLicenseURL": "ஃபாண்ட் காப்புரிமை பக்கம்",
 	"templateChars": "Template Characters",
 	"subCons": "Sub. Cons",
 	"subConsAdd": "Sub. Cons Add.",
@@ -636,5 +636,12 @@
     "fontFamily": "எழுத்துரு பெயர்",
     "upm": "ஒரு Em-க்கான அலகுகள்",
     "ascender": "ஏற்றம்",
-    "descender": "இறக்கம்"
+    "descender": "இறக்கம்",
+
+    "newGroup": "புதிய குழு",
+    "renameGroup": "குழுவை மறுபெயரிடுக",
+    "deleteGroup": "குழுவை நீக்கு",
+    "groupName": "குழு பெயர்",
+    "confirmDeleteGroup": "'{name}' குழுவையும் அதன் அனைத்து எழுத்துக்களையும் நீக்க விரும்புகிறீர்களா என்பது உறுதியா? இதைச் செயல்தவிர்க்க முடியாது.",
+    "cannotDeleteLastGroup": "கடைசி குழுவை நீக்க முடியாது."
 }
