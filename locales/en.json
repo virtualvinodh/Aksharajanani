@@ -106,11 +106,12 @@
 	"copiedSelection": "Selection copied to clipboard.",
 	"cornerSmoothing": "Corner Smoothing",
 	"createFromBlocks": "Create from Blocks",
-	"createScript": "Create Script",
+	"createScript": "New Empty Project",
 	"createScriptTitle": "Visual Script Creator",
 	"customBlockFont": "Custom Block Font",
 	"customCharacters": "Custom Characters",
 	"customScriptLoaderTitle": "Load Custom Script from Files",
+	"customProject": "Custom Project",
 	"cut": "Cut",
 	"cutSelection": "Selection cut to clipboard.",
 	"debugKerning": "Debug Kerning Bounding Boxes",
@@ -458,7 +459,7 @@
 	"scriptNameLabel": "Script Name",
 	"scriptPortugese": "Portuguese",
 	"scriptPortugeseMessage": "Portuguese alphabet with tildes, cedilla, and accents.",
-	"scriptSelectionCreateDescription": "Build a script definition from scratch.",
+	"scriptSelectionCreateDescription": "Start a new blank project and define it yourself.",
 	"scriptSelectionSubtitle": "From Your Hand to a Working Font in Minutes",
 	"scriptSelectionUploadDescription": "Upload your own script definition files.",
 	"scriptSinhala": "Sinhala",
@@ -644,5 +645,13 @@
     "snapshotRestoreFailed": "Failed to restore snapshot",
     "saveCopySuccess": "Saved copy as \"{name}\"",
     "saveCopyFailed": "Failed to save copy",
-    "exportTemplate": "Export Template"
+    "exportTemplate": "Export Template",
+    
+    "startNewProject": "Start New Project",
+    "newProjectTitle": "New Empty Project",
+    "newProjectDesc": "Start a completely blank font project.",
+    "fontFamily": "Font Family",
+    "upm": "Units Per Em",
+    "ascender": "Ascender",
+    "descender": "Descender"
 }

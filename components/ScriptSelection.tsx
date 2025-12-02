@@ -2,11 +2,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ScriptConfig, CharacterSet, CharacterDefinition, ProjectData, Character, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { AboutIcon, HelpIcon, LoadIcon, SwitchScriptIcon, SpinnerIcon, TrashIcon, DRAWING_CANVAS_SIZE } from '../constants';
+import { AboutIcon, HelpIcon, LoadIcon, SwitchScriptIcon, SpinnerIcon, TrashIcon, DRAWING_CANVAS_SIZE, AddIcon } from '../constants';
 import LanguageSelector from './LanguageSelector';
 import Footer from './Footer';
 import { useLayout } from '../contexts/LayoutContext';
-import ScriptCreator from './ScriptCreator';
+// import ScriptCreator from './ScriptCreator'; // Deprecated for Phase 4 removal
 import CustomScriptLoader from './CustomScriptLoader';
 import ScriptVariantModal, { VariantGroup } from './ScriptVariantModal';
 import UnicodeBlockSelectorModal from './UnicodeBlockSelectorModal';
@@ -15,6 +15,7 @@ import DeleteProjectConfirmationModal from './DeleteProjectConfirmationModal';
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths } from '../services/glyphRenderService';
 import { isGlyphDrawn } from '../utils/glyphUtils';
+import NewProjectModal, { NewProjectData } from './NewProjectModal';
 
 interface ScriptSelectionProps {
     scripts: ScriptConfig[];
@@ -130,9 +131,10 @@ const RecentProjectPreview: React.FC<{ project: ProjectData }> = ({ project }) =
 const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScript, onShowAbout, onShowHelp }) => {
     const { t } = useLocale();
     const { showNotification } = useLayout();
-    const [isCreatingScript, setIsCreatingScript] = useState(false);
+    const [isCreatingScript, setIsCreatingScript] = useState(false); // Keeping for now but unused in UI
     const [isUploadingScript, setIsUploadingScript] = useState(false);
     const [includeLatin, setIncludeLatin] = useState(false);
+    const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
@@ -239,6 +241,25 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                 guideFont: customScriptTemplate.guideFont,
                 testPage: customScriptTemplate.testPage,
             };
+        } else if (!scriptToLoad && project.scriptId?.startsWith('project_')) {
+             // Handle "Empty Project" style custom scripts
+             if (!customScriptTemplate) {
+                  showNotification('Could not load project: base template missing.', 'error');
+                  return;
+             }
+             scriptToLoad = {
+                ...customScriptTemplate,
+                id: project.scriptId,
+                nameKey: "customProject",
+                sampleText: "",
+                characterSetData: project.characterSets || [],
+                rulesData: project.fontRules || { 'dflt': {} },
+                metrics: project.metrics || customScriptTemplate.metrics,
+                defaults: { ...customScriptTemplate.defaults, ...project.settings },
+                grid: customScriptTemplate.grid,
+                guideFont: project.guideFont || customScriptTemplate.guideFont,
+                testPage: customScriptTemplate.testPage,
+             };
         }
 
         if (scriptToLoad) {
@@ -381,6 +402,91 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
         setPendingScript(null);
         startProject(finalScript);
     };
+    
+    const handleCreateEmptyProject = async (data: NewProjectData) => {
+        const { projectName, fontFamily, upm, ascender, descender, includeLatin } = data;
+        
+        let charDefs: CharacterDefinition[] = [];
+        
+        // Always include basic characters (numbers etc) if available, or at least ensure an empty structure
+        try {
+             const res = await fetch('/data/characters_basic.json');
+             if (res.ok) {
+                 const basicData = await res.json();
+                 charDefs = [...charDefs, ...basicData];
+             }
+        } catch(e) { console.error("Failed to fetch basic characters", e); }
+
+        if (includeLatin) {
+            try {
+                const res = await fetch('/data/characters_latin.json');
+                if (res.ok) {
+                    const latinData = await res.json();
+                    charDefs = [...charDefs, ...latinData];
+                }
+            } catch(e) { console.error("Failed to fetch Latin characters", e); }
+        }
+        
+        // Construct a new ScriptConfig based on the Latin template but customized
+        // We use the Latin template as a base for grid config, test page settings, etc.
+        const baseTemplate = customScriptTemplate || scripts[0];
+        
+        const newScript: ScriptConfig = {
+            ...baseTemplate,
+            id: `project_${Date.now()}`,
+            nameKey: 'customProject',
+            metrics: {
+                unitsPerEm: upm,
+                ascender: ascender,
+                descender: descender,
+                defaultAdvanceWidth: 600,
+                // Map standard font metrics to canvas visual guides (0-1000 range)
+                // This is approximate for visual editor guidance
+                topLineY: 300, 
+                baseLineY: 700,
+                styleName: 'Regular',
+                spaceAdvanceWidth: upm / 4,
+                defaultLSB: 50,
+                defaultRSB: 50
+            },
+            defaults: {
+                fontName: fontFamily,
+                strokeThickness: 20,
+                pathSimplification: 0.5,
+                showGridOutlines: true,
+                isAutosaveEnabled: true,
+                editorMode: 'simple',
+                isPrefillEnabled: true
+            },
+            characterSetData: charDefs,
+            rulesData: { 'DFLT': {} },
+            sampleText: "", // Will be auto-generated if empty
+        };
+        
+        // Set the project name (for dashboard) by passing it via a specialized call or relying on the fact
+        // that useProjectLoad sets the project name from loaded data.
+        // Since we are starting fresh, we need to inject this into the initial project state logic.
+        // However, startProject takes a ScriptConfig.
+        // We will modify the startProject flow in App.tsx or useProjectLoad to handle an initial project name if needed,
+        // but for now, the user can rename it in the header.
+        // Better: We can pass a "mock" project data to onSelectScript if we want to pre-fill metadata.
+        
+        const initialProjectData: ProjectData = {
+             settings: { 
+                 ...newScript.defaults, 
+                 fontName: fontFamily,
+                 contrast: newScript.defaults.contrast ?? 1.0 
+             },
+             name: projectName, // This sets the dashboard name
+             glyphs: [],
+             scriptId: newScript.id,
+             characterSets: [], // Will be populated from script config by loader
+             metrics: newScript.metrics
+        };
+        
+        onSelectScript(newScript, initialProjectData);
+        setIsNewProjectModalOpen(false);
+    };
 
     const handleLoadProjectClick = () => {
         fileInputRef.current?.click();
@@ -400,6 +506,9 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                     const scriptToLoad = scripts.find(s => s.id === projectData.scriptId);
                     if (scriptToLoad) {
                         onSelectScript(scriptToLoad, projectData);
+                    } else if (projectData.scriptId.startsWith('custom_') || projectData.scriptId.startsWith('project_')) {
+                         // Handle custom scripts loaded from file
+                         handleProjectClick(projectData);
                     } else {
                         showNotification(`Error: Project file is for a script ('${projectData.scriptId}') that is not available in this version of the app.`, 'error');
                     }
@@ -452,6 +561,8 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
         }
     };
     
+    /* 
+    // Deprecated ScriptCreator logic
     if (isCreatingScript) {
         return (
             <ScriptCreator 
@@ -461,6 +572,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
             />
         );
     }
+    */
     
     if (isUploadingScript) {
         return (
@@ -512,7 +624,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                          ) : (
                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                  {recentProjects.map(p => {
-                                     const scriptForSubtitle = scripts.find(s => s.id === p.scriptId) || (p.scriptId?.startsWith('custom_blocks_') ? { nameKey: 'customBlockFont' } : { nameKey: '' });
+                                     const scriptForSubtitle = scripts.find(s => s.id === p.scriptId) || (p.scriptId?.startsWith('custom_blocks_') ? { nameKey: 'customBlockFont' } : (p.scriptId?.startsWith('project_') ? { nameKey: 'customProject' } : { nameKey: '' }));
                                      const isDeleteVisible = longPressedProjectId === p.projectId;
                                      // Use the new 'name' field if available, otherwise fallback to fontName for backward compatibility
                                      const displayName = p.name || p.settings.fontName;
@@ -572,6 +684,21 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                         </label>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                        {/* New Empty Project Button */}
+                        <button
+                            onClick={() => setIsNewProjectModalOpen(true)}
+                            type="button"
+                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-indigo-600 dark:text-indigo-400"
+                        >
+                             <div className="script-card-char group-hover:scale-110 transition-transform duration-200 mb-2" aria-hidden="true">
+                                <AddIcon className="w-12 h-12" />
+                            </div>
+                            <div className="mt-2">
+                                <h3 className="text-lg font-bold">{t('createScript')}</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('newProjectDesc')}</p>
+                            </div>
+                        </button>
+
                         {scripts.map(script => (
                             <button 
                                 key={script.id} 
@@ -613,7 +740,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                     </div>
                 </div>
 
-                <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-8 items-start text-center border-t border-gray-200 dark:border-gray-700 pt-10">
+                <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 items-start text-center border-t border-gray-200 dark:border-gray-700 pt-10">
                     {/* Secondary Action */}
                     <div className="space-y-4">
                         <p className="font-semibold text-gray-700 dark:text-gray-300">{t('returningUser')}</p>
@@ -628,18 +755,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
 
                     {/* Advanced Actions */}
                     <div className="space-y-4">
-                         <p className="font-semibold text-gray-700 dark:text-gray-300">{t('advanced')}</p>
-                         <button
-                            onClick={() => setIsCreatingScript(true)}
-                            className="w-full max-w-xs mx-auto px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
-                        >
-                            {t('createScript')}
-                        </button>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{t('scriptSelectionCreateDescription')}</p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <p className="font-semibold text-gray-700 dark:text-gray-300">&nbsp;</p>
+                        <p className="font-semibold text-gray-700 dark:text-gray-300">{t('advanced')}</p>
                         <button
                             onClick={() => setIsUploadingScript(true)}
                             className="w-full max-w-xs mx-auto px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
@@ -668,6 +784,12 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                 mode="createScript"
                 onSelectScript={onSelectScript}
                 customScriptTemplate={customScriptTemplate}
+            />
+            
+            <NewProjectModal 
+                isOpen={isNewProjectModalOpen}
+                onClose={() => setIsNewProjectModalOpen(false)}
+                onConfirm={handleCreateEmptyProject}
             />
 
              <DeleteProjectConfirmationModal
