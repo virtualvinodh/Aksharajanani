@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -34,7 +34,19 @@ export const useGlyphActions = (
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
     const { markAttachmentRules } = useProject();
 
-    const handleSaveGlyph = useCallback((
+    // Track mounting state to cancel async operations if the user leaves the project
+    const isMounted = useRef(true);
+    useEffect(() => {
+        isMounted.current = true;
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
+
+    // Helper for async time-slicing
+    const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
+
+    const handleSaveGlyph = useCallback(async (
         unicode: number,
         newGlyphData: GlyphData,
         newBearings: { lsb?: number; rsb?: number },
@@ -60,28 +72,29 @@ export const useGlyphActions = (
         }
 
         // 2. Prepare new data map (working copy)
-        const newGlyphDataMap = new Map(glyphDataMap);
+        // We do NOT create a full clone here for the final dispatch if we are doing async work,
+        // because the state might change while we calculate.
         
-        // Apply updates to current glyph in the working copy
+        // Apply updates to current glyph immediately
         if (hasPathChanges) {
-            newGlyphDataMap.set(unicode, newGlyphData);
+             // Update just this one glyph immediately
+             glyphDataDispatch({ 
+                 type: 'UPDATE_MAP', 
+                 payload: (prev) => new Map(prev).set(unicode, newGlyphData) 
+             });
         }
-        // Bearings are metadata, handled separately via characterDispatch (which now updates ProjectContext directly)
+        // Bearings are metadata, handled separately via characterDispatch
         if (hasBearingChanges) {
             characterDispatch({ type: 'UPDATE_CHARACTER_BEARINGS', payload: { unicode, ...newBearings } });
         }
 
-        // 3. If this is a DRAFT (Autosave), dispatch and stop.
+        // 3. If this is a DRAFT (Autosave), stop here.
         if (isDraft) {
-            if (hasPathChanges) {
-                glyphDataDispatch({ type: 'SET_MAP', payload: newGlyphDataMap });
-            }
             if (onSuccess) onSuccess();
             return;
         }
 
-        // 4. COMMIT Logic - Recursive Cascade
-        let totalUpdatedCount = 0;
+        // 4. COMMIT Logic - Recursive Cascade (Async)
         
         // Check for immediate dependents
         const immediateDependents = dependencyMap.current.get(unicode);
@@ -91,7 +104,9 @@ export const useGlyphActions = (
         markPositioningMap.forEach((_, key) => {
             const [baseUnicode, markUnicode] = key.split('-').map(Number);
             if (baseUnicode === unicode || markUnicode === unicode) {
-                if (isGlyphDrawn(newGlyphDataMap.get(baseUnicode)) && isGlyphDrawn(newGlyphDataMap.get(markUnicode))) {
+                // Use the NEW glyph data for the check
+                if (isGlyphDrawn(baseUnicode === unicode ? newGlyphData : glyphDataMap.get(baseUnicode)) && 
+                    isGlyphDrawn(markUnicode === unicode ? newGlyphData : glyphDataMap.get(markUnicode))) {
                     positionedPairCount++;
                 }
             }
@@ -100,129 +115,161 @@ export const useGlyphActions = (
         const hasDependents = (immediateDependents && immediateDependents.size > 0) || positionedPairCount > 0;
 
         if (hasDependents) {
-            // Snapshot for Undo
-            const glyphDataSnapshot = new Map(glyphDataMap);
-            const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
-            const markPositioningSnapshot = new Map(markPositioningMap.entries());
+            // Show "Processing" notification
+            layout.showNotification(t('updatingDependents', { count: (immediateDependents?.size || 0) + positionedPairCount }), 'info', { duration: 10000 });
+
+            // Defer heavy calculation to next tick to let UI render the immediate save
+            setTimeout(async () => {
+                if (!isMounted.current) return; // Cancel if unmounted
+
+                const updates = new Map<number, GlyphData>();
+                let totalUpdatedCount = 0;
+
+                // BFS Traversal
+                const queue: number[] = [unicode];
+                const visited = new Set<number>([unicode]);
+                
+                // We need a "read-only" view of the data that includes our recent manual save
+                // for calculation purposes.
+                const calculationSourceMap = new Map(glyphDataMap);
+                calculationSourceMap.set(unicode, newGlyphData);
+
+                const BATCH_SIZE = 5;
+                let processedInBatch = 0;
+
+                while (queue.length > 0) {
+                    if (!isMounted.current) return; // Check cancel token inside loop
+
+                    const currentSourceUnicode = queue.shift()!;
+                    const currentDependents = dependencyMap.current.get(currentSourceUnicode);
+
+                    if (!currentDependents) continue;
+
+                    for (const depUnicode of currentDependents) {
+                        if (visited.has(depUnicode)) continue;
+
+                        const dependentChar = allCharsByUnicode.get(depUnicode);
+                        // Also check 'composite' for pre-filled static composites that need regeneration on source change
+                        if (!dependentChar || (!dependentChar.link && !dependentChar.composite)) continue;
             
-            const undoChanges = () => {
-                glyphDataDispatch({ type: 'SET_MAP', payload: glyphDataSnapshot });
-                characterDispatch({ type: 'SET_CHARACTER_SETS', payload: characterSetsSnapshot });
-                positioningDispatch({ type: 'SET_MAP', payload: markPositioningSnapshot });
-                layout.showNotification(t('glyphUpdateReverted'), 'info');
-            };
-
-            // BFS Traversal
-            const queue: number[] = [unicode];
-            const visited = new Set<number>([unicode]);
-
-            while (queue.length > 0) {
-                const currentSourceUnicode = queue.shift()!;
-                const currentDependents = dependencyMap.current.get(currentSourceUnicode);
-
-                if (!currentDependents) continue;
-
-                currentDependents.forEach(depUnicode => {
-                    if (visited.has(depUnicode)) return;
-
-                    const dependentChar = allCharsByUnicode.get(depUnicode);
-                    if (!dependentChar || !dependentChar.link) return;
-        
-                    const dependentGlyphData = newGlyphDataMap.get(depUnicode);
+                        // We use the map from start of transaction + accumulated updates
+                        // This ensures consistency within the cascade
+                        const dependentGlyphData = calculationSourceMap.get(depUnicode);
+                        let resultData: GlyphData | null = null;
+                        
+                        // Case A: Not drawn yet -> Full Generate
+                        if (!dependentGlyphData || !isGlyphDrawn(dependentGlyphData)) {
+                             const regenerated = generateCompositeGlyphData({ 
+                                character: dependentChar, 
+                                allCharsByName, 
+                                allGlyphData: calculationSourceMap, 
+                                settings: settings!, 
+                                metrics: metrics!, 
+                                markAttachmentRules, 
+                                allCharacterSets: characterSets! 
+                            });
+                            if(regenerated) {
+                                resultData = regenerated;
+                            }
+                        }
+                        // Case B: Smart Update
+                        else {
+                            const indicesToUpdate: number[] = [];
+                            const components = dependentChar.link || dependentChar.composite || [];
+                            components.forEach((name, index) => {
+                                if (allCharsByName.get(name)?.unicode === currentSourceUnicode) {
+                                    indicesToUpdate.push(index);
+                                }
+                            });
                     
-                    // Case A: Not drawn yet -> Full Generate
-                    if (!dependentGlyphData || !isGlyphDrawn(dependentGlyphData)) {
-                         const regenerated = generateCompositeGlyphData({ 
-                            character: dependentChar, 
-                            allCharsByName, 
-                            allGlyphData: newGlyphDataMap, 
-                            settings: settings!, 
-                            metrics: metrics!, 
-                            markAttachmentRules, 
-                            allCharacterSets: characterSets! 
-                        });
-                        if(regenerated) {
-                            newGlyphDataMap.set(depUnicode, regenerated);
+                            if (indicesToUpdate.length > 0) {
+                                let tempPaths = dependentGlyphData.paths;
+                                const strokeThickness = settings?.strokeThickness ?? 1;
+                                const sourceGlyphData = calculationSourceMap.get(currentSourceUnicode);
+                                
+                                if (sourceGlyphData) {
+                                    let pathsNeedRegeneration = false;
+                                    for (const index of indicesToUpdate) {
+                                        const updatedPaths = updateComponentInPaths(
+                                            tempPaths,
+                                            index,
+                                            sourceGlyphData.paths,
+                                            strokeThickness,
+                                            dependentChar.compositeTransform
+                                        );
+
+                                        if (!updatedPaths) {
+                                            pathsNeedRegeneration = true;
+                                            break;
+                                        }
+                                        tempPaths = updatedPaths;
+                                    }
+                            
+                                    if (pathsNeedRegeneration) {
+                                        const regenerated = generateCompositeGlyphData({ 
+                                            character: dependentChar, 
+                                            allCharsByName, 
+                                            allGlyphData: calculationSourceMap, 
+                                            settings: settings!, 
+                                            metrics: metrics!, 
+                                            markAttachmentRules, 
+                                            allCharacterSets: characterSets! 
+                                        });
+                                        if(regenerated) resultData = regenerated;
+                                    } else {
+                                        resultData = { paths: tempPaths };
+                                    }
+                                }
+                            }
+                        }
+
+                        if (resultData) {
+                            updates.set(depUnicode, resultData);
+                            calculationSourceMap.set(depUnicode, resultData); // Update local view for next steps
                             visited.add(depUnicode);
                             queue.push(depUnicode);
                             totalUpdatedCount++;
                         }
-                        return;
-                    }
-        
-                    // Case B: Smart Update
-                    const indicesToUpdate: number[] = [];
-                    dependentChar.link.forEach((name, index) => {
-                        if (allCharsByName.get(name)?.unicode === currentSourceUnicode) {
-                            indicesToUpdate.push(index);
+
+                        // Yield to main thread to prevent freezing
+                        processedInBatch++;
+                        if (processedInBatch >= BATCH_SIZE) {
+                            processedInBatch = 0;
+                            await yieldToMain();
                         }
+                    }
+                }
+
+                if (!isMounted.current) return; // Final check before dispatch
+
+                // Final Commit: Functional update to merge into current state
+                if (updates.size > 0) {
+                    glyphDataDispatch({ 
+                        type: 'UPDATE_MAP', 
+                        payload: (prev) => {
+                            const next = new Map(prev);
+                            updates.forEach((data, u) => next.set(u, data));
+                            return next;
+                        } 
                     });
-            
-                    if (indicesToUpdate.length === 0) return;
-            
-                    let pathsNeedRegeneration = false;
-                    let tempPaths = dependentGlyphData.paths;
-                    const strokeThickness = settings?.strokeThickness ?? 1;
                     
-                    const sourceGlyphData = newGlyphDataMap.get(currentSourceUnicode);
-                    if (!sourceGlyphData) return;
+                    // Logic to handle property removal for "Static Composite" glyphs if the source was deleted
+                    // is handled in handleDelete, this is handleSave, so we just update visuals.
+                }
 
-                    for (const index of indicesToUpdate) {
-                        const updatedPaths = updateComponentInPaths(
-                            tempPaths,
-                            index,
-                            sourceGlyphData.paths,
-                            strokeThickness,
-                            dependentChar.compositeTransform
-                        );
+                totalUpdatedCount += positionedPairCount;
 
-                        if (!updatedPaths) {
-                            pathsNeedRegeneration = true;
-                            break;
-                        }
-                        tempPaths = updatedPaths;
-                    }
-            
-                    if (pathsNeedRegeneration) {
-                        const regenerated = generateCompositeGlyphData({ 
-                            character: dependentChar, 
-                            allCharsByName, 
-                            allGlyphData: newGlyphDataMap, 
-                            settings: settings!, 
-                            metrics: metrics!, 
-                            markAttachmentRules, 
-                            allCharacterSets: characterSets! 
-                        });
-                        if(regenerated) {
-                            newGlyphDataMap.set(depUnicode, regenerated);
-                        }
-                    } else {
-                        newGlyphDataMap.set(depUnicode, { paths: tempPaths });
-                    }
-
-                    visited.add(depUnicode);
-                    queue.push(depUnicode);
-                    totalUpdatedCount++;
-                });
-            }
-
-            glyphDataDispatch({ type: 'SET_MAP', payload: newGlyphDataMap });
-
-            totalUpdatedCount += positionedPairCount;
-
-            if (totalUpdatedCount > 0) {
-                layout.showNotification(
-                    t('updatedDependents', { count: totalUpdatedCount }),
-                    'success',
-                );
-            } else if (!silent) {
-                layout.showNotification(t('saveGlyphSuccess'));
-            }
+                if (totalUpdatedCount > 0) {
+                    layout.showNotification(
+                        t('updatedDependents', { count: totalUpdatedCount }),
+                        'success',
+                    );
+                } else if (!silent) {
+                    layout.showNotification(t('saveGlyphSuccess'));
+                }
+            }, 0);
             
         } else {
-             if (hasPathChanges) {
-                 glyphDataDispatch({ type: 'SET_MAP', payload: newGlyphDataMap });
-             }
              if (!silent) {
                 layout.showNotification(t('saveGlyphSuccess'));
             }
@@ -235,6 +282,7 @@ export const useGlyphActions = (
     const handleDeleteGlyph = useCallback((unicode: number) => {
         const charToDelete = allCharsByUnicode.get(unicode); if (!charToDelete) return;
         
+        // Snapshot for Undo (Synchronous part is fine for delete usually)
         const glyphDataSnapshot = new Map(glyphDataMap);
         const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
         const kerningSnapshot = new Map(kerningMap);
@@ -250,18 +298,25 @@ export const useGlyphActions = (
         };
 
         const dependents = dependencyMap.current.get(unicode);
+        
+        // Handle Deletion Updates (Synchronous for now to ensure consistency before delete)
+        // We might make this async later if deleting complex trees, but usually delete is fast enough.
         if (dependents && dependents.size > 0) {
             const dependentUnicodes = Array.from(dependents);
+            const dependentNames: string[] = [];
             
+            // Visual Update (Bake/Flatten Composites)
             glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev) => {
                 const next = new Map(prev);
                 dependentUnicodes.forEach((depUni: number) => {
                     const depChar = allCharsByUnicode.get(depUni);
+                    if (depChar) dependentNames.push(depChar.name);
+                    // Attempt to regenerate/bake current state before source is lost
                     if (depChar && (depChar.link || depChar.composite)) {
                         const compositeData = generateCompositeGlyphData({
                             character: depChar,
                             allCharsByName,
-                            allGlyphData: prev, 
+                            allGlyphData: prev, // Use current state before delete
                             settings: settings!,
                             metrics: metrics!,
                             markAttachmentRules,
@@ -275,6 +330,7 @@ export const useGlyphActions = (
                 return next;
             }});
 
+            // Metadata Update (Sever Links)
             characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prevSets) => {
                 if (!prevSets) return null;
                 return prevSets.map(set => ({
@@ -296,6 +352,7 @@ export const useGlyphActions = (
             dependencyMap.current.delete(unicode);
         }
 
+        // Clean up auxiliary maps
         const newKerningMap = new Map<string, number>();
         kerningMap.forEach((value, key) => {
             const [left, right] = key.split('-').map(Number);
@@ -356,7 +413,6 @@ export const useGlyphActions = (
             newChar.advWidth = 0;
         }
 
-        // This now updates the ProjectContext state directly via the proxy hook
         characterDispatch({ type: 'ADD_CHARACTERS', payload: { characters: [newChar], activeTabNameKey: '' } });
 
         layout.closeModal();
@@ -437,7 +493,6 @@ export const useGlyphActions = (
     
     const handleUpdateDependencies = useCallback((unicode: number, newLinkComponents: string[] | null) => {
         const currentChar = allCharsByUnicode.get(unicode);
-        // Check both link and composite for cleanup
         const oldComponents = currentChar?.link || currentChar?.composite;
 
         if (oldComponents) {
