@@ -237,6 +237,21 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
           executeConstructionUpdate(type, components, transforms);
       }
   };
+  
+  const dependentsCount = useMemo(() => {
+      if (!character || !allCharacterSets) return 0;
+      let count = 0;
+      allCharacterSets.forEach(set => {
+          set.characters.forEach(c => {
+              // Check both link and composite arrays
+              const components = c.link || c.composite;
+              if (components && components.includes(character.name)) {
+                  count++;
+              }
+          });
+      });
+      return count;
+  }, [character, allCharacterSets]);
 
   // --- Transform Application Logic ---
   const handleApplyTransform = (transform: TransformState & { flipX?: boolean; flipY?: boolean }) => {
@@ -506,7 +521,14 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
 
       <ImageControlPanel backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity} setBackgroundImageOpacity={setBackgroundImageOpacity} onClearImage={() => { setBackgroundImage(null); setImageTransform(null); }} />
       <UnsavedChangesModal isOpen={isUnsavedModalOpen} onClose={closeUnsavedModal} onSave={confirmSave} onDiscard={confirmDiscard} />
-      <DeleteConfirmationModal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} onConfirm={() => { onDelete(character.unicode!); setIsDeleteConfirmOpen(false); }} character={character} isStandardGlyph={!character.isCustom} />
+      <DeleteConfirmationModal 
+        isOpen={isDeleteConfirmOpen} 
+        onClose={() => setIsDeleteConfirmOpen(false)} 
+        onConfirm={() => { onDelete(character.unicode!); setIsDeleteConfirmOpen(false); }} 
+        character={character} 
+        isStandardGlyph={!character.isCustom} 
+        dependentCount={dependentsCount}
+      />
       <Modal isOpen={isUnlockConfirmOpen} onClose={() => setIsUnlockConfirmOpen(false)} title={t('unlockGlyphTitle')} titleClassName="text-yellow-600 dark:text-yellow-400" footer={<><button onClick={() => setIsUnlockConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg">{t('cancel')}</button><button onClick={handleConfirmUnlock} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg">{t('unlock')}</button></>}><p>{t('unlockGlyphMessage')}</p></Modal>
       <Modal isOpen={isRelinkConfirmOpen} onClose={() => setIsRelinkConfirmOpen(false)} title={t('relinkGlyphTitle')} titleClassName="text-yellow-600 dark:text-yellow-400" footer={<><button onClick={() => setIsRelinkConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg">{t('cancel')}</button><button onClick={handleConfirmRelink} className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg">{t('relink')}</button></>}><p>{t('relinkGlyphMessage')}</p></Modal>
       

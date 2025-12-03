@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { Character } from '../types';
@@ -9,9 +10,10 @@ interface DeleteConfirmationModalProps {
   onConfirm: () => void;
   character: Character;
   isStandardGlyph?: boolean;
+  dependentCount?: number;
 }
 
-const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({ isOpen, onClose, onConfirm, character, isStandardGlyph = false }) => {
+const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({ isOpen, onClose, onConfirm, character, isStandardGlyph = false, dependentCount }) => {
   const { t } = useLocale();
   
   const title = t('deleteGlyphTitle');
@@ -39,6 +41,11 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({ isOpe
       }
     >
       <p>{message}</p>
+      {dependentCount && dependentCount > 0 && (
+        <p className="mt-4 text-red-600 dark:text-red-400 font-semibold">
+            {t('deleteDependencyWarning', { count: dependentCount })}
+        </p>
+      )}
     </Modal>
   );
 };
