@@ -62,7 +62,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   const { markPositioningMap } = usePositioning();
   const { state: rulesState } = useRules();
-  const { projectName } = useProject();
+  const { projectName, guideFont } = useProject(); // Pull guideFont from ProjectContext
   const { fontRules, isFeaEditMode, manualFeaCode, hasUnsavedRules } = rulesState;
   const { workspace, currentView, setCurrentView, selectedCharacter, selectCharacter, closeCharacterModal } = layout;
 
@@ -166,19 +166,33 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   
   // --- UI & OTHER EFFECTS ---
   
+  // Dynamic Guide Font Injection
   useEffect(() => {
-    if (!script) return;
-    const { guideFont } = script;
-    const existingStyle = document.getElementById(GUIDE_FONT_STYLE_ID); if (existingStyle) existingStyle.remove();
-    if (guideFont && guideFont.fontName && guideFont.fontUrl) {
-        const styleEl = document.createElement('style'); styleEl.id = GUIDE_FONT_STYLE_ID;
-        styleEl.innerHTML = `@font-face { font-family: "${guideFont.fontName}"; src: url('${guideFont.fontUrl}') format('truetype'); font-display: swap; }`;
+    // Priority: 1. Project-specific guide font (live edits), 2. Script default
+    const activeGuideFont = guideFont || script?.guideFont;
+    
+    const existingStyle = document.getElementById(GUIDE_FONT_STYLE_ID); 
+    if (existingStyle) existingStyle.remove();
+
+    if (activeGuideFont && activeGuideFont.fontName && activeGuideFont.fontUrl) {
+        const styleEl = document.createElement('style'); 
+        styleEl.id = GUIDE_FONT_STYLE_ID;
+        styleEl.innerHTML = `@font-face { font-family: "${activeGuideFont.fontName}"; src: url('${activeGuideFont.fontUrl}') format('truetype'); font-display: swap; }`;
         document.head.appendChild(styleEl);
-        document.documentElement.style.setProperty('--guide-font-family', `"${guideFont.fontName}", sans-serif`);
-        document.documentElement.style.setProperty('--guide-font-feature-settings', guideFont.stylisticSet || 'normal');
-    } else { document.documentElement.style.removeProperty('--guide-font-family'); document.documentElement.style.removeProperty('--guide-font-feature-settings'); }
-    return () => { document.documentElement.style.removeProperty('--guide-font-family'); document.documentElement.style.removeProperty('--guide-font-feature-settings'); const el = document.getElementById(GUIDE_FONT_STYLE_ID); if (el) el.remove(); };
-  }, [script]);
+        document.documentElement.style.setProperty('--guide-font-family', `"${activeGuideFont.fontName}", sans-serif`);
+        document.documentElement.style.setProperty('--guide-font-feature-settings', activeGuideFont.stylisticSet || 'normal');
+    } else { 
+        document.documentElement.style.removeProperty('--guide-font-family'); 
+        document.documentElement.style.removeProperty('--guide-font-feature-settings'); 
+    }
+    
+    return () => { 
+        document.documentElement.style.removeProperty('--guide-font-family'); 
+        document.documentElement.style.removeProperty('--guide-font-feature-settings'); 
+        const el = document.getElementById(GUIDE_FONT_STYLE_ID); 
+        if (el) el.remove(); 
+    };
+  }, [script, guideFont]); // Depend on guideFont from context
   
   if (scriptDataError) {
     return (

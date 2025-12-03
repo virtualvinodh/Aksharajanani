@@ -39,7 +39,9 @@ export const useProjectLoad = ({
         setMarkAttachmentRules,
         setMarkAttachmentClasses,
         setBaseAttachmentClasses,
-        setRecommendedKerning
+        setRecommendedKerning,
+        setCharacterSets, // Sync Fix: Get setter
+        setGuideFont
     } = useProject();
 
     const [isScriptDataLoading, setIsScriptDataLoading] = useState(true);
@@ -381,6 +383,10 @@ export const useProjectLoad = ({
             };
             characterDispatch({ type: 'SET_SCRIPT', payload: updatedScriptConfig });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: processedCharSets });
+            setCharacterSets(processedCharSets); // Sync Fix: Dispatch to ProjectContext
+            
+            // Set Guide Font in ProjectContext
+            setGuideFont(projectToLoad?.guideFont || currentScript.guideFont || null);
 
             // Build Dependency Map
             const newDependencyMap = new Map<number, Set<number>>();
@@ -465,7 +471,7 @@ export const useProjectLoad = ({
         } finally {
             setIsScriptDataLoading(false);
         }
-    }, [allScripts, characterDispatch, rulesDispatch, settingsDispatch, glyphDataDispatch, kerningDispatch, positioningDispatch, t, setProjectId, setLastSavedState, setMarkAttachmentRules, setMarkAttachmentClasses, setBaseAttachmentClasses, setPositioningRules, setRecommendedKerning, dependencyMap, setProjectName]);
+    }, [allScripts, characterDispatch, rulesDispatch, settingsDispatch, glyphDataDispatch, kerningDispatch, positioningDispatch, t, setProjectId, setLastSavedState, setMarkAttachmentRules, setMarkAttachmentClasses, setBaseAttachmentClasses, setPositioningRules, setRecommendedKerning, dependencyMap, setProjectName, setCharacterSets, setGuideFont]);
 
     const handleLoadProject = () => fileInputRef.current?.click();
 

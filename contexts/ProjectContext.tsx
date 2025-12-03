@@ -3,7 +3,8 @@ import React, { createContext, useState, useContext, ReactNode, useMemo } from '
 import { 
     GlyphData, KerningMap, CharacterSet, Path, 
     ProjectData, ScriptConfig, AppSettings, FontMetrics, Character,
-    PositioningRules, MarkAttachmentRules, AttachmentClass, RecommendedKerning
+    PositioningRules, MarkAttachmentRules, AttachmentClass, RecommendedKerning,
+    GuideFont
 } from '../types';
 
 interface ProjectContextType {
@@ -39,6 +40,8 @@ interface ProjectContextType {
     setBaseAttachmentClasses: React.Dispatch<React.SetStateAction<AttachmentClass[] | null>>;
     recommendedKerning: RecommendedKerning[] | null;
     setRecommendedKerning: React.Dispatch<React.SetStateAction<RecommendedKerning[] | null>>;
+    guideFont: GuideFont | null;
+    setGuideFont: React.Dispatch<React.SetStateAction<GuideFont | null>>;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -60,6 +63,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [markAttachmentClasses, setMarkAttachmentClasses] = useState<AttachmentClass[] | null>(null);
     const [baseAttachmentClasses, setBaseAttachmentClasses] = useState<AttachmentClass[] | null>(null);
     const [recommendedKerning, setRecommendedKerning] = useState<RecommendedKerning[] | null>(null);
+    const [guideFont, setGuideFont] = useState<GuideFont | null>(null);
 
     const allCharsByUnicode = useMemo(() => {
         if (!characterSets) return new Map<number, Character>();
@@ -96,7 +100,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         markAttachmentRules, setMarkAttachmentRules,
         markAttachmentClasses, setMarkAttachmentClasses,
         baseAttachmentClasses, setBaseAttachmentClasses,
-        recommendedKerning, setRecommendedKerning
+        recommendedKerning, setRecommendedKerning,
+        guideFont, setGuideFont
     };
 
     return (

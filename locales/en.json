@@ -662,5 +662,12 @@
     "groupName": "Group Name",
     "confirmDeleteGroup": "Are you sure you want to delete the group '{name}' and all its characters? This action cannot be undone.",
     "cannotDeleteLastGroup": "Cannot delete the last group.",
-    "manageRules": "Manage Rules"
+    "manageRules": "Manage Rules",
+
+    "guideFontSettings": "Guide Font Configuration",
+    "guideFontName": "Font Name (for display)",
+    "guideFontUrl": "Font URL (.ttf/.otf)",
+    "guideFontStylisticSet": "CSS Font Feature Settings (e.g., 'ss01')",
+    "sampleText": "Sample Text (Test Page)",
+    "sampleTextDescription": "This text will be pre-loaded when you open the Test Page."
 }

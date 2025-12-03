@@ -1,27 +1,38 @@
 
 import React from 'react';
-import { AppSettings, ToolRanges } from '../../types';
+import { AppSettings, ToolRanges, GuideFont } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 
 interface GeneralSettingsProps {
     settings: AppSettings;
     onSettingsChange: React.Dispatch<React.SetStateAction<AppSettings>>;
     toolRanges: ToolRanges;
+    guideFont: GuideFont;
+    onGuideFontChange: React.Dispatch<React.SetStateAction<GuideFont>>;
 }
 
-const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, onSettingsChange, toolRanges }) => {
+const GeneralSettings: React.FC<GeneralSettingsProps> = ({ 
+    settings, onSettingsChange, toolRanges, guideFont, onGuideFontChange 
+}) => {
     const { t } = useLocale();
 
-    const handleSettingChange = (key: keyof AppSettings, isNumeric: boolean = false) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSettingChange = (key: keyof AppSettings, isNumeric: boolean = false) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         onSettingsChange(prev => ({
             ...prev,
             [key]: isNumeric ? Number(e.target.value) : e.target.value
         }));
     };
     
+    const handleGuideFontChange = (key: keyof GuideFont) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        onGuideFontChange(prev => ({
+            ...prev,
+            [key]: e.target.value
+        }));
+    };
+    
     return (
-        <div className="space-y-1">
-            {/* Font Name Section - Moved to top as requested */}
+        <div className="space-y-6">
+            {/* Font Name Section */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('fontName')} (For Export):
@@ -33,6 +44,58 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ settings, onSettingsC
                     className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-lg font-semibold text-gray-900 dark:text-white"
                 />
                 <p className="text-xs text-gray-500 mt-1">This name will be used inside the exported OTF file.</p>
+            </div>
+
+            {/* Guide Font Section (New Step 4) */}
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow space-y-4">
+                <h4 className="text-lg font-bold text-gray-900 dark:text-white">{t('guideFontSettings')}</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Configure a reference font to appear in the background while you draw.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('guideFontName')}</label>
+                        <input 
+                            type="text" 
+                            value={guideFont.fontName} 
+                            onChange={handleGuideFontChange('fontName')} 
+                            placeholder="e.g. Noto Sans"
+                            className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('guideFontUrl')}</label>
+                        <input 
+                            type="text" 
+                            value={guideFont.fontUrl} 
+                            onChange={handleGuideFontChange('fontUrl')} 
+                            placeholder="https://..."
+                            className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-sm"
+                        />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('guideFontStylisticSet')}</label>
+                        <input 
+                            type="text" 
+                            value={guideFont.stylisticSet} 
+                            onChange={handleGuideFontChange('stylisticSet')} 
+                            placeholder="e.g. 'ss01' or 'normal'"
+                            className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-sm"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Sample Text Section (New Step 4) */}
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('sampleText')}</h4>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('sampleTextDescription')}
+                </label>
+                <textarea 
+                    value={settings.customSampleText || ''} 
+                    onChange={handleSettingChange('customSampleText')}
+                    rows={4} 
+                    className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-sm"
+                />
             </div>
 
             {/* Tools Configuration Section */}

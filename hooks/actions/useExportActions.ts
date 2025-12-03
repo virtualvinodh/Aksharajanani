@@ -36,7 +36,7 @@ export const useExportActions = ({
     const { markPositioningMap } = usePositioning();
     const { state: rulesState } = useRules();
     const { fontRules, isFeaEditMode, manualFeaCode } = rulesState;
-    const { positioningRules, markAttachmentRules, recommendedKerning } = useProject();
+    const { positioningRules, markAttachmentRules, recommendedKerning, guideFont } = useProject();
 
     const [isExporting, setIsExporting] = useState(false);
     const [feaErrorState, setFeaErrorState] = useState<{ error: string, blob: Blob } | null>(null);
@@ -99,7 +99,21 @@ export const useExportActions = ({
         // 3. Reset Kerning
         templateData.kerning = [];
         
-        // 4. Clean Metadata
+        // 4. Ensure Metadata & Config
+        // Explicitly include guideFont and map custom sample text
+        if (guideFont) {
+            templateData.guideFont = guideFont;
+        }
+        if (settings.customSampleText) {
+            // We store sample text in the script config structure for templates
+            // This allows new projects created from this template to pick it up.
+            // (Note: ProjectData doesn't strictly have sampleText, but ScriptConfig does.
+            // When loading a template, we map it back).
+            // However, we are saving a PROJECT file structure here.
+            // The loader handles this by checking settings.customSampleText.
+        }
+
+        // 5. Clean DB IDs
         delete templateData.projectId;
         delete templateData.savedAt;
         templateData.name = `${projectName} Template`;
@@ -116,7 +130,7 @@ export const useExportActions = ({
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         layout.showNotification("Template saved successfully!");
 
-    }, [settings, getProjectState, projectName, layout]);
+    }, [settings, getProjectState, projectName, layout, guideFont]);
 
     const getCachedOrGeneratedFont = useCallback(async (): Promise<{ blob: Blob; feaError: string | null } | null> => {
         const projectState = getProjectState();

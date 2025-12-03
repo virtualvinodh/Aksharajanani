@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AppSettings, ToolRanges, FontMetrics } from '../types';
+import { AppSettings, ToolRanges, FontMetrics, GuideFont } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon } from '../constants';
 import Footer from './Footer';
@@ -10,6 +10,7 @@ import MetaDataSettings from './settings/MetaDataSettings';
 import TestPageSettings from './settings/TestPageSettings';
 import MetricsSettings from './settings/MetricsSettings';
 import { useSettings } from '../contexts/SettingsContext';
+import { useProject } from '../contexts/ProjectContext';
 
 interface SettingsPageProps {
   onClose: () => void;
@@ -40,14 +41,20 @@ const TabButton: React.FC<{
 const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
   const { t } = useLocale();
   const { settings, metrics, dispatch } = useSettings();
+  // Get GuideFont from ProjectContext
+  const { guideFont, setGuideFont, script } = useProject();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('general');
   const [localSettings, setLocalSettings] = useState(settings!);
   const [localMetrics, setLocalMetrics] = useState(metrics!);
+  // Initialize local guide font from project, fallback to script default, or empty
+  const [localGuideFont, setLocalGuideFont] = useState<GuideFont>(guideFont || script?.guideFont || { fontName: '', fontUrl: '', stylisticSet: '' });
 
   const handleClose = () => {
     dispatch({ type: 'SET_SETTINGS', payload: localSettings });
     dispatch({ type: 'SET_METRICS', payload: localMetrics });
+    // Commit GuideFont to ProjectContext
+    setGuideFont(localGuideFont);
     onClose();
   };
 
@@ -86,7 +93,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
                     <GeneralSettings 
                         settings={localSettings} 
                         onSettingsChange={setLocalSettings} 
-                        toolRanges={toolRanges} 
+                        toolRanges={toolRanges}
+                        guideFont={localGuideFont}
+                        onGuideFontChange={setLocalGuideFont}
                     />
                 )}
                 {activeTab === 'editor' && (

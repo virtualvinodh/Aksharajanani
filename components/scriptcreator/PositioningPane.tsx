@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { RecommendedKerning, MarkAttachmentRules, PositioningRules, AttachmentClass, CharacterSet, AttachmentPoint } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -31,6 +32,58 @@ const CollapsibleSection: React.FC<{ title: string; children: React.ReactNode, i
 );
 
 // --- Editor Components ---
+
+const GlyphTagInput: React.FC<{
+    tags: string[];
+    setTags: (tags: string[]) => void;
+    placeholder: string;
+    characterSets: CharacterSet[];
+    groups: Record<string, string[]>;
+    showCharacterSets?: boolean;
+}> = ({ tags, setTags, placeholder, characterSets, groups, showCharacterSets }) => {
+    const { t } = useLocale();
+    const [selectedValue, setSelectedValue] = useState('');
+
+    const handleAddTag = () => {
+        if (selectedValue && !tags.includes(selectedValue)) {
+            setTags([...tags, selectedValue]);
+        }
+        setSelectedValue(''); // Reset dropdown
+    };
+
+    const handleRemoveTag = (tagToRemove: string) => {
+        setTags(tags.filter(tag => tag !== tagToRemove));
+    };
+
+    return (
+        <div>
+            <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[40px] bg-white dark:bg-gray-700 dark:border-gray-600 mb-2">
+                {tags.map(tag => (
+                    <div key={tag} className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 text-sm font-semibold px-2 py-1 rounded">
+                        <span>{tag}</span>
+                        <button type="button" onClick={() => handleRemoveTag(tag)} className="text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300">
+                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                        </button>
+                    </div>
+                ))}
+            </div>
+            <div className="flex items-center gap-2">
+                <GlyphSelect
+                    characterSets={characterSets}
+                    value={selectedValue}
+                    onChange={setSelectedValue}
+                    label={placeholder}
+                    className="flex-grow"
+                    groups={groups}
+                    showCharacterSets={showCharacterSets}
+                />
+                <button type="button" onClick={handleAddTag} className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                    <AddIcon className="w-5 h-5" />
+                </button>
+            </div>
+        </div>
+    );
+};
 
 const PositioningRuleEditor: React.FC<{
     rule?: PositioningRules;
@@ -70,12 +123,16 @@ const PositioningRuleEditor: React.FC<{
         onSave(finalRule);
     };
     
-    const availableSets = [...characterSets.map(cs => `$${cs.nameKey}`), ...Object.keys(groups).map(g => `$${g}`)];
-
     return (
         <div className="p-4 border rounded-lg bg-indigo-50 dark:bg-indigo-900/20 space-y-4">
-            <div><label className="font-semibold text-sm">{t('baseGlyphs')}</label><TagInput tags={base} setTags={setBase} placeholder="Add base glyph or $set..." availableSets={availableSets}/></div>
-            <div><label className="font-semibold text-sm">{t('markGlyphs')}</label><TagInput tags={mark} setTags={setMark} placeholder="Add mark glyph or $set..." availableSets={availableSets}/></div>
+            <div>
+                <label className="font-semibold text-sm">{t('baseGlyphs')}</label>
+                <GlyphTagInput tags={base} setTags={setBase} placeholder="Add base glyph or $set..." characterSets={characterSets} groups={groups} showCharacterSets={true} />
+            </div>
+            <div>
+                <label className="font-semibold text-sm">{t('markGlyphs')}</label>
+                <GlyphTagInput tags={mark} setTags={setMark} placeholder="Add mark glyph or $set..." characterSets={characterSets} groups={groups} showCharacterSets={true} />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <input type="text" placeholder={t('gposFeatureTag')} value={gpos} onChange={e => setGpos(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
                 <input type="text" placeholder={t('gsubFeatureTag')} value={gsub} onChange={e => setGsub(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
@@ -114,56 +171,6 @@ const PositioningRuleEditor: React.FC<{
             <div className="flex justify-end gap-2">
                 <button onClick={onCancel} className="px-3 py-1 bg-gray-500 text-white rounded">{t('cancel')}</button>
                 <button onClick={handleSave} className="px-3 py-1 bg-indigo-600 text-white rounded">{t('save')}</button>
-            </div>
-        </div>
-    );
-};
-
-const GlyphTagInput: React.FC<{
-    tags: string[];
-    setTags: (tags: string[]) => void;
-    placeholder: string;
-    characterSets: CharacterSet[];
-    groups: Record<string, string[]>;
-}> = ({ tags, setTags, placeholder, characterSets, groups }) => {
-    const { t } = useLocale();
-    const [selectedValue, setSelectedValue] = useState('');
-
-    const handleAddTag = () => {
-        if (selectedValue && !tags.includes(selectedValue)) {
-            setTags([...tags, selectedValue]);
-        }
-        setSelectedValue(''); // Reset dropdown
-    };
-
-    const handleRemoveTag = (tagToRemove: string) => {
-        setTags(tags.filter(tag => tag !== tagToRemove));
-    };
-
-    return (
-        <div>
-            <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[40px] bg-white dark:bg-gray-700 dark:border-gray-600 mb-2">
-                {tags.map(tag => (
-                    <div key={tag} className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 text-sm font-semibold px-2 py-1 rounded">
-                        <span>{tag}</span>
-                        <button type="button" onClick={() => handleRemoveTag(tag)} className="text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300">
-                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                        </button>
-                    </div>
-                ))}
-            </div>
-            <div className="flex items-center gap-2">
-                <GlyphSelect
-                    characterSets={characterSets}
-                    value={selectedValue}
-                    onChange={setSelectedValue}
-                    label={placeholder}
-                    className="flex-grow"
-                    groups={groups}
-                />
-                <button type="button" onClick={handleAddTag} className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-                    <AddIcon className="w-5 h-5" />
-                </button>
             </div>
         </div>
     );
