@@ -9,6 +9,7 @@ import ProgressIndicator from './ProgressIndicator';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useProject } from '../contexts/ProjectContext';
+import { useSettings } from '../contexts/SettingsContext';
 import Modal from './Modal';
 
 interface DrawingWorkspaceProps {
@@ -33,17 +34,18 @@ const CharacterSetTab: React.FC<{
     setActiveTab: (index: number) => void;
     glyphDataMap: Map<number, GlyphData>;
     onContextMenu: (e: React.MouseEvent | React.TouchEvent, index: number) => void;
-}> = ({ set, index, activeTab, setActiveTab, glyphDataMap, onContextMenu }) => {
+    showHidden: boolean;
+}> = ({ set, index, activeTab, setActiveTab, glyphDataMap, onContextMenu, showHidden }) => {
     const { t } = useLocale();
     const [isAnimating, setIsAnimating] = useState(false);
     const wasComplete = useRef(false);
     const longPressTimer = useRef<number | null>(null);
 
     const isSetComplete = useMemo(() => {
-        const visibleChars = set.characters.filter(char => !char.hidden);
+        const visibleChars = set.characters.filter(char => !char.hidden || showHidden);
         if (!visibleChars || visibleChars.length === 0) return false;
         return visibleChars.every(char => isGlyphDrawn(glyphDataMap.get(char.unicode)));
-    }, [set.characters, glyphDataMap]);
+    }, [set.characters, glyphDataMap, showHidden]);
 
     useEffect(() => {
         if (isSetComplete && !wasComplete.current) {
@@ -94,6 +96,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const { t } = useLocale();
     const { activeTab, setActiveTab, showNotification } = useLayout();
     const { dispatch: characterDispatch } = useProject();
+    const { settings } = useSettings();
     const navContainerRef = useRef<HTMLDivElement>(null);
     const [showNavArrows, setShowNavArrows] = useState({ left: false, right: false });
     
@@ -107,15 +110,17 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const [modalState, setModalState] = useState<{ type: 'create' | 'rename', index?: number, isOpen: boolean }>({ type: 'create', isOpen: false });
     const [modalInputValue, setModalInputValue] = useState('');
 
+    const showHidden = settings?.showHiddenGlyphs ?? false;
+
     const visibleCharacterSets = useMemo(() => {
         return characterSets
             .map(set => ({
                 ...set,
-                characters: set.characters.filter(char => !char.hidden && char.unicode !== 8205 && char.unicode !== 8204)
+                characters: set.characters.filter(char => (!char.hidden || showHidden) && char.unicode !== 8205 && char.unicode !== 8204)
             }))
             // Show all groups, even empty ones, so user can add to them
             .filter(set => set.nameKey !== 'dynamicLigatures');
-    }, [characterSets]);
+    }, [characterSets, showHidden]);
 
     useEffect(() => {
         // Ensure active tab is valid after deletions
@@ -288,6 +293,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                                 setActiveTab={setActiveTab}
                                 glyphDataMap={glyphDataMap}
                                 onContextMenu={handleContextMenu}
+                                showHidden={showHidden}
                             />
                         ))}
 
