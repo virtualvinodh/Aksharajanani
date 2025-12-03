@@ -182,10 +182,10 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       });
       
       // 2. Update Dependencies (Graph)
-      if (type === 'link') {
+      if (type === 'link' || type === 'composite') {
           onUpdateDependencies(character.unicode, components);
       } else {
-          // If changing to drawing/composite, remove existing link dependencies (pass null/empty)
+          // If changing to manual drawing, remove existing dependencies
           onUpdateDependencies(character.unicode, null);
       }
 

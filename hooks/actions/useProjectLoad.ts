@@ -388,14 +388,17 @@ export const useProjectLoad = ({
             // Build Dependency Map
             const newDependencyMap = new Map<number, Set<number>>();
             allCharsByNameLocal.forEach(char => {
-                if (char.unicode !== undefined && char.link) {
-                    char.link.forEach(compName => {
-                        const componentChar = allCharsByNameLocal.get(compName);
-                        if (componentChar?.unicode !== undefined) {
-                            if (!newDependencyMap.has(componentChar.unicode)) newDependencyMap.set(componentChar.unicode, new Set());
-                            newDependencyMap.get(componentChar.unicode)!.add(char.unicode!);
-                        }
-                    });
+                if (char.unicode !== undefined) {
+                    const components = char.link || char.composite;
+                    if (components) {
+                        components.forEach(compName => {
+                            const componentChar = allCharsByNameLocal.get(compName);
+                            if (componentChar?.unicode !== undefined) {
+                                if (!newDependencyMap.has(componentChar.unicode)) newDependencyMap.set(componentChar.unicode, new Set());
+                                newDependencyMap.get(componentChar.unicode)!.add(char.unicode!);
+                            }
+                        });
+                    }
                 }
             });
             dependencyMap.current = newDependencyMap;

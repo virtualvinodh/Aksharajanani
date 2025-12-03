@@ -437,8 +437,11 @@ export const useGlyphActions = (
     
     const handleUpdateDependencies = useCallback((unicode: number, newLinkComponents: string[] | null) => {
         const currentChar = allCharsByUnicode.get(unicode);
-        if (currentChar && currentChar.link) {
-            currentChar.link.forEach(compName => {
+        // Check both link and composite for cleanup
+        const oldComponents = currentChar?.link || currentChar?.composite;
+
+        if (oldComponents) {
+            oldComponents.forEach(compName => {
                 const compChar = allCharsByName.get(compName);
                 if (compChar && compChar.unicode !== undefined) {
                     const dependents = dependencyMap.current.get(compChar.unicode);
