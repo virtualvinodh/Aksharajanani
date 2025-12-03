@@ -76,7 +76,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
 
       <main className="flex-grow overflow-y-auto p-6 md:p-10 text-gray-700 dark:text-gray-300">
         <div className="max-w-2xl mx-auto">
-            <div className="mb-6 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <div className="mb-6 border-b border-gray-200 dark:border-gray-700 overflow-x-auto no-scrollbar">
                 <nav className="-mb-px flex space-x-6" aria-label="Tabs">
                     <TabButton tabId="general" label={t('settingsTabGeneral')} activeTab={activeTab} onClick={setActiveTab} />
                     <TabButton tabId="editor" label={t('editorSettings')} activeTab={activeTab} onClick={setActiveTab} />

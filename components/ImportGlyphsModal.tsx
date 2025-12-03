@@ -111,7 +111,8 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
   const comparisons = useMemo((): ComparisonItem[] => {
     if (!sourceProject || !sourceProject.characterSets) return [];
     
-    const sourceGlyphDataByUnicode = new Map(sourceProject.glyphs);
+    // Explicitly type the Map constructor to ensure values are GlyphData, resolving 'unknown' type errors.
+    const sourceGlyphDataByUnicode = new Map<number, GlyphData>(sourceProject.glyphs);
     const sourceCharsByName = new Map<string, Character>();
     sourceProject.characterSets.forEach(set => {
         set.characters.forEach(char => {
@@ -134,7 +135,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
                     unicode: targetChar.unicode, // IMPORTANT: Use target project's unicode
                     name: sourceName,
                     sourceGlyph: sourceGlyph,
-                    targetIsDrawn: isGlyphDrawn(currentGlyphData.get(targetChar.unicode) as GlyphData | undefined),
+                    targetIsDrawn: isGlyphDrawn(currentGlyphData.get(targetChar.unicode)),
                     targetCharExists: true,
                 });
             }

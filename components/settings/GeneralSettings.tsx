@@ -46,7 +46,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                 <p className="text-xs text-gray-500 mt-1">This name will be used inside the exported OTF file.</p>
             </div>
 
-            {/* Guide Font Section (New Step 4) */}
+            {/* Guide Font Section */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow space-y-4">
                 <h4 className="text-lg font-bold text-gray-900 dark:text-white">{t('guideFontSettings')}</h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Configure a reference font to appear in the background while you draw.</p>
@@ -82,20 +82,6 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                         />
                     </div>
                 </div>
-            </div>
-
-            {/* Sample Text Section (New Step 4) */}
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('sampleText')}</h4>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('sampleTextDescription')}
-                </label>
-                <textarea 
-                    value={settings.customSampleText || ''} 
-                    onChange={handleSettingChange('customSampleText')}
-                    rows={4} 
-                    className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-sm"
-                />
             </div>
 
             {/* Tools Configuration Section */}
