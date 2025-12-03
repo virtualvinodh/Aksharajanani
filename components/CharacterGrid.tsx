@@ -1,4 +1,6 @@
 
+
+
 import React from 'react';
 import { Character } from '../types';
 import CharacterCard from './CharacterCard';
@@ -20,10 +22,13 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
   if (!settings) return null;
 
   const { editorMode } = settings;
+  const showHidden = settings.showHiddenGlyphs ?? false;
 
   return (
     <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4 p-4">
-      {characters.filter(char => !char.hidden).map(char => (
+      {characters
+        .filter(char => !char.hidden || showHidden)
+        .map(char => (
         <CharacterCard
           key={char.unicode}
           character={char}

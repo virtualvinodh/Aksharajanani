@@ -475,7 +475,8 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
              settings: { 
                  ...newScript.defaults, 
                  fontName: fontFamily,
-                 contrast: newScript.defaults.contrast ?? 1.0 
+                 contrast: newScript.defaults.contrast ?? 1.0,
+                 showHiddenGlyphs: newScript.defaults.showHiddenGlyphs ?? false
              },
              name: projectName, // This sets the dashboard name
              glyphs: [],

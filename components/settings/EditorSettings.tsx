@@ -1,9 +1,12 @@
 
+
+
 import React from 'react';
 import { AppSettings } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import LanguageSelector from '../LanguageSelector';
+import { EyeOffIcon } from '../../constants';
 
 interface EditorSettingsProps {
     settings: AppSettings;
@@ -69,6 +72,14 @@ const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsCha
                         <label className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300 select-none">
                             <input type="checkbox" checked={settings.isPrefillEnabled !== false} onChange={handleToggleChange('isPrefillEnabled')} className="h-4 w-4 rounded accent-indigo-500" />
                             <span>{t('enableCompositePrefill')}</span>
+                        </label>
+                        
+                        <label className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300 select-none">
+                            <input type="checkbox" checked={settings.showHiddenGlyphs ?? false} onChange={handleToggleChange('showHiddenGlyphs')} className="h-4 w-4 rounded accent-indigo-500" />
+                            <div className="flex items-center gap-1">
+                                <EyeOffIcon className="w-4 h-4 opacity-70" />
+                                <span>Show Hidden Glyphs</span>
+                            </div>
                         </label>
                     </div>
                 </div>

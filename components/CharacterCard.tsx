@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Character } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -103,6 +105,10 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, onSelect }) =>
 
   if (!settings) return null;
 
+  const containerClasses = character.hidden
+    ? `relative bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-between hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square group opacity-70`
+    : `relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square group`;
+
   return (
     <div
       ref={cardRef}
@@ -112,7 +118,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, onSelect }) =>
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
-      className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square group"
+      className={containerClasses}
     >
       {tooltip.visible && (
         <div className="absolute top-full mb-2 w-max max-w-xs bg-black text-white text-xs rounded py-1 px-2 z-50 pointer-events-none transform -translate-x-1/2 left-1/2 opacity-90 dark:bg-gray-700">
@@ -122,6 +128,11 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, onSelect }) =>
           </svg>
         </div>
       )}
+      
+      {character.hidden && (
+          <span className="absolute top-1 right-1 text-[10px] font-bold text-gray-400 border border-gray-300 rounded px-1 bg-white dark:bg-gray-800">HIDDEN</span>
+      )}
+
       <div className="w-full h-full flex items-center justify-center">
         <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className="group-hover:scale-110 transition-transform duration-200"></canvas>
       </div>
