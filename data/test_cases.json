@@ -225,7 +225,7 @@
     { "id": "draw_select_tool_mobile_move", "category": "Drawing Workspace: Editor & Tools", "description": "On a small screen, select a path. Drag the top-left circular handle. The entire selection should move without changing its size or proportions.", "priority": "high" },
     { "id": "draw_select_tool_mobile_proportional_scale", "category": "Drawing Workspace: Editor & Tools", "description": "On a small screen, select a path. Drag a corner handle (other than the top-left one, e.g., bottom-right). The selection should scale proportionally, maintaining its aspect ratio.", "priority": "high" },
     { "id": "draw_select_tool_mobile_nonproportional_scale", "category": "Drawing Workspace: Editor & Tools", "description": "On a small screen, select a path. Drag a side handle (e.g., the middle-right handle). The selection should stretch horizontally or vertically only, without maintaining its aspect ratio.", "priority": "medium" },
-    { "id": "draw_select_tool_mobile_rotate", "category": "Drawing Workspace: Editor & Tools", "description": "On a small screen, select a path. Drag the rotation handle located above the selection box. The selection should rotate around its center.", "priority": "high" },
+    { "id": "draw_select_tool_mobile_rotate", "category": "Drawing Workspace: Editor & Tools", "description": "On a small screen, select a path. Drag a rotation handle located above the selection box. The selection should rotate around its center.", "priority": "high" },
     { "id": "draw_edit_points_tool", "category": "Drawing Workspace: Editor & Tools", "description": "ADVANCED: Use Edit Points tool. Select a path, drag its anchor (red) and control (yellow) points. Double-click a segment to add a point. Double-click a point to delete it.", "priority": "high" },
     { "id": "draw_undo_redo", "category": "Drawing Workspace: Editor & Tools", "description": "Perform an action (e.g., draw a stroke), click Undo, then click Redo. The action should be reversed and then restored.", "priority": "high" },
     { "id": "draw_image_trace", "category": "Drawing Workspace: Editor & Tools", "description": "In the drawing editor, use 'Trace Image'. Upload a simple black and white image. In the trace modal, adjust detail/noise sliders and see the live preview update. Toggle 'Remove white background'. Click 'Insert as Vector Path'. Verify the traced outline is added to the canvas and is selectable/editable.", "priority": "high" },
@@ -349,7 +349,7 @@
         "description": "In the 'Add New Rule' form for each rule type (ligature, single, etc.), use the `<GlyphSelect>` dropdown/search component to select input and output glyphs. Also test selecting a group (e.g., @virama). Verify the rule can be saved correctly with the selected glyphs/groups.",
         "priority": "high"
     },
-    { "id": "rules_stress_large_group", "category": "Rules Workspace (GUI)", "description": "Create a glyph group with >100 members. Use it in a substitution rule. Verify that the UI remains responsive and the font compiles successfully.", "priority": "high" },
+    { "id": "rules_stress_large_group", "category": "Rules Workspace (GUI)", "description": "Create a glyph group (e.g., `@mycons`) and use it in a substitution rule. Then, delete the `@mycons` group from the Groups pane. Verify the rule that used it is handled gracefully (e.g., flagged as invalid, ignored on export) without crashing the app.", "priority": "medium" },
     { "id": "rules_replace_existing_glyph", "category": "Rules Workspace (GUI)", "description": "ADVANCED: In any rule editor (ligature, contextual, etc.), click on a glyph that has already been placed in a slot. Verify the selection modal opens, allowing the glyph to be replaced.", "priority": "high" },
     { "id": "rules_group_pane_lifecycle", "category": "Rules Workspace (GUI)", "description": "ADVANCED: In the Rules workspace, switch to the 'Groups' tab. Create a new group, add members, and save it. Then, edit the group to change its name and members. Finally, delete the group. Verify all operations succeed.", "priority": "high" },
     { "id": "rules_group_lifecycle", "category": "Rules Workspace (GUI)", "description": "1. Navigate to the 'Groups' sub-tab in Rules workspace. 2. Create a new group '@test'. 3. Add members. 4. Save. 5. Go to GUI rules and use '@test' in a rule. 6. Go back to Groups tab and delete '@test'. 7. Verify the rule editor handles the missing group gracefully.", "priority": "high" },
@@ -536,5 +536,23 @@
     { "id": "kerning_manual_interaction", "category": "Kerning", "description": "Open a pair in the Kerning Editor. Drag the right glyph horizontally. Verify that the glyph moves and the 'Kerning' input value updates in real-time. Click 'Save' (or verify Autosave).", "priority": "high" },
     { "id": "kerning_x_distance_logic", "category": "Kerning", "description": "In the Kerning Editor, hover over the gap between glyphs to see the green X-Distance line. Modify the 'x-dist' input field value in the header. Verify that the main 'Kerning' value updates automatically to achieve the desired optical distance.", "priority": "medium" },
     { "id": "kerning_editor_navigation", "category": "Kerning", "description": "Open a pair in the Kerning Editor. Use the Left/Right arrow buttons (or keyboard keys) to switch to the next pair without closing the editor. Verify that the previous pair's changes are saved.", "priority": "medium" },
-    { "id": "kerning_reset_actions", "category": "Kerning", "description": "Test the 'Delete' (Trash icon) in the Editor to reset a single pair to 0. Back in the grid, test the 'Reset Visible' button to clear all kerning for the currently filtered view.", "priority": "low" }
+    { "id": "kerning_reset_actions", "category": "Kerning", "description": "Test the 'Delete' (Trash icon) in the Editor to reset a single pair to 0. Back in the grid, test the 'Reset Visible' button to clear all kerning for the currently filtered view.", "priority": "low" },
+    {
+        "id": "data_integrity_linked_source_deletion",
+        "category": "Complex Integration & Data Integrity",
+        "description": "1. Create Glyph 'A'. 2. Create Glyph 'B' and link it to 'A' (Locked). 3. Delete Glyph 'A'. 4. Verify Glyph 'B' exists, is now Unlocked (editable), and retains 'A's paths.",
+        "priority": "high"
+    },
+    {
+        "id": "data_integrity_composite_source_deletion",
+        "category": "Complex Integration & Data Integrity",
+        "description": "1. Create Glyph 'X'. 2. Create Glyph 'Y' as a Composite of 'X' (Prefilled). 3. Delete Glyph 'X'. 4. Verify Glyph 'Y' retains its paths. 5. Verify Glyph 'Y' no longer has the 'composite' property in metadata (it acts as a base glyph).",
+        "priority": "high"
+    },
+    {
+        "id": "data_integrity_cascade_chain_deletion",
+        "category": "Complex Integration & Data Integrity",
+        "description": "1. Setup Linked Chain: A -> B (Linked to A) -> C (Linked to B). 2. Delete Glyph B. 3. Verify Glyph C converts to a base glyph, retaining its shape, and does not crash the app.",
+        "priority": "medium"
+    }
 ]
