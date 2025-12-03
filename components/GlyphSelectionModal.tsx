@@ -163,6 +163,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
                 <CharacterCard
                   key={char.unicode}
                   character={char}
+                  glyphData={glyphDataMap.get(char.unicode!)}
                   onSelect={handleSelect}
                 />
               )) : (

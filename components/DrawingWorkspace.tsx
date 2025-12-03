@@ -324,8 +324,10 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     progressTextKey="progressText"
                 />
             </div>
-            <div className="flex-grow overflow-y-auto">
+            {/* Changed overflow-y-auto to overflow-hidden to let Virtuoso manage scrolling */}
+            <div className="flex-grow overflow-hidden">
                 <CharacterGrid
+                    key={activeTab}
                     characters={visibleCharacterSets[activeTab]?.characters || []}
                     onSelectCharacter={onSelectCharacter}
                     onAddGlyph={onAddGlyph}

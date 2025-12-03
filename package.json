@@ -13,7 +13,8 @@
     "react-dom": "^19.1.0",
     "idb": "^8.0.3",
     "paper": "^0.12.18",
-    "vitest": "^4.0.10"
+    "vitest": "^4.0.10",
+    "react-virtuoso": "^4.6.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

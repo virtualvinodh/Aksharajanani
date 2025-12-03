@@ -1,32 +1,27 @@
 
-
-
-
 import React, { useRef, useEffect, useState } from 'react';
-import { Character } from '../types';
+import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths } from '../services/glyphRenderService';
 import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE } from '../constants';
-import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 
 interface CharacterCardProps {
   character: Character;
+  glyphData: GlyphData | undefined;
   onSelect: (character: Character, rect: DOMRect) => void;
 }
 
 declare var unicodeName: any;
 
-const CharacterCard: React.FC<CharacterCardProps> = ({ character, onSelect }) => {
+const CharacterCard: React.FC<CharacterCardProps> = ({ character, glyphData, onSelect }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
-  const { glyphDataMap } = useGlyphData();
+  // Removed direct useGlyphData consumption to allow parent-level virtualization/memoization
   const { settings } = useSettings();
   
-  const glyphData = glyphDataMap.get(character.unicode);
-
   const [tooltip, setTooltip] = useState<{ visible: boolean; name: string }>({ visible: false, name: '' });
   const longPressTimeout = useRef<number | null>(null);
 

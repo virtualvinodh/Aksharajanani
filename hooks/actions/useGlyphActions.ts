@@ -97,7 +97,19 @@ export const useGlyphActions = (
         // 4. COMMIT Logic - Recursive Cascade (Async)
         
         // Check for immediate dependents
-        const immediateDependents = dependencyMap.current.get(unicode);
+        const rawDependents = dependencyMap.current.get(unicode);
+        
+        // Filter Dependents: Only include actual LINKED glyphs.
+        // Standard Composites should act as templates/copies and NOT update when source changes.
+        const linkedDependents = new Set<number>();
+        if (rawDependents) {
+            rawDependents.forEach(depUni => {
+                const depChar = allCharsByUnicode.get(depUni);
+                if (depChar && depChar.link) {
+                    linkedDependents.add(depUni);
+                }
+            });
+        }
         
         // Check for positioned pairs (visual updates only, just for notification stats)
         let positionedPairCount = 0;
@@ -112,11 +124,11 @@ export const useGlyphActions = (
             }
         });
 
-        const hasDependents = (immediateDependents && immediateDependents.size > 0) || positionedPairCount > 0;
+        const hasDependents = (linkedDependents.size > 0) || positionedPairCount > 0;
 
         if (hasDependents) {
             // Show "Processing" notification
-            layout.showNotification(t('updatingDependents', { count: (immediateDependents?.size || 0) + positionedPairCount }), 'info', { duration: 10000 });
+            layout.showNotification(t('updatingDependents', { count: linkedDependents.size + positionedPairCount }), 'info', { duration: 10000 });
 
             // Defer heavy calculation to next tick to let UI render the immediate save
             setTimeout(async () => {
@@ -149,8 +161,9 @@ export const useGlyphActions = (
                         if (visited.has(depUnicode)) continue;
 
                         const dependentChar = allCharsByUnicode.get(depUnicode);
-                        // Also check 'composite' for pre-filled static composites that need regeneration on source change
-                        if (!dependentChar || (!dependentChar.link && !dependentChar.composite)) continue;
+                        
+                        // Strict Check: Only update if it is a Linked Glyph
+                        if (!dependentChar || !dependentChar.link) continue;
             
                         // We use the map from start of transaction + accumulated updates
                         // This ensures consistency within the cascade
@@ -175,7 +188,9 @@ export const useGlyphActions = (
                         // Case B: Smart Update
                         else {
                             const indicesToUpdate: number[] = [];
-                            const components = dependentChar.link || dependentChar.composite || [];
+                            // For linked glyphs, we use the 'link' property
+                            const components = dependentChar.link || [];
+                            
                             components.forEach((name, index) => {
                                 if (allCharsByName.get(name)?.unicode === currentSourceUnicode) {
                                     indicesToUpdate.push(index);
@@ -252,9 +267,6 @@ export const useGlyphActions = (
                             return next;
                         } 
                     });
-                    
-                    // Logic to handle property removal for "Static Composite" glyphs if the source was deleted
-                    // is handled in handleDelete, this is handleSave, so we just update visuals.
                 }
 
                 totalUpdatedCount += positionedPairCount;
