@@ -8,7 +8,7 @@ import PairCard from './PairCard';
 import CharacterSelectionPanel from './kerning/CharacterSelectionPanel';
 import CharacterSelectionRow from './kerning/CharacterSelectionRow';
 import { useKerning } from '../contexts/KerningContext';
-import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -28,7 +28,7 @@ interface KerningPageProps {
 const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMode, mode, showRecommendedLabel }) => {
     const { t } = useLocale();
     const { showNotification, pendingNavigationTarget, setPendingNavigationTarget } = useLayout();
-    const { characterSets, allCharsByName } = useCharacter();
+    const { characterSets, allCharsByName } = useProject();
     const { glyphDataMap } = useGlyphData();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
     const { settings, metrics } = useSettings();

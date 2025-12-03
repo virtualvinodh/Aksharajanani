@@ -2,7 +2,7 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
-import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { useSettings } from '../contexts/SettingsContext';
 import Modal from './Modal';
 import { ProjectData, GlyphData, Character, ScriptConfig } from '../types';
@@ -29,7 +29,7 @@ interface ComparisonItem {
 const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, onImport, allScripts }) => {
   const { t } = useLocale();
   const { glyphDataMap: currentGlyphData } = useGlyphData();
-  const { allCharsByName: currentCharsByName } = useCharacter();
+  const { allCharsByName: currentCharsByName } = useProject();
   const { settings } = useSettings();
 
   const [step, setStep] = useState<'selectFile' | 'selectGlyphs' | 'confirm'>('selectFile');

@@ -27,7 +27,6 @@ import SnapshotRestoreModal from './components/SnapshotRestoreModal';
 import SaveAsModal from './components/SaveAsModal';
 import { useLocale } from './contexts/LocaleContext';
 import { useLayout } from './contexts/LayoutContext';
-import { useCharacter } from './contexts/CharacterContext';
 import { useGlyphData } from './contexts/GlyphDataContext';
 import { useKerning } from './contexts/KerningContext';
 import { useSettings } from './contexts/SettingsContext';
@@ -55,14 +54,15 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
   // CONTEXT HOOKS
   const layout = useLayout();
-  const { script, characterSets, allCharsByUnicode, allCharsByName } = useCharacter();
+  // Consolidating contexts: useProject replaces useCharacter
+  const { script, characterSets, allCharsByUnicode, allCharsByName, projectName, guideFont } = useProject();
   const { glyphDataMap } = useGlyphData();
   const { kerningMap } = useKerning();
   const { settings, metrics, dispatch: settingsDispatch } = useSettings();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   const { markPositioningMap } = usePositioning();
   const { state: rulesState } = useRules();
-  const { projectName, guideFont } = useProject(); // Pull guideFont from ProjectContext
+  
   const { fontRules, isFeaEditMode, manualFeaCode, hasUnsavedRules } = rulesState;
   const { workspace, currentView, setCurrentView, selectedCharacter, selectCharacter, closeCharacterModal } = layout;
 

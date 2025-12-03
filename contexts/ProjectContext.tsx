@@ -57,6 +57,8 @@ interface ProjectContextType {
 
     // Dispatcher for character actions
     dispatchCharacterAction: (action: CharacterAction) => void;
+    // Alias for backward compatibility with components previously using CharacterContext
+    dispatch: (action: CharacterAction) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -225,7 +227,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         recommendedKerning, setRecommendedKerning,
         guideFont, setGuideFont,
         
-        dispatchCharacterAction
+        dispatchCharacterAction,
+        dispatch: dispatchCharacterAction // Alias for compatibility
     };
 
     return (

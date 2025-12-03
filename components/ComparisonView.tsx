@@ -6,7 +6,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useTheme } from '../contexts/ThemeContext';
 import Footer from './Footer';
 import { renderPaths } from '../services/glyphRenderService';
-import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -23,7 +23,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { t } = useLocale();
   const { theme } = useTheme();
-  const { characterSets } = useCharacter();
+  const { characterSets } = useProject();
   const { glyphDataMap } = useGlyphData();
   const { settings, metrics } = useSettings();
   const { comparisonCharacters, setComparisonCharacters } = useLayout();

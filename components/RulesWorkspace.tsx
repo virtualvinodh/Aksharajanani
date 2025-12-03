@@ -1,7 +1,8 @@
+
 import React from 'react';
 import RulesPage from './RulesPage';
 import { PositioningRules } from '../types';
-import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useKerning } from '../contexts/KerningContext';
 import { usePositioning } from '../contexts/PositioningContext';
@@ -16,7 +17,7 @@ interface RulesWorkspaceProps {
 }
 
 const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
-    const { characterSets, allCharsByName, allCharsByUnicode } = useCharacter();
+    const { characterSets, allCharsByName, allCharsByUnicode } = useProject();
     const { glyphDataMap } = useGlyphData();
     const { kerningMap } = useKerning();
     const { markPositioningMap } = usePositioning();

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { ScriptConfig, ScriptsFile, ProjectData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -8,7 +7,7 @@ import App from '../App';
 import AboutPage from './AboutPage';
 import HelpPage from './HelpPage';
 import { initializePyodide } from '../services/pythonFontService';
-import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useKerning } from '../contexts/KerningContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -25,7 +24,7 @@ const AppContainer: React.FC = () => {
     
     const { t } = useLocale();
     const { openModal, closeModal, setActiveTab, setWorkspace, setCurrentView, closeCharacterModal, activeModal, notification, closeNotification } = useLayout();
-    const { script, dispatch: characterDispatch } = useCharacter();
+    const { script, dispatch: characterDispatch } = useProject();
     const { dispatch: glyphDataDispatch } = useGlyphData();
     const { dispatch: kerningDispatch } = useKerning();
     const { dispatch: settingsDispatch } = useSettings();

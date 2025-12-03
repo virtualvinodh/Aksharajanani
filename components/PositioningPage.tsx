@@ -7,7 +7,7 @@ import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttac
 import PositioningEditorPage from './PositioningEditorPage';
 import { usePositioning } from '../contexts/PositioningContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
-import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useHorizontalScroll } from '../hooks/useHorizontalScroll';
@@ -34,7 +34,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     const { showNotification, pendingNavigationTarget, setPendingNavigationTarget } = useLayout();
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
-    const { characterSets, dispatch: characterDispatch } = useCharacter();
+    const { characterSets, dispatch: characterDispatch } = useProject();
     const { settings, metrics } = useSettings();
 
     const [viewBy, setViewBy] = useState<'base' | 'mark'>('base');

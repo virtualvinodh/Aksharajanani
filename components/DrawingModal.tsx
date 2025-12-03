@@ -22,7 +22,7 @@ import { getAccurateGlyphBBox, generateCompositeGlyphData } from '../services/gl
 import { VEC } from '../utils/vectorUtils';
 import ContextualToolbar from './ContextualToolbar';
 import { isGlyphDrawn } from '../utils/glyphUtils';
-import { useCharacter as useCharacterContext } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 
 declare var paper: any;
@@ -54,7 +54,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   
   // We need direct dispatch access to update metadata for construction changes
-  const { dispatch: characterDispatch, allCharsByName } = useCharacterContext();
+  const { dispatch: characterDispatch, allCharsByName } = useProject();
   const { dispatch: glyphDataDispatch } = useGlyphDataContext();
 
   const [currentTool, setCurrentTool] = useState<Tool>('pen');

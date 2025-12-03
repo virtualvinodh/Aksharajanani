@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLocale } from '../contexts/LocaleContext';
@@ -16,7 +16,7 @@ interface MetricsWorkspaceProps {
 }
 
 const MetricsWorkspace: React.FC<MetricsWorkspaceProps> = () => {
-    const { characterSets, dispatch: characterDispatch } = useCharacter();
+    const { characterSets, dispatch: characterDispatch } = useProject();
     const { glyphDataMap } = useGlyphData();
     const { settings, metrics } = useSettings();
     const { t } = useLocale();

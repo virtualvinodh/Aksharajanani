@@ -8,7 +8,7 @@ import { LeftArrowIcon, RightArrowIcon, CheckCircleIcon, AddIcon, EditIcon, Tras
 import ProgressIndicator from './ProgressIndicator';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { isGlyphDrawn } from '../utils/glyphUtils';
-import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import Modal from './Modal';
 
 interface DrawingWorkspaceProps {
@@ -93,7 +93,7 @@ const CharacterSetTab: React.FC<{
 const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSelectCharacter, onAddGlyph, onAddBlock, drawingProgress }) => {
     const { t } = useLocale();
     const { activeTab, setActiveTab, showNotification } = useLayout();
-    const { dispatch: characterDispatch } = useCharacter();
+    const { dispatch: characterDispatch } = useProject();
     const navContainerRef = useRef<HTMLDivElement>(null);
     const [showNavArrows, setShowNavArrows] = useState({ left: false, right: false });
     

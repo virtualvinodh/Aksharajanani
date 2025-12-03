@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { Character, GlyphData, PositioningRules, ScriptConfig, KerningMap, RecommendedKerning } from '../types';
-import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { SearchIcon, EditIcon, SettingsIcon, CompareIcon, TestIcon, ExportIcon, SaveIcon, LoadIcon, CodeBracketsIcon, CopyIcon } from '../constants';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -40,7 +40,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     positioningRules, script, hasKerning, kerningMap, allCharsByUnicode, recommendedKerning 
 }) => {
     const { t } = useLocale();
-    const { characterSets, allCharsByName } = useCharacter();
+    // MIGRATION: Use useProject instead of useCharacter
+    const { characterSets, allCharsByName } = useProject();
     const { glyphDataMap } = useGlyphData();
     const { settings } = useSettings();
     const { state: rulesState } = useRules();
@@ -402,14 +403,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
              
              <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[80vh] animate-modal-enter">
                  <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-700 gap-3">
-                    <SearchIcon />
+                    <SearchIcon className="w-5 h-5 text-gray-400" />
                     <input 
                         ref={inputRef}
                         type="text" 
                         className="flex-grow bg-transparent text-lg placeholder-gray-400 dark:text-white focus:outline-none"
                         placeholder={t('searchChar') + " or command..."}
                         value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
+                        onChange={e => { setSearchTerm(e.target.value); setActiveIndex(0); }}
                         onKeyDown={handleKeyDown}
                     />
                     <button onClick={onClose} className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-gray-500 dark:text-gray-400">ESC</button>
@@ -447,6 +448,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                          </div>
                      )}
                  </div>
+                 <div className="bg-gray-50 dark:bg-gray-900/50 p-2 text-xs text-gray-500 border-t dark:border-gray-700 flex justify-between px-4">
+                    <span>Use arrow keys to navigate</span>
+                    <span>{filteredItems.length} results</span>
+                </div>
              </div>
         </div>
     );
