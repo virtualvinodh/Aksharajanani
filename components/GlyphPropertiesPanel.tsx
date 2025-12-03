@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { FontMetrics, Character, CharacterSet, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -199,7 +200,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   const showConstruction = !!character && !!onSaveConstruction && !!allCharacterSets;
 
   return (
-    <div ref={panelRef} className="absolute top-full right-0 mt-2 w-80 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-20 max-h-[80vh] overflow-y-auto flex flex-col gap-4">
+    <div ref={panelRef} className="absolute top-full right-0 mt-2 w-72 sm:w-80 max-w-[90vw] bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-20 max-h-[80vh] overflow-y-auto flex flex-col gap-4">
       <div className="flex justify-between items-center">
         <h4 className="font-bold text-gray-900 dark:text-white">{t('glyphProperties')}</h4>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
