@@ -5,7 +5,6 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 import { LayoutProvider } from '../contexts/LayoutContext';
 import { PositioningProvider } from '../contexts/PositioningContext';
 import { RulesProvider } from '../contexts/RulesContext';
-import { CharacterProvider } from '../contexts/CharacterContext';
 import { GlyphDataProvider } from '../contexts/GlyphDataContext';
 import { KerningProvider } from '../contexts/KerningContext';
 import { SettingsProvider } from '../contexts/SettingsContext';
@@ -18,8 +17,7 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       <LocaleProvider>
         <ProjectProvider>
           <LayoutProvider>
-            <CharacterProvider>
-              <GlyphDataProvider>
+            <GlyphDataProvider>
                 <KerningProvider>
                   <SettingsProvider>
                     <ClipboardProvider>
@@ -31,8 +29,7 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </ClipboardProvider>
                   </SettingsProvider>
                 </KerningProvider>
-              </GlyphDataProvider>
-            </CharacterProvider>
+            </GlyphDataProvider>
           </LayoutProvider>
         </ProjectProvider>
       </LocaleProvider>

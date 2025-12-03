@@ -1,11 +1,23 @@
 
-import React, { createContext, useState, useContext, ReactNode, useMemo } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { 
     GlyphData, KerningMap, CharacterSet, Path, 
     ProjectData, ScriptConfig, AppSettings, FontMetrics, Character,
     PositioningRules, MarkAttachmentRules, AttachmentClass, RecommendedKerning,
     GuideFont
 } from '../types';
+
+// --- Types moved from CharacterContext ---
+type CharacterAction =
+    | { type: 'SET_SCRIPT'; payload: ScriptConfig | null }
+    | { type: 'SET_CHARACTER_SETS'; payload: CharacterSet[] | null }
+    | { type: 'UPDATE_CHARACTER_SETS', payload: (prev: CharacterSet[] | null) => CharacterSet[] | null }
+    | { type: 'DELETE_CHARACTER', payload: { unicode: number } }
+    | { type: 'UPDATE_CHARACTER_BEARINGS', payload: { unicode: number, lsb?: number, rsb?: number } }
+    | { type: 'ADD_CHARACTERS', payload: { characters: Character[], activeTabNameKey: string } }
+    | { type: 'UNLINK_GLYPH', payload: { unicode: number } }
+    | { type: 'RELINK_GLYPH', payload: { unicode: number } }
+    | { type: 'RESET' };
 
 interface ProjectContextType {
     script: ScriptConfig | null;
@@ -42,6 +54,9 @@ interface ProjectContextType {
     setRecommendedKerning: React.Dispatch<React.SetStateAction<RecommendedKerning[] | null>>;
     guideFont: GuideFont | null;
     setGuideFont: React.Dispatch<React.SetStateAction<GuideFont | null>>;
+
+    // Dispatcher for character actions
+    dispatchCharacterAction: (action: CharacterAction) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -64,6 +79,113 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [baseAttachmentClasses, setBaseAttachmentClasses] = useState<AttachmentClass[] | null>(null);
     const [recommendedKerning, setRecommendedKerning] = useState<RecommendedKerning[] | null>(null);
     const [guideFont, setGuideFont] = useState<GuideFont | null>(null);
+
+    // Logic ported from CharacterContext reducer
+    const dispatchCharacterAction = useCallback((action: CharacterAction) => {
+        switch (action.type) {
+            case 'SET_SCRIPT': 
+                setScript(action.payload);
+                break;
+            case 'SET_CHARACTER_SETS': 
+                setCharacterSets(action.payload);
+                break;
+            case 'UPDATE_CHARACTER_SETS': 
+                setCharacterSets(prev => action.payload(prev));
+                break;
+            case 'DELETE_CHARACTER': 
+                setCharacterSets(prev => {
+                    if (!prev) return null;
+                    const newSets = prev
+                        .map(s => ({ ...s, characters: s.characters.filter(c => c.unicode !== action.payload.unicode) }))
+                        .filter(s => s.characters.length > 0);
+                    return newSets;
+                });
+                break;
+            case 'UPDATE_CHARACTER_BEARINGS':
+                setCharacterSets(prev => {
+                    if (!prev) return null;
+                    return prev.map(set => ({
+                        ...set,
+                        characters: set.characters.map(char => {
+                            if (char.unicode === action.payload.unicode) {
+                                const newChar = { ...char };
+                                if (action.payload.lsb !== undefined) newChar.lsb = action.payload.lsb; else delete newChar.lsb;
+                                if (action.payload.rsb !== undefined) newChar.rsb = action.payload.rsb; else delete newChar.rsb;
+                                return newChar;
+                            }
+                            return char;
+                        })
+                    }));
+                });
+                break;
+            case 'ADD_CHARACTERS': 
+                setCharacterSets(prev => {
+                    const { characters, activeTabNameKey } = action.payload;
+                    if (!characters || characters.length === 0) return prev;
+                    const currentSets = prev || [];
+                    const newSets: CharacterSet[] = JSON.parse(JSON.stringify(currentSets));
+                    
+                    let targetSet = newSets.find(s => s.nameKey === activeTabNameKey);
+                    if (!targetSet) {
+                        const TARGET_SET_KEY = 'punctuationsAndOthers';
+                        targetSet = newSets.find(s => s.nameKey === TARGET_SET_KEY);
+                        if (!targetSet) {
+                            targetSet = { nameKey: TARGET_SET_KEY, characters: [] };
+                            newSets.push(targetSet);
+                        }
+                    }
+                    const existingUnicodes = new Set(newSets.flatMap(s => s.characters).map(c => c.unicode));
+                    characters.forEach(charToAdd => {
+                        if (charToAdd.unicode !== undefined && !existingUnicodes.has(charToAdd.unicode)) {
+                            targetSet!.characters.push(charToAdd);
+                            existingUnicodes.add(charToAdd.unicode);
+                        }
+                    });
+                    return newSets;
+                });
+                break;
+            case 'UNLINK_GLYPH':
+                setCharacterSets(prev => {
+                    if (!prev) return null;
+                    return prev.map(set => ({
+                        ...set,
+                        characters: set.characters.map(char => {
+                            if (char.unicode === action.payload.unicode && char.link) {
+                                const newChar = { ...char };
+                                newChar.composite = newChar.link;
+                                newChar.sourceLink = newChar.link;
+                                delete newChar.link;
+                                return newChar;
+                            }
+                            return char;
+                        })
+                    }));
+                });
+                break;
+            case 'RELINK_GLYPH':
+                setCharacterSets(prev => {
+                    if (!prev) return null;
+                    return prev.map(set => ({
+                        ...set,
+                        characters: set.characters.map(char => {
+                            if (char.unicode === action.payload.unicode && char.sourceLink) {
+                                const newChar = { ...char };
+                                newChar.link = newChar.sourceLink;
+                                delete newChar.sourceLink;
+                                delete newChar.composite;
+                                return newChar;
+                            }
+                            return char;
+                        })
+                    }));
+                });
+                break;
+            case 'RESET':
+                setScript(null);
+                setCharacterSets(null);
+                break;
+        }
+    }, []);
 
     const allCharsByUnicode = useMemo(() => {
         if (!characterSets) return new Map<number, Character>();
@@ -101,7 +223,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         markAttachmentClasses, setMarkAttachmentClasses,
         baseAttachmentClasses, setBaseAttachmentClasses,
         recommendedKerning, setRecommendedKerning,
-        guideFont, setGuideFont
+        guideFont, setGuideFont,
+        
+        dispatchCharacterAction
     };
 
     return (

@@ -32,7 +32,7 @@ export const useGlyphActions = (
     const { settings, metrics, dispatch: settingsDispatch } = useSettings();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
-    const { markAttachmentRules, setCharacterSets } = useProject(); // Sync Fix: Get setCharacterSets
+    const { markAttachmentRules } = useProject();
 
     const handleSaveGlyph = useCallback((
         unicode: number,
@@ -66,22 +66,9 @@ export const useGlyphActions = (
         if (hasPathChanges) {
             newGlyphDataMap.set(unicode, newGlyphData);
         }
-        // Bearings are metadata, handled separately via characterDispatch
+        // Bearings are metadata, handled separately via characterDispatch (which now updates ProjectContext directly)
         if (hasBearingChanges) {
             characterDispatch({ type: 'UPDATE_CHARACTER_BEARINGS', payload: { unicode, ...newBearings } });
-            // Sync Fix: Update Bearings in ProjectContext
-            setCharacterSets(prev => {
-                if (!prev) return null;
-                return prev.map(set => ({
-                    ...set,
-                    characters: set.characters.map(c => {
-                        if (c.unicode === unicode) {
-                            return { ...c, ...newBearings };
-                        }
-                        return c;
-                    })
-                }));
-            });
         }
 
         // 3. If this is a DRAFT (Autosave), dispatch and stop.
@@ -121,7 +108,6 @@ export const useGlyphActions = (
             const undoChanges = () => {
                 glyphDataDispatch({ type: 'SET_MAP', payload: glyphDataSnapshot });
                 characterDispatch({ type: 'SET_CHARACTER_SETS', payload: characterSetsSnapshot });
-                setCharacterSets(characterSetsSnapshot); // Sync Fix: Undo character sets
                 positioningDispatch({ type: 'SET_MAP', payload: markPositioningSnapshot });
                 layout.showNotification(t('glyphUpdateReverted'), 'info');
             };
@@ -244,7 +230,7 @@ export const useGlyphActions = (
         
         if (onSuccess) onSuccess();
 
-    }, [allCharsByUnicode, glyphDataMap, dependencyMap, markPositioningMap, characterSets, glyphDataDispatch, characterDispatch, positioningDispatch, layout, settings, metrics, markAttachmentRules, allCharsByName, t, setCharacterSets]);
+    }, [allCharsByUnicode, glyphDataMap, dependencyMap, markPositioningMap, characterSets, glyphDataDispatch, characterDispatch, positioningDispatch, layout, settings, metrics, markAttachmentRules, allCharsByName, t]);
 
     const handleDeleteGlyph = useCallback((unicode: number) => {
         const charToDelete = allCharsByUnicode.get(unicode); if (!charToDelete) return;
@@ -258,7 +244,6 @@ export const useGlyphActions = (
         const undo = () => {
             glyphDataDispatch({ type: 'SET_MAP', payload: glyphDataSnapshot });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: characterSetsSnapshot });
-            setCharacterSets(characterSetsSnapshot); // Sync Fix: Undo deletion
             kerningDispatch({ type: 'SET_MAP', payload: kerningSnapshot });
             positioningDispatch({ type: 'SET_MAP', payload: positioningSnapshot });
             dependencyMap.current = dependencySnapshot;
@@ -307,24 +292,6 @@ export const useGlyphActions = (
                     })
                 }));
             }});
-            // Sync Fix: Update dependents in ProjectContext (remove links)
-            setCharacterSets(prev => {
-                if (!prev) return null;
-                return prev.map(set => ({
-                    ...set,
-                    characters: set.characters.map(char => {
-                        if (dependentUnicodes.includes(char.unicode!)) {
-                            const newChar = { ...char };
-                            delete newChar.link;
-                            delete newChar.composite;
-                            delete newChar.compositeTransform;
-                            delete newChar.sourceLink;
-                            return newChar;
-                        }
-                        return char;
-                    })
-                }));
-            });
             
             dependencyMap.current.delete(unicode);
         }
@@ -347,14 +314,6 @@ export const useGlyphActions = (
 
         glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode }});
         characterDispatch({ type: 'DELETE_CHARACTER', payload: { unicode } });
-        // Sync Fix: Delete glyph from ProjectContext
-        setCharacterSets(prev => {
-            if (!prev) return null;
-            return prev.map(s => ({
-                ...s,
-                characters: s.characters.filter(c => c.unicode !== unicode)
-            })).filter(s => s.characters.length > 0);
-        });
 
         kerningDispatch({ type: 'SET_MAP', payload: newKerningMap });
         positioningDispatch({ type: 'SET_MAP', payload: newPositioningMap });
@@ -365,7 +324,7 @@ export const useGlyphActions = (
             'success',
             { onUndo: undo }
         );
-    }, [allCharsByUnicode, t, glyphDataDispatch, characterDispatch, kerningDispatch, positioningDispatch, layout, glyphDataMap, characterSets, kerningMap, markPositioningMap, dependencyMap, allCharsByName, settings, metrics, markAttachmentRules, setCharacterSets]);
+    }, [allCharsByUnicode, t, glyphDataDispatch, characterDispatch, kerningDispatch, positioningDispatch, layout, glyphDataMap, characterSets, kerningMap, markPositioningMap, dependencyMap, allCharsByName, settings, metrics, markAttachmentRules]);
 
     const handleAddGlyph = useCallback((charData: { unicode?: number; name: string }) => {
         let finalUnicode = charData.unicode;
@@ -397,30 +356,13 @@ export const useGlyphActions = (
             newChar.advWidth = 0;
         }
 
-        characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prevSets) => {
-            if (!prevSets) return [{ nameKey: 'punctuationsAndOthers', characters: [newChar] }];
-            const newSets: CharacterSet[] = JSON.parse(JSON.stringify(prevSets));
-            const activeSet = newSets[layout.activeTab] || newSets[newSets.length - 1] || { nameKey: 'punctuationsAndOthers', characters: [] };
-            if (!newSets.includes(activeSet)) newSets.push(activeSet);
-            activeSet.characters.push(newChar);
-            return newSets;
-        }});
-        
-        // Sync Fix: Add glyph to ProjectContext
-        setCharacterSets(prev => {
-             if (!prev) return [{ nameKey: 'punctuationsAndOthers', characters: [newChar] }];
-             const newSets: CharacterSet[] = JSON.parse(JSON.stringify(prev));
-             // Rely on layout.activeTab being available in the closure
-             const activeSet = newSets[layout.activeTab] || newSets[newSets.length - 1] || { nameKey: 'punctuationsAndOthers', characters: [] };
-             if (!newSets.includes(activeSet)) newSets.push(activeSet);
-             activeSet.characters.push(newChar);
-             return newSets;
-        });
+        // This now updates the ProjectContext state directly via the proxy hook
+        characterDispatch({ type: 'ADD_CHARACTERS', payload: { characters: [newChar], activeTabNameKey: '' } });
 
         layout.closeModal();
         layout.showNotification(t('glyphAddedSuccess', { name: newChar.name }));
         layout.selectCharacter(newChar);
-    }, [characterDispatch, layout, t, allCharsByUnicode, setCharacterSets]);
+    }, [characterDispatch, layout, t, allCharsByUnicode]);
 
     const handleUnlockGlyph = useCallback((unicode: number) => {
         const charToUnlock = allCharsByUnicode.get(unicode);
@@ -436,23 +378,6 @@ export const useGlyphActions = (
         }
         
         characterDispatch({ type: 'UNLINK_GLYPH', payload: { unicode } });
-        // Sync Fix: Unlink in ProjectContext
-        setCharacterSets(prev => {
-            if (!prev) return null;
-            return prev.map(set => ({
-                ...set,
-                characters: set.characters.map(char => {
-                    if (char.unicode === unicode && char.link) {
-                        const newChar = { ...char };
-                        newChar.composite = newChar.link;
-                        newChar.sourceLink = newChar.link;
-                        delete newChar.link;
-                        return newChar;
-                    }
-                    return char;
-                })
-            }));
-        });
     
         dependencyMap.current.forEach((dependents, key) => {
             if (dependents.has(unicode)) {
@@ -460,7 +385,7 @@ export const useGlyphActions = (
             }
         });
     
-    }, [characterDispatch, allCharsByUnicode, dependencyMap, layout, setCharacterSets]);
+    }, [characterDispatch, allCharsByUnicode, dependencyMap, layout]);
 
     const handleRelinkGlyph = useCallback((unicode: number) => {
         const charToRelink = allCharsByUnicode.get(unicode);
@@ -476,23 +401,6 @@ export const useGlyphActions = (
         }
 
         characterDispatch({ type: 'RELINK_GLYPH', payload: { unicode } });
-        // Sync Fix: Relink in ProjectContext
-        setCharacterSets(prev => {
-            if (!prev) return null;
-            return prev.map(set => ({
-                ...set,
-                characters: set.characters.map(char => {
-                    if (char.unicode === unicode && char.sourceLink) {
-                        const newChar = { ...char };
-                        newChar.link = newChar.sourceLink;
-                        delete newChar.sourceLink;
-                        delete newChar.composite;
-                        return newChar;
-                    }
-                    return char;
-                })
-            }));
-        });
         
         if (relinkedChar.link && settings && metrics && characterSets) {
             const compositeData = generateCompositeGlyphData({
@@ -525,7 +433,7 @@ export const useGlyphActions = (
                 }
             });
         }
-    }, [characterDispatch, glyphDataDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap, setCharacterSets]);
+    }, [characterDispatch, glyphDataDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap]);
     
     const handleUpdateDependencies = useCallback((unicode: number, newLinkComponents: string[] | null) => {
         const currentChar = allCharsByUnicode.get(unicode);
@@ -590,34 +498,12 @@ export const useGlyphActions = (
 
         characterDispatch({ type: 'ADD_CHARACTERS', payload: { characters: charsToAdd, activeTabNameKey } });
         
-        // Sync Fix: Add characters to ProjectContext
-        setCharacterSets(prev => {
-             if (!prev) return null;
-             const newSets = JSON.parse(JSON.stringify(prev));
-             let targetSet = newSets.find((s: CharacterSet) => s.nameKey === activeTabNameKey);
-             if (!targetSet) {
-                 targetSet = newSets.find((s: CharacterSet) => s.nameKey === 'punctuationsAndOthers');
-                 if (!targetSet) {
-                     targetSet = { nameKey: 'punctuationsAndOthers', characters: [] };
-                     newSets.push(targetSet);
-                 }
-             }
-             const existingUnicodes = new Set(newSets.flatMap((s: CharacterSet) => s.characters).map((c: Character) => c.unicode));
-             charsToAdd.forEach((charToAdd: Character) => {
-                if (charToAdd.unicode !== undefined && !existingUnicodes.has(charToAdd.unicode)) {
-                    targetSet!.characters.push(charToAdd);
-                    existingUnicodes.add(charToAdd.unicode);
-                }
-             });
-             return newSets;
-        });
-        
         if (charsToAdd.length > 0) {
             layout.showNotification(t('glyphsAddedFromBlock', { count: charsToAdd.length }), 'success');
         } else {
             layout.showNotification(t('allGlyphsFromBlockExist'), 'info');
         }
-    }, [characterSets, characterDispatch, layout, t, setCharacterSets]);
+    }, [characterSets, characterDispatch, layout, t]);
 
     const handleCheckGlyphExists = useCallback((unicode: number): boolean => allCharsByUnicode.has(unicode), [allCharsByUnicode]);
     const handleCheckNameExists = useCallback((name: string): boolean => allCharsByName.has(name), [allCharsByName]);

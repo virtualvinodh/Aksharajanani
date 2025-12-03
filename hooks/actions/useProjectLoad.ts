@@ -40,7 +40,7 @@ export const useProjectLoad = ({
         setMarkAttachmentClasses,
         setBaseAttachmentClasses,
         setRecommendedKerning,
-        setCharacterSets, // Sync Fix: Get setter
+        setCharacterSets,
         setGuideFont
     } = useProject();
 
@@ -325,8 +325,6 @@ export const useProjectLoad = ({
             }
             
             // Create Dynamic Ligatures (if using default/static rules, or if project rules need expansion)
-            // Note: If projectToLoad is present, characterSets (including dynamic ones) should already be there.
-            // We only run this generation if we are initializing from static config or if the project is old.
             
             const activePositioningRules = projectToLoad?.positioningRules || rawPositioningRules;
             const activeMarkAttachmentRules = projectToLoad?.markAttachmentRules || expandMarkAttachmentRules((charDefinition.find(i => 'markAttachment' in i) as any)?.markAttachment);
@@ -383,7 +381,6 @@ export const useProjectLoad = ({
             };
             characterDispatch({ type: 'SET_SCRIPT', payload: updatedScriptConfig });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: processedCharSets });
-            setCharacterSets(processedCharSets); // Sync Fix: Dispatch to ProjectContext
             
             // Set Guide Font in ProjectContext
             setGuideFont(projectToLoad?.guideFont || currentScript.guideFont || null);
