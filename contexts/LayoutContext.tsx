@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useCallback, useRef } from 'react';
 import { Character, ProjectData } from '../types';
 
 export type Workspace = 'drawing' | 'positioning' | 'kerning' | 'rules' | 'metrics';
@@ -61,6 +61,9 @@ interface LayoutContextType {
   // Deep Linking / Navigation Target
   pendingNavigationTarget: string | null;
   setPendingNavigationTarget: React.Dispatch<React.SetStateAction<string | null>>;
+
+  // Session Flags for One-time UX events
+  checkAndSetFlag: (key: string) => boolean;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -85,6 +88,9 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [isMetricsSelectionMode, setIsMetricsSelectionMode] = useState(false);
     const [pendingNavigationTarget, setPendingNavigationTarget] = useState<string | null>(null);
 
+    // Session flags (non-persistent across refreshes)
+    const sessionFlags = useRef<Set<string>>(new Set());
+
     const selectCharacter = useCallback((character: Character, rect?: DOMRect) => {
         setModalOriginRect(rect || null);
         setSelectedCharacter(character);
@@ -104,6 +110,14 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const closeNotification = useCallback(() => setNotification(null), []);
 
+    const checkAndSetFlag = useCallback((key: string) => {
+        if (sessionFlags.current.has(key)) {
+            return true;
+        }
+        sessionFlags.current.add(key);
+        return false;
+    }, []);
+
     const value = {
         workspace, setWorkspace,
         currentView, setCurrentView,
@@ -117,7 +131,8 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         projectToRestore, setProjectToRestore,
         metricsSelection, setMetricsSelection,
         isMetricsSelectionMode, setIsMetricsSelectionMode,
-        pendingNavigationTarget, setPendingNavigationTarget
+        pendingNavigationTarget, setPendingNavigationTarget,
+        checkAndSetFlag
     };
 
     return (

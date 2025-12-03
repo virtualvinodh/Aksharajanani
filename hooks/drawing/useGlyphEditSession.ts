@@ -33,7 +33,7 @@ export const useGlyphEditSession = ({
     onClose
 }: UseGlyphEditSessionProps) => {
     const { t } = useLocale();
-    const { showNotification } = useLayout();
+    const { showNotification, checkAndSetFlag } = useLayout();
 
     // --- STATE INITIALIZATION ---
     
@@ -138,8 +138,11 @@ export const useGlyphEditSession = ({
         // 2. Existing Prefill Notification
         const isPrefilled = currentPaths.length > 0 && !isGlyphDrawn(glyphData);
         if (isPrefilled && !character.link) {
-            const componentNamesStr = (character.composite || []).join(' + ');
-            showNotification(t('compositeGlyphPrefilled', { components: componentNamesStr }), 'info');
+            const hasSeen = checkAndSetFlag('composite_intro');
+            const joiner = hasSeen ? ', ' : ' + ';
+            const componentNamesStr = (character.composite || []).join(joiner);
+            const messageKey = hasSeen ? 'compositeGlyphPrefilledShort' : 'compositeGlyphPrefilled';
+            showNotification(t(messageKey, { components: componentNamesStr }), 'info');
         }
     }, []); // Run once on mount
 

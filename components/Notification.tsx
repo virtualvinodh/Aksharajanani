@@ -53,7 +53,7 @@ const Notification: React.FC<NotificationProps> = ({ message, onClose, duration 
       role="alert"
     >
       <div className={`${colorClasses[type]} font-semibold px-4 py-3 rounded-lg shadow-xl flex items-center gap-4`}>
-        <span>{message}</span>
+        <span className="whitespace-pre-wrap">{message}</span>
         {onUndo && (
           <button
             onClick={handleUndoClick}

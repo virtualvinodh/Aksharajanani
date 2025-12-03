@@ -50,7 +50,7 @@ interface DrawingModalProps {
 
 const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, onUnlockGlyph, onRelinkGlyph, onUpdateDependencies }) => {
   const { t } = useLocale();
-  const { showNotification, modalOriginRect } = useLayout();
+  const { showNotification, modalOriginRect, checkAndSetFlag } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   
   // We need direct dispatch access to update metadata for construction changes
@@ -416,7 +416,11 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       }
 
       if (character.link && currentPaths.length > 0) {
-        showNotification(t('linkedGlyphLocked', { components: character.link.join(' + ') }), 'info');
+        const hasSeen = checkAndSetFlag('linked_intro');
+        const joiner = hasSeen ? ', ' : ' + ';
+        const componentsStr = character.link.join(joiner);
+        const messageKey = hasSeen ? 'linkedGlyphLockedShort' : 'linkedGlyphLocked';
+        showNotification(t(messageKey, { components: componentsStr }), 'info');
       }
   }, []);
 
