@@ -151,7 +151,7 @@
     { "unicode": 57415, "name": "க்ஷீ", "glyphClass": "ligature", "composite": ["க்ஷ", "ீ"] },
     { "unicode": 57416, "name": "ஶீ", "glyphClass": "ligature", "composite": ["ஶ", "ீ"] },
     { "name": "ஸ்ரீ", "glyphClass": "ligature" },    
-    { "name": "ஶ்ரீ", "glyphClass": "ligature", "composite": ["ஸ்ரீ"] }
+    { "name": "ஶ்ரீ", "glyphClass": "ligature", "composite": ["ஸ்ரீ"], "hidden": true }
   ]
 },
 {
