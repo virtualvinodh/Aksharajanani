@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useCharacter } from '../../contexts/CharacterContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useKerning } from '../../contexts/KerningContext';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -18,7 +17,7 @@ export const useProjectPersistence = (
 ) => {
     const { t } = useLocale();
     const layout = useLayout();
-    const { script, characterSets } = useCharacter();
+    const { script, characterSets } = useProject();
     const { glyphDataMap } = useGlyphData();
     const { kerningMap } = useKerning();
     const { settings, metrics } = useSettings();

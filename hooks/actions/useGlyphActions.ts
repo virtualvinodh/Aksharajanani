@@ -1,13 +1,12 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useCharacter } from '../../contexts/CharacterContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { usePositioning } from '../../contexts/PositioningContext';
 import { useKerning } from '../../contexts/KerningContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { useProject } from '../../contexts/ProjectContext';
 import { Character, GlyphData, Path, Point, CharacterSet } from '../../types';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
 import { generateCompositeGlyphData, updateComponentInPaths } from '../../services/glyphRenderService';
@@ -27,13 +26,13 @@ export const useGlyphActions = (
 ) => {
     const { t } = useLocale();
     const layout = useLayout();
-    const { characterSets, allCharsByUnicode, allCharsByName, dispatch: characterDispatch } = useCharacter();
+    // MIGRATION: Replaced useCharacter with useProject
+    const { characterSets, allCharsByUnicode, allCharsByName, dispatchCharacterAction: characterDispatch, markAttachmentRules } = useProject();
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
     const { settings, metrics, dispatch: settingsDispatch } = useSettings();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
-    const { markAttachmentRules } = useProject();
-
+    
     // Track mounting state to cancel async operations if the user leaves the project
     const isMounted = useRef(true);
     useEffect(() => {

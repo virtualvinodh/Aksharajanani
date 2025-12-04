@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useCharacter } from '../../contexts/CharacterContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useKerning } from '../../contexts/KerningContext';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -8,7 +8,6 @@ import { usePositioning } from '../../contexts/PositioningContext';
 import { useRules } from '../../contexts/RulesContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { useProject } from '../../contexts/ProjectContext';
 import { ScriptConfig, ProjectData, Character, CharacterSet, CharacterDefinition, AttachmentClass, RecommendedKerning, MarkAttachmentRules, PositioningRules } from '../../types';
 import { FONT_META_DEFAULTS } from '../../constants';
 
@@ -25,7 +24,8 @@ export const useProjectLoad = ({
     
     const { t } = useLocale();
     const layout = useLayout();
-    const { script, dispatch: characterDispatch } = useCharacter();
+    // MIGRATION: Replaced useCharacter with useProject
+    const { script, dispatchCharacterAction: characterDispatch } = useProject();
     const { dispatch: glyphDataDispatch } = useGlyphData();
     const { dispatch: kerningDispatch } = useKerning();
     const { dispatch: settingsDispatch } = useSettings();

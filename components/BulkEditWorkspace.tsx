@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useCharacter } from '../contexts/CharacterContext';
+import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLocale } from '../contexts/LocaleContext';
@@ -79,7 +79,7 @@ const transformGlyphPaths = (
 
 
 const BulkEditWorkspace: React.FC = () => {
-    const { characterSets, dispatch: characterDispatch } = useCharacter();
+    const { characterSets, dispatch: characterDispatch } = useProject();
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();

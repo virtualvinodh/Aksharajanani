@@ -4,7 +4,6 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useRules } from '../contexts/RulesContext';
-import { useCharacter } from '../contexts/CharacterContext';
 import { useProject } from '../contexts/ProjectContext';
 import { ScriptConfig, ProjectData } from '../types';
 
@@ -30,11 +29,20 @@ export const useAppActions = ({
     
     const { t } = useLocale();
     const layout = useLayout();
-    const { script } = useCharacter();
     const { settings, dispatch: settingsDispatch } = useSettings();
     const { workspace, setWorkspace } = layout;
-    // Removed redundant state fields that are now accessed via context in children
-    const { projectName, setProjectName, positioningRules, recommendedKerning, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses } = useProject();
+    
+    // Consolidate all project-related data from useProject
+    const { 
+        script, // Retrieved from ProjectContext now
+        projectName, 
+        setProjectName, 
+        positioningRules, 
+        recommendedKerning, 
+        markAttachmentRules, 
+        markAttachmentClasses, 
+        baseAttachmentClasses 
+    } = useProject();
     
     const dependencyMap = useRef<Map<number, Set<number>>>(new Map());
     const [isScriptDataLoadingState, setIsScriptDataLoadingState] = useState(true);

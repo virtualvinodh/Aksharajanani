@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { useCharacter } from '../../contexts/CharacterContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useKerning } from '../../contexts/KerningContext';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -8,7 +8,6 @@ import { usePositioning } from '../../contexts/PositioningContext';
 import { useRules } from '../../contexts/RulesContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { useProject } from '../../contexts/ProjectContext';
 import { exportToOtf } from '../../services/fontService';
 import * as dbService from '../../services/dbService';
 import { ProjectData } from '../../types';
@@ -30,7 +29,7 @@ export const useExportActions = ({
     const { t } = useLocale();
     const layout = useLayout();
     const { settings, metrics } = useSettings();
-    const { characterSets, allCharsByUnicode, allCharsByName } = useCharacter();
+    const { characterSets, allCharsByUnicode, allCharsByName } = useProject();
     const { glyphDataMap } = useGlyphData();
     const { kerningMap } = useKerning();
     const { markPositioningMap } = usePositioning();
