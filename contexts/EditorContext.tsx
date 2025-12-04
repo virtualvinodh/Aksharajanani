@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
 import { Path, Point, ImageTransform } from '../types';
 
@@ -38,6 +39,8 @@ interface EditorContextType {
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
+const MAX_HISTORY_STACK = 50;
+
 export const EditorProvider: React.FC<{ children: ReactNode; initialPaths: Path[] }> = ({ children, initialPaths }) => {
     const [currentPaths, setCurrentPaths] = useState<Path[]>(initialPaths);
     const [history, setHistory] = useState<Path[][]>([initialPaths]);
@@ -56,8 +59,14 @@ export const EditorProvider: React.FC<{ children: ReactNode; initialPaths: Path[
     const [calligraphyAngle, setCalligraphyAngle] = useState<45 | 30 | 15>(45);
 
     const handlePathsChange = useCallback((newPaths: Path[]) => {
-        const newHistory = history.slice(0, historyIndex + 1);
+        let newHistory = history.slice(0, historyIndex + 1);
         newHistory.push(newPaths);
+        
+        // Limit stack size
+        if (newHistory.length > MAX_HISTORY_STACK) {
+            newHistory = newHistory.slice(newHistory.length - MAX_HISTORY_STACK);
+        }
+
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
         setCurrentPaths(newPaths);
