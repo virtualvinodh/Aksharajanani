@@ -1,5 +1,6 @@
 
 
+
 export interface Point {
   x: number;
   y: number;
@@ -24,6 +25,12 @@ export interface Path {
 
 export interface GlyphData {
   paths: Path[];
+  _cache?: {
+    bbox?: {
+      data: BoundingBox | null;
+      strokeThickness: number;
+    };
+  };
 }
 
 export interface ImageTransform {
@@ -198,6 +205,7 @@ export interface ScriptDefaults {
 export interface Range {
     min: number;
     max: number;
+    step?: number;
 }
 
 export interface SliderRange extends Range {
@@ -246,6 +254,7 @@ export interface ScriptConfig {
   support?: string;
   supportMessage?: string;
   kerning?: string;
+  touchingConsonants?: string;
 }
 
 export interface ScriptsFile {

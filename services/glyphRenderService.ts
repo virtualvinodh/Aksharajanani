@@ -1,5 +1,6 @@
 
 
+
 // FIX: Added AppSettings to types import and added new imports for isGlyphDrawn and DRAWING_CANVAS_SIZE
 import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings } from '../types';
 import { VEC } from '../utils/vectorUtils';
@@ -20,6 +21,7 @@ export interface RenderOptions {
     contrast?: number; // Optional contrast for variable width rendering
 }
 
+// BoundingBox is exported from types.ts, but we re-export locally or use it here.
 export interface BoundingBox {
   x: number;
   y: number;
@@ -185,13 +187,27 @@ export const getStrokeOutlinePoints = (points: Point[], thickness: number, contr
 
 /**
  * Calculates a precise bounding box for a set of paths by flattening curves and accounting for stroke thickness.
- * @param paths The array of Path objects to measure.
+ * @param data The array of Path objects OR a GlyphData object to measure.
  * @param strokeThickness The thickness of the strokes.
  * @returns A BoundingBox object or null if there are no points.
  */
-export const getAccurateGlyphBBox = (paths: Path[], strokeThickness: number): BoundingBox | null => {
+export const getAccurateGlyphBBox = (data: Path[] | GlyphData, strokeThickness: number): BoundingBox | null => {
+    let paths: Path[];
+    let glyphData: GlyphData | undefined;
+
+    if (Array.isArray(data)) {
+        paths = data;
+    } else {
+        glyphData = data;
+        paths = data.paths;
+        if (glyphData._cache?.bbox && glyphData._cache.bbox.strokeThickness === strokeThickness) {
+            return glyphData._cache.bbox.data;
+        }
+    }
+
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     let hasContent = false;
+    
     // Clear the project on the shared scope to prevent state leakage from previous calculations.
     paperScope.project.clear();
 
@@ -265,8 +281,14 @@ export const getAccurateGlyphBBox = (paths: Path[], strokeThickness: number): Bo
         }
     });
 
-    if (!hasContent) return null;
-    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    const result = hasContent ? { x: minX, y: minY, width: maxX - minX, height: maxY - minY } : null;
+
+    if (glyphData) {
+        if (!glyphData._cache) glyphData._cache = {};
+        glyphData._cache.bbox = { data: result, strokeThickness };
+    }
+
+    return result;
 };
 
 export const getGlyphSubBBoxes = (
@@ -275,7 +297,7 @@ export const getGlyphSubBBoxes = (
     toplineY: number,
     strokeThickness: number
 ): { ascender: BBox | null; xHeight: BBox | null; descender: BBox | null; full: BBox } | null => {
-    const fullBBox = getAccurateGlyphBBox(glyphData.paths, strokeThickness);
+    const fullBBox = getAccurateGlyphBBox(glyphData, strokeThickness);
     if (!fullBBox) return null;
     const fullBBoxAsBBox: BBox = { minX: fullBBox.x, maxX: fullBBox.x + fullBBox.width, minY: fullBBox.y, maxY: fullBBox.y + fullBBox.height };
 
