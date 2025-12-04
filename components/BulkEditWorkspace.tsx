@@ -14,6 +14,7 @@ import { VEC } from '../utils/vectorUtils';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
 import { useKerning } from '../contexts/KerningContext';
 import { usePositioning } from '../contexts/PositioningContext';
+import { deepClone } from '../utils/cloneUtils';
 
 // --- Helper Logic for Transformation (Shared between Preview and Apply) ---
 const transformGlyphPaths = (
@@ -124,7 +125,7 @@ const BulkEditWorkspace: React.FC = () => {
     // --- Metrics (Properties) Handlers ---
     const handleSaveMetrics = (newLSB: string, newRSB: string, newAdvWidth: string) => {
         // Snapshot state for Undo
-        const previousCharSets = JSON.parse(JSON.stringify(characterSets));
+        const previousCharSets = deepClone(characterSets);
         const undo = () => {
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: previousCharSets });
         };
@@ -161,7 +162,7 @@ const BulkEditWorkspace: React.FC = () => {
 
         // 1. Snapshot for Undo (All contexts)
         const glyphDataSnapshot = new Map(glyphDataMap);
-        const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
+        const characterSetsSnapshot = deepClone(characterSets);
         const kerningSnapshot = new Map(kerningMap);
         const positioningSnapshot = new Map(markPositioningMap);
 

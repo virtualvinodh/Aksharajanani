@@ -1,11 +1,14 @@
 
 
 
+
+
 // FIX: Added AppSettings to types import and added new imports for isGlyphDrawn and DRAWING_CANVAS_SIZE
 import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { DRAWING_CANVAS_SIZE } from '../constants';
+import { deepClone } from '../utils/cloneUtils';
 
 declare var paper: any;
 
@@ -633,7 +636,8 @@ export const generateCompositeGlyphData = ({
 
     const transformedComponents = componentChars.map((char, index) => {
         const glyph = allGlyphData.get(char.unicode)!;
-        const rawPaths = JSON.parse(JSON.stringify(glyph.paths));
+        // OPTIMIZATION: Use deepClone instead of JSON
+        const rawPaths = deepClone(glyph.paths);
         const transformedPaths = transformComponentPaths(rawPaths, character, index);
         const bbox = getAccurateGlyphBBox(transformedPaths, settings.strokeThickness);
         return { char, paths: transformedPaths, bbox };

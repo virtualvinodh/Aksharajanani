@@ -1,5 +1,4 @@
 
-
 import {
     Character,
     GlyphData,
@@ -10,6 +9,7 @@ import {
     CharacterSet,
     PositioningRules,
 } from '../types';
+import { deepClone } from '../utils/cloneUtils';
 
 interface UpdatePositioningAndCascadeArgs {
     baseChar: Character;
@@ -129,7 +129,7 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
 
                 if (cascadeRule && cascadeRule.gsub) {
                     // Generate new glyph data for the auto-positioned ligature
-                    const transformedMarkPaths = JSON.parse(JSON.stringify(markGlyph.paths)).map((p: Path) => ({
+                    const transformedMarkPaths = deepClone(markGlyph.paths).map((p: Path) => ({
                         ...p,
                         points: p.points.map((pt: Point) => ({ x: pt.x + newOffset.x, y: pt.y + newOffset.y })),
                         segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: { x: seg.point.x + newOffset.x, y: seg.point.y + newOffset.y } }))) : undefined

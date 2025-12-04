@@ -1,11 +1,13 @@
 
 
+
 import { useState, useEffect, useCallback } from 'react';
 import { Path, Point, Segment } from '../../types';
 import { VEC } from '../../utils/vectorUtils';
 import { distanceToSegment } from '../../utils/geometryUtils';
 import { DraggedPointInfo, ToolHookProps } from './types';
 import { paperScope } from '../../services/glyphRenderService';
+import { deepClone } from '../../utils/cloneUtils';
 
 declare var paper: any;
 
@@ -82,7 +84,8 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
                     const pathIndex = currentPaths.findIndex(p => p.id === selectedPointInfo.pathId);
                     if (pathIndex === -1) return;
 
-                    const newSegmentGroups = JSON.parse(JSON.stringify(path.segmentGroups));
+                    // OPTIMIZATION: Use deepClone
+                    const newSegmentGroups = deepClone(path.segmentGroups);
                     const group = newSegmentGroups[selectedPointInfo.segmentGroupIndex!];
                     
                     // A valid closed path needs at least 3 points. Deleting one below that breaks it.
@@ -127,8 +130,9 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
             setCurrentPaths(prev => prev.map(p => {
                 if (p.id === draggedPointInfo.pathId) {
                     if (draggedPointInfo.type === 'segment') {
-                        const newSegmentGroups = JSON.parse(JSON.stringify(p.segmentGroups));
-                        const segment = newSegmentGroups[draggedPointInfo.segmentGroupIndex][draggedPointInfo.segmentIndex];
+                        // OPTIMIZATION: Use deepClone
+                        const newSegmentGroups = deepClone(p.segmentGroups);
+                        const segment = newSegmentGroups![draggedPointInfo.segmentGroupIndex][draggedPointInfo.segmentIndex];
                         
                         if (draggedPointInfo.handleType === 'point') {
                             segment.point = point;
@@ -168,8 +172,9 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
                 if (!path || !path.segmentGroups) return;
                 newPaths = currentPaths.map(p => {
                     if (p.id === pointToDelete.pathId) {
-                        const newSegmentGroups = JSON.parse(JSON.stringify(p.segmentGroups));
-                        const group = newSegmentGroups[pointToDelete.segmentGroupIndex!];
+                        // OPTIMIZATION: Use deepClone
+                        const newSegmentGroups = deepClone(p.segmentGroups);
+                        const group = newSegmentGroups![pointToDelete.segmentGroupIndex!];
                         if (group.length > 3) {
                             group.splice(pointToDelete.segmentIndex!, 1);
                         } else { return null; }
@@ -249,8 +254,9 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
                 const { pathId, groupIndex, location } = closestOutlineInfo!;
                 const newPaths = currentPaths.map(p => {
                     if (p.id === pathId) {
-                        const newSegmentGroups = JSON.parse(JSON.stringify(p.segmentGroups));
-                        const groupToModify = newSegmentGroups[groupIndex];
+                        // OPTIMIZATION: Use deepClone
+                        const newSegmentGroups = deepClone(p.segmentGroups);
+                        const groupToModify = newSegmentGroups![groupIndex];
                         const paperPath = new paperScope.Path({
                             segments: groupToModify.map((seg: Segment) => new paperScope.Segment(new paperScope.Point(seg.point.x, seg.point.y), new paperScope.Point(seg.handleIn.x, seg.handleIn.y), new paperScope.Point(seg.handleOut.x, seg.handleOut.y))),
                             closed: true,
@@ -263,7 +269,7 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
                                 handleIn: { x: seg.handleIn.x, y: seg.handleIn.y },
                                 handleOut: { x: seg.handleOut.x, y: seg.handleOut.y }
                             }));
-                            newSegmentGroups[groupIndex] = updatedGroup;
+                            newSegmentGroups![groupIndex] = updatedGroup;
                         }
                         // paperPath.remove();
                         return { ...p, segmentGroups: newSegmentGroups };

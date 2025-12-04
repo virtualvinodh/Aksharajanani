@@ -13,6 +13,7 @@ import GlyphPropertiesPanel from './GlyphPropertiesPanel';
 import PositioningToolbar from './PositioningToolbar';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import Modal from './Modal';
+import { deepClone } from '../utils/cloneUtils';
 
 
 interface PositioningEditorPageProps {
@@ -101,7 +102,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         }
         
         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
-        const newMarkPaths = JSON.parse(JSON.stringify(originalMarkPaths));
+        // OPTIMIZATION: Use deepClone
+        const newMarkPaths = deepClone(originalMarkPaths);
         if (offset) {
             newMarkPaths.forEach((p: Path) => {
                 p.points = p.points.map(pt => ({ x: pt.x + offset!.x, y: pt.y + offset!.y }));
@@ -116,7 +118,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             });
         }
         setMarkPaths(newMarkPaths);
-        setInitialMarkPaths(JSON.parse(JSON.stringify(newMarkPaths))); // Save initial state for change detection
+        // OPTIMIZATION: Use deepClone
+        setInitialMarkPaths(deepClone(newMarkPaths)); // Save initial state for change detection
         setLsb(targetLigature.lsb);
         setRsb(targetLigature.rsb);
         setIsPropertiesPanelOpen(false);
@@ -205,7 +208,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         
         const combinedPaths = [...(baseGlyph?.paths ?? []), ...pathsToSave];
         onSave(targetLigature, { paths: combinedPaths }, finalOffset, { lsb, rsb }, isAutosave);
-        setInitialMarkPaths(JSON.parse(JSON.stringify(pathsToSave))); // After saving, update initial state
+        // OPTIMIZATION: Use deepClone
+        setInitialMarkPaths(deepClone(pathsToSave)); // After saving, update initial state
     }, [glyphDataMap, markChar.unicode, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, settings.strokeThickness]);
 
     useEffect(() => {
@@ -266,7 +270,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
 
         if (sourceOffset) {
             const originalCurrentMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
-            const newMarkPaths = JSON.parse(JSON.stringify(originalCurrentMarkPaths));
+            // OPTIMIZATION: Use deepClone
+            const newMarkPaths = deepClone(originalCurrentMarkPaths);
             newMarkPaths.forEach((p: Path) => {
                 p.points = p.points.map(pt => ({ x: pt.x + sourceOffset!.x, y: pt.y + sourceOffset!.y }));
                 if (p.segmentGroups) {

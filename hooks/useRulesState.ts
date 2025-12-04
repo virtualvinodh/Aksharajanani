@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useRules } from '../contexts/RulesContext';
 import { useLayout } from '../contexts/LayoutContext';
+import { deepClone } from '../utils/cloneUtils';
 
 export type RuleType = 'ligature' | 'contextual' | 'multiple' | 'single';
 export type DistRuleType = 'simple' | 'contextual';
@@ -14,7 +16,7 @@ export const useRulesState = () => {
     const { showNotification } = useLayout();
     const { fontRules, manualFeaCode, isFeaEditMode } = rulesState;
 
-    const [localRules, setLocalRules] = useState(() => JSON.parse(JSON.stringify(fontRules)));
+    const [localRules, setLocalRules] = useState(() => deepClone(fontRules));
     const [activeFeature, setActiveFeature] = useState<string | null>(null);
     const [expandedLookups, setExpandedLookups] = useState<Set<string>>(new Set());
     const isInitialLookupsLoad = useRef(true);
@@ -30,7 +32,7 @@ export const useRulesState = () => {
     const autosaveTimeout = useRef<number | null>(null);
     
     useEffect(() => {
-        setLocalRules(JSON.parse(JSON.stringify(fontRules)));
+        setLocalRules(deepClone(fontRules));
     }, [fontRules]);
     
     const saveChanges = useCallback(() => {
@@ -93,7 +95,7 @@ export const useRulesState = () => {
         const { context, name, ruleKey, ruleType } = ruleToDelete;
         
         setLocalRules(prevRules => {
-            const newRules = JSON.parse(JSON.stringify(prevRules));
+            const newRules = deepClone(prevRules);
             const ruleGroup = getRuleGroupKey(ruleType as RuleType);
             let targetObject;
             if (context === 'feature') {
@@ -116,7 +118,7 @@ export const useRulesState = () => {
     const handleSaveNewRule = (contextName: string, newRule: any, ruleType: RuleType, context: 'feature' | 'lookup' = 'feature') => {
         if (!contextName) return;
         setLocalRules(prevRules => {
-            const newRules = JSON.parse(JSON.stringify(prevRules));
+            const newRules = deepClone(prevRules);
             const ruleGroup = getRuleGroupKey(ruleType);
             
             let targetObject;
@@ -144,7 +146,7 @@ export const useRulesState = () => {
     const handleUpdateRule = (contextName: string, oldKey: string, updatedRule: any, ruleType: RuleType, context: 'feature' | 'lookup' = 'feature') => {
         if (!contextName) return;
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             const ruleGroup = getRuleGroupKey(ruleType);
 
             let targetObject;
@@ -169,7 +171,7 @@ export const useRulesState = () => {
     const handleConfirmAddFeature = (tag: string) => {
         if (!scriptTag) return;
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             if (!newRules[scriptTag]) newRules[scriptTag] = {};
             newRules[scriptTag][tag] = { children: [{ type: 'inline' }] }; // Initialize with children array
             return newRules;
@@ -185,7 +187,7 @@ export const useRulesState = () => {
             return false;
         }
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             if (!newRules.lookups) newRules.lookups = {};
             newRules.lookups[trimmedName] = {};
             return newRules;
@@ -201,7 +203,7 @@ export const useRulesState = () => {
             return false;
         }
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             if (newRules.lookups?.[oldName]) {
                 newRules.lookups[trimmedNewName] = newRules.lookups[oldName];
                 delete newRules.lookups[oldName];
@@ -233,7 +235,7 @@ export const useRulesState = () => {
 
     const handleDeleteLookup = (name: string) => {
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             if (newRules.lookups?.[name]) {
                 delete newRules.lookups[name];
                  if (newRules[scriptTag!]) {
@@ -269,7 +271,7 @@ export const useRulesState = () => {
     const handleAddLookupReference = (featureName: string, lookupName: string) => {
         if (!featureName || !lookupName) return;
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             const feature = newRules[scriptTag!]?.[featureName];
             if (feature) {
                 if (!feature.children) feature.children = [];
@@ -282,7 +284,7 @@ export const useRulesState = () => {
     const handleRemoveLookupReference = (featureName: string, index: number) => {
         if (!featureName) return;
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             const feature = newRules[scriptTag!]?.[featureName];
             if (feature && feature.children) {
                 feature.children.splice(index, 1);
@@ -294,7 +296,7 @@ export const useRulesState = () => {
     const handleReorderFeatureItem = (featureName: string, fromIndex: number, toIndex: number) => {
         if (!featureName) return;
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             const feature = newRules[scriptTag!]?.[featureName];
             if (feature && feature.children) {
                 const [movedItem] = feature.children.splice(fromIndex, 1);
@@ -314,7 +316,7 @@ export const useRulesState = () => {
     const handleEditDistRule = (ruleData: any, type: 'simple' | 'contextual') => {
         if (!activeFeature || !scriptTag) return;
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             if (newRules[scriptTag]?.[activeFeature]?.[type]) {
                  if (type === 'simple') {
                     // This handles editing a simple rule, including changing its target character (key).
@@ -333,7 +335,7 @@ export const useRulesState = () => {
     const handleSaveDistRule = (rule: any, type: 'simple' | 'contextual') => {
         if (!activeFeature || !scriptTag) return;
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             if (!newRules[scriptTag]) newRules[scriptTag] = {};
             if (!newRules[scriptTag][activeFeature]) newRules[scriptTag][activeFeature] = {};
             if (!newRules[scriptTag][activeFeature][type]) {
@@ -354,7 +356,7 @@ export const useRulesState = () => {
     const handleDeleteDistRule = (keyOrIndex: string | number, type: 'simple' | 'contextual') => {
         if (!activeFeature || !scriptTag) return;
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             if(newRules[scriptTag]?.[activeFeature]?.[type]) {
                 if (type === 'simple') {
                     delete newRules[scriptTag][activeFeature][type][keyOrIndex as string];
@@ -381,7 +383,7 @@ export const useRulesState = () => {
     const handleFeatureTagChange = (oldFeature: string, newFeature: string) => {
         if (!scriptTag) return;
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             const scriptData = newRules[scriptTag];
             if (scriptData && scriptData[oldFeature]) {
                 scriptData[newFeature] = scriptData[oldFeature];
@@ -394,7 +396,7 @@ export const useRulesState = () => {
 
     const handleSaveGroup = useCallback(({ originalKey, newKey, members }: { originalKey?: string; newKey: string; members: string[] }) => {
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             if (!newRules.groups) newRules.groups = {};
             if (originalKey && originalKey !== newKey) {
                 delete newRules.groups[originalKey];
@@ -406,7 +408,7 @@ export const useRulesState = () => {
 
     const handleDeleteGroup = useCallback((key: string) => {
         setLocalRules(prev => {
-            const newRules = JSON.parse(JSON.stringify(prev));
+            const newRules = deepClone(prev);
             if (newRules.groups?.[key]) {
                 delete newRules.groups[key];
                 if (Object.keys(newRules.groups).length === 0) {

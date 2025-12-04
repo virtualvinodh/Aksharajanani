@@ -1,9 +1,11 @@
+
 import { useRef } from 'react';
 import { Point, Path } from '../../types';
 import { VEC } from '../../utils/vectorUtils';
 import { generateId, ToolHookProps } from './types';
 import { curveToPolyline, quadraticCurveToPolyline, getAccurateGlyphBBox } from '../../services/glyphRenderService';
 import { simplifyPath } from '../../utils/pathUtils';
+import { deepClone } from '../../utils/cloneUtils';
 
 export const useEraserTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, settings, showNotification, t }: ToolHookProps) => {
     const pathsAtDragStart = useRef<Path[]>([]);
@@ -13,7 +15,8 @@ export const useEraserTool = ({ isDrawing, setIsDrawing, currentPaths, setCurren
 
     const start = (point: Point) => {
         setIsDrawing(true);
-        pathsAtDragStart.current = JSON.parse(JSON.stringify(currentPaths));
+        // OPTIMIZATION: Use deepClone
+        pathsAtDragStart.current = deepClone(currentPaths);
         eraserPath.current = [point];
         notificationShown.current = false;
 

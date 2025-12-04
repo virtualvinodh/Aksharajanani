@@ -4,6 +4,7 @@ import { Character, GlyphData, MarkPositioningMap, Path } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths } from '../services/glyphRenderService';
 import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE } from '../constants';
+import { deepClone } from '../utils/cloneUtils';
 
 interface ReusePreviewCardProps {
   baseChar: Character;
@@ -26,7 +27,7 @@ const ReusePreviewCard: React.FC<ReusePreviewCardProps> = ({ baseChar, markChar,
     
     let combinedPaths = [...basePaths];
     if (offset) {
-        const transformedMarkPaths = JSON.parse(JSON.stringify(markPaths)).map((p: Path) => {
+        const transformedMarkPaths = deepClone(markPaths).map((p: Path) => {
             p.points = p.points.map(pt => ({ x: pt.x + offset!.x, y: pt.y + offset!.y }));
             return p;
         });

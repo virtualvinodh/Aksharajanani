@@ -39,7 +39,8 @@ interface EditorContextType {
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
-const MAX_HISTORY_STACK = 50;
+// OPTIMIZATION: Reduced from 50 to 20 to prevent memory crashes on complex fonts
+const MAX_HISTORY_STACK = 20;
 
 export const EditorProvider: React.FC<{ children: ReactNode; initialPaths: Path[] }> = ({ children, initialPaths }) => {
     const [currentPaths, setCurrentPaths] = useState<Path[]>(initialPaths);

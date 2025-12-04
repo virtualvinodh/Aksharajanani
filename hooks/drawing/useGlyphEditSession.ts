@@ -6,6 +6,7 @@ import { useLayout } from '../../contexts/LayoutContext';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
 import { generateCompositeGlyphData } from '../../services/glyphRenderService';
 import { SaveOptions } from '../actions/useGlyphActions';
+import { deepClone } from '../../utils/cloneUtils';
 
 interface UseGlyphEditSessionProps {
     character: Character;
@@ -155,7 +156,7 @@ export const useGlyphEditSession = ({
         
         const onSuccess = () => {
             // Update our baseline for "clean" state
-            setInitialPathsOnLoad(JSON.parse(JSON.stringify(pathsToSave)));
+            setInitialPathsOnLoad(deepClone(pathsToSave));
             
             // If this was a commit (not draft), we clear the pending cascade flag
             if (!options.isDraft) {

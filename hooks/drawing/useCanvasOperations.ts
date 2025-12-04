@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { Path, Point } from '../../types';
 import { generateId } from '../drawingTools/types';
 import { VEC } from '../../utils/vectorUtils';
+import { deepClone } from '../../utils/cloneUtils';
 
 interface UseCanvasOperationsProps {
     currentPaths: Path[];
@@ -30,13 +31,15 @@ export const useCanvasOperations = ({
             pathsToCopy = currentPaths.filter(p => selectedPathIds.has(p.id));
             showNotification(t('copiedSelection'));
         }
-        clipboardDispatch({ type: 'SET_CLIPBOARD', payload: JSON.parse(JSON.stringify(pathsToCopy)) });
+        // OPTIMIZATION: Use deepClone
+        clipboardDispatch({ type: 'SET_CLIPBOARD', payload: deepClone(pathsToCopy) });
     }, [currentPaths, selectedPathIds, clipboardDispatch, showNotification, t]);
 
     const handleCut = useCallback(() => {
         if (selectedPathIds.size === 0) return;
         const pathsToCut = currentPaths.filter(p => selectedPathIds.has(p.id));
-        clipboardDispatch({ type: 'SET_CLIPBOARD', payload: JSON.parse(JSON.stringify(pathsToCut)) });
+        // OPTIMIZATION: Use deepClone
+        clipboardDispatch({ type: 'SET_CLIPBOARD', payload: deepClone(pathsToCut) });
         const newPaths = currentPaths.filter(p => !selectedPathIds.has(p.id));
         handlePathsChange(newPaths);
         setSelectedPathIds(new Set());

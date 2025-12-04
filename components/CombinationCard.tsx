@@ -6,6 +6,7 @@ import { renderPaths, getAccurateGlyphBBox, calculateDefaultMarkOffset } from '.
 import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon } from '../constants';
 import { VEC } from '../utils/vectorUtils';
 import { useSettings } from '../contexts/SettingsContext';
+import { deepClone } from '../utils/cloneUtils';
 
 interface CombinationCardProps {
   baseChar: Character;
@@ -73,7 +74,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
                 offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets);
             }
             
-            const transformedMarkPaths = JSON.parse(JSON.stringify(markGlyph.paths));
+            const transformedMarkPaths = deepClone(markGlyph.paths);
             if (offset) {
                  transformedMarkPaths.forEach((p: Path) => {
                     p.points = p.points.map(pt => ({ x: pt.x + offset!.x, y: pt.y + offset!.y }));

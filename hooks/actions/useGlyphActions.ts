@@ -12,6 +12,7 @@ import { isGlyphDrawn } from '../../utils/glyphUtils';
 import { generateCompositeGlyphData, updateComponentInPaths } from '../../services/glyphRenderService';
 import { VEC } from '../../utils/vectorUtils';
 import * as dbService from '../../services/dbService';
+import { deepClone } from '../../utils/cloneUtils';
 
 declare var UnicodeProperties: any;
 
@@ -291,7 +292,7 @@ export const useGlyphActions = (
         
         // Snapshot for Undo (Synchronous part is fine for delete usually)
         const glyphDataSnapshot = new Map(glyphDataMap);
-        const characterSetsSnapshot = JSON.parse(JSON.stringify(characterSets));
+        const characterSetsSnapshot = deepClone(characterSets);
         const kerningSnapshot = new Map(kerningMap);
         const positioningSnapshot = new Map(markPositioningMap);
         const dependencySnapshot = new Map(dependencyMap.current);
