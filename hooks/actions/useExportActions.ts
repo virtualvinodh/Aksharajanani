@@ -30,7 +30,7 @@ export const useExportActions = ({
     const layout = useLayout();
     const { settings, metrics } = useSettings();
     const { characterSets, allCharsByUnicode, allCharsByName } = useProject();
-    const { glyphDataMap } = useGlyphData();
+    const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap } = useKerning();
     const { markPositioningMap } = usePositioning();
     const { state: rulesState } = useRules();
@@ -43,7 +43,7 @@ export const useExportActions = ({
 
     const { drawingProgress } = useProgressCalculators({ 
         characterSets, glyphDataMap, markPositioningMap, recommendedKerning, 
-        allCharsByName, fontRules, kerningMap, positioningRules 
+        allCharsByName, fontRules, kerningMap, positioningRules, glyphVersion 
     });
 
     const downloadFontBlob = useCallback((blob: Blob, fileNameBase: string) => {

@@ -15,9 +15,10 @@ interface PairCardProps {
     glyphDataMap: Map<number, GlyphData>;
     strokeThickness: number;
     metrics: FontMetrics;
+    glyphVersion: number;
 }
 
-const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showRecommendedLabel, kerningValue, glyphDataMap, strokeThickness, metrics }) => {
+const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showRecommendedLabel, kerningValue, glyphDataMap, strokeThickness, metrics, glyphVersion }) => {
     const { theme } = useTheme();
     const { t } = useLocale();
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -86,7 +87,7 @@ const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showR
         
         ctx.restore();
 
-    }, [pair, kerningValue, glyphDataMap, strokeThickness, theme, metrics]);
+    }, [pair, kerningValue, glyphDataMap, strokeThickness, theme, metrics, glyphVersion]);
 
     const hasKerning = kerningValue !== undefined;
     const cardClasses = `relative border-2 rounded-lg p-2 flex items-center justify-center cursor-pointer transition-all duration-200 aspect-square

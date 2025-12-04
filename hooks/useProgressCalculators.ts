@@ -11,6 +11,7 @@ interface UseProgressCalculatorsProps {
     fontRules: any;
     kerningMap: KerningMap;
     positioningRules: PositioningRules[] | null;
+    glyphVersion?: number;
 }
 
 export const useProgressCalculators = ({
@@ -22,6 +23,7 @@ export const useProgressCalculators = ({
     fontRules,
     kerningMap,
     positioningRules,
+    glyphVersion = 0,
 }: UseProgressCalculatorsProps) => {
 
     const drawingProgress = useMemo(() => {
@@ -36,7 +38,7 @@ export const useProgressCalculators = ({
         }).length;
 
         return { completed: drawnGlyphCount, total: totalDrawableChars };
-    }, [glyphDataMap, characterSets]);
+    }, [glyphDataMap, characterSets, glyphVersion]);
 
     const positioningProgress = useMemo(() => {
         if (!positioningRules) return { completed: 0, total: 0 };
@@ -99,7 +101,7 @@ export const useProgressCalculators = ({
             if (char && isGlyphDrawn(glyphDataMap.get(char.unicode))) completed++;
         });
         return { completed, total };
-    }, [fontRules, allCharsByName, glyphDataMap]);
+    }, [fontRules, allCharsByName, glyphDataMap, glyphVersion]);
 
     return {
         drawingProgress,

@@ -35,7 +35,8 @@ const CharacterSetTab: React.FC<{
     glyphDataMap: Map<number, GlyphData>;
     onContextMenu: (e: React.MouseEvent | React.TouchEvent, index: number) => void;
     showHidden: boolean;
-}> = ({ set, index, activeTab, setActiveTab, glyphDataMap, onContextMenu, showHidden }) => {
+    glyphVersion: number;
+}> = ({ set, index, activeTab, setActiveTab, glyphDataMap, onContextMenu, showHidden, glyphVersion }) => {
     const { t } = useLocale();
     const [isAnimating, setIsAnimating] = useState(false);
     const wasComplete = useRef(false);
@@ -45,7 +46,7 @@ const CharacterSetTab: React.FC<{
         const visibleChars = set.characters.filter(char => !char.hidden || showHidden);
         if (!visibleChars || visibleChars.length === 0) return false;
         return visibleChars.every(char => isGlyphDrawn(glyphDataMap.get(char.unicode)));
-    }, [set.characters, glyphDataMap, showHidden]);
+    }, [set.characters, glyphDataMap, showHidden, glyphVersion]);
 
     useEffect(() => {
         if (isSetComplete && !wasComplete.current) {
@@ -100,7 +101,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const navContainerRef = useRef<HTMLDivElement>(null);
     const [showNavArrows, setShowNavArrows] = useState({ left: false, right: false });
     
-    const { glyphDataMap } = useGlyphData();
+    const { glyphDataMap, version: glyphVersion } = useGlyphData();
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({ x: 0, y: 0, index: -1, isOpen: false });
@@ -294,6 +295,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                                 glyphDataMap={glyphDataMap}
                                 onContextMenu={handleContextMenu}
                                 showHidden={showHidden}
+                                glyphVersion={glyphVersion}
                             />
                         ))}
 

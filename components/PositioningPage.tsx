@@ -32,7 +32,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 }) => {
     const { t } = useLocale();
     const { showNotification, pendingNavigationTarget, setPendingNavigationTarget } = useLayout();
-    const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
+    const { glyphDataMap, dispatch: glyphDataDispatch, version: glyphVersion } = useGlyphData();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { characterSets, dispatch: characterDispatch } = useProject();
     const { settings, metrics } = useSettings();
@@ -176,7 +176,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         
         setShowIncompleteNotice(drawnPairCount < allPossiblePairs.size);
 
-    }, [positioningRules, allChars, glyphDataMap]);
+    }, [positioningRules, allChars, glyphDataMap, glyphVersion]);
 
 
     const navItems = useMemo(() => {
@@ -195,7 +195,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         });
 
         return Array.from(items.values()).sort((a, b) => a.unicode - b.unicode);
-    }, [positioningRules, allChars, viewBy, glyphDataMap]);
+    }, [positioningRules, allChars, viewBy, glyphDataMap, glyphVersion]);
 
     const activeItem = navItems[activeTab];
 
@@ -238,7 +238,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             ({ base, mark }) => isGlyphDrawn(glyphDataMap.get(base.unicode)) && isGlyphDrawn(glyphDataMap.get(mark.unicode))
         );
 
-    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap]);
+    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion]);
 
     // Handle Deep Navigation from Command Palette
     // This effect identifies the target, switches tabs if necessary, and opens the editor if found.
@@ -533,7 +533,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             const markIsDrawn = isGlyphDrawn(glyphDataMap.get(combo.mark.unicode));
             return !isPositioned && baseIsDrawn && markIsDrawn;
         }).length;
-    }, [displayedCombinations, markPositioningMap, glyphDataMap]);
+    }, [displayedCombinations, markPositioningMap, glyphDataMap, glyphVersion]);
 
     const handleAcceptAllDefaults = useCallback(() => {
         const unpositionedPairs = displayedCombinations.filter(combo => {
@@ -681,6 +681,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 currentIndex={editingIndex}
                 onNavigate={handleNavigatePair}
                 characterSets={characterSets!}
+                glyphVersion={glyphVersion}
             />
         );
     }
@@ -793,6 +794,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                         markAttachmentRules={markAttachmentRules}
                                         markPositioningMap={markPositioningMap}
                                         characterSets={characterSets!}
+                                        glyphVersion={glyphVersion}
                                     />
                                 );
                             })}

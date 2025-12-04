@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { Character, CharacterSet, GlyphData, AppSettings, KerningMap, MarkPositioningMap, PositioningRules, FontMetrics } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -36,12 +37,14 @@ interface RulesPageProps {
   onManualFeaCodeChange: (code: string) => void;
   isFeaOnlyMode: boolean;
   onHasUnsavedChanges: (isDirty: boolean) => void;
+  glyphVersion: number;
 }
 
 const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
   allCharacterSets, allCharsByName, allCharsByUnicode, kerningMap, markPositioningMap, glyphDataMap,
   strokeThickness, fontRules, onFontRulesChange, fontName, settings, positioningRules,
-  metrics, isFeaEditMode, onIsFeaEditModeChange, manualFeaCode, onManualFeaCodeChange, isFeaOnlyMode, onHasUnsavedChanges
+  metrics, isFeaEditMode, onIsFeaEditModeChange, manualFeaCode, onManualFeaCodeChange, isFeaOnlyMode, onHasUnsavedChanges,
+  glyphVersion
 }, ref) => {
   const { t } = useLocale();
   const { showNotification } = useLayout();
@@ -121,7 +124,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
       .flatMap(set => set.characters)
       .filter(char => char.unicode !== 32)
       .every(char => isGlyphDrawn(glyphDataMap.get(char.unicode)));
-  }, [allCharacterSets, glyphDataMap]);
+  }, [allCharacterSets, glyphDataMap, glyphVersion]);
 
   const handleExportFea = () => {
     try {
@@ -146,7 +149,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
         glyphBBoxes.set(unicode, getAccurateGlyphBBox(glyphData.paths, strokeThickness));
     });
     return generateFea(localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, glyphBBoxes);
-  }, [localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, strokeThickness]);
+  }, [localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, strokeThickness, glyphVersion]);
 
   const handleEnterEditMode = () => {
       if (!manualFeaCode || manualFeaCode.trim() === '') {
@@ -187,6 +190,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                         showNotification={showNotification}
                         mode="editing"
                         groups={groups}
+                        glyphVersion={glyphVersion}
                     />
                 )}
                 {Object.entries(rules).map(([key, value]) => (
@@ -206,6 +210,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                             showNotification={showNotification}
                             mode="editing"
                             groups={groups}
+                            glyphVersion={glyphVersion}
                         />
                     ) : (
                         <ExistingRuleDisplay
@@ -219,6 +224,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                             glyphDataMap={glyphDataMap}
                             strokeThickness={strokeThickness}
                             mode="editing"
+                            glyphVersion={glyphVersion}
                         />
                     )
                 ))}
@@ -345,6 +351,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                                                 strokeThickness={strokeThickness}
                                                 showNotification={showNotification}
                                                 groups={groups}
+                                                glyphVersion={glyphVersion}
                                             />
                                         ) : (
                                             <>
@@ -432,6 +439,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                 glyphDataMap={glyphDataMap}
                 strokeThickness={strokeThickness}
                 groups={groups}
+                glyphVersion={glyphVersion}
             />
         )}
 

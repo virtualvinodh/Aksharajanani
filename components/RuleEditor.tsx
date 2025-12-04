@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Character, GlyphData, CharacterSet } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -28,6 +29,7 @@ interface RuleEditorProps {
     showNotification: (message: string, type?: 'success' | 'info' | 'error') => void;
     mode?: RuleEditorMode;
     groups?: Record<string, string[]>;
+    glyphVersion?: number;
 }
 
 interface GlyphSlotProps {
@@ -91,7 +93,7 @@ const GroupSelector: React.FC<{ groups: Record<string, string[]>, onSelect: (gro
 const RuleEditor: React.FC<RuleEditorProps> = ({ 
     ruleKey, ruleValue, ruleType, allCharacterSets, allCharsByName, 
     glyphDataMap, strokeThickness = 15, isNew, onSave, onCancel, showNotification, mode = 'editing',
-    groups = {}
+    groups = {}, glyphVersion
 }) => {
     const { t } = useLocale();
     

@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useMemo } from 'react';
 import { Character, GlyphData, MarkPositioningMap, Path } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -11,9 +12,10 @@ interface ReusePreviewCardProps {
   glyphDataMap: Map<number, GlyphData>;
   strokeThickness: number;
   markPositioningMap: MarkPositioningMap;
+  glyphVersion: number;
 }
 
-const ReusePreviewCard: React.FC<ReusePreviewCardProps> = ({ baseChar, markChar, onClick, glyphDataMap, strokeThickness, markPositioningMap }) => {
+const ReusePreviewCard: React.FC<ReusePreviewCardProps> = ({ baseChar, markChar, onClick, glyphDataMap, strokeThickness, markPositioningMap, glyphVersion }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
 
@@ -33,7 +35,7 @@ const ReusePreviewCard: React.FC<ReusePreviewCardProps> = ({ baseChar, markChar,
         combinedPaths.push(...markPaths);
     }
     return { paths: combinedPaths };
-  }, [baseChar, markChar, glyphDataMap, markPositioningMap]);
+  }, [baseChar, markChar, glyphDataMap, markPositioningMap, glyphVersion]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

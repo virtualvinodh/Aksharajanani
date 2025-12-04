@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import GlyphTile from '../GlyphTile';
@@ -30,6 +31,7 @@ interface DistRulesEditorProps {
     strokeThickness: number;
     showNotification: (message: string, type?: 'success' | 'info' | 'error') => void;
     groups: Record<string, string[]>;
+    glyphVersion: number;
 }
 
 
@@ -93,7 +95,7 @@ const GroupSelector: React.FC<{ groups: Record<string, string[]>, onSelect: (gro
 
 const DistRulesEditor: React.FC<DistRulesEditorProps> = ({ 
     rules, onSave, onDelete, onEditRule, addingRuleType, onAddRule, allCharacterSets,
-    allCharsByName, glyphDataMap, strokeThickness, showNotification, groups
+    allCharsByName, glyphDataMap, strokeThickness, showNotification, groups, glyphVersion
 }) => {
     const { t } = useLocale();
     const [editorState, setEditorState] = useState<{ type: 'simple' | 'contextual', target: string | null, value: string, left: string[], right: string[] }>({

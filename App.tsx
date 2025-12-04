@@ -56,7 +56,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const layout = useLayout();
   // Consolidating contexts: useProject replaces useCharacter
   const { script, characterSets, allCharsByUnicode, allCharsByName, projectName, guideFont } = useProject();
-  const { glyphDataMap } = useGlyphData();
+  const { glyphDataMap, version: glyphVersion } = useGlyphData();
   const { kerningMap } = useKerning();
   const { settings, metrics, dispatch: settingsDispatch } = useSettings();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
@@ -162,6 +162,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       fontRules,
       kerningMap,
       positioningRules,
+      glyphVersion // Pass version to trigger recalc if needed
   });
   
   // --- UI & OTHER EFFECTS ---
@@ -341,6 +342,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
           }}
           glyphDataMap={glyphDataMap}
           settings={settings}
+          glyphVersion={glyphVersion}
         />
       )}
 

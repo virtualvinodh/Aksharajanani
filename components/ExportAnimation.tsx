@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useRef } from 'react';
 import { GlyphData, AppSettings } from '../types';
 import { renderPaths } from '../services/glyphRenderService';
@@ -10,12 +11,13 @@ interface ExportAnimationProps {
   onComplete: () => void;
   glyphDataMap: Map<number, GlyphData>;
   settings: AppSettings;
+  glyphVersion: number;
 }
 
 const GLYPH_COUNT = 5;
 const ANIMATION_DURATION = 2000; // ms
 
-const ExportAnimation: React.FC<ExportAnimationProps> = ({ isOpen, onComplete, glyphDataMap, settings }) => {
+const ExportAnimation: React.FC<ExportAnimationProps> = ({ isOpen, onComplete, glyphDataMap, settings, glyphVersion }) => {
   const timeoutRef = useRef<number | null>(null);
 
   const sampleGlyphs = useMemo(() => {
@@ -27,7 +29,7 @@ const ExportAnimation: React.FC<ExportAnimationProps> = ({ isOpen, onComplete, g
 
     // Shuffle and pick
     return drawnGlyphs.sort(() => 0.5 - Math.random()).slice(0, GLYPH_COUNT);
-  }, [glyphDataMap]);
+  }, [glyphDataMap, glyphVersion]);
 
   useEffect(() => {
     if (isOpen) {

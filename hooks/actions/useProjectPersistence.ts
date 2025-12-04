@@ -18,7 +18,7 @@ export const useProjectPersistence = (
     const { t } = useLocale();
     const layout = useLayout();
     const { script, characterSets } = useProject();
-    const { glyphDataMap } = useGlyphData();
+    const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap } = useKerning();
     const { settings, metrics } = useSettings();
     const { markPositioningMap } = usePositioning();
@@ -65,7 +65,7 @@ export const useProjectPersistence = (
             groups: fontRules.groups || undefined,
             guideFont: script.guideFont || undefined
         };
-    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning]);
+    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, glyphVersion]);
 
     useEffect(() => {
         if (!isScriptDataLoading && lastSavedState !== null) {
@@ -73,7 +73,9 @@ export const useProjectPersistence = (
         }
     }, [
         // Trigger dependencies
-        glyphDataMap, kerningMap, markPositioningMap, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, projectName,
+        // glyphDataMap is a ref, so it's stable. glyphVersion changes on update.
+        glyphVersion, 
+        kerningMap, markPositioningMap, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, projectName,
         positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning,
         // Logic dependencies
         isScriptDataLoading, lastSavedState

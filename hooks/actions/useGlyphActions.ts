@@ -76,10 +76,10 @@ export const useGlyphActions = (
         
         // Apply updates to current glyph immediately
         if (hasPathChanges) {
-             // Update just this one glyph immediately
+             // OPTIMIZED: Use SET_GLYPH to mutate map in place instead of cloning
              glyphDataDispatch({ 
-                 type: 'UPDATE_MAP', 
-                 payload: (prev) => new Map(prev).set(unicode, newGlyphData) 
+                 type: 'SET_GLYPH', 
+                 payload: { unicode, data: newGlyphData } 
              });
         }
         // Bearings are metadata, handled separately via characterDispatch
@@ -256,15 +256,11 @@ export const useGlyphActions = (
 
                 if (!isMounted.current) return; // Final check before dispatch
 
-                // Final Commit: Functional update to merge into current state
+                // Final Commit: OPTIMIZED batch update
                 if (updates.size > 0) {
                     glyphDataDispatch({ 
-                        type: 'UPDATE_MAP', 
-                        payload: (prev) => {
-                            const next = new Map(prev);
-                            updates.forEach((data, u) => next.set(u, data));
-                            return next;
-                        } 
+                        type: 'BATCH_UPDATE_GLYPHS', 
+                        payload: Array.from(updates.entries()) 
                     });
                 }
 
@@ -317,29 +313,33 @@ export const useGlyphActions = (
             const dependentNames: string[] = [];
             
             // Visual Update (Bake/Flatten Composites)
-            glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev) => {
-                const next = new Map(prev);
-                dependentUnicodes.forEach((depUni: number) => {
-                    const depChar = allCharsByUnicode.get(depUni);
-                    if (depChar) dependentNames.push(depChar.name);
-                    // Attempt to regenerate/bake current state before source is lost
-                    if (depChar && (depChar.link || depChar.composite)) {
-                        const compositeData = generateCompositeGlyphData({
-                            character: depChar,
-                            allCharsByName,
-                            allGlyphData: prev, // Use current state before delete
-                            settings: settings!,
-                            metrics: metrics!,
-                            markAttachmentRules,
-                            allCharacterSets: characterSets!
-                        });
-                        if (compositeData) {
-                            next.set(depUni, compositeData);
-                        }
+            // We need to calculate the new states for dependents before deleting the source.
+            const batchUpdates: [number, GlyphData][] = [];
+            
+            dependentUnicodes.forEach((depUni: number) => {
+                const depChar = allCharsByUnicode.get(depUni);
+                if (depChar) dependentNames.push(depChar.name);
+                // Attempt to regenerate/bake current state before source is lost
+                if (depChar && (depChar.link || depChar.composite)) {
+                    const compositeData = generateCompositeGlyphData({
+                        character: depChar,
+                        allCharsByName,
+                        allGlyphData: glyphDataMap, // Use current state before delete
+                        settings: settings!,
+                        metrics: metrics!,
+                        markAttachmentRules,
+                        allCharacterSets: characterSets!
+                    });
+                    if (compositeData) {
+                        batchUpdates.push([depUni, compositeData]);
                     }
-                });
-                return next;
-            }});
+                }
+            });
+            
+            // Apply baked data to dependents
+            if (batchUpdates.length > 0) {
+                glyphDataDispatch({ type: 'BATCH_UPDATE_GLYPHS', payload: batchUpdates });
+            }
 
             // Metadata Update (Sever Links)
             characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prevSets) => {
@@ -481,7 +481,8 @@ export const useGlyphActions = (
             });
             
             if (compositeData) {
-                glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev) => new Map(prev).set(unicode, compositeData) });
+                // OPTIMIZED: Use SET_GLYPH
+                glyphDataDispatch({ type: 'SET_GLYPH', payload: { unicode, data: compositeData } });
             } else {
                 glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
             }
@@ -534,13 +535,8 @@ export const useGlyphActions = (
     const handleImportGlyphs = useCallback((glyphsToImport: [number, GlyphData][]) => {
         if (!glyphsToImport || glyphsToImport.length === 0) return;
     
-        glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prevMap) => {
-            const newMap = new Map(prevMap);
-            for (const [unicode, glyphData] of glyphsToImport) {
-                newMap.set(unicode, glyphData);
-            }
-            return newMap;
-        }});
+        // OPTIMIZED: Use BATCH_UPDATE_GLYPHS
+        glyphDataDispatch({ type: 'BATCH_UPDATE_GLYPHS', payload: glyphsToImport });
 
         if (projectId !== undefined) {
             dbService.deleteFontCache(projectId);

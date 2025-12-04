@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { AddIcon, EditIcon, SaveIcon, TrashIcon } from '../../constants';
@@ -20,12 +21,13 @@ interface LookupsPaneProps {
     glyphDataMap: Map<number, GlyphData>;
     strokeThickness: number;
     groups: Record<string, string[]>;
+    glyphVersion: number;
 }
 
 const LookupsPane: React.FC<LookupsPaneProps> = ({
     lookups, expandedLookups, onToggleLookup, onAddLookup, onUpdateLookup, onDeleteLookup,
     onSaveRule, onUpdateRule, onDeleteRule, allCharacterSets, allCharsByName,
-    glyphDataMap, strokeThickness, groups
+    glyphDataMap, strokeThickness, groups, glyphVersion
 }) => {
     const { t } = useLocale();
     
@@ -97,6 +99,7 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                         showNotification={() => {}}
                         mode="editing"
                         groups={groups}
+                        glyphVersion={glyphVersion}
                     />
                 )}
                 {Object.entries(rules).map(([key, value]) => (
@@ -116,6 +119,7 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                             showNotification={() => {}}
                             mode="editing"
                             groups={groups}
+                            glyphVersion={glyphVersion}
                         />
                     ) : (
                         <ExistingRuleDisplay
@@ -129,6 +133,7 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                             glyphDataMap={glyphDataMap}
                             strokeThickness={strokeThickness}
                             mode="editing"
+                            glyphVersion={glyphVersion}
                         />
                     )
                 ))}

@@ -29,7 +29,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     const { t } = useLocale();
     const { showNotification, pendingNavigationTarget, setPendingNavigationTarget } = useLayout();
     const { characterSets, allCharsByName } = useProject();
-    const { glyphDataMap } = useGlyphData();
+    const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
     const { settings, metrics } = useSettings();
     
@@ -61,7 +61,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     const isGlyphDrawn = useCallback((char: Character): boolean => {
         if (!char || char.unicode === undefined) return false;
         return isGlyphDrawnUtil(glyphDataMap.get(char.unicode));
-    }, [glyphDataMap]);
+    }, [glyphDataMap, glyphVersion]);
 
     const drawnCharacters = useMemo(() => {
         return Array.from(allCharsByUnicode.values())
@@ -314,6 +314,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                 onNavigate={handleNavigateEditor}
                 hasPrev={editingIndex > 0}
                 hasNext={editingIndex < filteredPairsToDisplay.length - 1}
+                glyphVersion={glyphVersion}
             />
         );
     }
@@ -350,6 +351,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                                         glyphDataMap={glyphDataMap}
                                         strokeThickness={settings.strokeThickness}
                                         metrics={metrics}
+                                        glyphVersion={glyphVersion}
                                     />
                                 );
                             })}

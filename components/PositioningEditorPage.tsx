@@ -33,11 +33,12 @@ interface PositioningEditorPageProps {
     currentIndex: number | null;
     onNavigate: (newIndex: number) => void;
     characterSets: CharacterSet[];
+    glyphVersion: number;
 }
 
 const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     baseChar, markChar, targetLigature, glyphDataMap, markPositioningMap, onSave, onClose, onReset, settings, metrics, markAttachmentRules, positioningRules, allChars,
-    allPairs, currentIndex, onNavigate, characterSets
+    allPairs, currentIndex, onNavigate, characterSets, glyphVersion
 }) => {
     const { t } = useLocale();
     const [markPaths, setMarkPaths] = useState<Path[]>([]);
@@ -493,6 +494,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                             glyphDataMap={glyphDataMap}
                                             strokeThickness={settings.strokeThickness}
                                             markPositioningMap={markPositioningMap}
+                                            glyphVersion={glyphVersion}
                                         />
                                     ))}
                                 </div>

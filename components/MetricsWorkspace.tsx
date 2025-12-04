@@ -17,7 +17,7 @@ interface MetricsWorkspaceProps {
 
 const MetricsWorkspace: React.FC<MetricsWorkspaceProps> = () => {
     const { characterSets, dispatch: characterDispatch } = useProject();
-    const { glyphDataMap } = useGlyphData();
+    const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { settings, metrics } = useSettings();
     const { t } = useLocale();
     const { showNotification, metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
@@ -31,7 +31,7 @@ const MetricsWorkspace: React.FC<MetricsWorkspaceProps> = () => {
             .flatMap(set => set.characters)
             .filter(char => char.unicode !== undefined && !char.hidden && isGlyphDrawn(glyphDataMap.get(char.unicode)))
             .sort((a, b) => a.unicode! - b.unicode!);
-    }, [characterSets, glyphDataMap]);
+    }, [characterSets, glyphDataMap, glyphVersion]);
 
     const toggleSelection = (unicode: number) => {
         if (!isMetricsSelectionMode) return;

@@ -20,6 +20,7 @@ interface CombinationCardProps {
   markAttachmentRules: MarkAttachmentRules | null;
   markPositioningMap?: MarkPositioningMap;
   characterSets: CharacterSet[];
+  glyphVersion: number;
 }
 
 
@@ -36,6 +37,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
   markAttachmentRules,
   markPositioningMap,
   characterSets,
+  glyphVersion
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
@@ -98,7 +100,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
         color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
     });
     ctx.restore();
-  }, [baseChar, markChar, ligature, glyphDataMap, strokeThickness, theme, isPositioned, markAttachmentRules, markPositioningMap, metrics, characterSets]);
+  }, [baseChar, markChar, ligature, glyphDataMap, strokeThickness, theme, isPositioned, markAttachmentRules, markPositioningMap, metrics, characterSets, glyphVersion]);
   
   const handleConfirmClick = (e: React.MouseEvent) => {
     e.stopPropagation();

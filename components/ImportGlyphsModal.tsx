@@ -28,7 +28,7 @@ interface ComparisonItem {
 
 const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, onImport, allScripts }) => {
   const { t } = useLocale();
-  const { glyphDataMap: currentGlyphData } = useGlyphData();
+  const { glyphDataMap: currentGlyphData, version: glyphVersion } = useGlyphData();
   const { allCharsByName: currentCharsByName } = useProject();
   const { settings } = useSettings();
 
@@ -143,7 +143,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
     }
 
     return drawnSourceGlyphs.sort((a,b) => a.unicode - b.unicode);
-  }, [sourceProject, currentGlyphData, currentCharsByName]);
+  }, [sourceProject, currentGlyphData, currentCharsByName, glyphVersion]);
 
 
   const toggleSelection = (unicode: number) => {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -22,11 +23,12 @@ interface KerningEditorPageProps {
     onNavigate: (direction: 'prev' | 'next') => void;
     hasPrev: boolean;
     hasNext: boolean;
+    glyphVersion: number;
 }
 
 const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
     pair, onClose, onSave, onRemove, initialValue, glyphDataMap, strokeThickness, metrics, settings, recommendedKerning,
-    onNavigate, hasPrev, hasNext
+    onNavigate, hasPrev, hasNext, glyphVersion
 }) => {
     const { t } = useLocale();
     const { theme } = useTheme();
@@ -405,7 +407,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
 
              ctx.restore();
         }
-    }, [pair, localKernValue, zoom, glyphDataMap, metrics, strokeThickness, theme, canvasSize, isDragging, isHovering, settings.isDebugKerningEnabled, xHeightDistance, isXDistHovered, isXDistFocused, showInitialCue]);
+    }, [pair, localKernValue, zoom, glyphDataMap, metrics, strokeThickness, theme, canvasSize, isDragging, isHovering, settings.isDebugKerningEnabled, xHeightDistance, isXDistHovered, isXDistFocused, showInitialCue, glyphVersion]);
 
 
     const navButtonClass = "p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors";

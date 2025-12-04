@@ -24,7 +24,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
   const { t } = useLocale();
   const { theme } = useTheme();
   const { characterSets } = useProject();
-  const { glyphDataMap } = useGlyphData();
+  const { glyphDataMap, version: glyphVersion } = useGlyphData();
   const { settings, metrics } = useSettings();
   const { comparisonCharacters, setComparisonCharacters } = useLayout();
   
@@ -190,7 +190,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
     return () => {
         resizeObserver.disconnect();
     };
-  }, [comparisonCharacters, glyphDataMap, settings, metrics, t, isFolded, theme, zoom]);
+  }, [comparisonCharacters, glyphDataMap, settings, metrics, t, isFolded, theme, zoom, glyphVersion]);
 
   const handleToggleCharacter = (character: Character, isSelected: boolean) => {
     if (isSelected) {

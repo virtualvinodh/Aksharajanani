@@ -7,12 +7,14 @@ import CharacterCard from './CharacterCard';
 import { useHorizontalScroll } from '../hooks/useHorizontalScroll';
 import { LeftArrowIcon, RightArrowIcon, CheckCircleIcon } from '../constants';
 import { isGlyphDrawn as isGlyphDrawnUtil } from '../utils/glyphUtils';
+import { useGlyphData } from '../contexts/GlyphDataContext';
 
 interface GlyphSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (character: Character) => void;
   characterSets: CharacterSet[];
+  // Although we use context internally for version, we keep this prop for data access if passed from parent
   glyphDataMap: Map<number, GlyphData>;
 }
 
@@ -22,7 +24,9 @@ const CharacterSetTab: React.FC<{
     activeTab: number;
     setActiveTab: (index: number) => void;
     glyphDataMap: Map<number, GlyphData>;
-}> = ({ set, index, activeTab, setActiveTab, glyphDataMap }) => {
+    // Use version to force re-render of completion status
+    glyphVersion: number;
+}> = ({ set, index, activeTab, setActiveTab, glyphDataMap, glyphVersion }) => {
     const { t } = useLocale();
     const [isAnimating, setIsAnimating] = useState(false);
     const wasComplete = useRef(false);
@@ -30,7 +34,7 @@ const CharacterSetTab: React.FC<{
     const isSetComplete = useMemo(() => {
         if (!set.characters || set.characters.length === 0) return false;
         return set.characters.every(char => isGlyphDrawnUtil(glyphDataMap.get(char.unicode)));
-    }, [set.characters, glyphDataMap]);
+    }, [set.characters, glyphDataMap, glyphVersion]);
 
     useEffect(() => {
         if (isSetComplete && !wasComplete.current) {
@@ -61,6 +65,9 @@ const CharacterSetTab: React.FC<{
 
 const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClose, onSelect, characterSets, glyphDataMap }) => {
   const { t } = useLocale();
+  // Consume version from context to ensure modal updates when glyphs are drawn
+  const { version: glyphVersion } = useGlyphData();
+  
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const navContainerRef = useRef<HTMLDivElement>(null);
@@ -68,7 +75,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
 
   const isGlyphDrawn = useCallback((char: Character): boolean => {
     return isGlyphDrawnUtil(glyphDataMap.get(char.unicode));
-  }, [glyphDataMap]);
+  }, [glyphDataMap, glyphVersion]);
 
   const drawnCharacterSets = useMemo(() => {
     if (!characterSets) return [];
@@ -78,7 +85,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
             characters: set.characters.filter(char => !char.hidden && isGlyphDrawn(char))
         }))
         .filter(set => set.characters.length > 0);
-  }, [characterSets, isGlyphDrawn]);
+  }, [characterSets, isGlyphDrawn, glyphVersion]);
 
   useEffect(() => {
     if (isOpen) {
@@ -135,6 +142,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
                                 activeTab={activeTab}
                                 setActiveTab={setActiveTab}
                                 glyphDataMap={glyphDataMap}
+                                glyphVersion={glyphVersion}
                             />
                         ))}
                     </div>

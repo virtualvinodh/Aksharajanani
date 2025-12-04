@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Character, GlyphData } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -17,6 +18,7 @@ interface ExistingRuleDisplayProps {
     glyphDataMap?: Map<number, GlyphData>;
     strokeThickness?: number;
     mode?: 'editing' | 'creating';
+    glyphVersion?: number;
 }
 
 const GlyphDisplay: React.FC<{ char: Character, glyphData?: GlyphData, strokeThickness: number, mode: 'editing' | 'creating' }> = ({ char, glyphData, strokeThickness, mode }) => {
@@ -28,7 +30,7 @@ const GlyphDisplay: React.FC<{ char: Character, glyphData?: GlyphData, strokeThi
 
 const ExistingRuleDisplay: React.FC<ExistingRuleDisplayProps> = ({ 
     ruleKey, ruleValue, ruleType, onEdit, onDelete, allCharsByName, 
-    glyphDataMap, strokeThickness = 15, mode = 'editing' 
+    glyphDataMap, strokeThickness = 15, mode = 'editing', glyphVersion
 }) => {
     const { t } = useLocale();
 
