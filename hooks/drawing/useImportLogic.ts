@@ -1,9 +1,12 @@
 
+
+
 import React, { useRef, useCallback } from 'react';
 import { Path, FontMetrics, Segment, ImageTransform } from '../../types';
 import { generateId } from '../drawingTools/types';
 import { VEC } from '../../utils/vectorUtils';
 import { DRAWING_CANVAS_SIZE } from '../../constants';
+import { paperScope } from '../../services/glyphRenderService';
 
 declare var paper: any;
 
@@ -67,8 +70,7 @@ export const useImportLogic = ({
             const svgText = e.target?.result as string;
             if (!svgText) return;
             
-            const paperScope = new paper.PaperScope();
-            paperScope.setup(new paper.Size(DRAWING_CANVAS_SIZE, DRAWING_CANVAS_SIZE));
+            paperScope.project.clear();
             
             const importedItem = paperScope.project.importSVG(svgText, { expandShapes: true });
             if (!importedItem || importedItem.bounds.width === 0 || importedItem.bounds.height === 0) {

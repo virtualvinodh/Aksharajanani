@@ -1,8 +1,11 @@
+
+
 import { useState, useEffect, useCallback } from 'react';
 import { Path, Point, Segment } from '../../types';
 import { VEC } from '../../utils/vectorUtils';
 import { distanceToSegment } from '../../utils/geometryUtils';
 import { DraggedPointInfo, ToolHookProps } from './types';
+import { paperScope } from '../../services/glyphRenderService';
 
 declare var paper: any;
 
@@ -196,8 +199,7 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
             return;
         }
 
-        const paperScope = new paper.PaperScope();
-        paperScope.setup(new paperScope.Size(1,1));
+        paperScope.project.clear();
         const tolerance = 10 / zoom;
     
         let closestOutlineInfo: { distance: number, pathId: string, groupIndex: number, location: any } | null = null;
@@ -209,13 +211,14 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
                     if (group.length < 2) return;
                     const paperPath = new paperScope.Path({
                         segments: group.map((seg: Segment) => new paperScope.Segment(new paperScope.Point(seg.point.x, seg.point.y), new paperScope.Point(seg.handleIn.x, seg.handleIn.y), new paperScope.Point(seg.handleOut.x, seg.handleOut.y))),
-                        closed: true
+                        closed: true,
+                        insert: false
                     });
                     const location = paperPath.getNearestLocation(new paperScope.Point(clickPoint.x, clickPoint.y));
                     if (location && (!closestOutlineInfo || location.distance < closestOutlineInfo.distance)) {
                         closestOutlineInfo = { distance: location.distance, pathId: path.id, groupIndex, location };
                     }
-                    paperPath.remove();
+                    // paperPath.remove(); // Not needed with insert: false and project.clear() at start
                 });
             } else if (path.points && path.points.length >= 2) {
                 const isClosed = path.type === 'circle' || path.type === 'ellipse';
@@ -250,7 +253,9 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
                         const groupToModify = newSegmentGroups[groupIndex];
                         const paperPath = new paperScope.Path({
                             segments: groupToModify.map((seg: Segment) => new paperScope.Segment(new paperScope.Point(seg.point.x, seg.point.y), new paperScope.Point(seg.handleIn.x, seg.handleIn.y), new paperScope.Point(seg.handleOut.x, seg.handleOut.y))),
-                            closed: true });
+                            closed: true,
+                            insert: false 
+                        });
                         const newSegment = paperPath.divideAt(location);
                         if (newSegment) {
                             const updatedGroup = paperPath.segments.map((seg: any) => ({
@@ -260,7 +265,7 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
                             }));
                             newSegmentGroups[groupIndex] = updatedGroup;
                         }
-                        paperPath.remove();
+                        // paperPath.remove();
                         return { ...p, segmentGroups: newSegmentGroups };
                     }
                     return p;

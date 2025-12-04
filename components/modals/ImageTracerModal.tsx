@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import Modal from '../Modal';
 import { SpinnerIcon } from '../../constants';
@@ -8,6 +10,7 @@ import { traceImageToSVG } from '../../services/imageTracerService';
 import { Path, Segment } from '../../types';
 import { VEC } from '../../utils/vectorUtils';
 import { generateId } from '../../hooks/drawingTools/types';
+import { paperScope } from '../../services/glyphRenderService';
 
 declare var paper: any;
 
@@ -72,8 +75,7 @@ const ImageTracerModal: React.FC<ImageTracerModalProps> = ({ isOpen, onClose, im
     const handleInsert = () => {
         if (!tracerPreview) return;
 
-        const paperScope = new paper.PaperScope();
-        paperScope.setup(new paper.Size(drawingCanvasSize, drawingCanvasSize));
+        paperScope.project.clear();
         const importedItem = paperScope.project.importSVG(tracerPreview, { expandShapes: true });
 
         if (!importedItem || importedItem.bounds.width === 0 || importedItem.bounds.height === 0) {

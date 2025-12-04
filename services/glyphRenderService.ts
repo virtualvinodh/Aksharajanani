@@ -10,7 +10,8 @@ import { DRAWING_CANVAS_SIZE } from '../constants';
 declare var paper: any;
 
 // A single, persistent paper.js instance to avoid memory churn.
-const paperScope = new paper.PaperScope();
+// Exported to be reused by hooks and other services.
+export const paperScope = new paper.PaperScope();
 paperScope.setup(new paper.Size(1, 1));
 
 

@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Point, Path, Tool, AppSettings, ImageTransform, Segment } from '../types';
 import { VEC } from '../utils/vectorUtils';
@@ -14,7 +16,7 @@ import { useEraserTool } from './drawingTools/useEraserTool';
 import { useLayout } from '../contexts/LayoutContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { distanceToSegment } from '../utils/geometryUtils';
-import { getAccurateGlyphBBox, curveToPolyline, quadraticCurveToPolyline } from '../services/glyphRenderService';
+import { getAccurateGlyphBBox, curveToPolyline, quadraticCurveToPolyline, paperScope } from '../services/glyphRenderService';
 
 export type { DraggedPointInfo, Handle };
 
@@ -145,8 +147,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     }), []);
 
     const findPathAtPoint = useCallback((point: Point): Path | null => {
-        const paperScope = new paper.PaperScope();
-        paperScope.setup(new paperScope.Size(1, 1));
+        paperScope.project.clear();
         const tolerance = (settings.strokeThickness / 2 + 5) / zoomRef.current;
         
         for (let i = currentPaths.length - 1; i >= 0; i--) {
@@ -156,13 +157,14 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
                 let paperItem: any;
                 const createPaperPath = (segments: Segment[]) => new paperScope.Path({ 
                     segments: segments.map(seg => new paperScope.Segment(new paperScope.Point(seg.point.x, seg.point.y), new paperScope.Point(seg.handleIn.x, seg.handleIn.y), new paperScope.Point(seg.handleOut.x, seg.handleOut.y))), 
-                    closed: true 
+                    closed: true,
+                    insert: false // Important: don't add to the project layer automatically to keep things clean
                 });
                 
                 if (path.segmentGroups.length > 1) {
                     const nonEmptyGroups = path.segmentGroups.filter(g => g.length > 0);
                     if (nonEmptyGroups.length > 0) {
-                        paperItem = new paperScope.CompoundPath({ children: nonEmptyGroups.map(createPaperPath), fillRule: 'evenodd' });
+                        paperItem = new paperScope.CompoundPath({ children: nonEmptyGroups.map(createPaperPath), fillRule: 'evenodd', insert: false });
                     }
                 } else if (path.segmentGroups.length === 1 && path.segmentGroups[0].length > 0) {
                     paperItem = createPaperPath(path.segmentGroups[0]);
