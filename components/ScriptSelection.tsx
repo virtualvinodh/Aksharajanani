@@ -685,21 +685,6 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                         </label>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        {/* New Empty Project Button */}
-                        <button
-                            onClick={() => setIsNewProjectModalOpen(true)}
-                            type="button"
-                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-indigo-600 dark:text-indigo-400"
-                        >
-                             <div className="script-card-char group-hover:scale-110 transition-transform duration-200 mb-2" aria-hidden="true">
-                                <AddIcon className="w-12 h-12" />
-                            </div>
-                            <div className="mt-2">
-                                <h3 className="text-lg font-bold">{t('createScript')}</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('newProjectDesc')}</p>
-                            </div>
-                        </button>
-
                         {scripts.map(script => (
                             <button 
                                 key={script.id} 
@@ -738,6 +723,20 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                                 <h3 className="text-lg font-bold">{t('createFromBlocks')}</h3>
                             </div>
                         </button>
+                        {/* New Empty Project Button */}
+                        <button
+                            onClick={() => setIsNewProjectModalOpen(true)}
+                            type="button"
+                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-indigo-600 dark:text-indigo-400"
+                        >
+                             <div className="script-card-char group-hover:scale-110 transition-transform duration-200 mb-2" aria-hidden="true">
+                                <AddIcon className="w-12 h-12" />
+                            </div>
+                            <div className="mt-2">
+                                <h3 className="text-lg font-bold">{t('createScript')}</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('newProjectDesc')}</p>
+                            </div>
+                        </button>                        
                     </div>
                 </div>
 
