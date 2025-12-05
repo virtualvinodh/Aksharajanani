@@ -33,6 +33,8 @@ const ItemContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
     <div {...props} ref={ref} className="min-w-0 w-full" />
 ));
 
+const GridHeader = () => <div className="col-span-full h-8" />;
+
 const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectCharacter, onAddGlyph, onAddBlock }) => {
   const { t } = useLocale();
   const { settings } = useSettings();
@@ -71,7 +73,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
           return (
             <div
                 onClick={onAddGlyph}
-                className="relative w-full h-full bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                className="relative w-full h-full bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 h-full"
                 title={t('addGlyph')}
             >
                 <AddIcon />
@@ -84,7 +86,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
           return (
             <div
                 onClick={onAddBlock}
-                className="relative w-full h-full bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                className="relative w-full h-full bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 h-full"
                 title={t('addBlock')}
             >
                 <SwitchScriptIcon />
@@ -103,7 +105,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
         totalCount={gridItems.length}
         components={{
             List: ListContainer,
-            Item: ItemContainer
+            Item: ItemContainer,
+            Header: GridHeader
         }}
         itemContent={ItemContent}
         overscan={400}
