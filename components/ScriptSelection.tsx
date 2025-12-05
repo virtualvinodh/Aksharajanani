@@ -455,7 +455,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                 pathSimplification: 0.5,
                 showGridOutlines: true,
                 isAutosaveEnabled: true,
-                editorMode: 'simple',
+                editorMode: 'advanced',
                 isPrefillEnabled: true
             },
             characterSetData: charDefs,

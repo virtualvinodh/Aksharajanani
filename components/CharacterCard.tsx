@@ -101,8 +101,8 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, glyphData, onS
   if (!settings) return null;
 
   const containerClasses = character.hidden
-    ? `relative bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-between hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square group opacity-70`
-    : `relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square group`;
+    ? `relative bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-between hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square h-full group opacity-70`
+    : `relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square h-full group`;
 
   return (
     <div
@@ -128,10 +128,10 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, glyphData, onS
           <span className="absolute top-1 right-1 text-[10px] font-bold text-gray-400 border border-gray-300 rounded px-1 bg-white dark:bg-gray-800">HIDDEN</span>
       )}
 
-      <div className="w-full h-full flex items-center justify-center">
-        <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className="group-hover:scale-110 transition-transform duration-200"></canvas>
+      <div className="w-full flex-1 min-h-0 flex items-center justify-center">
+        <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className="group-hover:scale-110 transition-transform duration-200 max-w-full max-h-full object-contain"></canvas>
       </div>
-      <div className="text-center mt-2">
+      <div className="text-center mt-2 flex-shrink-0">
         <p 
           className="text-2xl font-bold text-gray-900 dark:text-white"
           style={{

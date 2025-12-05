@@ -26,7 +26,7 @@ const DEFAULT_METRICS: FontMetrics = {
 
 const DEFAULT_DEFAULTS: ScriptDefaults = {
     fontName: "NewFont", strokeThickness: 15, contrast: 1.0, pathSimplification: 0.5,
-    showGridOutlines: false, isAutosaveEnabled: true, editorMode: 'simple',
+    showGridOutlines: false, isAutosaveEnabled: true, editorMode: 'advanced',
     isPrefillEnabled: true, showHiddenGlyphs: false
 };
 
@@ -190,8 +190,7 @@ const ScriptCreator: React.FC<ScriptCreatorProps> = ({ availableScripts, onBack,
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = filename;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     };
 
     const handleStartProject = () => {

@@ -28,11 +28,9 @@ const ListContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
     />
 ));
 
-// FIX: Removed 'contents' class. 
-// Virtuoso needs a real DOM element (block) to measure dimensions correctly.
-// This div becomes the grid cell.
+// FIX: Ensure ItemContainer fills the grid cell space and handles sizing correctly
 const ItemContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => (
-    <div {...props} ref={ref} className="min-w-0" />
+    <div {...props} ref={ref} className="min-w-0 w-full" />
 ));
 
 const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectCharacter, onAddGlyph, onAddBlock }) => {
@@ -73,7 +71,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
           return (
             <div
                 onClick={onAddGlyph}
-                className="bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 h-full"
+                className="relative w-full h-full bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
                 title={t('addGlyph')}
             >
                 <AddIcon />
@@ -86,7 +84,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
           return (
             <div
                 onClick={onAddBlock}
-                className="bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 h-full"
+                className="relative w-full h-full bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
                 title={t('addBlock')}
             >
                 <SwitchScriptIcon />
