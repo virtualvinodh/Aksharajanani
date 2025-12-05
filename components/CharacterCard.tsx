@@ -100,7 +100,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, glyphData, onS
 
   if (!settings) return null;
 
-  const baseContainerClasses = "relative rounded-lg p-2 sm:p-4 flex flex-col items-center justify-between cursor-pointer transition-all duration-200 aspect-square h-full group";
+  const baseContainerClasses = "relative rounded-lg p-2 sm:p-4 flex flex-col items-center justify-between cursor-pointer transition-all duration-200 aspect-square h-full group select-none";
   const containerClasses = character.hidden
     ? `${baseContainerClasses} bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-500 opacity-70`
     : `${baseContainerClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500`;

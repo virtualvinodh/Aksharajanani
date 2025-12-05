@@ -7,7 +7,6 @@ import Footer from './Footer';
 import GeneralSettings from './settings/GeneralSettings';
 import EditorSettings from './settings/EditorSettings';
 import MetaDataSettings from './settings/MetaDataSettings';
-import TestPageSettings from './settings/TestPageSettings';
 import MetricsSettings from './settings/MetricsSettings';
 import { useSettings } from '../contexts/SettingsContext';
 import { useProject } from '../contexts/ProjectContext';
@@ -18,7 +17,7 @@ interface SettingsPageProps {
   toolRanges: ToolRanges;
 }
 
-type ActiveTab = 'general' | 'editor' | 'meta' | 'testPage' | 'metrics';
+type ActiveTab = 'general' | 'editor' | 'meta' | 'metrics';
 
 const TabButton: React.FC<{
     tabId: ActiveTab;
@@ -103,7 +102,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
                         <TabButton tabId="general" label={t('settingsTabGeneral')} activeTab={activeTab} onClick={setActiveTab} />
                         <TabButton tabId="editor" label={t('editorSettings')} activeTab={activeTab} onClick={setActiveTab} />
                         <TabButton tabId="meta" label={t('settingsTabMetaData')} activeTab={activeTab} onClick={setActiveTab} />
-                        <TabButton tabId="testPage" label={t('testPageSettings')} activeTab={activeTab} onClick={setActiveTab} />
             
                         {settings?.editorMode === 'advanced' && (
                             <TabButton tabId="metrics" label={t('settingsTabMetrics')} activeTab={activeTab} onClick={setActiveTab} />
@@ -143,12 +141,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
                     <MetaDataSettings
                          settings={localSettings} 
                          onSettingsChange={setLocalSettings} 
-                    />
-                )}
-                {activeTab === 'testPage' && (
-                    <TestPageSettings
-                        settings={localSettings}
-                        onSettingsChange={setLocalSettings}
                     />
                 )}
                 {activeTab === 'metrics' && settings?.editorMode === 'advanced' && (
