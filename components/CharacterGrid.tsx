@@ -24,7 +24,7 @@ const ListContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
     <div
       {...props}
       ref={ref}
-      className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4 p-4 pb-24"
+      className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 p-2 sm:gap-4 sm:p-4 pb-24"
     />
 ));
 
@@ -73,11 +73,11 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
           return (
             <div
                 onClick={onAddGlyph}
-                className="relative w-full h-full bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 h-full"
+                className="relative w-full h-full bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 h-full"
                 title={t('addGlyph')}
             >
                 <AddIcon />
-                <p className="text-sm font-semibold mt-2 text-center">{t('addGlyph')}</p>
+                <p className="text-sm font-semibold mt-1 sm:mt-2 text-center">{t('addGlyph')}</p>
             </div>
           );
       }
@@ -86,11 +86,11 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
           return (
             <div
                 onClick={onAddBlock}
-                className="relative w-full h-full bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 h-full"
+                className="relative w-full h-full bg-gray-100 dark:bg-gray-800/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 h-full"
                 title={t('addBlock')}
             >
                 <SwitchScriptIcon />
-                <p className="text-sm font-semibold mt-2 text-center">{t('addBlock')}</p>
+                <p className="text-sm font-semibold mt-1 sm:mt-2 text-center">{t('addBlock')}</p>
             </div>
           );
       }
