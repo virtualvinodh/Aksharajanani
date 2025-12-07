@@ -214,16 +214,15 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     }
 
     // Horizontal layout for mobile/tablet or short desktop screens
-    // Updated style for bottom placement: rounded-xl, border
+    // Consolidated into a single flex container for better flow
     return (
-        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-2 shadow-inner w-full sm:w-auto">
-             <div className="flex items-center justify-center flex-wrap gap-2">
+        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-inner w-full sm:w-auto">
+             <div className="flex items-center justify-center flex-wrap gap-1 sm:gap-2">
                 {commonTools}
-                <div className="border-l h-6 border-gray-400 dark:border-gray-600 mx-2"></div>
+                <div className="border-l h-6 border-gray-400 dark:border-gray-600 mx-1"></div>
                 {drawingTools}
-             </div>
-             <div className="flex items-center justify-center flex-wrap gap-2">
-                 {actionTools}
+                <div className="border-l h-6 border-gray-400 dark:border-gray-600 mx-1"></div>
+                {actionTools}
              </div>
         </div>
     );

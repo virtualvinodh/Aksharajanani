@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { FontMetrics, Character, CharacterSet, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -116,7 +117,9 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
     if (!character || !components.length || !isAdvanced) return false;
     
     // DFS to find if any component eventually points back to the target character
-    const checkCycle = (target: string, currentComponents: string[], visited: Set<string>): boolean => {
+    const checkCycle = (target: string, currentComponents: string[], visited: Set<string>, depth: number = 0): boolean => {
+        if (depth > 50) return true; // Prevent infinite recursion
+
         for (const compName of currentComponents) {
             if (compName === target) return true; // Cycle detected: Component is the target itself
             if (visited.has(compName)) continue; // Already checked this branch
@@ -129,14 +132,14 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                     // but prevent infinite loops in graph traversal
                     const newVisited = new Set(visited);
                     newVisited.add(compName);
-                    if (checkCycle(target, subComponents, newVisited)) return true;
+                    if (checkCycle(target, subComponents, newVisited, depth + 1)) return true;
                 }
             }
         }
         return false;
     };
 
-    return checkCycle(character.name, components, new Set());
+    return checkCycle(character.name, components, new Set(), 0);
   }, [character, components, allCharsMap, isAdvanced]);
 
   useEffect(() => {

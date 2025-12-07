@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -59,7 +60,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     const expandGroup = useMemo(() => {
         const resolve = (name: string, visited: Set<string>, depth: number): string[] => {
             if (typeof name !== 'string') return []; // Safety check for malformed data
-            if (depth > 100) return []; // Recursion depth limit to prevent stack overflow
+            if (depth > 50) return []; // Recursion depth limit to prevent stack overflow
 
             const trimmedName = name.trim();
             if (!trimmedName.startsWith('$')) return [trimmedName];

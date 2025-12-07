@@ -201,7 +201,11 @@ export const useProjectLoad = ({
             
             const expandedCustomGroups = new Map<string, string[]>();
 
-            const resolveCustomGroup = (groupName: string, visited: Set<string> = new Set()): string[] => {
+            const resolveCustomGroup = (groupName: string, visited: Set<string> = new Set(), depth: number = 0): string[] => {
+                if (depth > 50) {
+                    console.warn(`Group expansion depth limit reached for ${groupName}`);
+                    return [];
+                }
                 if (expandedCustomGroups.has(groupName)) return expandedCustomGroups.get(groupName)!;
                 if (visited.has(groupName)) return [];
                 visited.add(groupName);
@@ -211,7 +215,7 @@ export const useProjectLoad = ({
                 members.forEach(memberName => {
                     if (memberName.startsWith('$')) {
                         const subGroupName = memberName.substring(1);
-                        if (customGroups[subGroupName]) { resolveCustomGroup(subGroupName, new Set(visited)).forEach(m => expandedMembers.add(m)); }
+                        if (customGroups[subGroupName]) { resolveCustomGroup(subGroupName, new Set(visited), depth + 1).forEach(m => expandedMembers.add(m)); }
                         else if (allCharSetsByName.has(subGroupName)) { allCharSetsByName.get(subGroupName)!.characters.forEach(char => expandedMembers.add(char.name)); }
                     } else { expandedMembers.add(memberName); }
                 });
