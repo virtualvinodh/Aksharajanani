@@ -24,7 +24,7 @@ const ListContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
     <div
       {...props}
       ref={ref}
-      className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 p-2 sm:gap-4 sm:p-4 pb-24"
+      className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 p-2 sm:gap-4 sm:p-4"
     />
 ));
 
@@ -33,7 +33,8 @@ const ItemContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
     <div {...props} ref={ref} className="min-w-0 w-full" />
 ));
 
-const GridHeader = () => <div className="col-span-full h-8" />;
+const GridHeader = () => <div className="col-span-full h-6" />;
+const GridFooter = () => <div className="col-span-full h-6" />;
 
 const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectCharacter, onAddGlyph, onAddBlock }) => {
   const { t } = useLocale();
@@ -106,7 +107,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
         components={{
             List: ListContainer,
             Item: ItemContainer,
-            Header: GridHeader
+            Header: GridHeader,
+            Footer: GridFooter
         }}
         itemContent={ItemContent}
         overscan={400}
