@@ -16,11 +16,8 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ completed, total,
   const progressText = t(progressTextKey, { completed, total, percentage });
 
   return (
-    <div className="px-4 py-2">
-      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-        {progressText}
-      </div>
-      <div className="w-full bg-gray-300 dark:bg-gray-700 rounded-full h-2 overflow-hidden" role="presentation">
+    <div className="px-4 py-2 flex items-center gap-3">
+      <div className="flex-grow bg-gray-300 dark:bg-gray-700 rounded-full h-2 overflow-hidden" role="presentation">
         <div
           className={`${isComplete ? 'bg-green-500' : 'bg-indigo-600'} h-2 rounded-full transition-all duration-500`}
           style={{ width: `${percentage}%` }}
@@ -30,6 +27,9 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ completed, total,
           aria-valuemax={100}
           aria-label={progressText}
         ></div>
+      </div>
+      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap flex-shrink-0">
+        {progressText}
       </div>
     </div>
   );
