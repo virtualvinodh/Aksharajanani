@@ -4,7 +4,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useProject } from '../contexts/ProjectContext';
-import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, CopyIcon, WrenchIcon } from '../constants';
+import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, CopyIcon, WrenchIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import CommandPalette from './CommandPalette';
 
@@ -135,11 +135,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <>
         <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-2 sm:p-4 flex flex-col shadow-md w-full flex-shrink-0 z-20 gap-2 sm:gap-4">
             
-            {/* Top Row Container: Flex wrap for mobile, justify-between for spacing */}
-            <div className="w-full flex flex-wrap md:flex-nowrap items-center justify-between gap-y-2">
+            {/* Top Row Container: Flex wrap for both mobile and desktop. 
+                Mobile: justify-between. Desktop: justify-center with gaps. */}
+            <div className="w-full flex flex-wrap items-center justify-between md:justify-center gap-y-2 md:gap-x-12 md:gap-y-4">
 
-                {/* 1. Logo Section (Top Left) */}
-                <div className="order-1 flex flex-1 md:flex-none items-center justify-center md:justify-start gap-3">
+                {/* 1. Logo Section (Top Left on Mobile, Centered on Desktop Row 1) */}
+                <div className="order-1 flex flex-1 md:flex-none items-center justify-center md:justify-center gap-3">
                     <button onClick={onChangeScriptClick} title={t('changeScript')} className="flex items-center justify-center gap-2 sm:gap-3 group">
                         <div className="w-10 h-10 rounded-full border-2 border-indigo-500 dark:border-indigo-400 flex items-center justify-center flex-shrink-0 group-hover:bg-gray-100 dark:group-hover:bg-gray-700 transition-colors">
                             <span
@@ -152,10 +153,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         </div>
                         <h1 className="hidden sm:block text-2xl font-bold text-gray-700 dark:text-gray-200 whitespace-nowrap group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{t('appTitle')}</h1>
                     </button>
+                    {/* Desktop Divider */}
+                    <div className="hidden md:block h-8 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
                 </div>
 
-                {/* 2. Action Buttons (Top Right on Mobile, Far Right on Desktop) */}
-                <div className="order-2 md:order-3 flex items-center justify-end gap-3 sm:gap-2 flex-shrink-0">
+                {/* 2. Action Buttons (Top Right on Mobile, Centered on Desktop Row 1) */}
+                <div className="order-2 flex items-center justify-end md:justify-center gap-3 sm:gap-2 flex-shrink-0">
                     
                     {/* Mobile Vertical Divider to separate logo area from actions */}
                     <div className="md:hidden h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div>
@@ -179,8 +182,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                          <CompareIcon />
                         <span className="hidden lg:inline">{t('compare')}</span>
                     </button>
-
-                    <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1 self-center hidden sm:block"></div>
 
                     <button onClick={onExportClick} disabled={isExporting} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:cursor-wait text-sm sm:text-base">
                         {isExporting ? <SpinnerIcon /> : <ExportIcon />}
@@ -216,14 +217,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     </div>
                 </div>
 
-                {/* 3. Center/Bottom Group: Project Name & Toggle */}
-                {/* On Desktop: This sits between Logo and Actions (order-2). */}
-                {/* On Mobile: This wraps to a new line (order-3, w-full). */}
-                <div className="order-3 md:order-2 w-full md:w-auto md:flex-1 flex items-center justify-center gap-4 p-1 md:p-0 border-t md:border-t-0 border-gray-200 dark:border-gray-700 md:border-none">
+                {/* 3. Center/Bottom Group: Project Name & Toggle (Row 2 on both Mobile and Desktop) */}
+                <div className="order-3 w-full flex items-center justify-center gap-4 p-1 border-t border-gray-200 dark:border-gray-700">
                     
-                    {/* Desktop Separator (Left) */}
-                    <div className="hidden md:block border-l h-6 border-gray-300 dark:border-gray-600 mx-2"></div>
-
                     {/* Project Name */}
                     <div className="text-center flex-grow md:flex-grow-0">
                          {isEditingFontName ? (
