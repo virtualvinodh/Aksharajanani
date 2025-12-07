@@ -137,7 +137,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             
             {/* Top Row Container: Flex wrap for both mobile and desktop. 
                 Mobile: justify-between. Desktop: justify-center with gaps. */}
-            <div className="w-full flex flex-wrap items-center justify-between md:justify-center gap-y-2 md:gap-x-12 md:gap-y-4">
+            <div className="w-full flex flex-wrap items-center justify-between md:justify-center gap-y-2 md:gap-x-8 md:gap-y-4">
 
                 {/* 1. Logo Section (Top Left on Mobile, Centered on Desktop Row 1) */}
                 <div className="order-1 flex flex-1 md:flex-none items-center justify-center md:justify-center gap-3">
@@ -180,7 +180,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     
                     <button onClick={onCompareClick} title={t('compare')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
                          <CompareIcon />
-                        <span className="hidden lg:inline">{t('compare')}</span>
+                        <span className="hidden md:inline">{t('compare')}</span>
                     </button>
 
                     <button onClick={onExportClick} disabled={isExporting} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:cursor-wait text-sm sm:text-base">
@@ -254,6 +254,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 title={t('simpleMode')}
                             >
                                 <SparklesIcon />
+                                <span className="hidden md:inline">{t('simpleMode')}</span>
                             </button>
                             <button
                                 onClick={() => onEditorModeChange('advanced')}
@@ -265,6 +266,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 title={t('advancedMode')}
                             >
                                 <WrenchIcon />
+                                <span className="hidden md:inline">{t('advancedMode')}</span>
                             </button>
                         </div>
                     </div>
