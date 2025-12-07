@@ -13,14 +13,45 @@ const getPerpendicularDistance = (point: Point, lineStart: Point, lineEnd: Point
 
 export const simplifyPath = (points: Point[], epsilon: number): Point[] => {
   if (points.length < 3) return points;
-  let dmax = 0, index = 0, end = points.length - 1;
-  for (let i = 1; i < end; i++) {
-    const d = getPerpendicularDistance(points[i], points[0], points[end]);
-    if (d > dmax) { index = i; dmax = d; }
+
+  // Use a Uint8Array as a bitmask to mark points to keep. 
+  // 1 = keep, 0 = discard.
+  const keepPoint = new Uint8Array(points.length);
+  keepPoint[0] = 1; // Always keep first
+  keepPoint[points.length - 1] = 1; // Always keep last
+
+  // Stack for iterative processing: [startIndex, endIndex]
+  const stack: [number, number][] = [[0, points.length - 1]];
+
+  while (stack.length > 0) {
+    const [start, end] = stack.pop()!;
+    
+    let dmax = 0;
+    let index = 0;
+    
+    for (let i = start + 1; i < end; i++) {
+      const d = getPerpendicularDistance(points[i], points[start], points[end]);
+      if (d > dmax) {
+        index = i;
+        dmax = d;
+      }
+    }
+    
+    if (dmax > epsilon) {
+      keepPoint[index] = 1;
+      // Push sub-segments to stack
+      stack.push([start, index]);
+      stack.push([index, end]);
+    }
   }
-  if (dmax > epsilon) {
-    const recResults1 = simplifyPath(points.slice(0, index + 1), epsilon);
-    const recResults2 = simplifyPath(points.slice(index), epsilon);
-    return recResults1.slice(0, recResults1.length - 1).concat(recResults2);
-  } else { return [points[0], points[end]]; }
+
+  // Filter the original array based on the bitmask
+  const result: Point[] = [];
+  for (let i = 0; i < points.length; i++) {
+    if (keepPoint[i]) {
+      result.push(points[i]);
+    }
+  }
+  
+  return result;
 };
