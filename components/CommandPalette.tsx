@@ -56,25 +56,37 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     const [cachedItems, setCachedItems] = useState<SearchResult[]>([]);
     
     // Helper to resolve groups referenced in rules (e.g. $vowels) to individual character names
-    const expandGroup = useMemo(() => (name: string): string[] => {
-        if (!name.startsWith('$')) return [name];
-        
-        const groupName = name.substring(1);
-        // 1. Check character sets (e.g. $vowels from characters.json)
-        const charSet = characterSets?.find(s => s.nameKey === groupName);
-        if (charSet) {
-            return charSet.characters.map(c => c.name);
-        }
-        // 2. Check groups defined in rules.json (e.g. $consAll)
-        // Access groups from the rules state if available
-        const rulesGroups = rulesState.fontRules?.groups;
-        if (rulesGroups && rulesGroups[groupName]) {
-            // Recursively expand groups if a group contains other groups
-            const members = rulesGroups[groupName] as string[];
-            return members.flatMap(m => expandGroup(m));
-        }
-        
-        return [];
+    const expandGroup = useMemo(() => {
+        const resolve = (name: string, visited: Set<string>, depth: number): string[] => {
+            if (depth > 100) return []; // Recursion depth limit to prevent stack overflow
+
+            const trimmedName = name.trim();
+            if (!trimmedName.startsWith('$')) return [trimmedName];
+            
+            const groupName = trimmedName.substring(1);
+            if (visited.has(groupName)) return []; // Cycle detected, stop recursion
+            
+            const newVisited = new Set(visited).add(groupName);
+
+            // 1. Check character sets (e.g. $vowels from characters.json)
+            const charSet = characterSets?.find(s => s.nameKey === groupName);
+            if (charSet) {
+                return charSet.characters.map(c => c.name);
+            }
+            // 2. Check groups defined in rules.json (e.g. $consAll)
+            // Access groups from the rules state if available
+            const rulesGroups = rulesState.fontRules?.groups;
+            if (rulesGroups && rulesGroups[groupName]) {
+                // Recursively expand groups if a group contains other groups
+                const members = rulesGroups[groupName] as string[];
+                if (Array.isArray(members)) {
+                    return members.flatMap(m => typeof m === 'string' ? resolve(m, newVisited, depth + 1) : []);
+                }
+            }
+            
+            return [];
+        };
+        return (name: string) => resolve(name, new Set(), 0);
     }, [characterSets, rulesState.fontRules]);
 
     // Build the static search index only when the palette opens.
