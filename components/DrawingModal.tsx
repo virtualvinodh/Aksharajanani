@@ -46,9 +46,10 @@ interface DrawingModalProps {
   onUnlockGlyph: (unicode: number) => void;
   onRelinkGlyph: (unicode: number) => void;
   onUpdateDependencies: (unicode: number, newLinkComponents: string[] | null) => void;
+  onEditorModeChange: (mode: 'simple' | 'advanced') => void;
 }
 
-const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, onUnlockGlyph, onRelinkGlyph, onUpdateDependencies }) => {
+const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange }) => {
   const { t } = useLocale();
   const { showNotification, modalOriginRect, checkAndSetFlag } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
@@ -486,6 +487,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         isLocked={isLocked} isComposite={isComposite} onRefresh={handleRefresh}
         allCharacterSets={allCharacterSets}
         onSaveConstruction={handleSaveConstruction}
+        onEditorModeChange={onEditorModeChange}
       />
 
       <main className={layoutClasses}>

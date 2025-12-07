@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon } from '../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon, MoreIcon, WrenchIcon, SparklesIcon } from '../constants';
 import GlyphPropertiesPanel from './GlyphPropertiesPanel';
 
 interface DrawingModalHeaderProps {
@@ -26,18 +26,38 @@ interface DrawingModalHeaderProps {
   onRefresh?: () => void;
   allCharacterSets: CharacterSet[];
   onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => void;
+  onEditorModeChange: (mode: 'simple' | 'advanced') => void;
 }
 
 const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
   character, glyphData, prevCharacter, nextCharacter, onBackClick, onNavigate,
   settings, metrics, lsb, setLsb, rsb, setRsb, onDeleteClick, onClear, onSave,
-  isLocked = false, isComposite = false, onRefresh, allCharacterSets, onSaveConstruction
+  isLocked = false, isComposite = false, onRefresh, allCharacterSets, onSaveConstruction,
+  onEditorModeChange
 }) => {
   const { t } = useLocale();
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setIsMoreMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const toggleEditorMode = () => {
+    onEditorModeChange(settings.editorMode === 'simple' ? 'advanced' : 'simple');
+  };
 
   return (
-    <header className="bg-gray-5 dark:bg-gray-800 p-4 flex justify-between items-center shadow-md w-full flex-shrink-0">
+    <header className="bg-gray-50 dark:bg-gray-800 p-4 flex justify-between items-center shadow-md w-full flex-shrink-0 z-20">
       <div className="flex-1 flex justify-start">
           <button
           onClick={onBackClick}
@@ -84,74 +104,150 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
       </div>
 
 
-      <div className="flex-1 flex justify-end items-center gap-2">
-          {settings.editorMode === 'advanced' && (
-            <div className="relative">
-              <button
-                id="glyph-properties-button"
-                onClick={() => setIsPropertiesPanelOpen(p => !p)}
-                title={t('glyphProperties')}
-                className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
-              >
-                <PropertiesIcon />
-              </button>
-              {isPropertiesPanelOpen && (
-                <GlyphPropertiesPanel
-                  lsb={lsb}
-                  setLsb={setLsb}
-                  rsb={rsb}
-                  setRsb={setRsb}
-                  metrics={metrics}
-                  onClose={() => setIsPropertiesPanelOpen(false)}
-                  character={character}
-                  glyphData={glyphData}
-                  allCharacterSets={allCharacterSets}
-                  onSaveConstruction={onSaveConstruction}
-                />
-              )}
-            </div>
-          )}
-          {settings.editorMode === 'advanced' && (
-              <button
-                  onClick={onDeleteClick}
-                  title={t('deleteGlyph')}
-                  className="flex items-center gap-2 justify-center px-4 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-800 transition-colors duration-200"
-              >
-                  <TrashIcon />
-                  <span className="hidden sm:inline">{t('deleteGlyph')}</span>
-              </button>
-          )}
+      <div className="flex-1 flex justify-end items-center gap-2 relative">
           
-          {(isLocked || isComposite) && (
-            <button
-                onClick={onRefresh}
-                title={t('refreshGlyph')}
-                className="flex items-center gap-2 justify-center px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200"
-            >
-                <RedoIcon />
-                <span className="hidden sm:inline">{t('refresh')}</span>
-            </button>
-          )}
-          
-          {!isLocked && (
-            <button
-                onClick={onClear}
-                className="flex items-center gap-2 justify-center px-4 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors duration-200"
-            >
-                <BroomIcon />
-                <span className="hidden sm:inline">{t('clear')}</span>
-            </button>
-          )}
+          {/* DESKTOP ACTIONS (Hidden on Mobile) */}
+          <div className="hidden sm:flex items-center gap-2">
+            {/* Properties Panel Toggle */}
+            {settings.editorMode === 'advanced' && (
+                <button
+                    id="glyph-properties-button"
+                    onClick={() => setIsPropertiesPanelOpen(p => !p)}
+                    title={t('glyphProperties')}
+                    className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                >
+                    <PropertiesIcon />
+                </button>
+            )}
+            
+            {/* Refresh */}
+            {(isLocked || isComposite) && (
+                <button
+                    onClick={() => onRefresh?.()}
+                    title={t('refresh')}
+                    className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                >
+                    <RedoIcon />
+                </button>
+            )}
 
+            {/* Clear */}
+            {!isLocked && (
+                <button
+                    onClick={onClear}
+                    title={t('clear')}
+                    className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-orange-600 dark:text-orange-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                >
+                    <BroomIcon />
+                </button>
+            )}
+
+            {/* Delete */}
+            {settings.editorMode === 'advanced' && (
+                <button
+                    onClick={onDeleteClick}
+                    title={t('deleteGlyph')}
+                    className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                >
+                    <TrashIcon />
+                </button>
+            )}
+          </div>
+
+          {/* SHARED ACTIONS (Visible on All Screens) */}
+          
+          {/* Editor Mode Toggle */}
+          <button
+              onClick={toggleEditorMode}
+              title={settings.editorMode === 'simple' ? t('advancedMode') : t('simpleMode')}
+              className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+          >
+              {settings.editorMode === 'simple' ? <WrenchIcon /> : <SparklesIcon />}
+          </button>
+
+          {/* Manual Save Button */}
           {!settings.isAutosaveEnabled && (
               <button
                   onClick={onSave}
-                  className="flex items-center gap-2 justify-center px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+                  className="flex items-center gap-2 justify-center p-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+                  title={t('saveGlyph')}
               >
                   <SaveIcon />
-                  <span className="hidden sm:inline">{t('saveGlyph')}</span>
               </button>
           )}
+
+          {/* MOBILE MENU (Hidden on Desktop) */}
+          <div className="relative sm:hidden" ref={moreMenuRef}>
+              <button
+                  onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                  className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                  title={t('more')}
+              >
+                  <MoreIcon />
+              </button>
+
+              {isMoreMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 z-50">
+                       {/* Properties (Mobile) */}
+                       {settings.editorMode === 'advanced' && (
+                           <button
+                               onClick={() => { setIsPropertiesPanelOpen(true); setIsMoreMenuOpen(false); }}
+                               className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                           >
+                               <PropertiesIcon />
+                               <span>{t('glyphProperties')}</span>
+                           </button>
+                       )}
+
+                      {(isLocked || isComposite) && (
+                          <button
+                              onClick={() => { onRefresh?.(); setIsMoreMenuOpen(false); }}
+                              className="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          >
+                              <RedoIcon />
+                              <span>{t('refresh')}</span>
+                          </button>
+                      )}
+                      
+                      {!isLocked && (
+                          <button
+                              onClick={() => { onClear(); setIsMoreMenuOpen(false); }}
+                              className="w-full text-left px-4 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          >
+                              <BroomIcon />
+                              <span>{t('clear')}</span>
+                          </button>
+                      )}
+                      
+                      {settings.editorMode === 'advanced' && (
+                          <button
+                              onClick={() => { onDeleteClick(); setIsMoreMenuOpen(false); }}
+                              className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          >
+                              <TrashIcon />
+                              <span>{t('deleteGlyph')}</span>
+                          </button>
+                      )}
+                  </div>
+              )}
+          </div>
+          
+          {/* Properties Panel - Anchored to container */}
+          {isPropertiesPanelOpen && (
+            <GlyphPropertiesPanel
+              lsb={lsb}
+              setLsb={setLsb}
+              rsb={rsb}
+              setRsb={setRsb}
+              metrics={metrics}
+              onClose={() => setIsPropertiesPanelOpen(false)}
+              character={character}
+              glyphData={glyphData}
+              allCharacterSets={allCharacterSets}
+              onSaveConstruction={onSaveConstruction}
+            />
+          )}
+
       </div>
     </header>
   );

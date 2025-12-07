@@ -320,6 +320,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
           setClipboard={(paths) => clipboardDispatch({ type: 'SET_CLIPBOARD', payload: paths })}
           onClose={closeCharacterModal}
           markAttachmentRules={markAttachmentRules}
+          onEditorModeChange={handleEditorModeChange}
         />
       )}
 
