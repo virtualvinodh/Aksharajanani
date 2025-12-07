@@ -72,7 +72,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   });
 
   const drawControlPoints = useCallback((ctx: CanvasRenderingContext2D, pathsToDraw: Path[], focusedId: string | null, selectedPoint: DraggedPointInfo | null) => {
-    const mobileMultiplier = isMobile ? 1.5 : 1;
+    const mobileMultiplier = isMobile ? 2.5 : 1;
     const anchorRadiusBase = (4 * mobileMultiplier) / zoom;
     const controlRadiusBase = (3 * mobileMultiplier) / zoom;
     ctx.save();
@@ -135,20 +135,13 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             ctx.strokeStyle = `rgba(107, 114, 128, ${lineAlpha})`;
             ctx.lineWidth = 1.5 / zoom;
             ctx.beginPath();
-            if (type === 'curve') {
-                ctx.moveTo(points[0].x, points[0].y); ctx.lineTo(points[1].x, points[1].y); ctx.lineTo(points[2].x, points[2].y);
-            } else if (type === 'pen') {
-                for (let i = 1; i < points.length - 2; i++) {
-                    const xc = (points[i].x + points[i + 1].x) / 2;
-                    const yc = (points[i].y + points[i + 1].y) / 2;
-                    ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
-                }
-                const lastP0 = { x: (points[points.length - 3].x + points[points.length - 2].x) / 2, y: (points[points.length - 3].y + points[points.length - 2].y) / 2 };
-                ctx.moveTo(lastP0.x, lastP0.y); ctx.lineTo(points[points.length - 2].x, points[points.length - 2].y); ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
-            } else {
-                ctx.moveTo(points[0].x, points[0].y);
-                for(let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-            }
+            
+            // For 'pen' (bezier) and other types, we draw the control polygon (straight lines connecting points)
+            // This is standard for editing interfaces and clearer than re-drawing the curve skeleton.
+            // It fixes the issue where the first segment of the pen path was missing due to missing moveTo.
+            ctx.moveTo(points[0].x, points[0].y);
+            for(let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+            
             ctx.stroke();
         }
         points.forEach((p, index) => {
