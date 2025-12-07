@@ -92,9 +92,9 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const canvasWrapperRef = useRef<HTMLDivElement>(null); // Ref for the inner square wrapper
   const animationTimeoutRef = useRef<number | null>(null);
   
-  // Requires both width AND height to use the vertical sidebar layout.
-  // If screen is wide but short, use the horizontal top toolbar to avoid scrolling.
-  const isLargeScreen = useMediaQuery('(min-width: 1024px) and (min-height: 900px)');
+  // Revised query: Just check width. This allows laptops (e.g. 1366x768) to have side-by-side layout.
+  // Mobile/Portait Tablets (<1024px) will get bottom-docked layout.
+  const isLargeScreen = useMediaQuery('(min-width: 1024px)');
   
   const isLocked = !!character.link;
   const isComposite = !!character.composite && character.composite.length > 0;
@@ -465,6 +465,12 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   
   const mainContentClasses = `flex-grow overflow-hidden bg-gray-100 dark:bg-black/20 transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`;
 
+  // Use flex-col-reverse on mobile (toolbar at bottom visually)
+  // Use flex-row centered on desktop (toolbar side-by-side with canvas, centrally docked)
+  const layoutClasses = isLargeScreen 
+      ? `${mainContentClasses} flex flex-row justify-center items-center p-4 gap-4` 
+      : `${mainContentClasses} flex flex-col-reverse p-4 gap-4`;
+
   return (
     <div ref={modalRef} className={`fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col ${animationClass}`}>
       <input type="file" ref={imageImportRef} onChange={handleImageImport} className="hidden" accept="image/png, image/jpeg, image/gif, image/bmp" />
@@ -482,7 +488,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         onSaveConstruction={handleSaveConstruction}
       />
 
-      <main className={isLargeScreen ? `${mainContentClasses} flex flex-row justify-center p-4 gap-4` : `${mainContentClasses} flex flex-col p-4 gap-4`}>
+      <main className={layoutClasses}>
          <div className={isLargeScreen ? "flex flex-col overflow-y-auto max-h-full no-scrollbar" : ""}>
              <div className={isLargeScreen ? "my-auto" : ""}>
                  <DrawingToolbar
@@ -499,8 +505,13 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                  />
              </div>
          </div>
-        <div className="flex-1 min-w-0 min-h-0 flex justify-center items-center relative" ref={canvasContainerRef}>
-            <div className="rounded-md overflow-hidden shadow-lg aspect-square max-w-full max-h-full relative" ref={canvasWrapperRef}>
+        
+        {/* Canvas Container: On desktop, height determines width (aspect-square), avoiding full-width stretch */}
+        <div 
+            className={`min-w-0 min-h-0 flex justify-center items-center relative ${isLargeScreen ? 'h-full aspect-square' : 'flex-1 w-full'}`} 
+            ref={canvasContainerRef}
+        >
+            <div className={`rounded-md overflow-hidden shadow-lg aspect-square relative ${isLargeScreen ? 'w-full h-full' : 'max-w-full max-h-full'}`} ref={canvasWrapperRef}>
                 {settings.editorMode === 'advanced' && activeSelectionBBox && (
                     <ContextualToolbar 
                         selectionBox={activeSelectionBBox}

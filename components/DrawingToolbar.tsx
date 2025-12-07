@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
 import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, ControlPointsIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, LinkIcon, BrokenLinkIcon, GroupIcon, UngroupIcon } from '../constants';
@@ -202,7 +203,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
 
     if(isLargeScreen) {
         return (
-            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-l-lg grid grid-cols-2 gap-2 justify-items-center content-start shadow-inner max-h-full overflow-y-auto no-scrollbar">
+            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-xl grid grid-cols-2 gap-2 justify-items-center content-start shadow-inner max-h-full overflow-y-auto no-scrollbar">
                  {commonTools}
                  <div className="border-t w-full border-gray-400 dark:border-gray-600 my-1 col-span-2"></div>
                  {drawingTools}
@@ -213,8 +214,9 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     }
 
     // Horizontal layout for mobile/tablet or short desktop screens
+    // Updated style for bottom placement: rounded-xl, border
     return (
-        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-t-lg flex flex-col items-center justify-center gap-2 shadow-inner">
+        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-2 shadow-inner w-full sm:w-auto">
              <div className="flex items-center justify-center flex-wrap gap-2">
                 {commonTools}
                 <div className="border-l h-6 border-gray-400 dark:border-gray-600 mx-2"></div>

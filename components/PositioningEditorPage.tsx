@@ -136,14 +136,14 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                 return;
             }
         
+            const CANVAS_DIM = 700; // The fixed size of the positioning canvas
+            const PADDING = 100; // Add some padding around the glyphs
+        
             const bbox = getAccurateGlyphBBox(allPaths, settings.strokeThickness);
             if (!bbox) {
                 lastPairIdentifierRef.current = pairIdentifier;
                 return;
             }
-        
-            const CANVAS_DIM = 700; // The fixed size of the positioning canvas
-            const PADDING = 100; // Add some padding around the glyphs
         
             const requiredWidth = bbox.width + PADDING * 2;
             const requiredHeight = bbox.height + PADDING * 2;
@@ -474,7 +474,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                     )}
                 </div>
             </header>
-            <main className="flex-grow p-4 overflow-hidden flex flex-col lg:flex-row gap-4 bg-gray-100 dark:bg-gray-900">
+            
+            {/* Main Content Area: Centered, no forced flex-1 expansion on desktop to group tightly */}
+            <main className={`flex-grow p-4 overflow-hidden flex flex-col-reverse lg:flex-row lg:justify-center lg:items-center gap-4 bg-gray-100 dark:bg-gray-900`}>
                 <div className="flex-shrink-0 flex lg:flex-col justify-center">
                     <PositioningToolbar
                         onReuseClick={() => setIsReusePanelOpen(p => !p)}
@@ -484,7 +486,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                         isLargeScreen={isLargeScreen}
                     />
                 </div>
-                <div className="flex-1 min-w-0 min-h-0 flex justify-center items-center relative">
+                <div className={`min-w-0 min-h-0 flex justify-center items-center relative ${isLargeScreen ? 'lg:flex-none lg:h-full aspect-square' : 'flex-1 w-full'}`}>
                     {isReusePanelOpen && (
                         <div className="absolute top-0 left-4 z-20 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700">
                             <h4 className="font-bold text-gray-900 dark:text-white mb-2">{t('copyPositionFrom')}</h4>
@@ -508,7 +510,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                             )}
                         </div>
                     )}
-                    <div className="shadow-lg rounded-md overflow-hidden aspect-square max-w-full max-h-full">
+                    <div className={`shadow-lg rounded-md overflow-hidden aspect-square relative ${isLargeScreen ? 'w-full h-full' : 'max-w-full max-h-full'}`}>
                         <DrawingCanvas
                             width={700}
                             height={700}

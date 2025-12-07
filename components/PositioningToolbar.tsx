@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { PasteIcon, PanIcon, ZoomInIcon, ZoomOutIcon, SelectIcon } from '../constants';
@@ -65,14 +66,14 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ onReuseClick, p
 
   if (isLargeScreen) {
     return (
-      <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg flex flex-col items-center justify-center gap-2 shadow-inner">
+      <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-xl grid grid-cols-1 gap-2 justify-items-center content-start shadow-inner">
         {tools}
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg flex items-center justify-center flex-wrap gap-2 shadow-inner">
+    <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center flex-wrap gap-2 shadow-inner">
       {tools}
     </div>
   );
