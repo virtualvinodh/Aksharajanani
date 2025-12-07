@@ -152,7 +152,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
             </div>
         </div>
       </main>
-      <Footer />
+      <Footer hideOnMobile={true} />
     </div>
   );
 };

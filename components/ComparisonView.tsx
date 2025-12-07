@@ -449,7 +449,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
             )}
         </main>
       </div>
-      <Footer />
+      <Footer hideOnMobile={true} />
     </div>
   );
 };

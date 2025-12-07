@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { BackIcon } from '../../constants';
@@ -306,7 +304,7 @@ const ScriptCreator: React.FC<ScriptCreatorProps> = ({ availableScripts, onBack,
                     <button onClick={handleStartProject} disabled={!!scriptIdError} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-indigo-400 disabled:cursor-not-allowed shadow-lg">{t('startCreating')}</button>
                 </div>
             </main>
-            <Footer />
+            <Footer hideOnMobile={true} />
         </div>
     );
 };

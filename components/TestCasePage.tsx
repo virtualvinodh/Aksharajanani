@@ -236,7 +236,7 @@ const TestCasePage: React.FC<TestCasePageProps> = ({ onClose }) => {
           )}
         </div>
       </main>
-      <Footer />
+      <Footer hideOnMobile={true} />
     </div>
   );
 };

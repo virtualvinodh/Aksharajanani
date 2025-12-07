@@ -136,7 +136,7 @@ const CustomScriptLoader: React.FC<CustomScriptLoaderProps> = ({ onBack, onSelec
                     </div>
                 </div>
             </main>
-            <Footer />
+            <Footer hideOnMobile={true} />
         </div>
     );
 };

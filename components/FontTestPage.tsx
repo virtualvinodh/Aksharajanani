@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AppSettings, TestPageConfig } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -256,7 +257,7 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
           {renderContent()}
         </div>
       </main>
-      <Footer />
+      <Footer hideOnMobile={true} />
     </div>
   );
 };

@@ -297,7 +297,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         </div>
       </main>
       
-      <Footer />
+      <Footer hideOnMobile={true} />
       
       {selectedCharacter && characterSets && (
         <DrawingModal

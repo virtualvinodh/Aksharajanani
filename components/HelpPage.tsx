@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon } from '../constants';
@@ -177,7 +178,7 @@ const HelpPage: React.FC<HelpPageProps> = ({ onClose, scripts }) => {
           </div>
         </div>
       </main>
-      <Footer />
+      <Footer hideOnMobile={true} />
     </div>
   );
 };

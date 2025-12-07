@@ -58,6 +58,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     // Helper to resolve groups referenced in rules (e.g. $vowels) to individual character names
     const expandGroup = useMemo(() => {
         const resolve = (name: string, visited: Set<string>, depth: number): string[] => {
+            if (typeof name !== 'string') return []; // Safety check for malformed data
             if (depth > 100) return []; // Recursion depth limit to prevent stack overflow
 
             const trimmedName = name.trim();
@@ -80,13 +81,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                 // Recursively expand groups if a group contains other groups
                 const members = rulesGroups[groupName] as string[];
                 if (Array.isArray(members)) {
-                    return members.flatMap(m => typeof m === 'string' ? resolve(m, newVisited, depth + 1) : []);
+                    return members.flatMap(m => resolve(m, newVisited, depth + 1));
                 }
             }
             
             return [];
         };
-        return (name: string) => resolve(name, new Set(), 0);
+        // Return a function that deduplicates results using a Set
+        return (name: string) => Array.from(new Set(resolve(name, new Set(), 0)));
     }, [characterSets, rulesState.fontRules]);
 
     // Build the static search index only when the palette opens.
