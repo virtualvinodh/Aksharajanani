@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -431,7 +433,7 @@ export const useProjectLoad = ({
             // Final Settings Hydration
             const baseSettings = { ...currentScript.defaults };
             if (projectToLoad) {
-                const newSettings = { ...FONT_META_DEFAULTS, ...baseSettings, ...projectToLoad.settings };
+                const newSettings = { ...FONT_META_DEFAULTS, ...baseSettings, showUnicodeValues: projectToLoad.settings.showUnicodeValues ?? false, ...projectToLoad.settings };
                 newSettings.testPage = { ...currentScript.testPage, ...(newSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(newSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(newSettings.testPage?.lineHeight || {}) } };
                 
                 if (!newSettings.customSampleText) {
@@ -454,7 +456,7 @@ export const useProjectLoad = ({
             } else {
                 const savedSettingsRaw = localStorage.getItem(`font-creator-settings-${currentScript.id}`);
                 const savedSettings = savedSettingsRaw ? JSON.parse(savedSettingsRaw) : {};
-                const newSettings = { ...FONT_META_DEFAULTS, ...baseSettings, ...savedSettings };
+                const newSettings = { ...FONT_META_DEFAULTS, ...baseSettings, showUnicodeValues: false, ...savedSettings };
                 newSettings.testPage = { ...currentScript.testPage, ...(savedSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(savedSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(savedSettings.testPage?.lineHeight || {}) } };
                 
                 // Set initial sample text for new project

@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ScriptConfig, CharacterSet, CharacterDefinition, ProjectData, Character, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -236,6 +238,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                     isAutosaveEnabled: project.settings.isAutosaveEnabled,
                     editorMode: project.settings.editorMode,
                     isPrefillEnabled: project.settings.isPrefillEnabled ?? true,
+                    showUnicodeValues: project.settings.showUnicodeValues ?? false,
                 },
                 grid: customScriptTemplate.grid,
                 guideFont: customScriptTemplate.guideFont,
@@ -456,7 +459,8 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                 showGridOutlines: true,
                 isAutosaveEnabled: true,
                 editorMode: 'advanced',
-                isPrefillEnabled: true
+                isPrefillEnabled: true,
+                showUnicodeValues: false,
             },
             characterSetData: charDefs,
             rulesData: { 'DFLT': {} },
@@ -476,7 +480,8 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                  ...newScript.defaults, 
                  fontName: fontFamily,
                  contrast: newScript.defaults.contrast ?? 1.0,
-                 showHiddenGlyphs: newScript.defaults.showHiddenGlyphs ?? false
+                 showHiddenGlyphs: newScript.defaults.showHiddenGlyphs ?? false,
+                 showUnicodeValues: newScript.defaults.showUnicodeValues ?? false,
              },
              name: projectName, // This sets the dashboard name
              glyphs: [],

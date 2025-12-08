@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -82,7 +84,9 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               >
               {character.name}
               </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">U+{character.unicode?.toString(16).toUpperCase().padStart(4, '0')}</p>
+              {settings.showUnicodeValues && character.unicode !== undefined && (
+                <p className="text-gray-500 dark:text-gray-400 text-sm">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
+              )}
           </div>
            <button
               onClick={() => onNavigate(nextCharacter!)}

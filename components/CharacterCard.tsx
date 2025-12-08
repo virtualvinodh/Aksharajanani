@@ -1,4 +1,6 @@
 
+
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -166,7 +168,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
           {character.name}
           {character.link && <span className="ml-1 opacity-60" aria-label="Linked Glyph">🔗</span>}
         </p>
-        {settings.editorMode === 'advanced' && character.unicode !== undefined && (
+        {settings.showUnicodeValues && character.unicode !== undefined && (
             <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
         )}
       </div>

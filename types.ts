@@ -1,6 +1,7 @@
 
 
 
+
 export interface Point {
   x: number;
   y: number;
@@ -115,7 +116,8 @@ export interface AppSettings {
   isAutosaveEnabled: boolean;
   editorMode: 'simple' | 'advanced';
   isPrefillEnabled?: boolean;
-  showHiddenGlyphs: boolean; // New Setting
+  showHiddenGlyphs: boolean;
+  showUnicodeValues: boolean;
   // Font Meta Data
   manufacturer?: string;
   designer?: string;
@@ -200,6 +202,7 @@ export interface ScriptDefaults {
     editorMode: 'simple' | 'advanced';
     isPrefillEnabled: boolean;
     showHiddenGlyphs?: boolean;
+    showUnicodeValues?: boolean;
 }
 
 export interface Range {
