@@ -6,6 +6,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { AddIcon, SwitchScriptIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
+import { useLayout } from '../contexts/LayoutContext';
 import { VirtuosoGrid } from 'react-virtuoso';
 
 interface CharacterGridProps {
@@ -28,18 +29,18 @@ const ListContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
     />
 ));
 
-// FIX: Ensure ItemContainer fills the grid cell space and handles sizing correctly
 const ItemContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => (
     <div {...props} ref={ref} className="min-w-0 w-full" />
 ));
 
 const GridHeader = () => <div className="col-span-full h-6" />;
-const GridFooter = () => <div className="col-span-full h-6" />;
+const GridFooter = () => <div className="col-span-full h-24" />; // Extra padding for bottom bar
 
 const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectCharacter, onAddGlyph, onAddBlock }) => {
   const { t } = useLocale();
   const { settings } = useSettings();
   const { glyphDataMap } = useGlyphData();
+  const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
   
   const editorMode = settings?.editorMode || 'simple';
   const showHidden = settings?.showHiddenGlyphs ?? false;
@@ -56,6 +57,28 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
     return items;
   }, [characters, showHidden, editorMode]);
 
+  const toggleSelection = (character: Character) => {
+      if (!character.unicode) return;
+      
+      // If we are toggling, we implicitly enter selection mode if not already active
+      if (!isMetricsSelectionMode) {
+          setIsMetricsSelectionMode(true);
+      }
+
+      setMetricsSelection(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(character.unicode!)) {
+              newSet.delete(character.unicode!);
+          } else {
+              newSet.add(character.unicode!);
+          }
+          
+          // Optional: If we deselect the last item, should we exit mode?
+          // For now, let's keep it sticky until user clicks "Done".
+          return newSet;
+      });
+  };
+
   const ItemContent = (index: number) => {
       const item = gridItems[index];
       
@@ -66,6 +89,9 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
                 character={item.data}
                 glyphData={glyphDataMap.get(item.data.unicode!)}
                 onSelect={onSelectCharacter}
+                isSelectionMode={isMetricsSelectionMode}
+                isSelected={item.data.unicode !== undefined && metricsSelection.has(item.data.unicode)}
+                onToggleSelect={toggleSelection}
             />
           );
       }

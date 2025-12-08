@@ -19,7 +19,7 @@ import DrawingWorkspace from './components/DrawingWorkspace';
 import PositioningWorkspace from './components/PositioningWorkspace';
 import KerningWorkspace from './components/KerningWorkspace';
 import RulesWorkspace from './components/RulesWorkspace';
-import BulkEditWorkspace from './components/BulkEditWorkspace';
+// BulkEditWorkspace removed
 import TestCasePage from './components/TestCasePage';
 import ExportAnimation from './components/ExportAnimation';
 import ImportGlyphsModal from './components/ImportGlyphsModal';
@@ -52,9 +52,7 @@ interface AppProps {
 const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, onShowHelp, onShowTestCases, projectDataToRestore }) => {
   const { t } = useLocale();
 
-  // CONTEXT HOOKS
   const layout = useLayout();
-  // Consolidating contexts: useProject replaces useCharacter
   const { script, characterSets, allCharsByUnicode, allCharsByName, projectName, guideFont } = useProject();
   const { glyphDataMap, version: glyphVersion } = useGlyphData();
   const { kerningMap } = useKerning();
@@ -66,7 +64,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const { fontRules, isFeaEditMode, manualFeaCode, hasUnsavedRules } = rulesState;
   const { workspace, currentView, setCurrentView, selectedCharacter, selectCharacter, closeCharacterModal } = layout;
 
-  // LOCAL STATE
   const [isDonateNoticeVisible, setIsDonateNoticeVisible] = useState(false);
   const [isAnimatingExport, setIsAnimatingExport] = useState(false);
   const downloadTriggerRef = useRef<(() => void) | null>(null);
@@ -91,7 +88,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       scriptDataError,
       hasUnsavedChanges,
       handleSaveProject,
-      handleSaveTemplate, // Exposed from hook
+      handleSaveTemplate, 
       handleLoadProject,
       handleFileChange,
       handleChangeScriptClick,
@@ -118,26 +115,23 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       openSaveAsModal
   } = appActions;
 
-
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!localStorage.getItem('donateNoticeDismissed')) {
         setIsDonateNoticeVisible(true);
       }
-    }, 15000); // 15 seconds
+    }, 15000);
     return () => clearTimeout(timer);
   }, []);
   
-  // --- GLOBAL KEYBOARD SHORTCUTS ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        // Differentiate between save and export
         if (settings?.isAutosaveEnabled) {
-          handleSaveProject(); // Ctrl+S triggers export when autosave is on
+          handleSaveProject();
         } else {
-          handleSaveToDB(); // Ctrl+S triggers save-only when autosave is off
+          handleSaveToDB();
         }
       }
     };
@@ -147,7 +141,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
     };
   }, [handleSaveProject, handleSaveToDB, settings?.isAutosaveEnabled]);
 
-  // --- DERIVED STATE & COMPLEX LOGIC ---
   const {
       drawingProgress,
       positioningProgress,
@@ -162,14 +155,10 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       fontRules,
       kerningMap,
       positioningRules,
-      glyphVersion // Pass version to trigger recalc if needed
+      glyphVersion
   });
   
-  // --- UI & OTHER EFFECTS ---
-  
-  // Dynamic Guide Font Injection
   useEffect(() => {
-    // Priority: 1. Project-specific guide font (live edits), 2. Script default
     const activeGuideFont = guideFont || script?.guideFont;
     
     const existingStyle = document.getElementById(GUIDE_FONT_STYLE_ID); 
@@ -193,17 +182,14 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         const el = document.getElementById(GUIDE_FONT_STYLE_ID); 
         if (el) el.remove(); 
     };
-  }, [script, guideFont]); // Depend on guideFont from context
+  }, [script, guideFont]);
   
   if (scriptDataError) {
     return (
         <div className="h-screen bg-white dark:bg-gray-900 text-red-500 dark:text-red-400 flex flex-col items-center justify-center p-4">
             <h1 className="text-2xl font-bold mb-4">Error Loading Script Data</h1>
             <p className="text-center bg-gray-100 dark:bg-gray-800 p-4 rounded-md">{scriptDataError}</p>
-            <button
-                onClick={onBackToSelection}
-                className="mt-6 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
-            >
+            <button onClick={onBackToSelection} className="mt-6 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
                 {t('back')} to Script Selection
             </button>
         </div>
@@ -291,9 +277,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 rulesProgress={rulesProgress}
               />
           )}
-          {workspace === 'metrics' && settings.editorMode === 'advanced' && (
-              <BulkEditWorkspace />
-          )}
         </div>
       </main>
       
@@ -301,7 +284,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       
       {selectedCharacter && characterSets && (
         <DrawingModal
-          key={selectedCharacter.unicode} // CRITICAL: Forces clean remount on character change
+          key={selectedCharacter.unicode}
           character={selectedCharacter}
           characterSet={characterSets.find(cs => cs.characters.some(c => c.unicode === selectedCharacter.unicode)) || characterSets[layout.activeTab]}
           glyphData={glyphDataMap.get(selectedCharacter.unicode)}
@@ -347,7 +330,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         />
       )}
 
-      {/* --- Global Modals --- */}
       {currentView === 'settings' && <SettingsPage onClose={() => setCurrentView('grid')} toolRanges={TOOL_RANGES} />}
       {currentView === 'comparison' && <ComparisonView onClose={() => setCurrentView('grid')} />}
       {layout.activeModal?.name === 'addGlyph' && <AddGlyphModal isOpen={true} onClose={layout.closeModal} onAdd={handleAddGlyph} onCheckExists={handleCheckGlyphExists} onCheckNameExists={handleCheckNameExists} />}
