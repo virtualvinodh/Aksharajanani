@@ -99,7 +99,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
       if (item.type === 'addGlyph') {
           return (
             <div
-                onClick={onAddGlyph}
+                onClick={() => onAddGlyph()}
                 className={ghostButtonClass}
                 title={t('addGlyph')}
             >
