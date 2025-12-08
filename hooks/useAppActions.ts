@@ -55,7 +55,7 @@ export const useAppActions = ({
 
     // 3. Glyph Actions Hook
     const {
-        handleSaveGlyph, handleDeleteGlyph, handleAddGlyph, handleUnlockGlyph, 
+        handleSaveGlyph, handleDeleteGlyph, handleAddGlyph, handleQuickAddGlyph, handleUnlockGlyph, 
         handleRelinkGlyph, handleUpdateDependencies, handleImportGlyphs, handleAddBlock, 
         handleCheckGlyphExists, handleCheckNameExists
     } = useGlyphActions(dependencyMap, projectId);
@@ -248,6 +248,7 @@ export const useAppActions = ({
         handleEditorModeChange,
         downloadFontBlob,
         handleAddGlyph,
+        handleQuickAddGlyph, // Expose
         handleCheckGlyphExists,
         handleCheckNameExists,
         handleAddBlock,

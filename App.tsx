@@ -77,7 +77,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       positioningRules, 
       markAttachmentRules, 
       markAttachmentClasses, 
-      baseAttachmentClasses,
+      baseAttachmentClasses, 
       isFeaOnlyMode,
       testText, 
       setTestText,
@@ -101,6 +101,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       handleEditorModeChange,
       downloadFontBlob,
       handleAddGlyph,
+      handleQuickAddGlyph,
       handleCheckGlyphExists,
       handleCheckNameExists,
       handleAddBlock,
@@ -214,6 +215,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         onSaveToDB={handleSaveToDB}
         onLoadProject={handleLoadProject}
         onImportGlyphsClick={() => layout.openModal('importGlyphs')}
+        onAddGlyphClick={(options) => layout.openModal('addGlyph', options)}
         onExportClick={startExportProcess}
         onTestClick={handleTestClick}
         onCompareClick={() => setCurrentView('comparison')}
@@ -242,6 +244,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         hasSnapshot={hasSnapshot}
         onSaveAs={openSaveAsModal}
         onExportTemplate={handleSaveTemplate}
+        // Bind new handler for direct creation
+        onQuickAddGlyph={handleQuickAddGlyph}
        />
 
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -250,7 +254,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
               <DrawingWorkspace
                 characterSets={characterSets}
                 onSelectCharacter={selectCharacter}
-                onAddGlyph={() => layout.openModal('addGlyph')}
+                onAddGlyph={(targetSet) => layout.openModal('addGlyph', { targetSet })}
                 onAddBlock={() => layout.openModal('addBlock')}
                 drawingProgress={drawingProgress}
               />
@@ -332,7 +336,16 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
       {currentView === 'settings' && <SettingsPage onClose={() => setCurrentView('grid')} toolRanges={TOOL_RANGES} />}
       {currentView === 'comparison' && <ComparisonView onClose={() => setCurrentView('grid')} />}
-      {layout.activeModal?.name === 'addGlyph' && <AddGlyphModal isOpen={true} onClose={layout.closeModal} onAdd={handleAddGlyph} onCheckExists={handleCheckGlyphExists} onCheckNameExists={handleCheckNameExists} />}
+      {layout.activeModal?.name === 'addGlyph' && (
+          <AddGlyphModal 
+            isOpen={true} 
+            onClose={layout.closeModal} 
+            onAdd={(data) => handleAddGlyph(data, layout.activeModal?.props?.targetSet)}
+            onCheckExists={handleCheckGlyphExists} 
+            onCheckNameExists={handleCheckNameExists} 
+            initialName={layout.activeModal?.props?.prefillName}
+        />
+      )}
       {layout.activeModal?.name === 'addBlock' && <UnicodeBlockSelectorModal isOpen={true} onClose={layout.closeModal} onAddBlock={handleAddBlock} onCheckExists={handleCheckGlyphExists} mode="addBlocks" />}
       {layout.activeModal?.name === 'importGlyphs' && <ImportGlyphsModal isOpen={true} onClose={layout.closeModal} onImport={handleImportGlyphs} allScripts={allScripts} />}
       {layout.activeModal?.name === 'confirmChangeScript' && <ConfirmationModal isOpen={true} onClose={layout.closeModal} title={t('confirmChangeScriptTitle')} message={t('confirmChangeScriptMessage')} {...layout.activeModal.props} />}

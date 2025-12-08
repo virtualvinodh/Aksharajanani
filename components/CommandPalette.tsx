@@ -1,12 +1,11 @@
 
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { Character, GlyphData, PositioningRules, ScriptConfig, KerningMap, RecommendedKerning } from '../types';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
-import { SearchIcon, EditIcon, SettingsIcon, CompareIcon, TestIcon, ExportIcon, SaveIcon, LoadIcon, CodeBracketsIcon, CopyIcon } from '../constants';
+import { SearchIcon, EditIcon, SettingsIcon, CompareIcon, TestIcon, ExportIcon, SaveIcon, LoadIcon, CodeBracketsIcon, CopyIcon, AddIcon } from '../constants';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useSettings } from '../contexts/SettingsContext';
 import { useRules } from '../contexts/RulesContext';
@@ -16,7 +15,7 @@ interface CommandPaletteProps {
     onClose: () => void;
     onSelectGlyph: (character: Character) => void;
     onSetWorkspace: (workspace: any) => void;
-    onAction: (action: string) => void;
+    onAction: (action: string, data?: any) => void;
     positioningRules: PositioningRules[] | null;
     script: ScriptConfig;
     hasKerning: boolean;
@@ -27,7 +26,7 @@ interface CommandPaletteProps {
 
 interface SearchResult {
     id: string;
-    type: 'glyph' | 'workspace' | 'action' | 'positioning' | 'kerning-pair';
+    type: 'glyph' | 'workspace' | 'action' | 'positioning' | 'kerning-pair' | 'create';
     title: string;
     subtitle?: string;
     aliases?: string[]; // New property for search synonyms
@@ -364,6 +363,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
         // Sort by Score Descending, then by Type Priority
         const typePriority = {
+            create: 6,
             glyph: 5,
             'kerning-pair': 4,
             positioning: 3,
@@ -378,8 +378,26 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             // Tie-breaker: Type priority
             return typePriority[b.item.type] - typePriority[a.item.type];
         });
+        
+        const results = matches.map(m => m.item);
+        
+        // Progressive Disclosure: "Create Glyph" Option
+        // If the search yields no exact glyph matches, offer to create it.
+        // We check if any of the results are of type 'glyph' that exactly match the search term
+        const hasExactGlyphMatch = results.some(i => i.type === 'glyph' && i.title.toLowerCase() === lowerTerm);
+        
+        if (!hasExactGlyphMatch && searchTerm.trim()) {
+            results.push({
+                id: 'create-glyph-option',
+                type: 'create',
+                title: `Create glyph for "${searchTerm}"`,
+                subtitle: 'Add to Custom Glyphs',
+                icon: <AddIcon className="w-5 h-5 text-green-500" />,
+                onExecute: () => onAction('quick-add-glyph', { prefillName: searchTerm, targetSet: 'Custom Glyphs' })
+            });
+        }
 
-        return matches.map(m => m.item);
+        return results;
 
     }, [cachedItems, searchTerm, dynamicResults]);
 
@@ -453,6 +471,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                                          {item.type === 'positioning' && <span className={`ml-auto text-xs px-2 py-1 rounded-full ${index === activeIndex ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-800'}`}>Edit</span>}
                                          {item.type === 'kerning-pair' && <span className={`ml-auto text-xs px-2 py-1 rounded-full ${index === activeIndex ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-800'}`}>Kern</span>}
                                          {item.type === 'glyph' && <span className={`ml-auto text-xs px-2 py-1 rounded-full ${index === activeIndex ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-800'}`}>Edit</span>}
+                                         {item.type === 'create' && <span className={`ml-auto text-xs px-2 py-1 rounded-full ${index === activeIndex ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-800'}`}>New</span>}
                                      </button>
                                  </li>
                              ))}

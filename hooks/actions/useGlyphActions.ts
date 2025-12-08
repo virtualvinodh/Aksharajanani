@@ -395,7 +395,7 @@ export const useGlyphActions = (
         );
     }, [allCharsByUnicode, t, glyphDataDispatch, characterDispatch, kerningDispatch, positioningDispatch, layout, glyphDataMap, characterSets, kerningMap, markPositioningMap, dependencyMap, allCharsByName, settings, metrics, markAttachmentRules]);
 
-    const handleAddGlyph = useCallback((charData: { unicode?: number; name: string }) => {
+    const handleAddGlyph = useCallback((charData: { unicode?: number; name: string }, targetSetName?: string) => {
         let finalUnicode = charData.unicode;
         let isPuaAssigned = false;
     
@@ -425,12 +425,79 @@ export const useGlyphActions = (
             newChar.advWidth = 0;
         }
 
-        characterDispatch({ type: 'ADD_CHARACTERS', payload: { characters: [newChar], activeTabNameKey: '' } });
+        // Use the passed targetSetName, or default to a generic fallback if not provided
+        characterDispatch({ type: 'ADD_CHARACTERS', payload: { characters: [newChar], activeTabNameKey: targetSetName || '' } });
 
         layout.closeModal();
         layout.showNotification(t('glyphAddedSuccess', { name: newChar.name }));
         layout.selectCharacter(newChar);
     }, [characterDispatch, layout, t, allCharsByUnicode]);
+    
+    // New function for direct quick add without modal
+    const handleQuickAddGlyph = useCallback((input: string, targetSetName: string = 'Custom Glyphs') => {
+        const trimmedInput = input.trim();
+        if (!trimmedInput) return;
+
+        // Validation logic similar to AddGlyphModal
+        if (allCharsByName.has(trimmedInput)) {
+            layout.showNotification(t('errorNameExists'), 'error');
+            return;
+        }
+
+        let unicode: number | undefined;
+        let name: string = trimmedInput;
+        
+        // Check if it's a Hex code (e.g., U+0041 or 0041)
+        const hexMatch = trimmedInput.match(/^(?:U\+)?([0-9a-fA-F]{1,6})$/);
+        
+        if (hexMatch) {
+            // It looks like a hex code
+            const potentialUnicode = parseInt(hexMatch[1], 16);
+            if (!isNaN(potentialUnicode) && potentialUnicode <= 0x10FFFF) {
+                if (allCharsByUnicode.has(potentialUnicode)) {
+                    const existing = allCharsByUnicode.get(potentialUnicode);
+                    layout.showNotification(t('errorGlyphExists', { 
+                        codepoint: potentialUnicode.toString(16).toUpperCase().padStart(4, '0'), 
+                        name: existing?.name || '' 
+                    }), 'error');
+                    return;
+                }
+                unicode = potentialUnicode;
+                // If the input was just the hex code, assume the name is the character itself
+                if (trimmedInput.toUpperCase() === hexMatch[1] || trimmedInput.toUpperCase() === `U+${hexMatch[1]}`) {
+                    name = String.fromCodePoint(unicode);
+                    // Check if name exists again (since we just derived it)
+                     if (allCharsByName.has(name)) {
+                        layout.showNotification(t('errorNameExists'), 'error');
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // If not a hex code (or if name derivation failed/wasn't done), treat as character input
+        if (unicode === undefined) {
+             if ([...trimmedInput].length === 1) {
+                // Single character
+                unicode = trimmedInput.codePointAt(0);
+                if (unicode && allCharsByUnicode.has(unicode)) {
+                    layout.showNotification(t('errorUnicodeFromCharExists', { 
+                        char: trimmedInput, 
+                        codepoint: unicode.toString(16).toUpperCase() 
+                    }), 'error');
+                    return;
+                }
+             } else {
+                 // Multi-character string -> PUA
+                 unicode = undefined; 
+             }
+        }
+        
+        // Call existing add logic
+        handleAddGlyph({ unicode, name }, targetSetName);
+
+    }, [allCharsByName, allCharsByUnicode, handleAddGlyph, layout, t]);
+
 
     const handleUnlockGlyph = useCallback((unicode: number) => {
         const charToUnlock = allCharsByUnicode.get(unicode);
@@ -578,6 +645,7 @@ export const useGlyphActions = (
         handleSaveGlyph,
         handleDeleteGlyph,
         handleAddGlyph,
+        handleQuickAddGlyph, // Exported
         handleUnlockGlyph,
         handleRelinkGlyph,
         handleUpdateDependencies,

@@ -5,7 +5,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useProject } from '../contexts/ProjectContext';
-import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, CopyIcon, WrenchIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon } from '../constants';
+import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, CopyIcon, WrenchIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, AddIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import CommandPalette from './CommandPalette';
 
@@ -22,6 +22,7 @@ interface AppHeaderProps {
     onSaveToDB: () => void;
     onLoadProject: () => void;
     onImportGlyphsClick: () => void;
+    onAddGlyphClick: (options?: { prefillName?: string; targetSet?: string }) => void;
     onExportClick: () => void;
     onTestClick: () => void;
     onCompareClick: () => void;
@@ -50,6 +51,8 @@ interface AppHeaderProps {
     hasSnapshot: boolean;
     onSaveAs: () => void;
     onExportTemplate: () => void;
+    // New prop for direct glyph creation
+    onQuickAddGlyph: (input: string, targetSet?: string) => void;
 }
 
 const WorkspaceTab: React.FC<{
@@ -85,11 +88,12 @@ const WorkspaceTab: React.FC<{
 
 
 const AppHeader: React.FC<AppHeaderProps> = ({
-    script, settings, isExporting, onSaveProject, onSaveToDB, onLoadProject, onImportGlyphsClick, onExportClick,
+    script, settings, isExporting, onSaveProject, onSaveToDB, onLoadProject, onImportGlyphsClick, onAddGlyphClick, onExportClick,
     onTestClick, onCompareClick, onSettingsClick, onChangeScriptClick, onShowAbout,
     onShowHelp, onShowTestCases, onEditorModeChange, onWorkspaceChange, activeWorkspace, hasUnsavedChanges, hasUnsavedRules,
     hasPositioning, hasKerning, drawingProgress, positioningProgress, kerningProgress, rulesProgress, positioningRules,
-    kerningMap, allCharsByUnicode, recommendedKerning, onTakeSnapshot, onRestoreSnapshot, hasSnapshot, onSaveAs, onExportTemplate
+    kerningMap, allCharsByUnicode, recommendedKerning, onTakeSnapshot, onRestoreSnapshot, hasSnapshot, onSaveAs, onExportTemplate,
+    onQuickAddGlyph
 }) => {
     const { t } = useLocale();
     const { projectName, setProjectName } = useProject();
@@ -109,7 +113,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
     let tabIndex = 1;
 
-    const handleCommandAction = (action: string) => {
+    const handleCommandAction = (action: string, data?: any) => {
         if (action === 'save') onSaveToDB();
         if (action === 'save-as') onSaveAs();
         if (action === 'export-json') onSaveProject();
@@ -119,6 +123,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         if (action === 'test') onTestClick();
         if (action === 'compare') onCompareClick();
         if (action === 'settings') onSettingsClick();
+        if (action === 'add-glyph') onAddGlyphClick(data);
+        if (action === 'quick-add-glyph') {
+            onQuickAddGlyph(data?.prefillName, data?.targetSet);
+        }
     };
 
     useEffect(() => {
@@ -177,6 +185,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 <button onClick={() => { onSaveProject(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CodeBracketsIcon /> {t('exportJson')}</button>
                                 <button onClick={() => { onExportTemplate(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ExportIcon className="h-4 w-4" /> {t('exportTemplate')}</button>
                                 <button onClick={() => { onSaveAs(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CopyIcon /> Save Copy...</button>
+                                <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                                <button onClick={() => { onAddGlyphClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><AddIcon className="h-5 w-5" /> {t('addGlyph')}</button>
                                 <button onClick={() => { onImportGlyphsClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ImportIcon /> {t('importFromProject')}</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                 <button onClick={() => { onTakeSnapshot(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CameraIcon /> Take Snapshot</button>

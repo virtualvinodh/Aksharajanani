@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import Modal from './Modal';
@@ -9,9 +10,10 @@ interface AddGlyphModalProps {
   onAdd: (charData: { unicode?: number; name: string }) => void;
   onCheckExists: (unicode: number) => boolean;
   onCheckNameExists: (name: string) => boolean;
+  initialName?: string;
 }
 
-const AddGlyphModal: React.FC<AddGlyphModalProps> = ({ isOpen, onClose, onAdd, onCheckExists, onCheckNameExists }) => {
+const AddGlyphModal: React.FC<AddGlyphModalProps> = ({ isOpen, onClose, onAdd, onCheckExists, onCheckNameExists, initialName }) => {
   const { t } = useLocale();
   const [inputType, setInputType] = useState<'char' | 'codepoint'>('char');
   const [charValue, setCharValue] = useState('');
@@ -22,12 +24,12 @@ const AddGlyphModal: React.FC<AddGlyphModalProps> = ({ isOpen, onClose, onAdd, o
 
   useEffect(() => {
     if (isOpen) {
-      setCharValue('');
+      setCharValue(initialName || '');
       setCodepointValue('');
       setError(null);
       setInputType('char');
     }
-  }, [isOpen]);
+  }, [isOpen, initialName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

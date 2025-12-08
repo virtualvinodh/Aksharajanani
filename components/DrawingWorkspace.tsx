@@ -46,7 +46,7 @@ const BulkTransformModal: React.FC<{ isOpen: boolean, onClose: () => void, onCon
 interface DrawingWorkspaceProps {
     characterSets: CharacterSet[];
     onSelectCharacter: (character: Character, rect: DOMRect) => void;
-    onAddGlyph: () => void;
+    onAddGlyph: (targetSet?: string) => void;
     onAddBlock: () => void;
     drawingProgress: { completed: number; total: number };
 }
@@ -323,7 +323,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     key={activeTab}
                     characters={visibleCharacterSets[activeTab]?.characters || []}
                     onSelectCharacter={onSelectCharacter}
-                    onAddGlyph={onAddGlyph}
+                    onAddGlyph={() => onAddGlyph(visibleCharacterSets[activeTab]?.nameKey)}
                     onAddBlock={onAddBlock}
                 />
             </div>

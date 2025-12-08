@@ -128,12 +128,21 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                     const newSets: CharacterSet[] = JSON.parse(JSON.stringify(currentSets));
                     
                     let targetSet = newSets.find(s => s.nameKey === activeTabNameKey);
+                    
+                    // If target set not found
                     if (!targetSet) {
-                        const TARGET_SET_KEY = 'punctuationsAndOthers';
-                        targetSet = newSets.find(s => s.nameKey === TARGET_SET_KEY);
-                        if (!targetSet) {
-                            targetSet = { nameKey: TARGET_SET_KEY, characters: [] };
+                        // If a specific target name was requested (and isn't empty), create it.
+                        if (activeTabNameKey && activeTabNameKey.trim() !== '') {
+                            targetSet = { nameKey: activeTabNameKey, characters: [] };
                             newSets.push(targetSet);
+                        } else {
+                            // Fallback to "Punctuations & Others" if no specific target
+                            const TARGET_SET_KEY = 'punctuationsAndOthers';
+                            targetSet = newSets.find(s => s.nameKey === TARGET_SET_KEY);
+                            if (!targetSet) {
+                                targetSet = { nameKey: TARGET_SET_KEY, characters: [] };
+                                newSets.push(targetSet);
+                            }
                         }
                     }
                     const existingUnicodes = new Set(newSets.flatMap(s => s.characters).map(c => c.unicode));
