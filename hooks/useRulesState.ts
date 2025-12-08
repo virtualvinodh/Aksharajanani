@@ -31,8 +31,21 @@ export const useRulesState = () => {
     
     const autosaveTimeout = useRef<number | null>(null);
     
+    // Sync global fontRules to localRules only if they differ content-wise
     useEffect(() => {
-        setLocalRules(deepClone(fontRules));
+        try {
+            // CRITICAL FIX: Break the infinite loop.
+            // Only update local state if the CONTENT of the global state is different.
+            // References will always be different on context updates, so === check fails.
+            // JSON.stringify is safe here as fontRules is a POJO (no Maps/Sets).
+            if (JSON.stringify(localRules) === JSON.stringify(fontRules)) {
+                return;
+            }
+            setLocalRules(deepClone(fontRules));
+        } catch (e) {
+            // Fallback if stringify fails (unlikely for rules)
+            setLocalRules(deepClone(fontRules));
+        }
     }, [fontRules]);
     
     const saveChanges = useCallback(() => {
@@ -44,10 +57,12 @@ export const useRulesState = () => {
         if (!settings?.isAutosaveEnabled) {
           return;
         }
+        // Avoid flagging as unsaved if they are identical
         if (JSON.stringify(localRules) === JSON.stringify(fontRules)) {
             rulesDispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: false });
             return;
         }
+        
         rulesDispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: true });
         if (autosaveTimeout.current) {
             clearTimeout(autosaveTimeout.current);

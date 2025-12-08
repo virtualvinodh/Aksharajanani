@@ -1,20 +1,53 @@
 
 /**
- * Deep clones a value using structuredClone if available (modern browsers),
- * falling back to JSON.parse(JSON.stringify) for compatibility.
+ * Deep clones a value.
+ * 
+ * We prioritize structuredClone because it supports:
+ * 1. Map and Set objects (Critical for GlyphDataMap and selection sets)
+ * 2. Circular references
+ * 3. Better performance than JSON serialization
  * 
  * @param value The value to clone
  * @returns A deep copy of the value
  */
 export function deepClone<T>(value: T): T {
+  // 1. Primary Method: structuredClone (Modern, fast, supports Maps/Sets)
   if (typeof structuredClone === 'function') {
     try {
       return structuredClone(value);
     } catch (e) {
-      // Fallback if structuredClone fails (e.g. on non-cloneable types)
-      // though for POJOs in this app, this shouldn't happen often.
-      console.warn('structuredClone failed, falling back to JSON cloning', e);
+      console.warn('structuredClone failed (likely contains non-clonable data), attempting fallback.', e);
     }
   }
-  return JSON.parse(JSON.stringify(value));
+
+  // 2. Specific handling for Map/Set if structuredClone failed or isn't available
+  // (JSON.stringify converts Maps/Sets to empty objects {}, which destroys data)
+  if (value instanceof Map) {
+    return new Map(value) as unknown as T;
+  }
+  if (value instanceof Set) {
+    return new Set(value) as unknown as T;
+  }
+  if (Array.isArray(value)) {
+     return value.map(item => deepClone(item)) as unknown as T;
+  }
+  
+  if (value && typeof value === 'object') {
+      const copy: any = {};
+      for (const key in value) {
+          if (Object.prototype.hasOwnProperty.call(value, key)) {
+              copy[key] = deepClone((value as any)[key]);
+          }
+      }
+      return copy as T;
+  }
+
+  // 3. Fallback: JSON Serialization
+  // Useful for simple objects, strips undefined, breaks circular refs
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (e) {
+    console.error('All cloning methods failed. Returning original value (unsafe).', e);
+    return value;
+  }
 }

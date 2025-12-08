@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Point, Path, Tool, AppSettings, ImageTransform, Segment } from '../types';
 import { VEC } from '../utils/vectorUtils';
@@ -47,14 +45,19 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const animationFrameRef = useRef<number | undefined>(undefined);
 
     // Keep refs in sync with external state changes (e.g., from toolbar buttons)
+    // IMPORTANT: Only update target if NOT animating, otherwise we interrupt gestures like pinch/zoom
     useEffect(() => {
         zoomRef.current = zoom;
-        targetZoomRef.current = zoom; // Ensure target matches current to stop animation drift
+        if (!animationFrameRef.current) {
+             targetZoomRef.current = zoom;
+        }
     }, [zoom]);
 
     useEffect(() => {
         viewOffsetRef.current = viewOffset;
-        targetViewOffsetRef.current = viewOffset;
+        if (!animationFrameRef.current) {
+            targetViewOffsetRef.current = viewOffset;
+        }
     }, [viewOffset]);
 
     const startAnimation = useCallback(() => {
@@ -63,8 +66,10 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         const animate = () => {
             const LERP_FACTOR = 0.2; // Adjust for smoothness (lower is smoother but slower)
             
+            // Read from refs (current source of truth for the loop)
             const currentZoom = zoomRef.current;
             const currentOffset = viewOffsetRef.current;
+            // Read targets from refs (set by event handlers)
             const targetZoom = targetZoomRef.current;
             const targetOffset = targetViewOffsetRef.current;
             
@@ -87,11 +92,11 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
                 viewOffsetRef.current = targetOffset;
                 animationFrameRef.current = undefined;
             } else {
-                // Update React state (triggers render)
+                // Update React state (triggers render for visual update)
                 setZoom(newZoom);
                 setViewOffset(newOffset);
                 
-                // Update Refs for next frame
+                // Update Refs for next frame calculation
                 zoomRef.current = newZoom;
                 viewOffsetRef.current = newOffset;
                 
@@ -218,7 +223,8 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const toolProps = { ...props, isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, previewPath, setPreviewPath, getCanvasPoint, showNotification, t, findPathAtPoint, onSelectionChange: handleSelectionChangeWrapper };
     
     const handlePan = useCallback((newOffset: Point) => {
-        targetZoomRef.current = zoomRef.current; // Maintain current zoom
+        // Update the target REF, not state directly here, to let animation loop handle it
+        targetZoomRef.current = zoomRef.current; 
         targetViewOffsetRef.current = newOffset;
         startAnimation();
     }, [startAnimation]);
