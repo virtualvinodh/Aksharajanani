@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { useLocale } from '../contexts/LocaleContext';
+import { useSettings } from '../contexts/SettingsContext';
 import Modal from './Modal';
 
 interface IncompleteFontWarningModalProps {
@@ -14,11 +16,15 @@ interface IncompleteFontWarningModalProps {
   editorMode?: 'simple' | 'advanced';
 }
 
-const IncompleteFontWarningModal: React.FC<IncompleteFontWarningModalProps> = ({ isOpen, onClose, onConfirm, status, editorMode }) => {
+const IncompleteFontWarningModal: React.FC<IncompleteFontWarningModalProps> = ({ isOpen, onClose, onConfirm, status }) => {
   const { t } = useLocale();
+  const { settings } = useSettings();
 
   const incompleteTasks: string[] = [];
-  const kerningLabel = editorMode === 'simple' ? t('workspaceSpacing') : t('workspaceKerning');
+  
+  const useKerningTerm = settings ? (settings.editorMode === 'advanced' || settings.preferKerningTerm) : false;
+  const kerningLabel = useKerningTerm ? t('workspaceKerning') : t('workspaceSpacing');
+
   if (status.drawing) incompleteTasks.push(t('workspaceDrawing'));
   if (status.positioning) incompleteTasks.push(t('workspacePositioning'));
   if (status.kerning) incompleteTasks.push(kerningLabel);

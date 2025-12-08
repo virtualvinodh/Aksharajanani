@@ -55,6 +55,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     // Optimization: Cache the full list of items in state so it doesn't re-compute on every parent render
     const [cachedItems, setCachedItems] = useState<SearchResult[]>([]);
     
+    const useKerningTerm = settings?.preferKerningTerm ?? false;
+    const kerningLabel = useKerningTerm ? t('kerning') : t('spacing');
+    const workspaceKerningLabel = useKerningTerm ? t('workspaceKerning') : t('workspaceSpacing');
+
     // Helper to resolve groups referenced in rules (e.g. $vowels) to individual character names
     const expandGroup = useMemo(() => {
         const resolve = (name: string, visited: Set<string>, depth: number): string[] => {
@@ -97,8 +101,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         if (isOpen) {
             const items: SearchResult[] = [];
 
-            const isSimple = settings?.editorMode === 'simple' && !settings?.preferKerningTerm;
-
             // 1. Workspaces
             items.push({ 
                 id: 'ws-drawing', 
@@ -120,14 +122,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                 });
             }
             
-            const kerningLabel = isSimple ? t('workspaceSpacing') : t('workspaceKerning');
-            const showKerning = hasKerning;
-            
-            if (showKerning) {
+            if (hasKerning) {
                 items.push({ 
                     id: 'ws-kerning', 
                     type: 'workspace', 
-                    title: kerningLabel, 
+                    title: workspaceKerningLabel, 
                     aliases: ['Kerning', 'Spacing', 'Pairs', 'Kern'], // Explicitly alias both terms
                     icon: <SettingsIcon />, 
                     onExecute: () => onSetWorkspace('kerning') 
@@ -176,7 +175,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     // We intentionally exclude glyphDataMap from deps to avoid re-running on every stroke.
     // It updates only when isOpen becomes true.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, t, characterSets, settings, onSetWorkspace, onAction, onSelectGlyph, positioningRules, script, hasKerning]);
+    }, [isOpen, t, characterSets, settings, onSetWorkspace, onAction, onSelectGlyph, positioningRules, script, hasKerning, workspaceKerningLabel]);
 
     
     const dynamicResults = useMemo(() => {
@@ -229,7 +228,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
         // --- Kerning Results (Custom & Recommended) ---
         // Only generate if searching for a pair or parts of it
-        // The condition for hasKerning is now simplified
         if (hasKerning && allCharsByUnicode && (kerningMap || recommendedKerning)) {
              const existingPairs = new Set<string>();
 
@@ -254,7 +252,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                                     id: `kern-${key}`,
                                     type: 'kerning-pair',
                                     title: `${left.name} + ${right.name}`,
-                                    subtitle: `${t('kerning')}: ${value}`,
+                                    subtitle: `${kerningLabel}: ${value}`,
                                     icon: <span className="flex gap-1"><span>{left.name}</span><span>{right.name}</span></span>,
                                     onExecute: () => {
                                         onSetWorkspace('kerning');
@@ -296,7 +294,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                                              id: `kern-rec-${pairId}`,
                                              type: 'kerning-pair',
                                              title: `${l} + ${r}`,
-                                             subtitle: t('recommendedKerning'),
+                                             subtitle: t('recommendedKerning'), // Using translated key for "Recommended"
                                              icon: <span className="flex gap-1"><span>{l}</span><span>{r}</span></span>,
                                              onExecute: () => {
                                                  onSetWorkspace('kerning');
@@ -316,7 +314,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
         return results;
 
-    }, [searchTerm, positioningRules, allCharsByName, t, onSetWorkspace, setPendingNavigationTarget, expandGroup, hasKerning, kerningMap, allCharsByUnicode, recommendedKerning, glyphDataMap]);
+    }, [searchTerm, positioningRules, allCharsByName, t, onSetWorkspace, setPendingNavigationTarget, expandGroup, hasKerning, kerningMap, allCharsByUnicode, recommendedKerning, glyphDataMap, kerningLabel]);
 
     const filteredItems = useMemo(() => {
         if (!searchTerm) {

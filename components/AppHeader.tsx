@@ -231,19 +231,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                             </button>
                         )}
                     </div>
-
-                    <div className="flex-shrink-0 md:absolute md:right-2">
-                         <div className="flex items-center rounded-lg bg-gray-200 dark:bg-gray-700 p-1">
-                            <button onClick={() => onEditorModeChange('simple')} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-colors ${settings.editorMode === 'simple' ? 'bg-white dark:bg-gray-800 shadow text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`} title={t('simpleMode')}>
-                                <SparklesIcon />
-                                <span className="hidden md:inline">{t('simpleMode')}</span>
-                            </button>
-                            <button onClick={() => onEditorModeChange('advanced')} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-colors ${settings.editorMode === 'advanced' ? 'bg-white dark:bg-gray-800 shadow text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`} title={t('advancedMode')}>
-                                <WrenchIcon />
-                                <span className="hidden md:inline">{t('advancedMode')}</span>
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
 
