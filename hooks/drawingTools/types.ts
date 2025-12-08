@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Point, Path, Tool, AppSettings, ImageTransform } from '../../types';
 import { BoundingBox } from '../../services/glyphRenderService';
@@ -41,6 +42,7 @@ export interface UseDrawingCanvasProps {
     initialPaths: Path[];
     onPathsChange: (paths: Path[]) => void;
     tool: Tool;
+    onToolChange?: (tool: Tool) => void;
     zoom: number;
     setZoom: (zoom: number) => void;
     viewOffset: Point;

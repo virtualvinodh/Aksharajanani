@@ -15,6 +15,7 @@ interface DrawingCanvasProps {
   onPathsChange: (paths: Path[]) => void;
   metrics: FontMetrics;
   tool: Tool;
+  onToolChange?: (tool: Tool) => void;
   zoom: number;
   setZoom: (zoom: number) => void;
   viewOffset: Point;
@@ -47,7 +48,7 @@ interface DrawingCanvasProps {
 }
 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 
-    width, height, paths: initialPaths, onPathsChange, metrics, tool, zoom, setZoom, viewOffset, setViewOffset, 
+    width, height, paths: initialPaths, onPathsChange, metrics, tool, onToolChange, zoom, setZoom, viewOffset, setViewOffset, 
     settings, currentCharacter, gridConfig, backgroundImage, backgroundImageOpacity, imageTransform, 
     onImageTransformChange, selectedPathIds, onSelectionChange, isImageSelected, onImageSelectionChange, 
     lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides = true, disableTransformations = false, 
@@ -62,7 +63,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     handleMouseDown, handleMouseMove, handleMouseUp, handleTouchStart, handleTouchMove,
     handleTouchEnd, handleTouchCancel, handleWheel, handleDoubleClick, getCursor, isMobile, HANDLE_SIZE, handles
   } = useDrawingCanvas({
-    canvasRef, initialPaths, onPathsChange, tool, zoom, setZoom, viewOffset, setViewOffset,
+    canvasRef, initialPaths, onPathsChange, tool, onToolChange, zoom, setZoom, viewOffset, setViewOffset,
     settings, backgroundImage, imageTransform, onImageTransformChange, selectedPathIds, onSelectionChange,
     isImageSelected, onImageSelectionChange, 
     calligraphyAngle: calligraphyAngle as 45 | 30 | 15, // Explicit cast or pass
@@ -307,7 +308,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
     ctx.setLineDash([]);
     
-    if (showBearingGuides && settings.editorMode === 'advanced') {
+    if (showBearingGuides) { // Always show guides if requested, not just in advanced mode
         const allVisiblePaths = [...(backgroundPaths || []), ...currentPaths];
         if (allVisiblePaths.length > 0) {
             const glyphBBox = getAccurateGlyphBBox(allVisiblePaths, settings.strokeThickness);

@@ -451,7 +451,9 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
      <DrawingCanvas 
         width={DRAWING_CANVAS_SIZE} height={DRAWING_CANVAS_SIZE} 
         paths={currentPaths} onPathsChange={handlePathsChange} metrics={metrics}
-        tool={currentTool} zoom={zoom} setZoom={setZoom} viewOffset={viewOffset} setViewOffset={setViewOffset}
+        tool={currentTool} 
+        onToolChange={setCurrentTool}
+        zoom={zoom} setZoom={setZoom} viewOffset={viewOffset} setViewOffset={setViewOffset}
         settings={settings} allGlyphData={allGlyphData} allCharacterSets={allCharacterSets} currentCharacter={character}
         gridConfig={gridConfig} backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity}
         imageTransform={imageTransform} onImageTransformChange={setImageTransform}
@@ -525,6 +527,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                         containerWidth={containerSize.width}
                         containerHeight={containerSize.height}
                         internalCanvasSize={DRAWING_CANVAS_SIZE}
+                        onEditMode={() => setCurrentTool('edit')}
                     />
                 )}
                 {canvasComponent}

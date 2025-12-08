@@ -22,7 +22,7 @@ declare var paper: any;
 
 export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const {
-        canvasRef, initialPaths, onPathsChange, tool, zoom, setZoom, viewOffset,
+        canvasRef, initialPaths, onPathsChange, tool, onToolChange, zoom, setZoom, viewOffset,
         setViewOffset, settings, onSelectionChange, transformMode = 'all'
     } = props;
     
@@ -377,11 +377,21 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     }, [getViewportPoint, panTool, endInteraction]);
 
     const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+        const viewportPoint = getViewportPoint(e);
+        if (!viewportPoint) return;
+        const canvasPoint = getCanvasPoint(viewportPoint);
+
         if (tool === 'edit') {
-            const viewportPoint = getViewportPoint(e);
-            if (viewportPoint) editTool.doubleClick(getCanvasPoint(viewportPoint));
+            editTool.doubleClick(canvasPoint);
+        } else if (tool === 'select') {
+            const path = findPathAtPoint(canvasPoint);
+            if (path && onToolChange) {
+                onSelectionChange(new Set()); // Clear selection before entering edit mode
+                onToolChange('edit');
+                editTool.setFocusedPathId(path.id);
+            }
         }
-    }, [tool, getViewportPoint, getCanvasPoint, editTool]);
+    }, [tool, getViewportPoint, getCanvasPoint, editTool, findPathAtPoint, onToolChange, onSelectionChange]);
     
     const handleWheel = useCallback((e: React.WheelEvent) => {
         e.preventDefault(); 

@@ -1,6 +1,4 @@
 
-
-
 import { useState, useEffect, useCallback } from 'react';
 import { Path, Point, Segment } from '../../types';
 import { VEC } from '../../utils/vectorUtils';
@@ -11,7 +9,7 @@ import { deepClone } from '../../utils/cloneUtils';
 
 declare var paper: any;
 
-export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, zoom, ...props }: ToolHookProps) => {
+export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, zoom, onToolChange, ...props }: ToolHookProps) => {
     const [draggedPointInfo, setDraggedPointInfo] = useState<DraggedPointInfo | null>(null);
     const [selectedPointInfo, setSelectedPointInfo] = useState<DraggedPointInfo | null>(null);
     const [focusedPathId, setFocusedPathId] = useState<string | null>(null);
@@ -120,6 +118,11 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
             setFocusedPathId(grabbedPoint.pathId);
             setIsDrawing(true);
         } else {
+            // If clicking empty space (and not hitting a point or handle),
+            // switch back to select mode.
+            if (onToolChange) {
+                onToolChange('select');
+            }
             setSelectedPointInfo(null);
             setFocusedPathId(null);
         }
@@ -204,6 +207,7 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
             return;
         }
 
+        // Logic for ADDING a point (subdividing segment)
         paperScope.project.clear();
         const tolerance = 10 / zoom;
     
@@ -300,5 +304,5 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
         return 'default';
     };
 
-    return { start, move, end, doubleClick, getCursor, selectedPointInfo, focusedPathId };
+    return { start, move, end, doubleClick, getCursor, selectedPointInfo, focusedPathId, setFocusedPathId };
 };

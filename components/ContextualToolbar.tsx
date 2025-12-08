@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { BoundingBox, Point, TransformState } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
-import { CheckCircleIcon } from '../constants';
+import { CheckCircleIcon, ControlPointsIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 
 interface ContextualToolbarProps {
@@ -15,6 +15,7 @@ interface ContextualToolbarProps {
   containerWidth: number;
   containerHeight: number;
   internalCanvasSize: number;
+  onEditMode: () => void;
 }
 
 const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
@@ -26,7 +27,8 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
   setPreviewTransform,
   containerWidth,
   containerHeight,
-  internalCanvasSize
+  internalCanvasSize,
+  onEditMode
 }) => {
   const { theme } = useTheme();
   const [rotateInput, setRotateInput] = useState('0');
@@ -159,6 +161,17 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
       style={style}
       onMouseDown={(e) => e.stopPropagation()} // Prevent canvas drag start
     >
+      {/* Edit Points Button */}
+       <div className="flex items-center border-r border-gray-200 dark:border-gray-700 pr-2 mr-1">
+        <button
+            onClick={onEditMode}
+            title="Edit Points"
+            className={buttonClass}
+        >
+             <ControlPointsIcon />
+        </button>
+      </div>
+
       {/* Flip Controls */}
       <div className="flex items-center gap-1 border-r border-gray-200 dark:border-gray-700 pr-2">
         <button 
