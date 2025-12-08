@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon, MoreIcon, WrenchIcon, SparklesIcon } from '../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon, MoreIcon } from '../constants';
 import GlyphPropertiesPanel from './GlyphPropertiesPanel';
 
 interface DrawingModalHeaderProps {
@@ -26,14 +26,12 @@ interface DrawingModalHeaderProps {
   onRefresh?: () => void;
   allCharacterSets: CharacterSet[];
   onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => void;
-  onEditorModeChange: (mode: 'simple' | 'advanced') => void;
 }
 
 const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
   character, glyphData, prevCharacter, nextCharacter, onBackClick, onNavigate,
   settings, metrics, lsb, setLsb, rsb, setRsb, onDeleteClick, onClear, onSave,
-  isLocked = false, isComposite = false, onRefresh, allCharacterSets, onSaveConstruction,
-  onEditorModeChange
+  isLocked = false, isComposite = false, onRefresh, allCharacterSets, onSaveConstruction
 }) => {
   const { t } = useLocale();
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
@@ -51,10 +49,6 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  const toggleEditorMode = () => {
-    onEditorModeChange(settings.editorMode === 'simple' ? 'advanced' : 'simple');
-  };
 
   return (
     <header className="bg-gray-50 dark:bg-gray-800 p-4 flex justify-between items-center shadow-md w-full flex-shrink-0 z-20">
@@ -88,9 +82,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               >
               {character.name}
               </h2>
-              {settings.editorMode === 'advanced' && (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">U+{character.unicode?.toString(16).toUpperCase().padStart(4, '0')}</p>
-              )}
+              <p className="text-gray-500 dark:text-gray-400 text-sm">U+{character.unicode?.toString(16).toUpperCase().padStart(4, '0')}</p>
           </div>
            <button
               onClick={() => onNavigate(nextCharacter!)}
@@ -109,16 +101,15 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
           {/* DESKTOP ACTIONS (Hidden on Mobile) */}
           <div className="hidden sm:flex items-center gap-2">
             {/* Properties Panel Toggle */}
-            {settings.editorMode === 'advanced' && (
-                <button
-                    id="glyph-properties-button"
-                    onClick={() => setIsPropertiesPanelOpen(p => !p)}
-                    title={t('glyphProperties')}
-                    className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
-                >
-                    <PropertiesIcon />
-                </button>
-            )}
+            <button
+                id="glyph-properties-button"
+                onClick={() => setIsPropertiesPanelOpen(p => !p)}
+                title={t('glyphProperties')}
+                className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+            >
+                <PropertiesIcon />
+                <span className="hidden xl:inline">{t('glyphProperties')}</span>
+            </button>
             
             {/* Refresh */}
             {(isLocked || isComposite) && (
@@ -128,6 +119,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
                     className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
                 >
                     <RedoIcon />
+                    <span className="hidden xl:inline">{t('refresh')}</span>
                 </button>
             )}
 
@@ -139,32 +131,23 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
                     className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-orange-600 dark:text-orange-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
                 >
                     <BroomIcon />
+                    <span className="hidden xl:inline">{t('clear')}</span>
                 </button>
             )}
 
             {/* Delete */}
-            {settings.editorMode === 'advanced' && (
-                <button
-                    onClick={onDeleteClick}
-                    title={t('deleteGlyph')}
-                    className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
-                >
-                    <TrashIcon />
-                </button>
-            )}
+            <button
+                onClick={onDeleteClick}
+                title={t('deleteGlyph')}
+                className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+            >
+                <TrashIcon />
+                <span className="hidden xl:inline">{t('deleteGlyph')}</span>
+            </button>
           </div>
 
           {/* SHARED ACTIONS (Visible on All Screens) */}
           
-          {/* Editor Mode Toggle */}
-          <button
-              onClick={toggleEditorMode}
-              title={settings.editorMode === 'simple' ? t('advancedMode') : t('simpleMode')}
-              className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
-          >
-              {settings.editorMode === 'simple' ? <WrenchIcon /> : <SparklesIcon />}
-          </button>
-
           {/* Manual Save Button */}
           {!settings.isAutosaveEnabled && (
               <button
@@ -173,6 +156,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
                   title={t('saveGlyph')}
               >
                   <SaveIcon />
+                  <span className="hidden xl:inline">{t('saveGlyph')}</span>
               </button>
           )}
 
@@ -189,15 +173,13 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               {isMoreMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 z-50">
                        {/* Properties (Mobile) */}
-                       {settings.editorMode === 'advanced' && (
-                           <button
-                               onClick={() => { setIsPropertiesPanelOpen(true); setIsMoreMenuOpen(false); }}
-                               className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                           >
-                               <PropertiesIcon />
-                               <span>{t('glyphProperties')}</span>
-                           </button>
-                       )}
+                       <button
+                           onClick={() => { setIsPropertiesPanelOpen(true); setIsMoreMenuOpen(false); }}
+                           className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                       >
+                           <PropertiesIcon />
+                           <span>{t('glyphProperties')}</span>
+                       </button>
 
                       {(isLocked || isComposite) && (
                           <button
@@ -219,15 +201,13 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
                           </button>
                       )}
                       
-                      {settings.editorMode === 'advanced' && (
-                          <button
-                              onClick={() => { onDeleteClick(); setIsMoreMenuOpen(false); }}
-                              className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                          >
-                              <TrashIcon />
-                              <span>{t('deleteGlyph')}</span>
-                          </button>
-                      )}
+                      <button
+                          onClick={() => { onDeleteClick(); setIsMoreMenuOpen(false); }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                          <TrashIcon />
+                          <span>{t('deleteGlyph')}</span>
+                      </button>
                   </div>
               )}
           </div>

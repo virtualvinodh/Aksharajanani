@@ -421,7 +421,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         isLocked={isLocked} isComposite={isComposite} onRefresh={handleRefresh}
         allCharacterSets={allCharacterSets}
         onSaveConstruction={handleSaveConstruction}
-        onEditorModeChange={onEditorModeChange}
       />
 
       <main className={layoutClasses}>
@@ -447,7 +446,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
             ref={canvasContainerRef}
         >
             <div className={`rounded-md overflow-hidden shadow-lg aspect-square relative ${isLargeScreen ? 'w-full h-full' : 'max-w-full max-h-full'}`} ref={canvasWrapperRef}>
-                {settings.editorMode === 'advanced' && activeSelectionBBox && (
+                {activeSelectionBBox && (
                     <ContextualToolbar 
                         selectionBox={activeSelectionBBox}
                         zoom={zoom}

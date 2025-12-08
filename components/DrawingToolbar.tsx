@@ -143,35 +143,33 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     const drawingTools = (
         <>
             <ToolButton tool="pen" currentTool={currentTool} label="Pen" onClick={setCurrentTool} disabled={isLocked}><PenIcon /></ToolButton>
-            {settings.editorMode === 'advanced' && (
-                <div className="relative" ref={calligraphyToolButtonRef}>
-                    <button
-                        onClick={handleCalligraphyToolClick}
-                        title="Calligraphy Pen"
-                        disabled={isLocked}
-                        className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                        currentTool === 'calligraphy'
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white hover:bg-gray-400 dark:hover:bg-gray-500'
-                        }`}
-                    >
-                        <CalligraphyIcon />
-                    </button>
-                    {isAnglePickerOpen && (
-                        <div className={`absolute z-10 bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 flex gap-1 ${isLargeScreen ? 'left-full ml-2 top-0 flex-col' : 'bottom-full mb-2 left-1/2 -translate-x-1/2'}`}>
-                            {[45, 30, 15].map((angle) => (
-                                <button
-                                    key={angle}
-                                    onClick={() => { setCalligraphyAngle(angle as 45|30|15); setIsAnglePickerOpen(false); }}
-                                    className={`px-3 py-1 text-sm rounded-md w-full text-left ${calligraphyAngle === angle ? 'bg-indigo-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-600'}`}
-                                >
-                                    {angle}°
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
+            <div className="relative" ref={calligraphyToolButtonRef}>
+                <button
+                    onClick={handleCalligraphyToolClick}
+                    title="Calligraphy Pen"
+                    disabled={isLocked}
+                    className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    currentTool === 'calligraphy'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white hover:bg-gray-400 dark:hover:bg-gray-500'
+                    }`}
+                >
+                    <CalligraphyIcon />
+                </button>
+                {isAnglePickerOpen && (
+                    <div className={`absolute z-10 bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 flex gap-1 ${isLargeScreen ? 'left-full ml-2 top-0 flex-col' : 'bottom-full mb-2 left-1/2 -translate-x-1/2'}`}>
+                        {[45, 30, 15].map((angle) => (
+                            <button
+                                key={angle}
+                                onClick={() => { setCalligraphyAngle(angle as 45|30|15); setIsAnglePickerOpen(false); }}
+                                className={`px-3 py-1 text-sm rounded-md w-full text-left ${calligraphyAngle === angle ? 'bg-indigo-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                            >
+                                {angle}°
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
             <ToolButton tool="line" currentTool={currentTool} label="Line" onClick={setCurrentTool} disabled={isLocked}><LineIcon /></ToolButton>
             <ToolButton tool="circle" currentTool={currentTool} label="Circle" onClick={setCurrentTool} disabled={isLocked}><CircleIcon /></ToolButton>
             <ToolButton tool="ellipse" currentTool={currentTool} label="Ellipse" onClick={setCurrentTool} disabled={isLocked}><EllipseIcon /></ToolButton>

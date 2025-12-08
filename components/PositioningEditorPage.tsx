@@ -445,7 +445,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                         <UndoIcon />
                         <span className="hidden sm:inline">{t('resetPosition')}</span>
                     </button>
-                    {settings.editorMode === 'advanced' && isGsubPair && (
+                    {isGsubPair && (
                         <div className="relative">
                             <button
                                 id="pos-properties-button"
