@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -139,9 +137,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             // Rules workspace is now always available
             items.push({ id: 'ws-rules', type: 'workspace', title: t('workspaceRules'), aliases: ['Features', 'OpenType', 'Substitution', 'Liga'], icon: <SettingsIcon />, onExecute: () => onSetWorkspace('rules') });
 
-            if (settings?.editorMode === 'advanced') {
-                 items.push({ id: 'ws-metrics', type: 'workspace', title: t('metrics'), aliases: ['Bulk Edit', 'Properties', 'Bearings', 'Advance'], icon: <SettingsIcon />, onExecute: () => onSetWorkspace('metrics') });
-            }
+            items.push({ id: 'ws-metrics', type: 'workspace', title: t('metrics'), aliases: ['Bulk Edit', 'Properties', 'Bearings', 'Advance'], icon: <SettingsIcon />, onExecute: () => onSetWorkspace('metrics') });
 
             // 2. Actions
             items.push({ id: 'act-save', type: 'action', title: t('save'), icon: <SaveIcon />, onExecute: () => onAction('save') });
@@ -150,9 +146,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             items.push({ id: 'act-load-json', type: 'action', title: t('load'), icon: <LoadIcon />, onExecute: () => onAction('load-json') });
             items.push({ id: 'act-export', type: 'action', title: t('exportOtf'), icon: <ExportIcon />, onExecute: () => onAction('export') });
             items.push({ id: 'act-test', type: 'action', title: t('testFont'), icon: <TestIcon />, onExecute: () => onAction('test') });
-            if (settings?.editorMode === 'advanced') {
-                items.push({ id: 'act-compare', type: 'action', title: t('compare'), icon: <CompareIcon />, onExecute: () => onAction('compare') });
-            }
+            items.push({ id: 'act-compare', type: 'action', title: t('compare'), icon: <CompareIcon />, onExecute: () => onAction('compare') });
             items.push({ id: 'act-settings', type: 'action', title: t('settings'), icon: <SettingsIcon />, onExecute: () => onAction('settings') });
 
             // 3. Glyphs (Snapshot of drawn state at open time)

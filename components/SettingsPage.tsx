@@ -102,10 +102,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
                         <TabButton tabId="general" label={t('settingsTabGeneral')} activeTab={activeTab} onClick={setActiveTab} />
                         <TabButton tabId="editor" label={t('editorSettings')} activeTab={activeTab} onClick={setActiveTab} />
                         <TabButton tabId="meta" label={t('settingsTabMetaData')} activeTab={activeTab} onClick={setActiveTab} />
-            
-                        {settings?.editorMode === 'advanced' && (
-                            <TabButton tabId="metrics" label={t('settingsTabMetrics')} activeTab={activeTab} onClick={setActiveTab} />
-                        )}
+                        <TabButton tabId="metrics" label={t('settingsTabMetrics')} activeTab={activeTab} onClick={setActiveTab} />
                     </nav>
                 </div>
 
@@ -143,7 +140,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
                          onSettingsChange={setLocalSettings} 
                     />
                 )}
-                {activeTab === 'metrics' && settings?.editorMode === 'advanced' && (
+                {activeTab === 'metrics' && (
                     <MetricsSettings
                         metrics={localMetrics}
                         onMetricsChange={setLocalMetrics}

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -204,7 +203,9 @@ export const useExportActions = ({
             positioning: (positioningRules?.length ?? 0) > markPositioningMap.size,
             kerning: (recommendedKerning?.length ?? 0) > kerningMap.size,
         };
-        const shouldWarn = isIncomplete.drawing || (settings?.editorMode === 'advanced' && (isIncomplete.positioning || isIncomplete.kerning));
+        
+        // Modified logic: Always warn if any part is incomplete, regardless of editor mode.
+        const shouldWarn = isIncomplete.drawing || isIncomplete.positioning || isIncomplete.kerning;
 
         if (shouldWarn) {
             layout.openModal('incompleteWarning', {

@@ -64,7 +64,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
     const ctx = canvas?.getContext('2d');
     if (!ctx || !canvas || !container || !settings || !metrics) return;
 
-    const { strokeThickness, editorMode } = settings;
+    const { strokeThickness, showUnicodeValues } = settings;
 
     const draw = () => {
       const CELL_HEIGHT = COMPARISON_CELL_HEIGHT * zoom;
@@ -106,7 +106,8 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
         ctx.textAlign = 'center';
         const textX = cellStartX + CELL_WIDTH / 2;
         ctx.fillText(char.name, textX, cellStartY + CELL_HEIGHT - (22 * zoom));
-        if (editorMode === 'advanced') {
+        
+        if (showUnicodeValues && char.unicode !== undefined) {
           ctx.font = `${10 * zoom}px ${guideFontFamily}`;
           ctx.fillText(`U+${char.unicode.toString(16).toUpperCase().padStart(4, '0')}`, textX, cellStartY + CELL_HEIGHT - (8 * zoom));
         }
