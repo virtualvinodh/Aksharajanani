@@ -60,7 +60,13 @@ export interface UseDrawingCanvasProps {
     transformMode?: 'all' | 'move-only';
     movementConstraint?: 'horizontal' | 'vertical' | 'none';
     // New props for live preview
-    previewTransform?: any; // Avoiding circular dep or complex type here if possible, or import TransformState
+    previewTransform?: any; 
+    
+    // Metrics Editing
+    lsb?: number;
+    rsb?: number;
+    onMetricsChange?: (lsb: number, rsb: number) => void;
+    metrics?: any; // FontMetrics
 }
 
 export interface ToolHookProps extends UseDrawingCanvasProps {

@@ -53,8 +53,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const { t } = useLocale();
   const { showNotification, modalOriginRect, checkAndSetFlag } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
-  
-  // We need direct dispatch access to update metadata for construction changes
   const { dispatch: characterDispatch, allCharsByName } = useProject();
   const { dispatch: glyphDataDispatch } = useGlyphDataContext();
 
@@ -66,35 +64,23 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const [animationClass, setAnimationClass] = useState('');
   const [calligraphyAngle, setCalligraphyAngle] = useState<45 | 30 | 15>(45);
   
-  // Image state
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [backgroundImageOpacity, setBackgroundImageOpacity] = useState(0.5);
   const [imageTransform, setImageTransform] = useState<ImageTransform | null>(null);
-  
-  // Transform Tool State
   const [previewTransform, setPreviewTransform] = useState<TransformState | null>(null);
-
-  // Trace Modal State
   const [isTracerModalOpen, setIsTracerModalOpen] = useState(false);
   const [tracerImageSrc, setTracerImageSrc] = useState<string | null>(null);
-
-  // Confirmation Modals
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isUnlockConfirmOpen, setIsUnlockConfirmOpen] = useState(false);
   const [isRelinkConfirmOpen, setIsRelinkConfirmOpen] = useState(false);
   const [isConstructionWarningOpen, setIsConstructionWarningOpen] = useState(false);
   const [pendingConstruction, setPendingConstruction] = useState<{type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]} | null>(null);
-
-  // Container dimensions state
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   
   const modalRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const canvasWrapperRef = useRef<HTMLDivElement>(null); // Ref for the inner square wrapper
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const animationTimeoutRef = useRef<number | null>(null);
-  
-  // Revised query: Just check width. This allows laptops (e.g. 1366x768) to have side-by-side layout.
-  // Mobile/Portait Tablets (<1024px) will get bottom-docked layout.
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
   
   const isLocked = !!character.link;
@@ -114,7 +100,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
     }
   }, [modalOriginRect]);
 
-  // --- Hook: Session Management ---
   const {
     currentPaths, handlePathsChange, undo, redo, canUndo, canRedo,
     lsb, setLsb, rsb, setRsb, isTransitioning,
@@ -126,7 +111,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       onSave, onNavigate, onClose: () => triggerClose(onClose)
   });
 
-  // --- Hook: Import Logic ---
   const {
       imageImportRef, svgImportRef, imageTraceRef,
       handleImageImport, handleSvgImport, handleImageTraceFileChange, handleInsertTracedSVG
@@ -135,7 +119,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       handlePathsChange, setCurrentTool, setSelectedPathIds, currentPaths, metrics, showNotification, t
   });
 
-  // --- Hook: Canvas Operations (Copy/Paste/Group) ---
   const {
       handleCopy, handleCut, handlePaste, handleDeleteSelection, moveSelection,
       handleGroup, handleUngroup, canGroup, canUngroup
@@ -144,12 +127,8 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       clipboard, clipboardDispatch, showNotification, t
   });
 
-  // --- Construction Logic ---
   const executeConstructionUpdate = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => {
       if (character.unicode === undefined) return;
-
-      // 1. Update Character Definition (Metadata)
-      // We need to inject a custom update using UPDATE_CHARACTER_SETS
       characterDispatch({
           type: 'UPDATE_CHARACTER_SETS',
           payload: (prevSets) => {
@@ -181,16 +160,11 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
               }));
           }
       });
-      
-      // 2. Update Dependencies (Graph)
       if (type === 'link' || type === 'composite') {
           onUpdateDependencies(character.unicode, components);
       } else {
-          // If changing to manual drawing, remove existing dependencies
           onUpdateDependencies(character.unicode, null);
       }
-
-      // 3. Handle Path Regeneration
       if (type === 'link' || type === 'composite') {
           const tempChar: Character = { 
               ...character, 
@@ -211,15 +185,11 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
 
           if (compositeData) {
               handlePathsChange(compositeData.paths);
-              // Also update the persistent glyph data map
               glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev) => new Map(prev).set(character.unicode!, compositeData) });
           } else {
-              // If generation fails (e.g. empty components), maybe clear?
                handlePathsChange([]);
           }
       }
-      // If 'drawing', we do nothing to paths (keep them as editable)
-      
       showNotification(t('glyphRefreshedSuccess'), 'success');
       setIsConstructionWarningOpen(false);
       setPendingConstruction(null);
@@ -228,9 +198,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const handleSaveConstruction = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => {
       const hasContent = currentPaths.length > 0;
       const wasVisual = isLocked || isComposite;
-      
-      // Warning condition: Switching TO a constructed mode FROM a manual drawing mode that has content.
-      // This implies overwriting the manual work with generated components.
       if (!wasVisual && (type === 'link' || type === 'composite') && hasContent) {
           setPendingConstruction({ type, components, transforms });
           setIsConstructionWarningOpen(true);
@@ -244,7 +211,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       let count = 0;
       allCharacterSets.forEach(set => {
           set.characters.forEach(c => {
-              // Check both link and composite arrays
               const components = c.link || c.composite;
               if (components && components.includes(character.name)) {
                   count++;
@@ -254,7 +220,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       return count;
   }, [character, allCharacterSets]);
 
-  // --- Transform Application Logic ---
   const handleApplyTransform = (transform: TransformState & { flipX?: boolean; flipY?: boolean }) => {
       if (selectedPathIds.size === 0) return;
 
@@ -270,31 +235,23 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       const transformPoint = (pt: Point) => {
           let px = pt.x - center.x;
           let py = pt.y - center.y;
-          
-          // Rotate
           const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
           const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
-          
-          // Scale & Flip
           px = rx * sx;
           py = ry * sy;
-          
           return { x: px + center.x, y: ry + center.y };
       };
 
       const newPaths = currentPaths.map(p => {
           if (!selectedPathIds.has(p.id)) return p;
-          
           const newP = { ...p, points: p.points.map(transformPoint) };
           if (p.segmentGroups) {
               newP.segmentGroups = p.segmentGroups.map(g => g.map(s => ({
                   ...s,
                   point: transformPoint(s.point),
-                  // Handle vectors need rotation and scaling but not translation
                   handleIn: VEC.scale(VEC.rotate(s.handleIn, angleRad), sx),
                   handleOut: VEC.scale(VEC.rotate(s.handleOut, angleRad), sx)
               })));
-              
                if (transform.flipX || transform.flipY) {
                   newP.segmentGroups = newP.segmentGroups.map(g => g.map(s => ({
                       ...s,
@@ -310,12 +267,10 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       setPreviewTransform(null);
   };
 
-  // Reset transform preview when selection changes
   useEffect(() => {
       setPreviewTransform(null);
   }, [selectedPathIds]);
 
-  // --- Hook: Shortcuts ---
   useDrawingShortcuts({
       onUndo: undo, onRedo: redo, onCopy: handleCopy, onCut: handleCut, onPaste: handlePaste,
       onDelete: handleDeleteSelection, onMoveSelection: moveSelection,
@@ -325,12 +280,10 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       canNavigatePrev: !!prevCharacter, canNavigateNext: !!nextCharacter
   });
 
-  // Measure container for Contextual Toolbar
   useEffect(() => {
     if (canvasWrapperRef.current) {
         const { clientWidth, clientHeight } = canvasWrapperRef.current;
         setContainerSize({ width: clientWidth, height: clientHeight });
-        
         const resizeObserver = new ResizeObserver((entries) => {
             if (entries[0]) {
                 setContainerSize({ width: entries[0].contentRect.width, height: entries[0].contentRect.height });
@@ -341,7 +294,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
     }
   }, []);
 
-  // Animation handling
   useLayoutEffect(() => {
     if (modalOriginRect && modalRef.current) {
         const modalEl = modalRef.current;
@@ -359,9 +311,8 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         animationTimeoutRef.current = window.setTimeout(() => setAnimationClass(''), 300);
     }
     return () => { if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current); };
-  }, [modalOriginRect]); // Only run on mount for entry animation
+  }, [modalOriginRect]);
 
-  // Action Handlers
   const handleClear = () => handlePathsChange([]);
   const handleZoom = (factor: number) => {
       const newZoom = Math.max(0.1, Math.min(10, zoom * factor));
@@ -382,7 +333,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
     showNotification(t('glyphRelinkedSuccess'), 'success'); 
   };
 
-  // Setup tool and reset view on init (since we remount on char change now, this is safe)
   useEffect(() => {
       setZoom(1); 
       setViewOffset({ x: 0, y: 0 }); 
@@ -391,42 +341,28 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       setImageTransform(null); 
       setBackgroundImageOpacity(0.5);
 
-      // Detect if this is a fresh prefill (data was empty in DB, but paths exist now)
-      const initiallyDrawn = !!glyphData && glyphData.paths.length > 0; // Simple check instead of utility import to avoid dep cycle if any
+      const initiallyDrawn = !!glyphData && glyphData.paths.length > 0;
       const isFreshPrefill = !initiallyDrawn && currentPaths.length > 0;
       
       if (isFreshPrefill) {
-          // Attempt to select the last component of the composite
           const components = character.composite || character.link || [];
           if (components.length > 1) {
               const lastIndex = components.length - 1;
-              // Match the groupId format used in generateCompositeGlyphData
               const targetGroupId = `component-${lastIndex}`;
-              
               const idsToSelect = new Set<string>();
               currentPaths.forEach(p => {
                   if (p.groupId === targetGroupId) {
                       idsToSelect.add(p.id);
                   }
               });
-              
               setSelectedPathIds(idsToSelect);
-              // Always switch to select tool for multi-component prefilled composites so user can adjust immediately
               setCurrentTool('select');
           } else {
-               // Fallback if no components found (unlikely for prefill) or single component
                setSelectedPathIds(new Set());
-               
-               // Only switch to select tool if it is a linked (locked) glyph.
-               // For editable composites (single component), stay in default tool (Pen).
-               if (character.link) {
-                   setCurrentTool('select'); 
-               } else {
-                   setCurrentTool('pen');
-               }
+               if (character.link) setCurrentTool('select'); 
+               else setCurrentTool('pen');
           }
       } else {
-          // Normal load
           setSelectedPathIds(new Set());
           if (character.link) setCurrentTool('select'); else setCurrentTool('pen');
       }
@@ -440,7 +376,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       }
   }, []);
 
-  // Compute the current selection bounding box for the contextual toolbar
   const activeSelectionBBox = useMemo(() => {
     if (selectedPathIds.size === 0 || isLocked) return null;
     const selectedPaths = currentPaths.filter(p => selectedPathIds.has(p.id));
@@ -459,17 +394,14 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         imageTransform={imageTransform} onImageTransformChange={setImageTransform}
         selectedPathIds={selectedPathIds} onSelectionChange={setSelectedPathIds}
         isImageSelected={isImageSelected} onImageSelectionChange={setIsImageSelected}
-        lsb={lsb} rsb={rsb} calligraphyAngle={calligraphyAngle} 
-        isInitiallyDrawn={!wasEmptyOnLoad} // Pass the boolean result directly
+        lsb={lsb} rsb={rsb} onMetricsChange={(l, r) => { setLsb(l); setRsb(r); }} calligraphyAngle={calligraphyAngle} 
+        isInitiallyDrawn={!wasEmptyOnLoad}
         transformMode={isLocked ? 'move-only' : 'all'}
         previewTransform={previewTransform}
     />
   );
   
   const mainContentClasses = `flex-grow overflow-hidden bg-gray-100 dark:bg-black/20 transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`;
-
-  // Use flex-col-reverse on mobile (toolbar at bottom visually)
-  // Use flex-row centered on desktop (toolbar side-by-side with canvas, centrally docked)
   const layoutClasses = isLargeScreen 
       ? `${mainContentClasses} flex flex-row justify-center items-center p-4 gap-4` 
       : `${mainContentClasses} flex flex-col-reverse p-4 gap-4`;
@@ -510,7 +442,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
              </div>
          </div>
         
-        {/* Canvas Container: On desktop, height determines width (aspect-square), avoiding full-width stretch */}
         <div 
             className={`min-w-0 min-h-0 flex justify-center items-center relative ${isLargeScreen ? 'h-full aspect-square' : 'flex-1 w-full'}`} 
             ref={canvasContainerRef}

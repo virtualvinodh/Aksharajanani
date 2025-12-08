@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Point, Path, Tool, AppSettings, ImageTransform, Segment } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { useTheme } from '../contexts/ThemeContext';
@@ -23,7 +23,8 @@ declare var paper: any;
 export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const {
         canvasRef, initialPaths, onPathsChange, tool, onToolChange, zoom, setZoom, viewOffset,
-        setViewOffset, settings, onSelectionChange, transformMode = 'all'
+        setViewOffset, settings, onSelectionChange, transformMode = 'all', 
+        lsb, rsb, onMetricsChange, metrics
     } = props;
     
     const [isDrawing, setIsDrawing] = useState(false);
@@ -31,21 +32,31 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const [previewPath, setPreviewPath] = useState<Path | null>(null);
     const [bgImageObject, setBgImageObject] = useState<HTMLImageElement | null>(null);
     const [hoveredPathIds, setHoveredPathIds] = useState<Set<string>>(new Set());
+    
+    // Metrics Interaction State
+    const [hoveredMetric, setHoveredMetric] = useState<'lsb' | 'rsb' | null>(null);
+    const [draggingMetric, setDraggingMetric] = useState<'lsb' | 'rsb' | null>(null);
+    const metricDragStartRef = useRef<{ startX: number, startValue: number } | null>(null);
+
     const { theme } = useTheme();
     const { showNotification } = useLayout();
     const { t } = useLocale();
 
+    // Calculate Glyph BBox for metrics positioning (and other uses)
+    // Memoize this to avoid expensive recalculations on every render
+    const glyphBBox = useMemo(() => {
+        // Only calculate if we have paths to measure
+        if (currentPaths.length === 0) return null;
+        return getAccurateGlyphBBox(currentPaths, settings.strokeThickness);
+    }, [currentPaths, settings.strokeThickness]);
+
     // --- Animation State ---
-    // Use refs to track values inside the animation loop to prevent stale closures
-    // and excessive React updates.
     const zoomRef = useRef(zoom);
     const viewOffsetRef = useRef(viewOffset);
     const targetZoomRef = useRef(zoom);
     const targetViewOffsetRef = useRef(viewOffset);
     const animationFrameRef = useRef<number | undefined>(undefined);
 
-    // Keep refs in sync with external state changes (e.g., from toolbar buttons)
-    // IMPORTANT: Only update target if NOT animating, otherwise we interrupt gestures like pinch/zoom
     useEffect(() => {
         zoomRef.current = zoom;
         if (!animationFrameRef.current) {
@@ -64,42 +75,32 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
 
         const animate = () => {
-            const LERP_FACTOR = 0.2; // Adjust for smoothness (lower is smoother but slower)
-            
-            // Read from refs (current source of truth for the loop)
+            const LERP_FACTOR = 0.2; 
             const currentZoom = zoomRef.current;
             const currentOffset = viewOffsetRef.current;
-            // Read targets from refs (set by event handlers)
             const targetZoom = targetZoomRef.current;
             const targetOffset = targetViewOffsetRef.current;
             
-            // Calculate new values
             const newZoom = currentZoom + (targetZoom - currentZoom) * LERP_FACTOR;
             const newOffset = {
                 x: currentOffset.x + (targetOffset.x - currentOffset.x) * LERP_FACTOR,
                 y: currentOffset.y + (targetOffset.y - currentOffset.y) * LERP_FACTOR,
             };
 
-            // Check convergence
             const isZoomDone = Math.abs(newZoom - targetZoom) < 0.001;
             const isOffsetDone = VEC.len(VEC.sub(newOffset, targetOffset)) < 0.1;
 
             if (isZoomDone && isOffsetDone) {
-                // Snap to target and stop
                 setZoom(targetZoom);
                 setViewOffset(targetOffset);
                 zoomRef.current = targetZoom;
                 viewOffsetRef.current = targetOffset;
                 animationFrameRef.current = undefined;
             } else {
-                // Update React state (triggers render for visual update)
                 setZoom(newZoom);
                 setViewOffset(newOffset);
-                
-                // Update Refs for next frame calculation
                 zoomRef.current = newZoom;
                 viewOffsetRef.current = newOffset;
-                
                 animationFrameRef.current = requestAnimationFrame(animate);
             }
         };
@@ -107,7 +108,6 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         animationFrameRef.current = requestAnimationFrame(animate);
     }, [setZoom, setViewOffset]);
 
-    // Cleanup animation on unmount
     useEffect(() => {
         return () => {
             if (animationFrameRef.current) {
@@ -144,8 +144,6 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         return { x: (pointSource.clientX - rect.left) * scaleX, y: (pointSource.clientY - rect.top) * scaleY };
     }, [canvasRef]);
 
-    // Use refs for coordinate conversion to ensure event handlers always use latest values
-    // even if React state hasn't flushed yet during rapid events.
     const getCanvasPoint = useCallback((viewportPoint: Point): Point => ({
         x: (viewportPoint.x - viewOffsetRef.current.x) / zoomRef.current,
         y: (viewportPoint.y - viewOffsetRef.current.y) / zoomRef.current,
@@ -163,7 +161,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
                 const createPaperPath = (segments: Segment[]) => new paperScope.Path({ 
                     segments: segments.map(seg => new paperScope.Segment(new paperScope.Point(seg.point.x, seg.point.y), new paperScope.Point(seg.handleIn.x, seg.handleIn.y), new paperScope.Point(seg.handleOut.x, seg.handleOut.y))), 
                     closed: true,
-                    insert: false // Important: don't add to the project layer automatically to keep things clean
+                    insert: false 
                 });
                 
                 if (path.segmentGroups.length > 1) {
@@ -182,7 +180,6 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             }
 
             let pointsToCheck = path.points;
-
             if ((path.type === 'pen' || path.type === 'calligraphy') && path.points.length > 2) {
                 pointsToCheck = curveToPolyline(path.points, 10);
             } else if (path.type === 'curve' && path.points.length === 3) {
@@ -223,7 +220,6 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const toolProps = { ...props, isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, previewPath, setPreviewPath, getCanvasPoint, showNotification, t, findPathAtPoint, onSelectionChange: handleSelectionChangeWrapper };
     
     const handlePan = useCallback((newOffset: Point) => {
-        // Update the target REF, not state directly here, to let animation loop handle it
         targetZoomRef.current = zoomRef.current; 
         targetViewOffsetRef.current = newOffset;
         startAnimation();
@@ -237,7 +233,22 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const editTool = useEditTool(toolProps);
     const eraserTool = useEraserTool(toolProps);
 
+    // --- Interaction Routing ---
+
     const startInteraction = useCallback((point: Point, viewportPoint: Point, e: React.MouseEvent | React.TouchEvent) => {
+        // Metric Dragging takes precedence if active
+        if (hoveredMetric && glyphBBox && metrics && onMetricsChange) {
+             setDraggingMetric(hoveredMetric);
+             metricDragStartRef.current = {
+                 startX: point.x,
+                 startValue: hoveredMetric === 'lsb' 
+                     ? (lsb ?? metrics.defaultLSB) 
+                     : (rsb ?? metrics.defaultRSB)
+             };
+             setIsDrawing(true); // Occupy drawing state to block other tools
+             return;
+        }
+
         switch (tool) {
             case 'pan': panTool.startPan(viewportPoint, viewOffsetRef.current); break;
             case 'pen': case 'calligraphy': penTool.start(point); break;
@@ -247,9 +258,59 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'edit': editTool.start(point); break;
             case 'eraser': eraserTool.start(point); break;
         }
-    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool]);
+    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, hoveredMetric, glyphBBox, lsb, rsb, metrics, onMetricsChange]);
 
     const moveInteraction = useCallback((point: Point, viewportPoint: Point) => {
+        // Handle Metric Dragging
+        if (draggingMetric && metricDragStartRef.current && onMetricsChange && metrics) {
+             const delta = point.x - metricDragStartRef.current.startX;
+             const PIXELS_PER_FONT_UNIT = 1000 / metrics.unitsPerEm; // Drawing canvas is 1000 wide
+             const valueChange = Math.round(delta / PIXELS_PER_FONT_UNIT);
+
+             if (draggingMetric === 'lsb') {
+                 // For LSB, moving right (positive delta) decreases the bearing (moves line right towards glyph)
+                 // Wait, LSB is distance from origin to glyph.
+                 // Line is at `glyphX - lsb`. Moving line left increases LSB. Moving right decreases LSB.
+                 // Correct: newPos = oldPos + delta.
+                 // x_new = (glyphX - lsb_old) + delta
+                 // glyphX - lsb_new = glyphX - lsb_old + delta
+                 // -lsb_new = -lsb_old + delta  =>  lsb_new = lsb_old - delta (scaled)
+                 const newValue = metricDragStartRef.current.startValue - valueChange;
+                 onMetricsChange(newValue, rsb ?? metrics.defaultRSB);
+             } else {
+                 // RSB Line is at `glyphRight + rsb`.
+                 // Moving right increases RSB.
+                 // x_new = (glyphRight + rsb_old) + delta
+                 // glyphRight + rsb_new = glyphRight + rsb_old + delta
+                 // rsb_new = rsb_old + delta (scaled)
+                 const newValue = metricDragStartRef.current.startValue + valueChange;
+                 onMetricsChange(lsb ?? metrics.defaultLSB, newValue);
+             }
+             return;
+        }
+
+        // Handle Hover Detection for Metrics (when not drawing/dragging)
+        if (!isDrawing && glyphBBox && metrics) {
+            const PIXELS_PER_FONT_UNIT = 1000 / metrics.unitsPerEm;
+            const lsbVal = lsb ?? metrics.defaultLSB;
+            const rsbVal = rsb ?? metrics.defaultRSB;
+            
+            const lsbX = glyphBBox.x - (lsbVal * PIXELS_PER_FONT_UNIT);
+            const rsbX = glyphBBox.x + glyphBBox.width + (rsbVal * PIXELS_PER_FONT_UNIT);
+            
+            const HIT_TOLERANCE = 8 / zoomRef.current; // 8px tolerance adjusted for zoom
+            
+            if (Math.abs(point.x - lsbX) < HIT_TOLERANCE) {
+                setHoveredMetric('lsb');
+            } else if (Math.abs(point.x - rsbX) < HIT_TOLERANCE) {
+                setHoveredMetric('rsb');
+            } else {
+                setHoveredMetric(null);
+            }
+        }
+
+        if (draggingMetric) return;
+
         switch (tool) {
             case 'pan': panTool.move(viewportPoint); break;
             case 'pen': case 'calligraphy': penTool.move(point); break;
@@ -259,10 +320,17 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'edit': editTool.move(point); break;
             case 'eraser': eraserTool.move(point); break;
         }
-    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool]);
+    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, isDrawing, draggingMetric, glyphBBox, metrics, lsb, rsb, onMetricsChange]);
 
     const endInteraction = useCallback(() => {
         isPinchingRef.current = false;
+        
+        if (draggingMetric) {
+            setDraggingMetric(null);
+            setIsDrawing(false);
+            return;
+        }
+
         switch (tool) {
             case 'pan': panTool.end(); break;
             case 'pen': case 'calligraphy': penTool.end(); break;
@@ -273,7 +341,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'eraser': eraserTool.end(); break;
         }
         setHoveredPathIds(new Set());
-    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool]);
+    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, draggingMetric]);
     
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (e.button === 1 || (tool === 'pan' && e.button === 0)) {
@@ -293,7 +361,9 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             return;
         }
         const canvasPoint = getCanvasPoint(viewportPoint);
-        if (!isDrawing && (tool === 'select' || tool === 'edit')) {
+        
+        // Tool-specific hover logic
+        if (!isDrawing && !draggingMetric && (tool === 'select' || tool === 'edit')) {
             const path = findPathAtPoint(canvasPoint);
             if (path) {
                 if (path.groupId) {
@@ -313,8 +383,9 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         } else if (isDrawing) {
             setHoveredPathIds(new Set());
         }
+        
         moveInteraction(canvasPoint, viewportPoint);
-    }, [getViewportPoint, getCanvasPoint, moveInteraction, panTool, isDrawing, tool, findPathAtPoint, currentPaths]);
+    }, [getViewportPoint, getCanvasPoint, moveInteraction, panTool, isDrawing, tool, findPathAtPoint, currentPaths, draggingMetric]);
 
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         if (tool === 'pan' && e.touches.length === 2) {
@@ -337,12 +408,10 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             const p2 = getViewportPoint(e, 1)!;
             const currentDist = VEC.len(VEC.sub(p1, p2));
 
-            // Use refs for calculation to avoid state dependency in loop
             const zoomFactor = currentDist / pinchStartDistanceRef.current;
             const newZoom = Math.max(0.1, Math.min(10, pinchStartZoomRef.current * zoomFactor));
 
             const midPointViewport = VEC.scale(VEC.add(p1, p2), 0.5);
-            // Must calculate point in canvas based on *current* transform before updating
             const pointInCanvas = {
                 x: (midPointViewport.x - viewOffsetRef.current.x) / zoomRef.current,
                 y: (midPointViewport.y - viewOffsetRef.current.y) / zoomRef.current
@@ -386,7 +455,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         } else if (tool === 'select') {
             const path = findPathAtPoint(canvasPoint);
             if (path && onToolChange) {
-                onSelectionChange(new Set()); // Clear selection before entering edit mode
+                onSelectionChange(new Set()); 
                 onToolChange('edit');
                 editTool.setFocusedPathId(path.id);
             }
@@ -402,7 +471,6 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         const zoomFactor = -e.deltaY * 0.001; 
         const newZoom = Math.max(0.1, Math.min(10, currentZoom * (1 + zoomFactor)));
         
-        // Calculate using refs to avoid stale state
         const pointInCanvas = {
             x: (viewportPoint.x - viewOffsetRef.current.x) / currentZoom,
             y: (viewportPoint.y - viewOffsetRef.current.y) / currentZoom
@@ -420,6 +488,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     }, [getViewportPoint, startAnimation]);
     
     const getCursor = useCallback(() => {
+        if (hoveredMetric || draggingMetric) return 'col-resize';
         if (panTool.isPanning) return 'grabbing';
         switch (tool) {
             case 'pan': return 'grab';
@@ -437,7 +506,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'curve': return curveTool.getCursor();
             default: return 'crosshair';
         }
-    }, [tool, panTool.isPanning, selectTool, editTool, curveTool, settings.strokeThickness, theme]);
+    }, [tool, panTool.isPanning, selectTool, editTool, curveTool, settings.strokeThickness, theme, hoveredMetric, draggingMetric]);
     
     return {
         currentPaths, previewPath, marqueeBox: selectTool.marqueeBox, selectionBox: selectTool.selectionBox,
@@ -447,5 +516,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         handleTouchEnd, handleTouchCancel: endInteraction,
         handleWheel, handleDoubleClick, getCursor, handles: selectTool.handles,
         isMobile: selectTool.isMobile, HANDLE_SIZE: selectTool.HANDLE_SIZE,
+        // Computed metrics for rendering
+        glyphBBox, hoveredMetric, draggingMetric
     };
 };

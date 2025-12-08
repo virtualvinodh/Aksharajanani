@@ -35,6 +35,7 @@ interface DrawingCanvasProps {
   onImageSelectionChange: (isSelected: boolean) => void;
   lsb?: number;
   rsb?: number;
+  onMetricsChange?: (lsb: number, rsb: number) => void;
   backgroundPaths?: Path[];
   backgroundPathsColor?: string;
   showBearingGuides?: boolean;
@@ -43,7 +44,6 @@ interface DrawingCanvasProps {
   transformMode?: 'all' | 'move-only';
   movementConstraint?: 'horizontal' | 'vertical' | 'none';
   isInitiallyDrawn?: boolean;
-  // New props for live preview
   previewTransform?: TransformState | null;
 }
 
@@ -51,7 +51,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     width, height, paths: initialPaths, onPathsChange, metrics, tool, onToolChange, zoom, setZoom, viewOffset, setViewOffset, 
     settings, currentCharacter, gridConfig, backgroundImage, backgroundImageOpacity, imageTransform, 
     onImageTransformChange, selectedPathIds, onSelectionChange, isImageSelected, onImageSelectionChange, 
-    lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides = true, disableTransformations = false, 
+    lsb, rsb, onMetricsChange, backgroundPaths, backgroundPathsColor, showBearingGuides = true, disableTransformations = false, 
     calligraphyAngle = 45, transformMode = 'all', movementConstraint = 'none', isInitiallyDrawn = false,
     previewTransform = null
 }) => {
@@ -61,15 +61,19 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const {
     currentPaths, previewPath, marqueeBox, selectionBox, focusedPathId, selectedPointInfo, bgImageObject, hoveredPathIds,
     handleMouseDown, handleMouseMove, handleMouseUp, handleTouchStart, handleTouchMove,
-    handleTouchEnd, handleTouchCancel, handleWheel, handleDoubleClick, getCursor, isMobile, HANDLE_SIZE, handles
+    handleTouchEnd, handleTouchCancel, handleWheel, handleDoubleClick, getCursor, isMobile, HANDLE_SIZE, handles,
+    // Metric state from hook
+    glyphBBox, hoveredMetric, draggingMetric
   } = useDrawingCanvas({
     canvasRef, initialPaths, onPathsChange, tool, onToolChange, zoom, setZoom, viewOffset, setViewOffset,
     settings, backgroundImage, imageTransform, onImageTransformChange, selectedPathIds, onSelectionChange,
     isImageSelected, onImageSelectionChange, 
-    calligraphyAngle: calligraphyAngle as 45 | 30 | 15, // Explicit cast or pass
+    calligraphyAngle: calligraphyAngle as 45 | 30 | 15,
     disableTransformations, 
     transformMode: transformMode as 'all' | 'move-only',
-    movementConstraint: movementConstraint as 'horizontal' | 'vertical' | 'none'
+    movementConstraint: movementConstraint as 'horizontal' | 'vertical' | 'none',
+    // Pass metrics related props to hook
+    lsb, rsb, onMetricsChange, metrics
   });
 
   const drawControlPoints = useCallback((ctx: CanvasRenderingContext2D, pathsToDraw: Path[], focusedId: string | null, selectedPoint: DraggedPointInfo | null) => {
@@ -132,17 +136,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         const controlRadius = isFocused ? controlRadiusBase * 1.2 : controlRadiusBase;
         
         if (points.length >= 2) {
-            // Draw skeleton line for editing even if calligraphy
             ctx.strokeStyle = `rgba(107, 114, 128, ${lineAlpha})`;
             ctx.lineWidth = 1.5 / zoom;
             ctx.beginPath();
-            
-            // For 'pen' (bezier) and other types, we draw the control polygon (straight lines connecting points)
-            // This is standard for editing interfaces and clearer than re-drawing the curve skeleton.
-            // It fixes the issue where the first segment of the pen path was missing due to missing moveTo.
             ctx.moveTo(points[0].x, points[0].y);
             for(let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-            
             ctx.stroke();
         }
         points.forEach((p, index) => {
@@ -175,7 +173,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }
     if (selectionBox) {
         if (transformMode === 'move-only' && !isImageSelected) {
-            ctx.strokeStyle = '#4f46e5'; // A darker indigo for locked state
+            ctx.strokeStyle = '#4f46e5'; 
             ctx.lineWidth = 1.5 / zoom;
             ctx.setLineDash([8 / zoom, 6 / zoom]);
             ctx.strokeRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
@@ -191,7 +189,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 ctx.strokeRect(-imageTransform.width/2, -imageTransform.height/2, imageTransform.width, imageTransform.height);
                 ctx.restore();
             } else {
-                // Don't draw selection box if rotating/scaling via toolbar preview to avoid confusion
                 if (!previewTransform) {
                     ctx.strokeRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
                 }
@@ -200,7 +197,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.setLineDash([]);
         
         if (handles && transformMode !== 'move-only' && !previewTransform) {
-            // Removed extra multiplier here; HANDLE_SIZE is now correctly set in useSelectTool
             const scaledHandleSize = HANDLE_SIZE / zoom;
 
             Object.values(handles).forEach((handle: Handle & Point) => {
@@ -218,13 +214,13 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 } else if (handle.type === 'move') {
                     ctx.fillStyle = '#6366F1';
                     ctx.strokeStyle = theme === 'dark' ? '#111827' : '#FFFFFF';
-                    ctx.lineWidth = 2 / zoom; // Thicker line for circle
-                    const radius = scaledHandleSize * 0.7; // Make the circle a bit bigger for touch
+                    ctx.lineWidth = 2 / zoom;
+                    const radius = scaledHandleSize * 0.7;
                     ctx.beginPath();
                     ctx.arc(handle.x, handle.y, radius, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.stroke();
-                } else { // All other scale handles
+                } else {
                     ctx.fillStyle = '#6366F1';
                     ctx.strokeStyle = theme === 'dark' ? '#111827' : '#FFFFFF';
                     ctx.lineWidth = 1.5 / zoom;
@@ -288,9 +284,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     ctx.lineTo(logicalViewX + logicalViewWidth, metrics.baseLineY);
     ctx.stroke();
 
-    // Draw optional super/sub guides
     if (metrics.superTopLineY || metrics.subBaseLineY) {
-        ctx.strokeStyle = theme === 'dark' ? '#6366f1' : '#a5b4fc'; // Lighter Indigo
+        ctx.strokeStyle = theme === 'dark' ? '#6366f1' : '#a5b4fc'; 
         ctx.setLineDash([8 / zoom, 6 / zoom]);
         if (metrics.superTopLineY) {
             ctx.beginPath();
@@ -308,27 +303,77 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
     ctx.setLineDash([]);
     
-    if (showBearingGuides) { // Always show guides if requested, not just in advanced mode
-        const allVisiblePaths = [...(backgroundPaths || []), ...currentPaths];
-        if (allVisiblePaths.length > 0) {
-            const glyphBBox = getAccurateGlyphBBox(allVisiblePaths, settings.strokeThickness);
-            if (glyphBBox) {
-                ctx.save();
-                const PIXELS_PER_FONT_UNIT = width / metrics.unitsPerEm;
-                const lsbInPixels = (lsb ?? metrics.defaultLSB) * PIXELS_PER_FONT_UNIT;
-                const rsbInPixels = (rsb ?? metrics.defaultRSB) * PIXELS_PER_FONT_UNIT;
+    // --- Metric Guides & Interactive UI ---
+    if (showBearingGuides && glyphBBox) {
+        const PIXELS_PER_FONT_UNIT = 1000 / metrics.unitsPerEm; // Drawing canvas is 1000
+        const lsbVal = lsb ?? metrics.defaultLSB;
+        const rsbVal = rsb ?? metrics.defaultRSB;
+        const lsbInPixels = lsbVal * PIXELS_PER_FONT_UNIT;
+        const rsbInPixels = rsbVal * PIXELS_PER_FONT_UNIT;
 
-                ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-                ctx.lineWidth = 1 / zoom; ctx.setLineDash([]);
-                ctx.beginPath(); ctx.moveTo(glyphBBox.x, logicalViewY); ctx.lineTo(glyphBBox.x, logicalViewY + logicalViewHeight); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(glyphBBox.x + glyphBBox.width, logicalViewY); ctx.lineTo(glyphBBox.x + glyphBBox.width, logicalViewY + logicalViewHeight); ctx.stroke();
+        const lsbX = glyphBBox.x - lsbInPixels;
+        const rsbX = glyphBBox.x + glyphBBox.width + rsbInPixels;
 
-                ctx.strokeStyle = theme === 'dark' ? 'rgba(250, 204, 21, 0.4)' : 'rgba(217, 119, 6, 0.5)';
-                ctx.lineWidth = 1.5 / zoom; ctx.setLineDash([6 / zoom, 4 / zoom]);
-                ctx.beginPath(); ctx.moveTo(glyphBBox.x - lsbInPixels, logicalViewY); ctx.lineTo(glyphBBox.x - lsbInPixels, logicalViewY + logicalViewHeight); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(glyphBBox.x + glyphBBox.width + rsbInPixels, logicalViewY); ctx.lineTo(glyphBBox.x + glyphBBox.width + rsbInPixels, logicalViewY + logicalViewHeight); ctx.stroke();
-                ctx.restore();
-            }
+        // Draw BBox
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        ctx.lineWidth = 1 / zoom; 
+        ctx.beginPath(); 
+        ctx.moveTo(glyphBBox.x, logicalViewY); ctx.lineTo(glyphBBox.x, logicalViewY + logicalViewHeight); ctx.stroke();
+        ctx.beginPath(); 
+        ctx.moveTo(glyphBBox.x + glyphBBox.width, logicalViewY); ctx.lineTo(glyphBBox.x + glyphBBox.width, logicalViewY + logicalViewHeight); ctx.stroke();
+
+        // Draw LSB Line
+        const isLsbActive = hoveredMetric === 'lsb' || draggingMetric === 'lsb';
+        ctx.strokeStyle = isLsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.4)' : 'rgba(217, 119, 6, 0.5)');
+        ctx.lineWidth = (isLsbActive ? 2.5 : 1.5) / zoom;
+        ctx.setLineDash(isLsbActive ? [] : [6 / zoom, 4 / zoom]);
+        ctx.beginPath(); 
+        ctx.moveTo(lsbX, logicalViewY); ctx.lineTo(lsbX, logicalViewY + logicalViewHeight); 
+        ctx.stroke();
+
+        // Draw RSB Line
+        const isRsbActive = hoveredMetric === 'rsb' || draggingMetric === 'rsb';
+        ctx.strokeStyle = isRsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.4)' : 'rgba(217, 119, 6, 0.5)');
+        ctx.lineWidth = (isRsbActive ? 2.5 : 1.5) / zoom;
+        ctx.setLineDash(isRsbActive ? [] : [6 / zoom, 4 / zoom]);
+        ctx.beginPath(); 
+        ctx.moveTo(rsbX, logicalViewY); ctx.lineTo(rsbX, logicalViewY + logicalViewHeight); 
+        ctx.stroke();
+
+        // Draw Tooltip if dragging
+        if (draggingMetric) {
+            const activeX = draggingMetric === 'lsb' ? lsbX : rsbX;
+            const activeVal = draggingMetric === 'lsb' ? lsbVal : rsbVal;
+            const label = draggingMetric === 'lsb' ? 'LSB' : 'RSB';
+            
+            ctx.save();
+            // Reset transform for absolute positioning of text (screen-space text looks cleaner)
+            ctx.setTransform(1, 0, 0, 1, 0, 0); 
+            
+            // Calculate screen position
+            const screenX = (activeX * zoom) + viewOffset.x;
+            const screenY = (glyphBBox.y * zoom) + viewOffset.y - 20;
+
+            const text = `${label}: ${Math.round(activeVal)}`;
+            ctx.font = 'bold 12px sans-serif';
+            const textWidth = ctx.measureText(text).width + 12;
+            
+            // Draw background pill
+            ctx.fillStyle = theme === 'dark' ? '#1f2937' : '#ffffff';
+            ctx.strokeStyle = '#d1d5db';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(screenX - textWidth/2, screenY - 20, textWidth, 24, 4);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Draw text
+            ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#111827';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, screenX, screenY - 8);
+            
+            ctx.restore();
         }
     }
 
@@ -337,13 +382,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }
 
     const mainColor = theme === 'dark' ? '#E2E8F0' : '#1F2937';
-    const highlightColor = theme === 'dark' ? '#A78BFA' : '#8B5CF6'; // For both hover and selection
+    const highlightColor = theme === 'dark' ? '#A78BFA' : '#8B5CF6'; 
 
     const hoveredPaths: Path[] = [];
     const selectedNotHoveredPaths: Path[] = [];
     const normalPaths: Path[] = [];
     
-    // Apply live transformations if needed
     let pathsToRender = currentPaths;
     if (previewTransform && selectionBox && selectedPathIds.size > 0) {
         const { x, y, width, height } = selectionBox;
@@ -354,46 +398,26 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             if (!selectedPathIds.has(p.id)) return p;
 
             const transformPoint = (pt: Point) => {
-                // 1. Translate to center
                 let px = pt.x - center.x;
                 let py = pt.y - center.y;
-                
-                // 2. Rotate
                 const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
                 const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
-                
-                // 3. Scale & Flip
                 const sx = (previewTransform.flipX ? -1 : 1) * previewTransform.scale;
                 const sy = (previewTransform.flipY ? -1 : 1) * previewTransform.scale;
-                
                 px = rx * sx;
                 py = ry * sy;
-                
-                // 4. Translate back
                 return { x: px + center.x, y: py + center.y };
             };
             
-            // Clone and transform
             const newP = { ...p, points: p.points.map(transformPoint) };
             if (p.segmentGroups) {
                 newP.segmentGroups = p.segmentGroups.map(g => g.map(s => {
-                    // For handles, we rotate and scale them.
-                    // When flipping, handles need to be mirrored properly.
-                    // If we flip X (horizontal flip), vectors (dx, dy) become (-dx, dy).
-                    // However, transformPoint effectively multiplies x by sx.
-                    // If sx is negative, x is inverted.
-                    
                     const sx = (previewTransform.flipX ? -1 : 1) * previewTransform.scale;
                     const sy = (previewTransform.flipY ? -1 : 1) * previewTransform.scale;
-
-                    // 1. Rotate handle vector
                     const hInRot = VEC.rotate(s.handleIn, angleRad);
                     const hOutRot = VEC.rotate(s.handleOut, angleRad);
-                    
-                    // 2. Scale & Flip handle vector
                     const hInTransformed = { x: hInRot.x * sx, y: hInRot.y * sy };
                     const hOutTransformed = { x: hOutRot.x * sx, y: hOutRot.y * sy };
-
                     return {
                         ...s,
                         point: transformPoint(s.point),
@@ -416,7 +440,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         }
     });
 
-    // Render in layers: normal -> selected -> hovered
     renderPaths(ctx, normalPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: mainColor });
     if (selectedNotHoveredPaths.length > 0) {
         renderPaths(ctx, selectedNotHoveredPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: highlightColor });
@@ -434,7 +457,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     if (tool === 'select') drawSelectionUI(ctx);
 
     ctx.restore();
-  }, [currentPaths, previewPath, marqueeBox, selectionBox, width, height, settings, metrics, theme, tool, zoom, viewOffset, currentCharacter, gridConfig, bgImageObject, backgroundImageOpacity, imageTransform, focusedPathId, selectedPointInfo, lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides, drawControlPoints, drawSelectionUI, hoveredPathIds, selectedPathIds, isInitiallyDrawn, previewTransform]);
+  }, [currentPaths, previewPath, marqueeBox, selectionBox, width, height, settings, metrics, theme, tool, zoom, viewOffset, currentCharacter, gridConfig, bgImageObject, backgroundImageOpacity, imageTransform, focusedPathId, selectedPointInfo, lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides, drawControlPoints, drawSelectionUI, hoveredPathIds, selectedPathIds, isInitiallyDrawn, previewTransform, glyphBBox, hoveredMetric, draggingMetric]);
   
   return (
     <canvas
