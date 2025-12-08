@@ -71,7 +71,6 @@ const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: bo
   </button>
 ));
 
-
 const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     const { t } = useLocale();
     const { character, currentTool, setCurrentTool, settings, isLargeScreen, onUndo, canUndo, onRedo, canRedo, onCut, selectedPathIds, onCopy, onPaste, clipboard, onGroup, canGroup, onUngroup, canUngroup, onZoom, onImageImportClick, onSvgImportClick, calligraphyAngle, setCalligraphyAngle, onUnlockClick, onRelinkClick } = props;
@@ -135,7 +134,6 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
         <>
             <ToolButton tool="select" currentTool={currentTool} label="Select" onClick={setCurrentTool}><SelectIcon /></ToolButton>
             <ToolButton tool="pan" currentTool={currentTool} label={t('pan')} onClick={setCurrentTool}><PanIcon /></ToolButton>
-            {/* Edit Points tool removed. Accessed via Contextual Toolbar or Double Click */}
             {lockOrLinkButton}
         </>
     );
@@ -143,6 +141,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     const drawingTools = (
         <>
             <ToolButton tool="pen" currentTool={currentTool} label="Pen" onClick={setCurrentTool} disabled={isLocked}><PenIcon /></ToolButton>
+            
             <div className="relative" ref={calligraphyToolButtonRef}>
                 <button
                     onClick={handleCalligraphyToolClick}
@@ -155,9 +154,10 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
                     }`}
                 >
                     <CalligraphyIcon />
+                     <div className={`absolute bottom-0.5 right-0.5 w-0 h-0 border-l-[4px] border-l-transparent border-b-[4px] ${currentTool === 'calligraphy' ? 'border-b-white' : 'border-b-gray-500 dark:border-b-gray-400'}`}></div>
                 </button>
                 {isAnglePickerOpen && (
-                    <div className={`absolute z-10 bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 flex gap-1 ${isLargeScreen ? 'left-full ml-2 top-0 flex-col' : 'bottom-full mb-2 left-1/2 -translate-x-1/2'}`}>
+                    <div className={`absolute z-20 bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 flex gap-1 animate-fade-in-up ${isLargeScreen ? 'left-full ml-2 top-0 flex-col' : 'bottom-full mb-2 left-1/2 -translate-x-1/2'}`}>
                         {[45, 30, 15].map((angle) => (
                             <button
                                 key={angle}
@@ -170,11 +170,13 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
                     </div>
                 )}
             </div>
+
             <ToolButton tool="line" currentTool={currentTool} label="Line" onClick={setCurrentTool} disabled={isLocked}><LineIcon /></ToolButton>
+            <ToolButton tool="curve" currentTool={currentTool} label="Curve" onClick={setCurrentTool} disabled={isLocked}><CurveIcon /></ToolButton>
             <ToolButton tool="circle" currentTool={currentTool} label="Circle" onClick={setCurrentTool} disabled={isLocked}><CircleIcon /></ToolButton>
             <ToolButton tool="ellipse" currentTool={currentTool} label="Ellipse" onClick={setCurrentTool} disabled={isLocked}><EllipseIcon /></ToolButton>
-            <ToolButton tool="curve" currentTool={currentTool} label="Curve" onClick={setCurrentTool} disabled={isLocked}><CurveIcon /></ToolButton>
             <ToolButton tool="dot" currentTool={currentTool} label="Dot" onClick={setCurrentTool} disabled={isLocked}><DotIcon /></ToolButton>
+            
             <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
             <ToolButton tool="eraser" currentTool={currentTool} label="Eraser" onClick={setCurrentTool} disabled={isLocked}><EraserIcon /></ToolButton>
         </>
