@@ -108,9 +108,8 @@ export const useAppActions = ({
 
     const handleEditorModeChange = useCallback((mode: 'simple' | 'advanced') => {
         if (mode === 'simple') {
-            if (workspace === 'rules') {
-                setWorkspace('drawing');
-            } else if (workspace === 'kerning') {
+            // Don't force exit from rules workspace
+            if (workspace === 'kerning') {
                 if (script?.kerning !== 'true') {
                     setWorkspace('drawing');
                 }

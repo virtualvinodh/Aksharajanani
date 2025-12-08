@@ -133,9 +133,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                     onExecute: () => onSetWorkspace('kerning') 
                 });
             }
+            
+            // Rules workspace is now always available
+            items.push({ id: 'ws-rules', type: 'workspace', title: t('workspaceRules'), aliases: ['Features', 'OpenType', 'Substitution', 'Liga'], icon: <SettingsIcon />, onExecute: () => onSetWorkspace('rules') });
 
             if (settings?.editorMode === 'advanced') {
-                 items.push({ id: 'ws-rules', type: 'workspace', title: t('workspaceRules'), aliases: ['Features', 'OpenType', 'Substitution', 'Liga'], icon: <SettingsIcon />, onExecute: () => onSetWorkspace('rules') });
                  items.push({ id: 'ws-metrics', type: 'workspace', title: t('metrics'), aliases: ['Bulk Edit', 'Properties', 'Bearings', 'Advance'], icon: <SettingsIcon />, onExecute: () => onSetWorkspace('metrics') });
             }
 

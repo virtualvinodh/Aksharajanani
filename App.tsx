@@ -274,7 +274,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 kerningProgress={kerningProgress}
               />
           )}
-          {workspace === 'rules' && settings.editorMode === 'advanced' && (
+          {workspace === 'rules' && (
               <RulesWorkspace 
                 positioningRules={positioningRules}
                 isFeaOnlyMode={isFeaOnlyMode}
