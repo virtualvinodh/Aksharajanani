@@ -137,8 +137,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             // Rules workspace is now always available
             items.push({ id: 'ws-rules', type: 'workspace', title: t('workspaceRules'), aliases: ['Features', 'OpenType', 'Substitution', 'Liga'], icon: <SettingsIcon />, onExecute: () => onSetWorkspace('rules') });
 
-            items.push({ id: 'ws-metrics', type: 'workspace', title: t('metrics'), aliases: ['Bulk Edit', 'Properties', 'Bearings', 'Advance'], icon: <SettingsIcon />, onExecute: () => onSetWorkspace('metrics') });
-
             // 2. Actions
             items.push({ id: 'act-save', type: 'action', title: t('save'), icon: <SaveIcon />, onExecute: () => onAction('save') });
             items.push({ id: 'act-save-as', type: 'action', title: 'Save Copy...', aliases: ['Duplicate Project', 'Branch'], icon: <CopyIcon />, onExecute: () => onAction('save-as') });
@@ -147,7 +145,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             items.push({ id: 'act-export', type: 'action', title: t('exportOtf'), icon: <ExportIcon />, onExecute: () => onAction('export') });
             items.push({ id: 'act-test', type: 'action', title: t('testFont'), icon: <TestIcon />, onExecute: () => onAction('test') });
             items.push({ id: 'act-compare', type: 'action', title: t('compare'), icon: <CompareIcon />, onExecute: () => onAction('compare') });
-            items.push({ id: 'act-settings', type: 'action', title: t('settings'), icon: <SettingsIcon />, onExecute: () => onAction('settings') });
+            // Redirect "Metrics" searches to Settings
+            items.push({ id: 'act-settings', type: 'action', title: t('settings'), aliases: ['Metrics', 'Global Metrics', 'Ascender', 'Descender', 'UPM'], icon: <SettingsIcon />, onExecute: () => onAction('settings') });
 
             // 3. Glyphs (Snapshot of drawn state at open time)
             if (characterSets) {
