@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Character, GlyphData, FontMetrics, CharacterSet, KerningMap, RecommendedKerning, AppSettings } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -285,8 +287,9 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
 
     if (!settings || !metrics) return null;
 
-    const noCharsDrawnText = editorMode === 'simple' ? t('spacingNoCharsDrawn') : t('kerningNoCharsDrawn');
-    const showOnlyCompleteText = editorMode === 'simple' ? t('spacingShowOnlyComplete') : t('kerningShowOnlyComplete');
+    const useKerningTerm = settings.editorMode === 'advanced' || settings.preferKerningTerm;
+    const noCharsDrawnText = !useKerningTerm ? t('spacingNoCharsDrawn') : t('kerningNoCharsDrawn');
+    const showOnlyCompleteText = !useKerningTerm ? t('spacingShowOnlyComplete') : t('kerningShowOnlyComplete');
 
     const leftTitleKey = mode === 'recommended' ? 'kerningFilterLeftChars' : 'kerningSelectLeftChars';
     const rightTitleKey = mode === 'recommended' ? 'kerningFilterRightChars' : 'kerningSelectRightChars';

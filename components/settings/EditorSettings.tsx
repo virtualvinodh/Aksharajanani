@@ -3,6 +3,8 @@
 
 
 
+
+
 import React from 'react';
 import { AppSettings } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -90,6 +92,11 @@ const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsCha
                                 <span className="font-mono text-xs border border-gray-400 dark:border-gray-500 px-1 rounded opacity-70">U+</span>
                                 <span>Show Unicode Values</span>
                             </div>
+                        </label>
+                        
+                        <label className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300 select-none">
+                            <input type="checkbox" checked={settings.preferKerningTerm ?? false} onChange={handleToggleChange('preferKerningTerm')} className="h-4 w-4 rounded accent-indigo-500" />
+                            <span>Use "Kerning" terminology</span>
                         </label>
                     </div>
                 </div>

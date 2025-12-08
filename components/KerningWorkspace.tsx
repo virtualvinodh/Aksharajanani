@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import KerningPage from './KerningPage';
 import { RecommendedKerning } from '../types';
@@ -29,7 +31,7 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
 
     if (!settings) return null;
 
-    const progressTextKey = settings.editorMode === 'simple' ? "spacingProgress" : "kerningProgress";
+    const progressTextKey = (settings.editorMode === 'simple' && !settings.preferKerningTerm) ? "spacingProgress" : "kerningProgress";
 
     return (
         <div className="flex flex-col h-full overflow-hidden">

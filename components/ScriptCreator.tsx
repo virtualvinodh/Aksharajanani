@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { BackIcon } from '../../constants';
@@ -27,7 +29,8 @@ const DEFAULT_METRICS: FontMetrics = {
 const DEFAULT_DEFAULTS: ScriptDefaults = {
     fontName: "NewFont", strokeThickness: 15, contrast: 1.0, pathSimplification: 0.5,
     showGridOutlines: false, isAutosaveEnabled: true, editorMode: 'advanced',
-    isPrefillEnabled: true, showHiddenGlyphs: false, showUnicodeValues: false
+    isPrefillEnabled: true, showHiddenGlyphs: false, showUnicodeValues: false,
+    preferKerningTerm: false
 };
 
 const DEFAULT_GUIDE_FONT: GuideFont = { fontName: '', fontUrl: '', stylisticSet: '' };

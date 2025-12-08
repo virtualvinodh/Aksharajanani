@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import DrawingModal from './components/DrawingModal';
@@ -268,7 +270,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
               positioningProgress={positioningProgress}
             />
           )}
-          {workspace === 'kerning' && (settings.editorMode === 'advanced' || script.kerning === 'true') && (
+          {workspace === 'kerning' && (
               <KerningWorkspace 
                 recommendedKerning={recommendedKerning ?? []}
                 kerningProgress={kerningProgress}

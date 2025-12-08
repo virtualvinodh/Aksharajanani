@@ -2,6 +2,7 @@
 
 
 
+
 export interface Point {
   x: number;
   y: number;
@@ -118,6 +119,7 @@ export interface AppSettings {
   isPrefillEnabled?: boolean;
   showHiddenGlyphs: boolean;
   showUnicodeValues: boolean;
+  preferKerningTerm?: boolean;
   // Font Meta Data
   manufacturer?: string;
   designer?: string;
@@ -203,6 +205,7 @@ export interface ScriptDefaults {
     isPrefillEnabled: boolean;
     showHiddenGlyphs?: boolean;
     showUnicodeValues?: boolean;
+    preferKerningTerm?: boolean;
 }
 
 export interface Range {

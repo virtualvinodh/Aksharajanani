@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -411,7 +413,8 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
 
 
     const navButtonClass = "p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors";
-    const inputLabel = settings.editorMode === 'advanced' ? t('kerning') : t('spacing');
+    const useKerningTerm = settings.editorMode === 'advanced' || settings.preferKerningTerm;
+    const inputLabel = useKerningTerm ? t('kerning') : t('spacing');
 
     const controls = (
         <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-700/50 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-600">

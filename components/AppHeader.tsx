@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -102,12 +104,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     
     const { selectCharacter, setWorkspace, setCurrentView } = useLayout();
     
-    const kerningLabel = settings.editorMode === 'advanced' ? t('workspaceKerning') : t('workspaceSpacing');
+    const kerningLabel = (settings.editorMode === 'advanced' || settings.preferKerningTerm) ? t('workspaceKerning') : t('workspaceSpacing');
     
     // Removed metrics and rules tabs from count
     const visibleTabCount = 1 + // Drawing
         (hasPositioning ? 1 : 0) +
-        ((settings.editorMode === 'advanced' || script.kerning === 'true') && hasKerning ? 1 : 0);
+        (hasKerning ? 1 : 0);
 
     let tabIndex = 1;
 
@@ -249,7 +251,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <nav className="flex justify-center space-x-2 px-2 sm:px-4 overflow-x-auto no-scrollbar">
                     <WorkspaceTab workspaceId="drawing" label={t('workspaceDrawing')} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<EditIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={drawingProgress} />
                     {hasPositioning && <WorkspaceTab workspaceId="positioning" label={t('workspacePositioning')} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<PositioningIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={positioningProgress} />}
-                    {(settings.editorMode === 'advanced' || script.kerning === 'true') && hasKerning && <WorkspaceTab workspaceId="kerning" label={kerningLabel} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<KerningIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={kerningProgress} />}
+                    {hasKerning && <WorkspaceTab workspaceId="kerning" label={kerningLabel} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<KerningIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={kerningProgress} />}
                 </nav>
             </div>
         </header>

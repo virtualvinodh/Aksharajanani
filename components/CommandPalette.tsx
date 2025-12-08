@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -97,7 +99,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         if (isOpen) {
             const items: SearchResult[] = [];
 
-            const isSimple = settings?.editorMode === 'simple';
+            const isSimple = settings?.editorMode === 'simple' && !settings?.preferKerningTerm;
 
             // 1. Workspaces
             items.push({ 
@@ -121,7 +123,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             }
             
             const kerningLabel = isSimple ? t('workspaceSpacing') : t('workspaceKerning');
-            const showKerning = hasKerning && (settings?.editorMode === 'advanced' || script.kerning === 'true');
+            const showKerning = hasKerning;
             
             if (showKerning) {
                 items.push({ 
@@ -234,7 +236,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
         // --- Kerning Results (Custom & Recommended) ---
         // Only generate if searching for a pair or parts of it
-        if (hasKerning && (settings?.editorMode === 'advanced' || script.kerning === 'true') && allCharsByUnicode && (kerningMap || recommendedKerning)) {
+        // The condition for hasKerning is now simplified
+        if (hasKerning && allCharsByUnicode && (kerningMap || recommendedKerning)) {
              const existingPairs = new Set<string>();
 
              // 1. Index existing (saved) kerning pairs
@@ -320,7 +323,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
         return results;
 
-    }, [searchTerm, positioningRules, allCharsByName, t, onSetWorkspace, setPendingNavigationTarget, expandGroup, hasKerning, settings?.editorMode, script.kerning, kerningMap, allCharsByUnicode, recommendedKerning, glyphDataMap]);
+    }, [searchTerm, positioningRules, allCharsByName, t, onSetWorkspace, setPendingNavigationTarget, expandGroup, hasKerning, kerningMap, allCharsByUnicode, recommendedKerning, glyphDataMap]);
 
     const filteredItems = useMemo(() => {
         if (!searchTerm) {
