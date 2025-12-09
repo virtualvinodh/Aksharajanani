@@ -1,15 +1,17 @@
 
-import { useState, useRef } from 'react';
-import { Point, Path, Segment } from '../../types';
+import { useState } from 'react';
+import { Point, Path, Segment, PathType } from '../../types';
 import { generateId, ToolHookProps } from './types';
 import { paperScope } from '../../services/glyphRenderService';
 import { deepClone } from '../../utils/cloneUtils';
+import { VEC } from '../../utils/vectorUtils';
+import { simplifyPath } from '../../utils/pathUtils';
 
 declare var paper: any;
 
 export const useSliceTool = ({
     isDrawing, setIsDrawing, currentPaths, onPathsChange, previewPath, setPreviewPath,
-    showNotification, t
+    settings
 }: ToolHookProps) => {
     const [sliceStart, setSliceStart] = useState<Point | null>(null);
 
@@ -20,8 +22,6 @@ export const useSliceTool = ({
 
     const move = (point: Point) => {
         if (!isDrawing || !sliceStart) return;
-        
-        // Visualize the slice line
         setPreviewPath({
             id: 'slice-preview',
             type: 'line',
@@ -31,213 +31,273 @@ export const useSliceTool = ({
 
     const end = (endPoint?: Point) => {
         if (!isDrawing || !sliceStart) return;
-        
-        // If endPoint isn't provided (e.g. mouse up outside canvas), use the last point from preview
         const finalPoint = endPoint || (previewPath?.points[1]);
-        
         if (finalPoint) {
             performSlice(sliceStart, finalPoint);
         }
-
         setIsDrawing(false);
         setSliceStart(null);
         setPreviewPath(null);
     };
-    
-    // Helper to convert App Path -> Paper Item
-    const appPathToPaperItem = (pathData: Path): any => {
-         let paperItem: any;
-            
-        if (pathData.type === 'outline' && pathData.segmentGroups) {
-                // Complex compound path
-                const createPaperPath = (segments: Segment[]) => new paperScope.Path({ 
-                segments: segments.map(seg => new paperScope.Segment(
-                    new paperScope.Point(seg.point.x, seg.point.y), 
-                    new paperScope.Point(seg.handleIn.x, seg.handleIn.y), 
-                    new paperScope.Point(seg.handleOut.x, seg.handleOut.y)
-                )), 
-                closed: true,
-                insert: false 
-            });
 
-            if (pathData.segmentGroups.length > 1) {
-                    const nonEmptyGroups = pathData.segmentGroups.filter(g => g.length > 0);
-                    paperItem = new paperScope.CompoundPath({ children: nonEmptyGroups.map(createPaperPath), insert: false });
-            } else if (pathData.segmentGroups.length === 1) {
-                    paperItem = createPaperPath(pathData.segmentGroups[0]);
-            }
-        } else {
-                // Simple path (pen, line, curve, etc.)
-                let segments: any[] = [];
-                
-                // If it's a shape defined by points (pen, line), use them
-                if (pathData.points && pathData.points.length > 0) {
-                    
-                    if (pathData.type === 'pen' && pathData.points.length > 2) {
-                        // Reconstruct smooth pen stroke geometry
-                        const pts = pathData.points;
-                        paperItem = new paperScope.Path({ insert: false });
-                        paperItem.moveTo(new paperScope.Point(pts[0].x, pts[0].y));
-                        for (let i = 1; i < pts.length - 2; i++) {
-                            const p1 = pts[i];
-                            const p2 = pts[i + 1];
-                            const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-                            paperItem.quadraticCurveTo(
-                                new paperScope.Point(p1.x, p1.y),
-                                new paperScope.Point(mid.x, mid.y)
-                            );
-                        }
-                        // Last curve segment
-                        const last = pts[pts.length - 1];
-                        const secondLast = pts[pts.length - 2];
-                        paperItem.quadraticCurveTo(
-                            new paperScope.Point(secondLast.x, secondLast.y),
-                            new paperScope.Point(last.x, last.y)
-                        );
-                    } else if (pathData.type === 'curve' && pathData.points.length === 3) {
-                         // Quadratic Bezier
-                         const [p0, p1, p2] = pathData.points;
-                         paperItem = new paperScope.Path({ insert: false });
-                         paperItem.moveTo(new paperScope.Point(p0.x, p0.y));
-                         paperItem.quadraticCurveTo(
-                             new paperScope.Point(p1.x, p1.y),
-                             new paperScope.Point(p2.x, p2.y)
-                         );
-                    } else {
-                        // Linear segments (line, dot, short pen)
-                        segments = pathData.points.map(p => new paperScope.Point(p.x, p.y));
-                        paperItem = new paperScope.Path({
-                            segments: segments,
-                            closed: ['circle', 'ellipse'].includes(pathData.type),
-                            insert: false
-                        });
-                        
-                        // For circle/ellipse, we technically only have points approximation in 'points' array if converted?
-                        // Actually 'circle'/'ellipse' tool creates paths with many points approximating the shape in `useShapeTool`.
-                        // So treated as polyline is fine, or we can smooth it if we want perfect circles.
-                        // Ideally shape tools should store center/radius but here they store points.
-                    }
-                }
+    // Helper: Line Segment Intersection
+    // Returns the intersection point if found, otherwise null
+    const getSegmentIntersection = (p0: Point, p1: Point, p2: Point, p3: Point): Point | null => {
+        const s1_x = p1.x - p0.x; const s1_y = p1.y - p0.y;
+        const s2_x = p3.x - p2.x; const s2_y = p3.y - p2.y;
+        const s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
+        const t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+        if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+            return { x: p0.x + (t * s1_x), y: p0.y + (t * s1_y) };
         }
-        return paperItem;
+        return null;
+    };
+    
+    // Helper: Convert any path to a dense polyline of Points
+    const getFlattenedPoints = (pathData: Path): { points: Point[], isClosed: boolean } => {
+        paperScope.project.clear();
+        let paperItem: any;
+
+        if (pathData.type === 'outline' && pathData.segmentGroups) {
+             // For outlines, we just use the first group for simplicity in slicing context, 
+             // or flatten the whole compound path.
+             // Complex slicing of compound paths is simplified here to just the main hull.
+            const segments = pathData.segmentGroups[0];
+            if (!segments) return { points: [], isClosed: false };
+            paperItem = new paperScope.Path({
+                segments: segments.map(s => [s.point.x, s.point.y]),
+                closed: true
+            });
+        } else if (pathData.type === 'pen' || pathData.type === 'curve') {
+             // Reconstruct smooth path
+             if (pathData.points.length < 2) return { points: pathData.points, isClosed: false };
+             paperItem = new paperScope.Path({ segments: pathData.points.map(p => [p.x, p.y]) });
+             if (pathData.type === 'pen') paperItem.smooth();
+        } else if (['circle', 'ellipse'].includes(pathData.type) && pathData.points.length >= 2) {
+             // Reconstruct shape
+             const start = pathData.points[0];
+             const end = pathData.points[1]; // or radii logic
+             // Simplified reconstruction for circle/ellipse from points (center + radius point usually)
+             // But usually drawing tools store [center, handle] or similar.
+             // Let's assume standard reconstruction:
+             if (pathData.type === 'circle') {
+                 const r = VEC.len(VEC.sub(start, end));
+                 paperItem = new paperScope.Path.Circle(new paperScope.Point(start.x, start.y), r);
+             } else {
+                 // Ellipse usually stored as bounding box corners or center+radii. 
+                 // Assuming DrawingTool logic: points=[center, corner]
+                 const rx = Math.abs(start.x - end.x);
+                 const ry = Math.abs(start.y - end.y);
+                 paperItem = new paperScope.Path.Ellipse({ center: [start.x, start.y], radius: [rx, ry] });
+             }
+        } else {
+             // Line, Dot
+             return { points: pathData.points, isClosed: false };
+        }
+        
+        if (!paperItem) return { points: [], isClosed: false };
+
+        // Flatten to get dense points
+        paperItem.flatten(2); // 2px tolerance for flattening
+        const points = paperItem.segments.map((s: any) => ({ x: s.point.x, y: s.point.y }));
+        const isClosed = paperItem.closed || (pathData.type === 'pen' && points.length > 2 && VEC.len(VEC.sub(points[0], points[points.length-1])) < 5);
+        
+        return { points, isClosed };
     };
 
     const performSlice = (p1: Point, p2: Point) => {
-        paperScope.project.clear();
-        
-        // 1. Create the Slice Line
-        const sliceLine = new paperScope.Path.Line(
-            new paperScope.Point(p1.x, p1.y), 
-            new paperScope.Point(p2.x, p2.y)
-        );
-        
-        // If the slice is just a click (too short), ignore it
-        if (sliceLine.length < 2) {
-             return;
-        }
-
         let hasSplit = false;
         const newPaths: Path[] = [];
-
-        // 2. Process each existing path
-        // We use deepClone to avoid mutating currentPaths in place during iteration if we were modifying it directly,
-        // though here we build a new array so it's less critical, but good practice.
-        const pathsToProcess = deepClone(currentPaths);
         
-        pathsToProcess.forEach(pathData => {
-            // Convert App Path -> Paper Path
-            const paperItem = appPathToPaperItem(pathData);
+        // Tolerance for considering a cut valid (avoid tiny snippets)
+        const MIN_SEGMENT_LENGTH = 5; 
 
-            if (!paperItem) {
+        currentPaths.forEach(pathData => {
+            // 1. Convert to dense points
+            const { points, isClosed } = getFlattenedPoints(pathData);
+            if (points.length < 2) {
                 newPaths.push(pathData);
                 return;
             }
 
-            // 3. Find Intersections
-            // We need to check if the slice line actually intersects the path.
-            // Note: getIntersections returns locations on the 'paperItem'.
-            const intersections = sliceLine.getIntersections(paperItem);
+            // 2. Find Intersections
+            // We store intersections as { index, point }, where index is the index of the *start* point of the segment.
+            const intersections: { index: number, point: Point }[] = [];
+
+            for (let i = 0; i < points.length - 1; i++) {
+                const segStart = points[i];
+                const segEnd = points[i+1];
+                const hit = getSegmentIntersection(segStart, segEnd, p1, p2);
+                if (hit) {
+                    intersections.push({ index: i, point: hit });
+                }
+            }
             
-            if (intersections.length > 0) {
-                hasSplit = true;
-                
-                // Group intersections by the specific Path object (handling CompoundPaths)
-                const intersectionsByPath = new Map<any, any[]>();
-                
-                intersections.forEach((intersection: any) => {
-                    // intersection.path refers to the specific Path item involved (e.g. child of CompoundPath)
-                    const targetPath = intersection.path; 
-                    if (!intersectionsByPath.has(targetPath)) {
-                        intersectionsByPath.set(targetPath, []);
-                    }
-                    intersectionsByPath.get(targetPath).push(intersection);
-                });
+            // Check closing segment for closed shapes
+            if (isClosed) {
+                const segStart = points[points.length - 1];
+                const segEnd = points[0];
+                const hit = getSegmentIntersection(segStart, segEnd, p1, p2);
+                if (hit) {
+                    intersections.push({ index: points.length - 1, point: hit });
+                }
+            }
 
-                const allParts: any[] = [];
-                
-                // Helper to collect paths, handling splits if needed
-                const processNode = (node: any) => {
-                    if (node.className === 'CompoundPath' || node.className === 'Group') {
-                        node.children.forEach(processNode);
-                    } else if (node.className === 'Path') {
-                        if (intersectionsByPath.has(node)) {
-                            // This path needs splitting
-                            const cutLocs = intersectionsByPath.get(node);
-                            
-                            // Sort intersections by descending offset to split from end to start.
-                            // This preserves offsets for earlier splits.
-                            cutLocs.sort((a: any, b: any) => b.offset - a.offset);
-                            
-                            const splitPieces: any[] = [];
-                            let remaining = node;
-                            
-                            cutLocs.forEach((loc: any) => {
-                                // splitAt() divides the path at the location.
-                                // It returns the *new* path (the part after the split).
-                                // The original 'remaining' path becomes the part *before* the split.
-                                // NOTE: We must use the location relative to the current state of 'remaining'.
-                                // Since we sort descending, 'loc' (which was calculated on the original)
-                                // should still be valid because we haven't touched the geometry *before* it.
-                                
-                                // Paper.js quirk: After splitAt, the location object might be invalidated
-                                // or the path identity changes. 
-                                // However, sorting by offset descending is the standard workaround.
-                                
-                                const newPart = remaining.splitAt(loc);
-                                if (newPart) {
-                                    splitPieces.push(newPart);
-                                }
-                            });
-                            
-                            // The 'remaining' is now the first segment (head)
-                            allParts.push(remaining);
-                            // The splitPieces are the subsequent segments (tails)
-                            // We push them in reverse order of creation to maintain logical flow if needed, 
-                            // but order doesn't matter for independent paths.
-                            splitPieces.forEach(p => allParts.push(p));
-                            
-                        } else {
-                            // No intersection on this specific sub-path
-                            allParts.push(node);
-                        }
-                    }
-                };
-                
-                processNode(paperItem);
-
-                // Convert all resulting parts back to App Paths
-                allParts.forEach(part => {
-                     // Check if part has significant length (ignore tiny artifacts from splitting)
-                     if (part.length > 0.1) {
-                         const appPath = paperPathToAppPath(part);
-                         // Preserve original ID for the first part? No, generate new IDs to avoid conflicts.
-                         // But maybe we want to keep properties?
-                         newPaths.push(appPath);
-                     }
-                });
-                
-            } else {
+            // 3. Logic Check
+            if (intersections.length === 0) {
                 newPaths.push(pathData);
+                return;
+            }
+
+            // For closed shapes, we need even number of cuts (usually 2) to split it.
+            // If 1 cut on a circle, it just becomes an open 'C' shape (valid, but typically implies we missed a cut or it was a tangent).
+            // Let's allow 1 cut on closed shape -> opens it. 2 cuts -> splits it.
+            
+            intersections.sort((a, b) => a.index - b.index);
+
+            hasSplit = true;
+            
+            const createPathFromPoints = (pts: Point[]): Path | null => {
+                if (pts.length < 2) return null;
+                // Renormalize: Simplify the dense polyline back to a reasonable curve
+                const simplified = simplifyPath(pts, 1.0); // 1.0 epsilon
+                if (simplified.length < 2) return null;
+                
+                return {
+                    id: generateId(),
+                    type: 'pen',
+                    points: simplified
+                };
+            };
+
+            if (isClosed) {
+                if (intersections.length === 1) {
+                    // Open the loop at the intersection
+                    // Path: Intersection -> End -> Start -> Intersection
+                    const hit = intersections[0];
+                    const idx = hit.index;
+                    
+                    // Segment 1: Hit -> End
+                    // If idx is last point, then Hit -> End is just Hit. 
+                    // But for closed loop, points[length-1] connects to points[0].
+                    
+                    const newPoly: Point[] = [];
+                    newPoly.push(hit.point);
+                    // Add points from idx+1 to end
+                    for (let i = idx + 1; i < points.length; i++) newPoly.push(points[i]);
+                    // Add points from 0 to idx
+                    for (let i = 0; i <= idx; i++) newPoly.push(points[i]);
+                    newPoly.push(hit.point);
+                    
+                    const path = createPathFromPoints(newPoly);
+                    if (path) newPaths.push(path);
+                    
+                } else {
+                    // Multiple cuts on closed loop.
+                    // We treat the loop as linear: Start->End, but wrap around logic is tricky.
+                    // Easier method: Rotate the array so it starts at the first intersection.
+                    // Then it becomes an open line with cuts.
+                    
+                    const firstCut = intersections[0];
+                    const remainingCuts = intersections.slice(1);
+                    
+                    // Rotate points to start at firstCut
+                    const rotatedPoints: Point[] = [];
+                    rotatedPoints.push(firstCut.point);
+                    for (let i = firstCut.index + 1; i < points.length; i++) rotatedPoints.push(points[i]);
+                    for (let i = 0; i <= firstCut.index; i++) rotatedPoints.push(points[i]);
+                    rotatedPoints.push(firstCut.point); // Close it back to start
+                    
+                    // Now adjust remaining cuts indices relative to new start
+                    // This is complex. 
+                    // Alternative: Just split standard array, then glue first and last pieces?
+                    
+                    // Let's use the simpler "Split and Glue" method for closed loops.
+                    // 1. Split at all indices.
+                    // 2. The first segment (Start -> Cut1) and last segment (CutN -> End) should be joined.
+                    
+                    const segments: Point[][] = [];
+                    let currentSeg: Point[] = [points[0]];
+                    let lastIdx = 0;
+                    
+                    intersections.forEach(hit => {
+                        // Add points up to hit
+                        for(let i = lastIdx + 1; i <= hit.index; i++) currentSeg.push(points[i]);
+                        currentSeg.push(hit.point);
+                        segments.push(currentSeg);
+                        
+                        // Start new segment
+                        currentSeg = [hit.point];
+                        lastIdx = hit.index;
+                    });
+                    
+                    // Add remaining
+                    for(let i = lastIdx + 1; i < points.length; i++) currentSeg.push(points[i]);
+                    // For closed loop original array didn't repeat start at end usually, 
+                    // but if it did, we handle.
+                    
+                    // Now, because it was closed, the last segment connects back to the first segment.
+                    // Merge Last Segment + First Segment
+                    const firstSeg = segments[0];
+                    const lastSeg = currentSeg;
+                    
+                    // Check if they are valid
+                    if (firstSeg.length > 0 && lastSeg.length > 0) {
+                        // Merge: LastSeg points + FirstSeg points (skipping duplicate join point if any)
+                         // But wait, FirstSeg started at points[0]. LastSeg ended at points[end].
+                         // points[end] connects to points[0].
+                         const merged = [...lastSeg, ...firstSeg]; 
+                         segments[0] = merged; // Replace first with merged
+                         // Don't push lastSeg separately
+                    } else {
+                        segments.push(currentSeg);
+                    }
+                    
+                    // Output all segments (except the first one is now the merged one)
+                    segments.forEach(seg => {
+                        const p = createPathFromPoints(seg);
+                        if (p) newPaths.push(p);
+                    });
+                }
+            } else {
+                // Open Path Splitting
+                // Simple: Start -> Cut1, Cut1 -> Cut2, ..., CutN -> End
+                let currentStartPoint = points[0];
+                let currentIndex = 0; // Index in original array
+
+                intersections.forEach(hit => {
+                    const segmentPoints: Point[] = [];
+                    
+                    // If we are starting a fresh segment from a cut point, add it first
+                    if (segmentPoints.length === 0) {
+                        segmentPoints.push(currentStartPoint);
+                    }
+                    
+                    // Add intermediate existing points
+                    for (let i = currentIndex + 1; i <= hit.index; i++) {
+                        segmentPoints.push(points[i]);
+                    }
+                    
+                    // Add cut point
+                    segmentPoints.push(hit.point);
+                    
+                    // Save this segment
+                    const p = createPathFromPoints(segmentPoints);
+                    if (p) newPaths.push(p);
+                    
+                    // Prepare next
+                    currentStartPoint = hit.point;
+                    currentIndex = hit.index;
+                });
+                
+                // Add final segment (CutN -> End)
+                const finalSegment: Point[] = [currentStartPoint];
+                for (let i = currentIndex + 1; i < points.length; i++) {
+                    finalSegment.push(points[i]);
+                }
+                const p = createPathFromPoints(finalSegment);
+                if (p) newPaths.push(p);
             }
         });
 
@@ -245,40 +305,8 @@ export const useSliceTool = ({
             onPathsChange(newPaths);
         }
     };
-    
-    // Helper to convert Paper.js Item back to App Path
-    // Always converts to 'outline' type to preserve the exact split geometry (Bezier handles)
-    const paperPathToAppPath = (paperItem: any): Path => {
-         const segmentGroups: Segment[][] = [];
-         
-         const extractSegments = (item: any) => {
-             if (item.children) {
-                 item.children.forEach(extractSegments);
-             } else if (item.segments) {
-                 const group = item.segments.map((seg: any) => ({
-                     point: { x: seg.point.x, y: seg.point.y },
-                     handleIn: { x: seg.handleIn.x, y: seg.handleIn.y },
-                     handleOut: { x: seg.handleOut.x, y: seg.handleOut.y }
-                 }));
-                 segmentGroups.push(group);
-             }
-         };
-         
-         extractSegments(paperItem);
-         
-         return {
-             id: generateId(),
-             type: 'outline',
-             points: [], 
-             segmentGroups: segmentGroups,
-             // We drop the original groupId because splitting usually implies separating parts.
-             groupId: undefined 
-         };
-    };
 
-    const getCursor = () => {
-        return 'crosshair';
-    };
+    const getCursor = () => 'crosshair';
 
     return { start, move, end, getCursor };
 };
