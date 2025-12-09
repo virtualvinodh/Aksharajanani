@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Point, Path, Tool, AppSettings, ImageTransform, Segment } from '../types';
 import { VEC } from '../utils/vectorUtils';
@@ -11,6 +13,7 @@ import { useCurveTool } from './drawingTools/useCurveTool';
 import { useSelectTool } from './drawingTools/useSelectTool';
 import { useEditTool } from './drawingTools/useEditTool';
 import { useEraserTool } from './drawingTools/useEraserTool';
+import { useSliceTool } from './drawingTools/useSliceTool';
 import { useLayout } from '../contexts/LayoutContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { distanceToSegment } from '../utils/geometryUtils';
@@ -232,6 +235,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const selectTool = useSelectTool(toolProps);
     const editTool = useEditTool(toolProps);
     const eraserTool = useEraserTool(toolProps);
+    const sliceTool = useSliceTool(toolProps);
 
     // --- Interaction Routing ---
 
@@ -257,8 +261,9 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'select': selectTool.start(point, e as React.MouseEvent); break;
             case 'edit': editTool.start(point); break;
             case 'eraser': eraserTool.start(point); break;
+            case 'slice': sliceTool.start(point); break;
         }
-    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, hoveredMetric, glyphBBox, lsb, rsb, metrics, onMetricsChange]);
+    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, sliceTool, hoveredMetric, glyphBBox, lsb, rsb, metrics, onMetricsChange]);
 
     const moveInteraction = useCallback((point: Point, viewportPoint: Point) => {
         // Handle Metric Dragging
@@ -319,8 +324,9 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'select': selectTool.move(point); break;
             case 'edit': editTool.move(point); break;
             case 'eraser': eraserTool.move(point); break;
+            case 'slice': sliceTool.move(point); break;
         }
-    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, isDrawing, draggingMetric, glyphBBox, metrics, lsb, rsb, onMetricsChange]);
+    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, sliceTool, isDrawing, draggingMetric, glyphBBox, metrics, lsb, rsb, onMetricsChange]);
 
     const endInteraction = useCallback(() => {
         isPinchingRef.current = false;
@@ -331,6 +337,8 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             return;
         }
 
+        const point = getCanvasPoint(getViewportPoint({} as any) || {x:0, y:0}); // Hack to get current mouse not needed for all tools
+
         switch (tool) {
             case 'pan': panTool.end(); break;
             case 'pen': case 'calligraphy': penTool.end(); break;
@@ -339,9 +347,10 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'select': selectTool.end(); break;
             case 'edit': editTool.end(); break;
             case 'eraser': eraserTool.end(); break;
+            case 'slice': sliceTool.end(); break; // Slice tool might handle its own end point logic if stored in state
         }
         setHoveredPathIds(new Set());
-    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, draggingMetric]);
+    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, sliceTool, draggingMetric]);
     
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (e.button === 1 || (tool === 'pan' && e.button === 0)) {
@@ -494,6 +503,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'pan': return 'grab';
             case 'select': return selectTool.getCursor();
             case 'edit': return editTool.getCursor();
+            case 'slice': return sliceTool.getCursor();
             case 'eraser': {
                 const eraserDiameter = Math.max(4, Math.min(128, settings.strokeThickness * zoomRef.current));
                 const r = eraserDiameter / 2;
@@ -506,7 +516,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'curve': return curveTool.getCursor();
             default: return 'crosshair';
         }
-    }, [tool, panTool.isPanning, selectTool, editTool, curveTool, settings.strokeThickness, theme, hoveredMetric, draggingMetric]);
+    }, [tool, panTool.isPanning, selectTool, editTool, curveTool, sliceTool, settings.strokeThickness, theme, hoveredMetric, draggingMetric]);
     
     return {
         currentPaths, previewPath, marqueeBox: selectTool.marqueeBox, selectionBox: selectTool.selectionBox,

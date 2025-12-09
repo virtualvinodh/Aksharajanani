@@ -1,4 +1,6 @@
 
+
+
 import React from 'react';
 
 // --- Canvas & Sizing Constants ---
@@ -473,4 +475,11 @@ export const WrenchIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.87-5.83m0 0c.966.028 1.807-.324 2.174-.863a2.578 2.578 0 00-1.28-3.002 6.643 6.643 0 00-6.178.636l-3.324-1.52A1.961 1.961 0 003.543 8.36L8.048 11.8a6.642 6.642 0 00-.236 3.42c.49 1.133 1.808 1.192 2.612 1.192.518 0 1.002-.128 1.346-.242z" />
     </svg>
+);
+
+export const SliceIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+    <path fillRule="evenodd" d="M2.613 2.668a1.5 1.5 0 0 1 2.122.054l16.602 17.717a1.5 1.5 0 0 1-2.19 2.053L2.545 4.775a1.5 1.5 0 0 1 .068-2.107Z" clipRule="evenodd" />
+    <path d="M13.56 5.865a1.5 1.5 0 0 1 1.58-.291l1.5.5a1.5 1.5 0 0 1 .465 2.696l-1.5.75a1.5 1.5 0 0 1-2.045-1.34V5.865ZM5.865 13.56a1.5 1.5 0 0 1 .291-1.58l.5-1.5a1.5 1.5 0 0 1 2.696-.465l.75 1.5a1.5 1.5 0 0 1-1.34 2.045H5.865Z" />
+  </svg>
 );

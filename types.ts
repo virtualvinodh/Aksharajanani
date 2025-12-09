@@ -3,6 +3,7 @@
 
 
 
+
 export interface Point {
   x: number;
   y: number;
@@ -277,7 +278,7 @@ export interface LocaleInfo {
   nativeName: string;
 }
 
-export type Tool = 'pen' | 'eraser' | 'line' | 'dot' | 'circle' | 'curve' | 'select' | 'pan' | 'edit' | 'ellipse' | 'calligraphy';
+export type Tool = 'pen' | 'eraser' | 'line' | 'dot' | 'circle' | 'curve' | 'select' | 'pan' | 'edit' | 'ellipse' | 'calligraphy' | 'slice';
 
 export interface UnicodeBlock {
   name: string;

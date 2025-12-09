@@ -1,7 +1,9 @@
 
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
-import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, LinkIcon, BrokenLinkIcon, GroupIcon, UngroupIcon } from '../constants';
+import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, LinkIcon, BrokenLinkIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
 
 interface DrawingToolbarProps {
@@ -179,6 +181,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
             
             <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
             <ToolButton tool="eraser" currentTool={currentTool} label="Eraser" onClick={setCurrentTool} disabled={isLocked}><EraserIcon /></ToolButton>
+            <ToolButton tool="slice" currentTool={currentTool} label="Slice" onClick={setCurrentTool} disabled={isLocked}><SliceIcon /></ToolButton>
         </>
     );
 

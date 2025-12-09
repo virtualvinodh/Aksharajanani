@@ -452,7 +452,23 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       drawControlPoints(ctx, pathsToRender, focusedPathId, selectedPointInfo);
     }
 
-    if (previewPath) renderPaths(ctx, [previewPath], { color: theme === 'dark' ? '#6366F1' : '#818CF8', strokeThickness: settings.strokeThickness, contrast: settings.contrast, lineDash: [5, 5] });
+    if (previewPath) {
+        if (tool === 'slice') {
+             // Specific styling for slice tool: Red, Thin, Dashed
+             renderPaths(ctx, [previewPath], { 
+                 color: '#EF4444', 
+                 strokeThickness: 2 / zoom, 
+                 lineDash: [4 / zoom, 4 / zoom] 
+             });
+        } else {
+             renderPaths(ctx, [previewPath], { 
+                 color: theme === 'dark' ? '#6366F1' : '#818CF8', 
+                 strokeThickness: settings.strokeThickness, 
+                 contrast: settings.contrast, 
+                 lineDash: [5, 5] 
+             });
+        }
+    }
     
     if (tool === 'select') drawSelectionUI(ctx);
 
