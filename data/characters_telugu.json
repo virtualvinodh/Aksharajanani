@@ -170,8 +170,29 @@
       { "name": "", "glyphClass": "mark", "lsb": 0  },
       { "name": "", "glyphClass": "mark", "lsb": 0  },
       { "name": "", "glyphClass": "mark",  "composite": [ "్త", ""], "advWidth": 0, "if": "" },
-      { "name": "", "glyphClass": "mark",  "composite": [ "్ట", ""], "advWidth": 0, "if": "" }
+      { "name": "", "glyphClass": "mark",  "composite": [ "్ట", ""], "advWidth": 0, "if": "" },
 
+      {  "name": "్ఖ.sp", "glyphClass": "mark", "link": ["్ఖ"], "hidden": true  },
+      {  "name": "్గ.sp", "glyphClass": "mark", "link": ["్గ"], "hidden": true },
+      {  "name": "్ఘ.sp", "glyphClass": "mark",  "link": ["్ఘ"], "hidden": true  },
+      {  "name": "్ఙ.sp", "glyphClass": "mark",  "link": ["్ఙ"], "hidden": true  },
+      {  "name": "్జ.sp", "glyphClass": "mark",  "link": ["్జ"], "hidden": true  },
+      {  "name": "్ఝ.sp", "glyphClass": "mark",  "link": ["్ఝ"], "hidden": true  },
+      {  "name": "్ఞ.sp", "glyphClass": "mark",  "link": ["్ఞ"], "hidden": true  },
+      {  "name": "్ట.sp", "glyphClass": "mark",  "link": ["్ట"], "hidden": true  },
+      {  "name": "్ఠ.sp", "glyphClass": "mark",  "link": ["్ఠ"], "hidden": true  },
+      {  "name": "్డ.sp", "glyphClass": "mark",  "link": ["్డ"], "hidden": true  },
+      {  "name": "్ఢ.sp", "glyphClass": "mark",  "link": ["్ఢ"], "hidden": true  },
+      {  "name": "్ణ.sp", "glyphClass": "mark",  "link": ["్ణ"], "hidden": true  },
+      {  "name": "్త.sp", "glyphClass": "mark", "link": ["్త"], "hidden": true },
+      {  "name": "్ద.sp", "glyphClass": "mark",  "link": ["్ద"], "hidden": true  },
+      {  "name": "్ధ.sp", "glyphClass": "mark",  "link": ["్ధ"], "hidden": true  },
+      {  "name": "్థ.sp", "glyphClass": "mark",  "link": ["్థ"], "hidden": true  },
+      {  "name": "్ఱ.sp", "glyphClass": "mark",  "link": ["్ఱ"], "hidden": true  },
+      {  "name": "్ల.sp", "glyphClass": "mark", "link": ["్ల"], "hidden": true },
+      {  "name": "్ష.sp", "glyphClass": "mark",  "link": ["్ష"], "hidden": true  },
+      {  "name": "్హ.sp", "glyphClass": "mark",  "link": ["్హ"], "hidden": true  },
+      { "name": "్ఴ.sp", "glyphClass": "mark", "link": ["్ఴ"], "hidden": true  }
     ]
   },
   {

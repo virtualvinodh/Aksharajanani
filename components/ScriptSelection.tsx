@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ScriptConfig, CharacterSet, CharacterDefinition, ProjectData, Character, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -326,9 +328,36 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                 ...additionalCharDefs,
             ];
             
-            scriptWithAddons.characterSetData = combinedCharDefs;
+            // Assign PUA unicodes for variant characters missing them,
+            // so they can be processed by the variant selection logic.
+            let puaCounter = 0xE000 - 1;
+            // Scan for existing PUA usage to avoid collisions
+            (combinedCharDefs.filter(d => 'characters' in d) as CharacterSet[])
+                .flatMap(cs => cs.characters)
+                .forEach(char => {
+                    if (char.unicode && char.unicode >= 0xE000 && char.unicode <= 0xF8FF) {
+                        puaCounter = Math.max(puaCounter, char.unicode);
+                    }
+                });
 
-            const allChars = (combinedCharDefs.filter(d => 'characters' in d) as CharacterSet[]).flatMap(cs => cs.characters);
+            const charDefsWithIds = combinedCharDefs.map(def => {
+                if ('characters' in def) {
+                    const set = def as CharacterSet;
+                    const newChars = set.characters.map(char => {
+                        if (char.unicode === undefined) {
+                            puaCounter++;
+                            return { ...char, unicode: puaCounter, isPuaAssigned: true };
+                        }
+                        return char;
+                    });
+                    return { ...set, characters: newChars };
+                }
+                return def;
+            });
+            
+            scriptWithAddons.characterSetData = charDefsWithIds;
+
+            const allChars = (charDefsWithIds.filter(d => 'characters' in d) as CharacterSet[]).flatMap(cs => cs.characters);
             const variantsByOptionKey = new Map<string, Character[]>();
 
             allChars.forEach(char => {
