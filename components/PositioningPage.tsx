@@ -60,14 +60,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     const positioningData = useMemo(() => {
         const newLigaturesByKey = new Map<string, Character>();
 
-        let puaCounter = 0xE000 - 1;
-        characterSets!.forEach(set => {
-            set.characters.forEach(char => {
-                if (char.unicode && char.unicode >= 0xE000 && char.unicode <= 0xF8FF) {
-                    puaCounter = Math.max(puaCounter, char.unicode);
-                }
-            });
-        });
+        // Use Plane 16 for temporary visual-only IDs to avoid collision with persistent PUAs in Plane 0/15
+        let virtualPuaCounter = 0x100000;
 
         const rulesLigas = { 
             ...(fontRules?.tml2?.abvs?.liga || {}), 
@@ -122,11 +116,12 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                             if (existingChar) {
                                 targetLigature = existingChar;
                             } else {
-                                // Create a new PUA character.
-                                puaCounter++;
+                                // Create a new virtual PUA character in Plane 16.
+                                // These are temporary for display only and won't be saved unless confirmed.
+                                virtualPuaCounter++;
                                 targetLigature = {
                                     name: finalLigatureName,
-                                    unicode: puaCounter,
+                                    unicode: virtualPuaCounter,
                                     glyphClass: 'ligature',
                                     composite: [baseName, markName]
                                 };

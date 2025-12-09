@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import Modal from './Modal';
@@ -12,6 +11,15 @@ interface AddGlyphModalProps {
   onCheckNameExists: (name: string) => boolean;
   initialName?: string;
 }
+
+// Map common names to their standard unicode points
+const STANDARD_NAME_MAP: Record<string, number> = {
+    'space': 32,
+    'nbsp': 160,
+    'zwnj': 8204,
+    'zwj': 8205
+};
+
 
 const AddGlyphModal: React.FC<AddGlyphModalProps> = ({ isOpen, onClose, onAdd, onCheckExists, onCheckNameExists, initialName }) => {
   const { t } = useLocale();
@@ -57,9 +65,21 @@ const AddGlyphModal: React.FC<AddGlyphModalProps> = ({ isOpen, onClose, onAdd, o
             return;
           }
         } else {
-          // For multi-character strings, unicode will be undefined.
-          // It will be assigned a PUA codepoint later in useAppActions.
-          unicode = undefined;
+          // Check standard name map first
+          const lowerName = name.toLowerCase();
+          if (STANDARD_NAME_MAP[lowerName]) {
+             unicode = STANDARD_NAME_MAP[lowerName];
+             if (onCheckExists(unicode)) {
+                 // If the standard ID is taken, we fall back to undefined (which will trigger a PUA assignment)
+                 // or we could show an error. Let's show an error if it's a standard name collision.
+                 setError(t('errorUnicodeFromCharExists', { char: name, codepoint: unicode.toString(16).toUpperCase() }));
+                 return;
+             }
+          } else {
+             // For multi-character strings that aren't in the standard map, unicode will be undefined.
+             // It will be assigned a PUA codepoint later in useAppActions.
+             unicode = undefined;
+          }
         }
         onAdd({ unicode, name });
 
@@ -79,8 +99,21 @@ const AddGlyphModal: React.FC<AddGlyphModalProps> = ({ isOpen, onClose, onAdd, o
             return;
         }
         
+        // Try to derive a name if it's a single printable char, otherwise just use the code
+        // Or if it's a known name like 'space'
         name = String.fromCodePoint(unicode);
+        
+        // Reverse lookup for standard names to be helpful (optional but nice)
+        const knownName = Object.keys(STANDARD_NAME_MAP).find(key => STANDARD_NAME_MAP[key] === unicode);
+        if (knownName) {
+            name = knownName;
+        }
+
         if (onCheckNameExists(name)) {
+            // If the default name (the char itself) exists, we might still proceed if the unicode is different,
+            // but here we are adding BY codepoint, so collision on name is tricky.
+            // If 'space' exists (id=32) and we try to add U+0020, onCheckExists would catch it.
+            // If we try to add U+E000 and name it 'space', checkNameExists catches it.
             setError(t('errorNameExists'));
             return;
         }
@@ -118,6 +151,7 @@ const AddGlyphModal: React.FC<AddGlyphModalProps> = ({ isOpen, onClose, onAdd, o
           <div>
             <label htmlFor="char-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('characterLabel')}</label>
             <input id="char-input" type="text" value={charValue} onChange={e => setCharValue(e.target.value)} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-3xl text-center font-bold" autoFocus />
+            <p className="text-xs text-gray-500 mt-1">Type a single character or a name (e.g. "space", "zwj").</p>
           </div>
         ) : (
           <div>

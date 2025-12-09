@@ -21,6 +21,14 @@ export interface SaveOptions {
     silent?: boolean;
 }
 
+// Standard names that should map to specific Unicode points instead of PUA
+const STANDARD_NAMES: Record<string, number> = {
+    'space': 32,
+    'nbsp': 160,
+    'zwnj': 8204,
+    'zwj': 8205
+};
+
 export const useGlyphActions = (
     dependencyMap: React.MutableRefObject<Map<number, Set<number>>>,
     projectId: number | undefined
@@ -34,6 +42,43 @@ export const useGlyphActions = (
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
     
+    // --- Atomic PUA Cursor ---
+    // Tracks the highest assigned PUA to prevent race conditions during rapid additions
+    const puaCursorRef = useRef<number>(0xE000 - 1);
+
+    // Sync cursor with loaded data, but ensure it never moves backwards during a session
+    useEffect(() => {
+        let maxFound = 0xE000 - 1;
+        allCharsByUnicode.forEach((char, unicode) => {
+            // Check BMP PUA (E000-F8FF)
+            if (unicode >= 0xE000 && unicode <= 0xF8FF) {
+                maxFound = Math.max(maxFound, unicode);
+            }
+            // Check Supplementary PUA-A (F0000-FFFFD)
+            else if (unicode >= 0xF0000 && unicode <= 0xFFFFD) {
+                maxFound = Math.max(maxFound, unicode);
+            }
+        });
+        
+        // Only update if the found max is greater than current cursor to strictly increase
+        if (maxFound > puaCursorRef.current) {
+            puaCursorRef.current = maxFound;
+        }
+    }, [allCharsByUnicode]);
+
+    const getNextAtomicPua = useCallback(() => {
+        let next = puaCursorRef.current + 1;
+        
+        // Overflow Protection: If BMP PUA is full (hitting CJK Compatibility at F900), 
+        // jump to Plane 15 (Supplementary Private Use Area-A)
+        if (next > 0xF8FF && next < 0xF0000) {
+            next = 0xF0000;
+        }
+        
+        puaCursorRef.current = next;
+        return next;
+    }, []);
+
     // Track mounting state to cancel async operations if the user leaves the project
     const isMounted = useRef(true);
     useEffect(() => {
@@ -398,15 +443,23 @@ export const useGlyphActions = (
     const handleAddGlyph = useCallback((charData: { unicode?: number; name: string }, targetSetName?: string) => {
         let finalUnicode = charData.unicode;
         let isPuaAssigned = false;
+        
+        // Handle name mapping if no unicode provided
+        if (finalUnicode === undefined) {
+             const lowerName = charData.name.trim().toLowerCase();
+             if (STANDARD_NAMES[lowerName]) {
+                 finalUnicode = STANDARD_NAMES[lowerName];
+                 // Ensure this standard mapped unicode doesn't clash
+                 if (allCharsByUnicode.has(finalUnicode)) {
+                     // If it clashes, we can't use the standard map. Fallback to PUA.
+                     finalUnicode = undefined;
+                 }
+             }
+        }
     
         if (finalUnicode === undefined) {
-            let puaCounter = 0xE000 - 1;
-            allCharsByUnicode.forEach(char => {
-                if (char.unicode && char.unicode >= 0xE000 && char.unicode <= 0xF8FF) {
-                    puaCounter = Math.max(puaCounter, char.unicode);
-                }
-            });
-            finalUnicode = puaCounter + 1;
+            // Use atomic PUA generator to prevent race conditions
+            finalUnicode = getNextAtomicPua();
             isPuaAssigned = true;
         }
     
@@ -431,7 +484,7 @@ export const useGlyphActions = (
         layout.closeModal();
         layout.showNotification(t('glyphAddedSuccess', { name: newChar.name }));
         layout.selectCharacter(newChar);
-    }, [characterDispatch, layout, t, allCharsByUnicode]);
+    }, [characterDispatch, layout, t, allCharsByUnicode, getNextAtomicPua]);
     
     // New function for direct quick add without modal
     const handleQuickAddGlyph = useCallback((input: string, targetSetName: string = 'Custom Glyphs') => {
@@ -488,7 +541,8 @@ export const useGlyphActions = (
                     return;
                 }
              } else {
-                 // Multi-character string -> PUA
+                 // Multi-character string -> PUA or Standard Map
+                 // Logic handled inside handleAddGlyph
                  unicode = undefined; 
              }
         }

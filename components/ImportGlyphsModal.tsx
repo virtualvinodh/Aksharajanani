@@ -29,7 +29,7 @@ interface ComparisonItem {
 const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, onImport, allScripts }) => {
   const { t } = useLocale();
   const { glyphDataMap: currentGlyphData, version: glyphVersion } = useGlyphData();
-  const { allCharsByName: currentCharsByName } = useProject();
+  const { allCharsByName: currentCharsByName, dispatchCharacterAction } = useProject();
   const { settings } = useSettings();
 
   const [step, setStep] = useState<'selectFile' | 'selectGlyphs' | 'confirm'>('selectFile');
@@ -111,7 +111,6 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
   const comparisons = useMemo((): ComparisonItem[] => {
     if (!sourceProject || !sourceProject.characterSets) return [];
     
-    // Explicitly type the Map constructor to ensure values are GlyphData, resolving 'unknown' type errors.
     const sourceGlyphDataByUnicode = new Map<number, GlyphData>(sourceProject.glyphs);
     const sourceCharsByName = new Map<string, Character>();
     sourceProject.characterSets.forEach(set => {
@@ -128,15 +127,32 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
         const sourceGlyph = sourceGlyphDataByUnicode.get(sourceChar.unicode!);
         
         if (sourceGlyph && isGlyphDrawn(sourceGlyph)) {
+            // MATCHING LOGIC:
+            // Always match by NAME first.
+            // If Target has a char with the same name, we use the Target's unicode ID.
+            // If Target does NOT have it, we use the Source's unicode ID (for display/selection),
+            // but mark it for re-assignment if it conflicts.
+            
             const targetChar = currentCharsByName.get(sourceName);
             
             if (targetChar && targetChar.unicode !== undefined) {
+                // Case 1: Exists in Target (Match by Name)
                 drawnSourceGlyphs.push({
-                    unicode: targetChar.unicode, // IMPORTANT: Use target project's unicode
+                    unicode: targetChar.unicode, // Use Target ID
                     name: sourceName,
                     sourceGlyph: sourceGlyph,
                     targetIsDrawn: isGlyphDrawn(currentGlyphData.get(targetChar.unicode)),
                     targetCharExists: true,
+                });
+            } else {
+                // Case 2: New Character (not in Target)
+                // We use the Source's unicode as a temporary key for the list
+                drawnSourceGlyphs.push({
+                    unicode: sourceChar.unicode!,
+                    name: sourceName,
+                    sourceGlyph: sourceGlyph,
+                    targetIsDrawn: false,
+                    targetCharExists: false, 
                 });
             }
         }
@@ -175,9 +191,53 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
   }, [selectedUnicodes, comparisons]);
 
   const handleConfirmImport = () => {
-    const glyphsToImport = comparisons
-      .filter(c => selectedUnicodes.has(c.unicode))
-      .map(c => [c.unicode, c.sourceGlyph] as [number, GlyphData]);
+    const glyphsToImport: [number, GlyphData][] = [];
+    const newCharactersToAdd: Character[] = [];
+    
+    // We need to determine the next available PUA for new imports to avoid collision
+    let puaCounter = 0xE000 - 1;
+    // Scan existing characters to find max PUA
+    currentCharsByName.forEach(char => {
+        if (char.unicode && char.unicode >= 0xE000 && char.unicode <= 0xF8FF) {
+            puaCounter = Math.max(puaCounter, char.unicode);
+        }
+    });
+
+    comparisons.forEach(comp => {
+        if (selectedUnicodes.has(comp.unicode)) {
+            if (comp.targetCharExists) {
+                // Overwrite existing glyph using its own ID
+                glyphsToImport.push([comp.unicode, comp.sourceGlyph]);
+            } else {
+                // Import new character (likely a PUA from source)
+                // Assign a NEW valid PUA for the target project to ensure uniqueness
+                puaCounter++;
+                const newUnicode = puaCounter;
+                
+                // Add definition
+                newCharactersToAdd.push({
+                    name: comp.name,
+                    unicode: newUnicode,
+                    glyphClass: 'base', // Default to base, could be refined if source char class is known but simplified here
+                    isCustom: true,
+                    isPuaAssigned: true
+                });
+                
+                // Add glyph data
+                glyphsToImport.push([newUnicode, comp.sourceGlyph]);
+            }
+        }
+    });
+
+    // 1. Add definitions first if any
+    if (newCharactersToAdd.length > 0) {
+        dispatchCharacterAction({ 
+            type: 'ADD_CHARACTERS', 
+            payload: { characters: newCharactersToAdd, activeTabNameKey: 'Custom Glyphs' } 
+        });
+    }
+
+    // 2. Import glyph paths
     onImport(glyphsToImport);
     handleClose();
   };
@@ -258,11 +318,14 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
                                 <td className="p-2 font-semibold">{comp.name}</td>
                                 <td className="p-2"><div className="flex justify-center"><GlyphTile character={{name: comp.name, unicode: comp.unicode}} glyphData={comp.sourceGlyph} strokeThickness={sourceProject?.settings.strokeThickness || 15} /></div></td>
                                 <td className="p-2 text-center text-xl text-gray-400">→</td>
-                                <td className="p-2"><div className="flex justify-center"><GlyphTile character={{name: comp.name, unicode: comp.unicode}} glyphData={currentGlyphData.get(comp.unicode)} strokeThickness={settings?.strokeThickness || 15} /></div></td>
+                                <td className="p-2"><div className="flex justify-center"><GlyphTile character={{name: comp.name, unicode: comp.unicode}} glyphData={comp.targetCharExists ? currentGlyphData.get(comp.unicode) : undefined} strokeThickness={settings?.strokeThickness || 15} /></div></td>
                                 <td className="p-2">
                                     {comp.targetIsDrawn 
                                         ? <span className="text-yellow-600 dark:text-yellow-400 font-semibold">⚠️ {t('willBeOverwritten')}</span>
-                                        : <span className="text-green-600 dark:text-green-400">{t('willBeFilled')}</span>
+                                        : (comp.targetCharExists 
+                                            ? <span className="text-green-600 dark:text-green-400">{t('willBeFilled')}</span>
+                                            : <span className="text-blue-600 dark:text-blue-400 italic">New Custom Glyph</span>
+                                          )
                                     }
                                 </td>
                             </tr>
