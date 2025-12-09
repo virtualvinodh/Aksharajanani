@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Point, Path, Tool, AppSettings, ImageTransform, Segment } from '../types';
 import { VEC } from '../utils/vectorUtils';
@@ -347,7 +348,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'select': selectTool.end(); break;
             case 'edit': editTool.end(); break;
             case 'eraser': eraserTool.end(); break;
-            case 'slice': sliceTool.end(); break; // Slice tool might handle its own end point logic if stored in state
+            case 'slice': sliceTool.end(); break; 
         }
         setHoveredPathIds(new Set());
     }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, sliceTool, draggingMetric]);
@@ -527,6 +528,8 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         handleWheel, handleDoubleClick, getCursor, handles: selectTool.handles,
         isMobile: selectTool.isMobile, HANDLE_SIZE: selectTool.HANDLE_SIZE,
         // Computed metrics for rendering
-        glyphBBox, hoveredMetric, draggingMetric
+        glyphBBox, hoveredMetric, draggingMetric,
+        // Added highlightedPathId from slice tool
+        highlightedPathId: sliceTool.highlightedPathId
     };
 };

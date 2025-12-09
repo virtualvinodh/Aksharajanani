@@ -1,4 +1,8 @@
 
+
+
+
+
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -63,7 +67,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     handleMouseDown, handleMouseMove, handleMouseUp, handleTouchStart, handleTouchMove,
     handleTouchEnd, handleTouchCancel, handleWheel, handleDoubleClick, getCursor, isMobile, HANDLE_SIZE, handles,
     // Metric state from hook
-    glyphBBox, hoveredMetric, draggingMetric
+    glyphBBox, hoveredMetric, draggingMetric,
+    // Slice Tool state
+    highlightedPathId
   } = useDrawingCanvas({
     canvasRef, initialPaths, onPathsChange, tool, onToolChange, zoom, setZoom, viewOffset, setViewOffset,
     settings, backgroundImage, imageTransform, onImageTransformChange, selectedPathIds, onSelectionChange,
@@ -387,6 +393,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const hoveredPaths: Path[] = [];
     const selectedNotHoveredPaths: Path[] = [];
     const normalPaths: Path[] = [];
+    const highlightedPaths: Path[] = [];
     
     let pathsToRender = currentPaths;
     if (previewTransform && selectionBox && selectedPathIds.size > 0) {
@@ -431,6 +438,10 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }
 
     pathsToRender.forEach(path => {
+        if (highlightedPathId === path.id) {
+             highlightedPaths.push(path);
+        }
+
         if ((tool === 'select' || tool === 'edit') && hoveredPathIds.has(path.id)) {
             hoveredPaths.push(path);
         } else if (selectedPathIds.has(path.id)) {
@@ -439,6 +450,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             normalPaths.push(path);
         }
     });
+
+    // Render highlighted path (underneath standard rendering if possible, but distinct)
+    if (highlightedPaths.length > 0) {
+         renderPaths(ctx, highlightedPaths, { strokeThickness: settings.strokeThickness + 4, contrast: settings.contrast, color: '#22D3EE' }); // Cyan highlight glow
+    }
 
     renderPaths(ctx, normalPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: mainColor });
     if (selectedNotHoveredPaths.length > 0) {
@@ -473,7 +489,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     if (tool === 'select') drawSelectionUI(ctx);
 
     ctx.restore();
-  }, [currentPaths, previewPath, marqueeBox, selectionBox, width, height, settings, metrics, theme, tool, zoom, viewOffset, currentCharacter, gridConfig, bgImageObject, backgroundImageOpacity, imageTransform, focusedPathId, selectedPointInfo, lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides, drawControlPoints, drawSelectionUI, hoveredPathIds, selectedPathIds, isInitiallyDrawn, previewTransform, glyphBBox, hoveredMetric, draggingMetric]);
+  }, [currentPaths, previewPath, marqueeBox, selectionBox, width, height, settings, metrics, theme, tool, zoom, viewOffset, currentCharacter, gridConfig, bgImageObject, backgroundImageOpacity, imageTransform, focusedPathId, selectedPointInfo, lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides, drawControlPoints, drawSelectionUI, hoveredPathIds, selectedPathIds, isInitiallyDrawn, previewTransform, glyphBBox, hoveredMetric, draggingMetric, highlightedPathId]);
   
   return (
     <canvas
