@@ -200,6 +200,8 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
     currentCharsByName.forEach(char => {
         if (char.unicode && char.unicode >= 0xE000 && char.unicode <= 0xF8FF) {
             puaCounter = Math.max(puaCounter, char.unicode);
+        } else if (char.unicode && char.unicode >= 0xF0000 && char.unicode <= 0xFFFFD) {
+            puaCounter = Math.max(puaCounter, char.unicode);
         }
     });
 
@@ -212,6 +214,12 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
                 // Import new character (likely a PUA from source)
                 // Assign a NEW valid PUA for the target project to ensure uniqueness
                 puaCounter++;
+                
+                // Overflow protection: Jump to Plane 15 if BMP PUA is full
+                if (puaCounter > 0xF8FF && puaCounter < 0xF0000) {
+                    puaCounter = 0xF0000;
+                }
+                
                 const newUnicode = puaCounter;
                 
                 // Add definition
