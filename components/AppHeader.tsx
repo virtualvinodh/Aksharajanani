@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning, FilterMode } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -199,15 +198,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                          {hasUnsavedRules && <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white dark:ring-gray-800" title="Unsaved changes"></span>}
                     </button>
 
-                    <button onClick={onCompareClick} title={t('compare')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
-                         <CompareIcon />
-                        <span className="hidden md:inline">{t('compare')}</span>
-                    </button>
                     <button onClick={onExportClick} disabled={isExporting} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:cursor-wait text-sm sm:text-base">
                         {isExporting ? <SpinnerIcon /> : <ExportIcon />}
                         <span className="hidden md:inline">{isExporting ? t('exporting') : t('exportOtf')}</span>
                     </button>
                     <button onClick={onTestClick} title={t('testFont')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><TestIcon /><span className="hidden md:inline">{t('testFont')}</span></button>
+                    <button onClick={onSettingsClick} title={t('settings')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><SettingsIcon /><span className="hidden md:inline">{t('settings')}</span></button>
 
                     <div className="relative">
                         <button onClick={() => setIsMoreMenuOpen(prev => !prev)} className="p-2 sm:p-2.5 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"><MoreIcon /></button>
@@ -217,15 +213,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 <button onClick={() => { onExportTemplate(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ExportIcon /> {t('exportTemplate')}</button>
                                 <button onClick={() => { onSaveAs(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CopyIcon /> Save Copy...</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-                                <button onClick={() => { onAddGlyphClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><AddIcon className="h-5 w-5" /> {t('addGlyph')}</button>
                                 <button onClick={() => { onImportGlyphsClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ImportIcon /> {t('importFromProject')}</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                 <button onClick={() => { onTakeSnapshot(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CameraIcon /> Take Snapshot</button>
                                 <button onClick={() => { onRestoreSnapshot(); setIsMoreMenuOpen(false); }} disabled={!hasSnapshot} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"><HistoryIcon /> Restore Snapshot</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-                                <button onClick={() => { onSettingsClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><SettingsIcon /> {t('settings')}</button>
-                                <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-                                <button onClick={() => { onChangeScriptClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><SwitchScriptIcon /> {t('changeScript')}</button>
                                 <button onClick={() => { onShowAbout(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><AboutIcon /> {t('about')}</button>
                                 <button onClick={() => { onShowHelp(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><HelpIcon /> {t('help')}</button>
                                 <button onClick={() => { onShowTestCases(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><TestCaseIcon /> {t('testCases')}</button>

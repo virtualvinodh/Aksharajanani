@@ -1,3 +1,4 @@
+
 import { Character, KerningMap, MarkPositioningMap, PositioningRules, GlyphData, FontMetrics, Path } from '../types';
 import { BoundingBox } from './glyphRenderService';
 import { DRAWING_CANVAS_SIZE } from '../constants';
@@ -345,24 +346,71 @@ export const generateFea = (
             }
         }
         const hasInlineRules = anonymousRulesContent.trim() !== '';
+
+        // Check if the feature references any named lookups
+        const hasNamedLookups = (children.length > 0 && children.some((c: any) => c.type === 'lookup')) || 
+                                (!children.length && featureData.lookups && Array.isArray(featureData.lookups) && featureData.lookups.length > 0);
     
-        // Handle lookups based on the 'children' array if it exists (new format).
-        if (children.length > 0) {
-            for (const child of children) {
-                if (child.type === 'lookup') {
-                    featureLookups.push(child.name);
-                } else if (child.type === 'inline' && hasInlineRules) {
+        if (!hasNamedLookups && hasInlineRules) {
+            // SIMPLE MODE: No named lookups, so we can output rules directly into the feature block.
+            // This avoids creating a lookup wrapper, which is cleaner and prevents issues with mixed rule types inside a single lookup.
+            let featureBlock = `feature ${featureTag} {\n`;
+            
+            // Add feature-level lookup flags
+            if (featureData.lookupflags) {
+                for (const flagName in featureData.lookupflags) {
+                    if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
+                        featureBlock += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
+                    }
+                }
+            }
+            
+            featureBlock += anonymousRulesContent;
+            featureBlock += `} ${featureTag};\n\n`;
+            feaContent += featureBlock;
+            if (!allGsubFeatures.includes(featureTag)) allGsubFeatures.push(featureTag);
+
+        } else {
+            // MIXED or NAMED MODE: Use lookup wrappers/references to support ordering.
+            // This preserves the original behavior for complex scenarios.
+            
+            // Handle lookups based on the 'children' array if it exists (new format).
+            if (children.length > 0) {
+                for (const child of children) {
+                    if (child.type === 'lookup') {
+                        featureLookups.push(child.name);
+                    } else if (child.type === 'inline' && hasInlineRules) {
+                        let inlineLookupContent = '';
+                        // 2a. If lookupflags exist, move them inside the anonymous lookup.
+                        if (featureData.lookupflags) {
+                            for (const flagName in featureData.lookupflags) {
+                                if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
+                                    inlineLookupContent += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
+                                }
+                            }
+                        }
+                        inlineLookupContent += anonymousRulesContent;
+                        
+                        const anonLookupName = `${featureTag}_inline_rules`;
+                        if (!allLookupDefinitions.includes(`lookup ${anonLookupName}`)) {
+                            allLookupDefinitions += `lookup ${anonLookupName} {\n${inlineLookupContent}} ${anonLookupName};\n\n`;
+                            generatedLookupNames.add(anonLookupName);
+                        }
+                        featureLookups.push(anonLookupName);
+                    }
+                }
+            } else { // Fallback for old data structure without 'children'.
+                if (featureData.lookups && Array.isArray(featureData.lookups)) {
+                    featureLookups.push(...featureData.lookups);
+                }
+                if (hasInlineRules) {
                     let inlineLookupContent = '';
-                    // 2a. If lookupflags exist, move them inside the anonymous lookup.
                     if (featureData.lookupflags) {
                         for (const flagName in featureData.lookupflags) {
-                            if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
-                                inlineLookupContent += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
-                            }
+                            inlineLookupContent += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
                         }
                     }
                     inlineLookupContent += anonymousRulesContent;
-                    
                     const anonLookupName = `${featureTag}_inline_rules`;
                     if (!allLookupDefinitions.includes(`lookup ${anonLookupName}`)) {
                         allLookupDefinitions += `lookup ${anonLookupName} {\n${inlineLookupContent}} ${anonLookupName};\n\n`;
@@ -371,45 +419,27 @@ export const generateFea = (
                     featureLookups.push(anonLookupName);
                 }
             }
-        } else { // Fallback for old data structure without 'children'.
-            if (featureData.lookups && Array.isArray(featureData.lookups)) {
-                featureLookups.push(...featureData.lookups);
-            }
-            if (hasInlineRules) {
-                let inlineLookupContent = '';
-                if (featureData.lookupflags) {
-                    for (const flagName in featureData.lookupflags) {
-                        inlineLookupContent += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
-                    }
-                }
-                inlineLookupContent += anonymousRulesContent;
-                const anonLookupName = `${featureTag}_inline_rules`;
-                if (!allLookupDefinitions.includes(`lookup ${anonLookupName}`)) {
-                    allLookupDefinitions += `lookup ${anonLookupName} {\n${inlineLookupContent}} ${anonLookupName};\n\n`;
-                    generatedLookupNames.add(anonLookupName);
-                }
-                featureLookups.push(anonLookupName);
-            }
-        }
+            
+            const validLookups = featureLookups.filter(name => generatedLookupNames.has(name));
         
-        const validLookups = featureLookups.filter(name => generatedLookupNames.has(name));
-    
-        if (validLookups.length > 0) {
-            let featureBlock = `feature ${featureTag} {\n`;
-            // 3. Only add lookupflags at the feature level if there are NO inline rules.
-            if (featureData.lookupflags && !hasInlineRules) {
-                for (const flagName in featureData.lookupflags) {
-                    if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
-                        featureBlock += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
+            if (validLookups.length > 0) {
+                let featureBlock = `feature ${featureTag} {\n`;
+                // 3. Only add lookupflags at the feature level if there are NO inline rules (since those are wrapped with flags).
+                // If there ARE inline rules, the flags moved into the wrapper.
+                if (featureData.lookupflags && !hasInlineRules) {
+                    for (const flagName in featureData.lookupflags) {
+                        if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
+                            featureBlock += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
+                        }
                     }
                 }
+                validLookups.forEach(name => {
+                    featureBlock += `  lookup ${name};\n`;
+                });
+                featureBlock += `} ${featureTag};\n\n`;
+                feaContent += featureBlock;
+                if (!allGsubFeatures.includes(featureTag)) allGsubFeatures.push(featureTag);
             }
-            validLookups.forEach(name => {
-                featureBlock += `  lookup ${name};\n`;
-            });
-            featureBlock += `} ${featureTag};\n\n`;
-            feaContent += featureBlock;
-            if (!allGsubFeatures.includes(featureTag)) allGsubFeatures.push(featureTag);
         }
     }
     

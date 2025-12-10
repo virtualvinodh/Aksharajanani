@@ -43,6 +43,13 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
     if (didRunAutoSelect.current || !characterSets) {
         return;
     }
+    
+    // If the comparison set is already populated (e.g., from DrawingWorkspace selection), do not overwrite it.
+    if (comparisonCharacters.length > 0) {
+        didRunAutoSelect.current = true;
+        return;
+    }
+
     if (isLargeScreen) {
       const completedChars = characterSets
         .flatMap(set => set.characters)
@@ -52,7 +59,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
       setComparisonCharacters([]);
     }
     didRunAutoSelect.current = true;
-  }, [characterSets, glyphDataMap, setComparisonCharacters, isLargeScreen]);
+  }, [characterSets, glyphDataMap, setComparisonCharacters, isLargeScreen]); // comparisonCharacters.length is checked inside, but we only want to run once on mount essentially.
 
   const handleZoom = (factor: number) => {
     setZoom(prev => Math.max(0.2, Math.min(5, prev * factor)));

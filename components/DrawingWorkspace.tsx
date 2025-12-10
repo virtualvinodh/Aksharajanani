@@ -4,7 +4,7 @@ import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { LeftArrowIcon, RightArrowIcon, CheckCircleIcon, AddIcon, EditIcon, TrashIcon, SelectIcon, SettingsIcon, BatchIcon } from '../constants';
+import { LeftArrowIcon, RightArrowIcon, CheckCircleIcon, AddIcon, EditIcon, TrashIcon, SelectIcon, SettingsIcon, BatchIcon, CompareIcon } from '../constants';
 import ProgressIndicator from './ProgressIndicator';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -126,7 +126,7 @@ const CharacterSetTab: React.FC<{
 
 const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSelectCharacter, onAddGlyph, onAddBlock, drawingProgress }) => {
     const { t } = useLocale();
-    const { activeTab, setActiveTab, showNotification, metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, filterMode } = useLayout();
+    const { activeTab, setActiveTab, showNotification, metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, filterMode, setComparisonCharacters, setCurrentView } = useLayout();
     const { dispatch: characterDispatch } = useProject();
     const { settings, metrics } = useSettings();
     const navContainerRef = useRef<HTMLDivElement>(null);
@@ -320,8 +320,14 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         setMetricsSelection(allUnicodes);
     };
 
-    const handleSelectVisible = () => {
-        handleSelectAll(); // Same as select all for flattened view or current tab
+    const handleCompareSelected = () => {
+        const selectedChars = drawnCharacters.filter(c => c.unicode !== undefined && metricsSelection.has(c.unicode));
+        if (selectedChars.length === 0) {
+             showNotification('No characters selected to compare.', 'info');
+             return;
+        }
+        setComparisonCharacters(selectedChars);
+        setCurrentView('comparison');
     };
 
     const getBannerText = () => {
@@ -410,6 +416,9 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                             </button>
                             <button onClick={() => setIsPropertiesModalOpen(true)} disabled={metricsSelection.size === 0} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
                                 <SettingsIcon /> <span className="hidden sm:inline">{t('editProperties')}</span>
+                            </button>
+                             <button onClick={handleCompareSelected} disabled={metricsSelection.size === 0} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
+                                <CompareIcon /> <span className="hidden sm:inline">{t('compare')}</span>
                             </button>
                             <button onClick={() => setIsDeleteConfirmOpen(true)} disabled={metricsSelection.size === 0} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
                                 <TrashIcon /> <span className="hidden sm:inline">{t('delete')}</span>
