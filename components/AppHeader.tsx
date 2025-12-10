@@ -263,7 +263,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 <div className="relative" ref={filterMenuRef}>
                                     <button
                                         onClick={() => setIsFilterMenuOpen(p => !p)}
-                                        className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${filterMode !== 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                        className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${filterMode !== 'none' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
                                         title={t('filter')}
                                     >
                                         <FilterIcon />
@@ -272,8 +272,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                     
                                     {isFilterMenuOpen && (
                                         <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-40 overflow-hidden">
+                                            <button onClick={() => handleFilterChange('none')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'none' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                {t('filterNone')}
+                                            </button>
                                             <button onClick={() => handleFilterChange('all')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'all' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
-                                                {t('showAll')}
+                                                {t('filterAllFlat')}
                                             </button>
                                             <button onClick={() => handleFilterChange('completed')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'completed' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
                                                 {t('showCompleted')}

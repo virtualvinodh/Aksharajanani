@@ -196,6 +196,8 @@
 	"featureTag": "Feature Tag (4 chars)",
 	"featureTagLabel": "Feature Tag",
 	"filter": "Filter",
+	"filterNone": "None (Grouped)",
+	"filterAllFlat": "All (Flat List)",
 	"filterAll": "All",
 	"filterByPriority": "Filter by Priority:",
 	"filterCompleted": "Completed",

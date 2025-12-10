@@ -91,7 +91,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [metricsSelection, setMetricsSelection] = useState<Set<number>>(new Set());
     const [isMetricsSelectionMode, setIsMetricsSelectionMode] = useState(false);
     const [pendingNavigationTarget, setPendingNavigationTarget] = useState<string | null>(null);
-    const [filterMode, setFilterMode] = useState<FilterMode>('all');
+    const [filterMode, setFilterMode] = useState<FilterMode>('none');
 
     // Session flags (non-persistent across refreshes)
     const sessionFlags = useRef<Set<string>>(new Set());

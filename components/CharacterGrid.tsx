@@ -49,9 +49,9 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
       .filter(char => !char.hidden || showHidden)
       .map(char => ({ type: 'char', data: char }));
       
-    // Only show Add buttons if we are viewing "All" (Standard Mode)
-    // In "Completed" or "Incomplete" (Punch List Mode), these are distracting.
-    if (filterMode === 'all') {
+    // Only show Add buttons if we are viewing "None" (Standard Mode)
+    // In "Completed", "Incomplete", or "All" (Flat list) modes, these are distracting.
+    if (filterMode === 'none') {
         items.push({ type: 'addGlyph' });
         items.push({ type: 'addBlock' });
     }

@@ -1,3 +1,4 @@
+
 // ... existing imports ...
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
@@ -55,7 +56,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     // Local ref to persist the scroll target even when pendingNavigationTarget is cleared or component re-renders
     const localScrollTarget = useRef<string | null>(null);
     
-    const isFiltered = filterMode !== 'all';
+    const isFiltered = filterMode !== 'none';
     
     const allChars = useMemo<Map<string, Character>>(() => new Map(characterSets!.flatMap(set => set.characters).map(char => [char.name, char])), [characterSets]);
 
@@ -254,6 +255,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             } else if (filterMode === 'incomplete') {
                 result = result.filter(c => !markPositioningMap.has(`${c.base.unicode}-${c.mark.unicode}`));
             }
+            // if filterMode === 'all', we just return the full list (already populated above)
             
             // Sort flat list by base unicode then mark unicode for consistency
             result.sort((a,b) => (a.base.unicode || 0) - (b.base.unicode || 0) || (a.mark.unicode || 0) - (b.mark.unicode || 0));
@@ -734,6 +736,15 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         );
     }
 
+    const getBannerText = () => {
+        switch(filterMode) {
+            case 'completed': return t('filterCompleted');
+            case 'incomplete': return t('filterIncomplete');
+            case 'all': return t('filterAllFlat');
+            default: return '';
+        }
+    };
+
     return (
         <div className="w-full h-full flex flex-col">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -746,7 +757,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                     )}
                     {isFiltered && (
                          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 font-bold text-gray-700 dark:text-gray-200">
-                             {filterMode === 'completed' ? t('filterCompleted') : t('filterIncomplete')}
+                             {getBannerText()}
                          </div>
                     )}
                     <div className="ml-auto">

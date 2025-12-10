@@ -137,7 +137,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     }, [mode, drawnRecommendedKerning, allCharsByName, selectedLeftChars, selectedRightChars, allCharsByUnicode, isGlyphDrawn, kerningMap]);
 
     const filteredPairsToDisplay = useMemo(() => {
-        if (filterMode === 'all') {
+        if (filterMode === 'none' || filterMode === 'all') {
             return allPairsToDisplay;
         }
         
@@ -399,8 +399,8 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             const isPartialSelection = !isReviewMode && (selectedLeftChars.size === 0 || selectedRightChars.size === 0);
 
             if (isReviewMode) {
-                if (kerningMap.size === 0 && filterMode === 'all') {
-                    // Empty state only when filter is 'all'. If filter is 'completed/incomplete', standard no results is better.
+                if (kerningMap.size === 0 && filterMode === 'none') {
+                    // Empty state only when filter is 'none' (default). If filter is 'completed/incomplete', standard no results is better.
                     return (
                         <div className="flex-grow flex items-center justify-center text-center p-8">
                             <div className="max-w-md">

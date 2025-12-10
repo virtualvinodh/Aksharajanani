@@ -151,7 +151,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const showHidden = settings?.showHiddenGlyphs ?? false;
 
     // Filter Logic
-    const isFiltered = filterMode !== 'all';
+    const isFiltered = filterMode !== 'none';
     
     const visibleCharacterSets = useMemo(() => {
         if (isFiltered) return []; // In filtered mode, we don't use sets
@@ -174,16 +174,13 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                 
                 const drawn = isGlyphDrawn(glyphDataMap.get(char.unicode));
                 
-                // Show hidden glyphs if user explicitly wants incomplete/completed and they match
-                // Or respect showHidden setting. 
-                // Let's assume filterMode overrides hidden for matching items to be helpful.
-                const isMatch = (filterMode === 'completed' && drawn) || (filterMode === 'incomplete' && !drawn);
+                // If filterMode is 'all', we show everything (flat list).
+                // If it's completed/incomplete, we filter by drawn status.
+                const isMatch = filterMode === 'all' || (filterMode === 'completed' && drawn) || (filterMode === 'incomplete' && !drawn);
                 
                 if (!isMatch) return false;
                 
-                // If it matches filter, we show it, unless it's hidden AND showHidden is false.
-                // But for "Punch list" (incomplete), you probably want to see even hidden ones if you have tasks.
-                // Let's stick to standard visibility rules for consistency unless 'showHidden' is on.
+                // Respect hidden property unless showHidden is on
                 return (!char.hidden || showHidden);
             })
             .sort((a, b) => (a.unicode || 0) - (b.unicode || 0));
@@ -327,6 +324,15 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         handleSelectAll(); // Same as select all for flattened view or current tab
     };
 
+    const getBannerText = () => {
+        switch(filterMode) {
+            case 'completed': return t('filterCompleted');
+            case 'incomplete': return t('filterIncomplete');
+            case 'all': return t('filterAllFlat');
+            default: return '';
+        }
+    };
+
     return (
         <div className="flex flex-col h-full overflow-hidden relative">
             <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center pr-2">
@@ -347,7 +353,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     </div>
                 ) : (
                     <div className="flex-grow p-3 px-4 font-bold text-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20">
-                        {filterMode === 'completed' ? 'Completed Glyphs' : 'Incomplete Glyphs (To-Do)'} 
+                        {getBannerText()}
                         <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">({filteredFlatList.length} found)</span>
                     </div>
                 )}

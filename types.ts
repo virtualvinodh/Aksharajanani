@@ -281,4 +281,4 @@ export interface UnicodeBlock {
   end: number;
 }
 
-export type FilterMode = 'all' | 'completed' | 'incomplete';
+export type FilterMode = 'none' | 'all' | 'completed' | 'incomplete';
