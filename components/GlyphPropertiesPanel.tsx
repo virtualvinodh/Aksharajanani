@@ -1,5 +1,4 @@
 
-
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { FontMetrics, Character, CharacterSet, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -18,6 +17,12 @@ interface GlyphPropertiesPanelProps {
   glyphData?: GlyphData | undefined;
   allCharacterSets?: CharacterSet[];
   onSaveConstruction?: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => void;
+  
+  // Metadata props (Optional to support usage in PositioningEditorPage)
+  glyphClass?: Character['glyphClass'];
+  setGlyphClass?: (val: Character['glyphClass']) => void;
+  advWidth?: number | string;
+  setAdvWidth?: (val: number | string | undefined) => void;
 }
 
 interface TransformData {
@@ -29,7 +34,8 @@ interface TransformData {
 
 const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({ 
   lsb, setLsb, rsb, setRsb, metrics, onClose,
-  character, glyphData, allCharacterSets, onSaveConstruction
+  character, glyphData, allCharacterSets, onSaveConstruction,
+  glyphClass, setGlyphClass, advWidth, setAdvWidth
 }) => {
   const { t } = useLocale();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -44,6 +50,16 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   const [components, setComponents] = useState<string[]>(() => {
       return character?.link || character?.composite || [];
   });
+
+  const [isClassificationExpanded, setIsClassificationExpanded] = useState(false);
+
+  // Helper for non-spacing checkbox
+  const isNonSpacing = advWidth === 0 || advWidth === '0';
+  const handleNonSpacingChange = (checked: boolean) => {
+      if (setAdvWidth) {
+          setAdvWidth(checked ? 0 : undefined);
+      }
+  };
 
   const parseInitialTransforms = (comps: string[]): TransformData[] => {
       const raw = character?.compositeTransform;
@@ -201,6 +217,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   };
 
   const showConstruction = !!character && !!onSaveConstruction && !!allCharacterSets;
+  const showMetadata = !!setGlyphClass && !!setAdvWidth;
 
   return (
     <div 
@@ -214,40 +231,87 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
         </button>
       </div>
       
-      {/* Metrics Section */}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label htmlFor="lsb-input" className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-            {t('leftSpace')} (LSB)
-          </label>
-          <input
-            id="lsb-input"
-            type="number"
-            placeholder={String(metrics.defaultLSB)}
-            value={lsb === undefined ? '' : lsb}
-            onChange={(e) => setLsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
-            className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-1.5 text-sm"
-          />
+      {/* Metrics Section - Hidden if non-spacing (advWidth 0) */}
+      {!isNonSpacing && (
+        <>
+        <div className="grid grid-cols-2 gap-2">
+            <div>
+            <label htmlFor="lsb-input" className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                {t('leftSpace')} (LSB)
+            </label>
+            <input
+                id="lsb-input"
+                type="number"
+                placeholder={String(metrics.defaultLSB)}
+                value={lsb === undefined ? '' : lsb}
+                onChange={(e) => setLsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
+                className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-1.5 text-sm"
+            />
+            </div>
+            <div>
+            <label htmlFor="rsb-input" className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                {t('rightSpace')} (RSB)
+            </label>
+            <input
+                id="rsb-input"
+                type="number"
+                placeholder={String(metrics.defaultRSB)}
+                value={rsb === undefined ? '' : rsb}
+                onChange={(e) => setRsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
+                className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-1.5 text-sm"
+            />
+            </div>
         </div>
+        <hr className="border-gray-200 dark:border-gray-700" />
+        </>
+      )}
+
+      {/* Classification Section */}
+      {showMetadata && (
         <div>
-          <label htmlFor="rsb-input" className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-            {t('rightSpace')} (RSB)
-          </label>
-          <input
-            id="rsb-input"
-            type="number"
-            placeholder={String(metrics.defaultRSB)}
-            value={rsb === undefined ? '' : rsb}
-            onChange={(e) => setRsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
-            className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-1.5 text-sm"
-          />
+            <button 
+                onClick={() => setIsClassificationExpanded(!isClassificationExpanded)}
+                className="flex items-center justify-between w-full text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+            >
+                <span>Classification & Spacing</span>
+                <span>{isClassificationExpanded ? '▼' : '▶'}</span>
+            </button>
+            {isClassificationExpanded && (
+                <div className="animate-fade-in-up space-y-3 p-1">
+                    <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Glyph Class</label>
+                        <select
+                            value={glyphClass}
+                            onChange={(e) => setGlyphClass!(e.target.value as any)}
+                            className="w-full p-1.5 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-sm"
+                        >
+                            <option value="base">Base</option>
+                            <option value="mark">Mark</option>
+                            <option value="ligature">Ligature</option>
+                        </select>
+                    </div>
+                    {glyphClass === 'mark' && (
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="non-spacing-toggle"
+                                checked={isNonSpacing}
+                                onChange={(e) => handleNonSpacingChange(e.target.checked)}
+                                className="h-4 w-4 rounded accent-indigo-500"
+                            />
+                            <label htmlFor="non-spacing-toggle" className="text-sm text-gray-700 dark:text-gray-300">
+                                Non-spacing (Width: 0)
+                            </label>
+                        </div>
+                    )}
+                </div>
+            )}
+            <hr className="border-gray-200 dark:border-gray-700 mt-4" />
         </div>
-      </div>
+      )}
 
       {showConstruction && (
       <>
-      <hr className="border-gray-200 dark:border-gray-700" />
-
       {/* Construction Section Header */}
       <div>
         <button 
@@ -325,7 +389,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 className="text-xs p-1 bg-white dark:bg-gray-700"
                             />
                             <button onClick={() => setIsAddingComp(false)} className="p-1 text-red-500">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
                         </div>
                      )}

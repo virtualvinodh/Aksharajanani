@@ -63,8 +63,6 @@ export const useGlyphEditSession = ({
     });
 
     // Used to track "dirty" state against what was loaded/saved.
-    // IMPORTANT: We initialize this to the *persisted* state (glyphData), not the *current* state (which might include prefill).
-    // This ensures that if a glyph is prefilled for the first time, it counts as "unsaved changes".
     const [initialPathsOnLoad, setInitialPathsOnLoad] = useState<Path[]>(() => {
         return isGlyphDrawn(glyphData) ? (glyphData!.paths || []) : [];
     });
@@ -72,9 +70,6 @@ export const useGlyphEditSession = ({
     // Tracks if any changes have happened that require a full commit (cascade update)
     const hasPendingCascade = useRef(false);
     
-    // Was it empty when we started? Used for background guide visibility.
-    // Modified to ensure guides remain visible for prefilled composite glyphs that haven't been saved yet.
-    // We base this strictly on whether the glyph was present in the database (glyphData), ignoring dynamic prefill content.
     const [wasEmptyOnLoad] = useState(() => {
         return !isGlyphDrawn(glyphData);
     });
@@ -82,8 +77,11 @@ export const useGlyphEditSession = ({
     const [history, setHistory] = useState<Path[][]>([currentPaths]);
     const [historyIndex, setHistoryIndex] = useState(0);
     
+    // Metadata States
     const [lsb, setLsbState] = useState<number | undefined>(character.lsb);
     const [rsb, setRsbState] = useState<number | undefined>(character.rsb);
+    const [glyphClass, setGlyphClassState] = useState<Character['glyphClass']>(character.glyphClass);
+    const [advWidth, setAdvWidthState] = useState<number | string | undefined>(character.advWidth);
 
     const setLsb = (val: number | undefined) => {
         setLsbState(val);
@@ -92,6 +90,16 @@ export const useGlyphEditSession = ({
     
     const setRsb = (val: number | undefined) => {
         setRsbState(val);
+        hasPendingCascade.current = true;
+    };
+
+    const setGlyphClass = (val: Character['glyphClass']) => {
+        setGlyphClassState(val);
+        hasPendingCascade.current = true;
+    };
+    
+    const setAdvWidth = (val: number | string | undefined) => {
+        setAdvWidthState(val);
         hasPendingCascade.current = true;
     };
     
@@ -128,11 +136,10 @@ export const useGlyphEditSession = ({
              });
 
              if (missingComponents.length > 0) {
-                 // Use setTimeout to ensure this notification appears after any initial info notifications from parent components
                  setTimeout(() => {
                      showNotification(t('errorComponentsNotDrawn', { components: missingComponents.join(', ') }), 'error');
                  }, 100);
-                 return; // Don't show prefill message if there's an error
+                 return;
              }
         }
 
@@ -145,7 +152,7 @@ export const useGlyphEditSession = ({
             const messageKey = hasSeen ? 'compositeGlyphPrefilledShort' : 'compositeGlyphPrefilled';
             showNotification(t(messageKey, { components: componentNamesStr }), 'info');
         }
-    }, []); // Run once on mount
+    }, []);
 
     // --- SAVING WRAPPER ---
     const performSave = useCallback((
@@ -164,8 +171,13 @@ export const useGlyphEditSession = ({
             }
         };
 
-        onSave(character.unicode, { paths: pathsToSave }, { lsb, rsb }, onSuccess, options);
-    }, [onSave, character.unicode, currentPaths, lsb, rsb]);
+        // Note: The onSave callback from parent is typed to accept 'newBearings' object.
+        // We are passing expanded metadata now. The implementation in useGlyphActions.ts handles this extension.
+        // We cast to any to bypass strict type checking here as we updated the context/hook but interfaces might lag slightly.
+        const metadata: any = { lsb, rsb, glyphClass, advWidth };
+        
+        onSave(character.unicode, { paths: pathsToSave }, metadata, onSuccess, options);
+    }, [onSave, character.unicode, currentPaths, lsb, rsb, glyphClass, advWidth]);
 
 
     // --- HISTORY & AUTOSAVE ---
@@ -223,16 +235,12 @@ export const useGlyphEditSession = ({
     const canRedo = historyIndex < history.length - 1;
 
     // --- DIRTY STATE ---
-    // We assume it's dirty if the JSON strings don't match.
-    // Since we initialized `initialPathsOnLoad` to `[]` for prefilled glyphs,
-    // this will be true immediately for them, triggering autosave or prompts.
     const hasPathChanges = JSON.stringify(currentPaths) !== JSON.stringify(initialPathsOnLoad);
     const hasBearingChanges = lsb !== character.lsb || rsb !== character.rsb;
-    const hasUnsavedChanges = hasPathChanges || hasBearingChanges;
+    const hasMetadataChanges = hasBearingChanges || glyphClass !== character.glyphClass || advWidth !== character.advWidth;
+    const hasUnsavedChanges = hasPathChanges || hasMetadataChanges;
 
     // --- INITIAL AUTOSAVE FOR PREFILL ---
-    // If we loaded with prefill data (so hasUnsavedChanges is true immediately) and autosave is on,
-    // trigger an immediate draft save so the grid updates without user interaction.
     useEffect(() => {
         if (settings.isAutosaveEnabled && hasUnsavedChanges) {
              if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
@@ -242,9 +250,21 @@ export const useGlyphEditSession = ({
         }
     }, []);
 
+    // --- AUTOSAVE FOR METADATA ---
+    useEffect(() => {
+        if (settings.isAutosaveEnabled && hasMetadataChanges) {
+             if (autosaveTimeout.current) {
+                clearTimeout(autosaveTimeout.current);
+            }
+            autosaveTimeout.current = window.setTimeout(() => {
+                performSave(currentPaths, { isDraft: true, silent: true });
+            }, 500);
+        }
+    }, [settings.isAutosaveEnabled, hasMetadataChanges, performSave, currentPaths]);
+
+
     // --- NAVIGATION & CLOSING ---
     const handleNavigationAttempt = useCallback((targetCharacter: Character | null) => {
-        // Cleanup pending autosaves immediately
         if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
 
         const proceed = () => {
@@ -267,7 +287,6 @@ export const useGlyphEditSession = ({
     }, [settings.isAutosaveEnabled, hasUnsavedChanges, performSave, currentPaths, onNavigate, onClose]);
 
     const handleConfirmSave = () => {
-        // Explicit user save -> Commit + Cascade
         performSave(currentPaths, { isDraft: false });
         if (pendingNavigation) onNavigate(pendingNavigation);
         else onClose();
@@ -303,7 +322,6 @@ export const useGlyphEditSession = ({
         showNotification(t('glyphRefreshedSuccess'), 'info');
     }, [character, allCharacterSets, allGlyphData, settings, metrics, markAttachmentRules, handlePathsChange, showNotification, t]);
 
-    // Clean up timeout on unmount
     useEffect(() => {
         return () => {
             if (autosaveTimeout.current) {
@@ -323,9 +341,13 @@ export const useGlyphEditSession = ({
         setLsb,
         rsb,
         setRsb,
+        glyphClass,
+        setGlyphClass,
+        advWidth,
+        setAdvWidth,
         isTransitioning,
         hasUnsavedChanges,
-        handleSave: () => performSave(currentPaths, { isDraft: false }), // Manual save button = Commit
+        handleSave: () => performSave(currentPaths, { isDraft: false }), 
         handleRefresh,
         handleNavigationAttempt,
         wasEmptyOnLoad,

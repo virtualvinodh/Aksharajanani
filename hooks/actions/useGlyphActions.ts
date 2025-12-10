@@ -94,7 +94,7 @@ export const useGlyphActions = (
     const handleSaveGlyph = useCallback(async (
         unicode: number,
         newGlyphData: GlyphData,
-        newBearings: { lsb?: number; rsb?: number },
+        newMetadata: { lsb?: number; rsb?: number; glyphClass?: Character['glyphClass']; advWidth?: number | string },
         onSuccess?: () => void,
         options: SaveOptions = {}
     ) => {
@@ -106,10 +106,14 @@ export const useGlyphActions = (
         const oldPathsJSON = JSON.stringify(glyphDataMap.get(unicode)?.paths || []);
         const newPathsJSON = JSON.stringify(newGlyphData.paths);
         const hasPathChanges = oldPathsJSON !== newPathsJSON;
-        const hasBearingChanges = newBearings.lsb !== charToSave.lsb || newBearings.rsb !== charToSave.rsb;
+        const hasMetadataChanges = 
+            newMetadata.lsb !== charToSave.lsb || 
+            newMetadata.rsb !== charToSave.rsb ||
+            newMetadata.glyphClass !== charToSave.glyphClass ||
+            newMetadata.advWidth !== charToSave.advWidth;
     
         // 1. No Changes?
-        if (!hasPathChanges && !hasBearingChanges) {
+        if (!hasPathChanges && !hasMetadataChanges) {
             if (isDraft) {
                 if (onSuccess) onSuccess();
                 return;
@@ -128,9 +132,9 @@ export const useGlyphActions = (
                  payload: { unicode, data: newGlyphData } 
              });
         }
-        // Bearings are metadata, handled separately via characterDispatch
-        if (hasBearingChanges) {
-            characterDispatch({ type: 'UPDATE_CHARACTER_BEARINGS', payload: { unicode, ...newBearings } });
+        // Metadata handled separately via characterDispatch
+        if (hasMetadataChanges) {
+            characterDispatch({ type: 'UPDATE_CHARACTER_METADATA', payload: { unicode, ...newMetadata } });
         }
 
         // 3. If this is a DRAFT (Autosave), stop here.

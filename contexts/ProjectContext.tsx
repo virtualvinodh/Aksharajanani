@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { 
     GlyphData, KerningMap, CharacterSet, Path, 
@@ -13,6 +12,7 @@ type CharacterAction =
     | { type: 'SET_CHARACTER_SETS'; payload: CharacterSet[] | null }
     | { type: 'UPDATE_CHARACTER_SETS', payload: (prev: CharacterSet[] | null) => CharacterSet[] | null }
     | { type: 'DELETE_CHARACTER', payload: { unicode: number } }
+    | { type: 'UPDATE_CHARACTER_METADATA', payload: { unicode: number, lsb?: number, rsb?: number, glyphClass?: Character['glyphClass'], advWidth?: number | string } }
     | { type: 'UPDATE_CHARACTER_BEARINGS', payload: { unicode: number, lsb?: number, rsb?: number } }
     | { type: 'ADD_CHARACTERS', payload: { characters: Character[], activeTabNameKey: string } }
     | { type: 'UNLINK_GLYPH', payload: { unicode: number } }
@@ -103,7 +103,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                     return newSets;
                 });
                 break;
-            case 'UPDATE_CHARACTER_BEARINGS':
+            case 'UPDATE_CHARACTER_METADATA':
                 setCharacterSets(prev => {
                     if (!prev) return null;
                     return prev.map(set => ({
@@ -113,6 +113,25 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                                 const newChar = { ...char };
                                 if (action.payload.lsb !== undefined) newChar.lsb = action.payload.lsb; else delete newChar.lsb;
                                 if (action.payload.rsb !== undefined) newChar.rsb = action.payload.rsb; else delete newChar.rsb;
+                                if (action.payload.glyphClass !== undefined) newChar.glyphClass = action.payload.glyphClass;
+                                if (action.payload.advWidth !== undefined) newChar.advWidth = action.payload.advWidth; else delete newChar.advWidth;
+                                return newChar;
+                            }
+                            return char;
+                        })
+                    }));
+                });
+                break;
+            case 'UPDATE_CHARACTER_BEARINGS':
+                setCharacterSets(prev => {
+                    if (!prev) return null;
+                    return prev.map(set => ({
+                        ...set,
+                        characters: set.characters.map(char => {
+                            if (char.unicode === action.payload.unicode) {
+                                const newChar = { ...char };
+                                if (action.payload.lsb !== undefined) newChar.lsb = action.payload.lsb;
+                                if (action.payload.rsb !== undefined) newChar.rsb = action.payload.rsb;
                                 return newChar;
                             }
                             return char;

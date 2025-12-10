@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment, TransformState } from '../types';
 import DrawingCanvas from './DrawingCanvas';
@@ -104,7 +102,9 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
 
   const {
     currentPaths, handlePathsChange, undo, redo, canUndo, canRedo,
-    lsb, setLsb, rsb, setRsb, isTransitioning,
+    lsb, setLsb, rsb, setRsb, 
+    glyphClass, setGlyphClass, advWidth, setAdvWidth,
+    isTransitioning,
     handleSave, handleRefresh, handleNavigationAttempt,
     wasEmptyOnLoad,
     isUnsavedModalOpen, closeUnsavedModal, confirmSave, confirmDiscard
@@ -425,6 +425,9 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         onSaveConstruction={handleSaveConstruction}
         onUnlock={() => setIsUnlockConfirmOpen(true)}
         onRelink={() => setIsRelinkConfirmOpen(true)}
+        // Pass lifted metadata state to Header
+        glyphClass={glyphClass} setGlyphClass={setGlyphClass}
+        advWidth={advWidth} setAdvWidth={setAdvWidth}
       />
 
       <main className={layoutClasses}>

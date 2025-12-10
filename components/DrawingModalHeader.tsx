@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -31,13 +28,19 @@ interface DrawingModalHeaderProps {
   onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => void;
   onUnlock: () => void;
   onRelink: () => void;
+  
+  // Metadata state from parent
+  glyphClass?: Character['glyphClass'];
+  setGlyphClass?: (val: Character['glyphClass']) => void;
+  advWidth?: number | string;
+  setAdvWidth?: (val: number | string | undefined) => void;
 }
 
 const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
   character, glyphData, prevCharacter, nextCharacter, onBackClick, onNavigate,
   settings, metrics, lsb, setLsb, rsb, setRsb, onDeleteClick, onClear, onSave,
   isLocked = false, isComposite = false, onRefresh, allCharacterSets, onSaveConstruction,
-  onUnlock, onRelink
+  onUnlock, onRelink, glyphClass, setGlyphClass, advWidth, setAdvWidth
 }) => {
   const { t } = useLocale();
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
@@ -233,6 +236,10 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               glyphData={glyphData}
               allCharacterSets={allCharacterSets}
               onSaveConstruction={onSaveConstruction}
+              glyphClass={glyphClass}
+              setGlyphClass={setGlyphClass}
+              advWidth={advWidth}
+              setAdvWidth={setAdvWidth}
             />
           )}
 
