@@ -1,9 +1,11 @@
 
 
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon, MoreIcon, LinkIcon, BrokenLinkIcon } from '../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon, MoreIcon, LinkIcon, BrokenLinkIcon, RefreshIcon } from '../constants';
 import GlyphPropertiesPanel from './GlyphPropertiesPanel';
 
 interface DrawingModalHeaderProps {
@@ -146,7 +148,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
                   title={t('refresh')}
                   className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
               >
-                  <RedoIcon />
+                  <RefreshIcon />
                   <span className="hidden xl:inline">{t('refresh')}</span>
               </button>
           )}
