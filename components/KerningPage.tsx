@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Character, GlyphData, FontMetrics, CharacterSet, KerningMap, RecommendedKerning, AppSettings } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -29,7 +27,7 @@ interface KerningPageProps {
 
 const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMode, mode, showRecommendedLabel }) => {
     const { t } = useLocale();
-    const { showNotification, pendingNavigationTarget, setPendingNavigationTarget } = useLayout();
+    const { showNotification, pendingNavigationTarget, setPendingNavigationTarget, filterMode } = useLayout();
     const { characterSets, allCharsByName } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
@@ -43,7 +41,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     const [isAutoKerning, setIsAutoKerning] = useState(false);
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
     const [kerningProgressValue, setKerningProgressValue] = useState(0);
-    const [showOnlyUnkerned, setShowOnlyUnkerned] = useState(false);
+    // Removed local showOnlyUnkerned state in favor of global filterMode
     const [isResetVisibleConfirmOpen, setIsResetVisibleConfirmOpen] = useState(false);
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -111,6 +109,8 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             
             if (selectedLeftChars.size === 0 && selectedRightChars.size === 0) {
                 // REVIEW MODE: No selection, show all currently kerned pairs
+                // If filter is active (incomplete/completed), we also need to respect that.
+                
                 kerningMap.forEach((_, key) => {
                     const [leftUnicode, rightUnicode] = key.split('-').map(Number);
                     const leftChar = allCharsByUnicode.get(leftUnicode);
@@ -137,15 +137,21 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     }, [mode, drawnRecommendedKerning, allCharsByName, selectedLeftChars, selectedRightChars, allCharsByUnicode, isGlyphDrawn, kerningMap]);
 
     const filteredPairsToDisplay = useMemo(() => {
-        if (!showOnlyUnkerned) {
+        if (filterMode === 'all') {
             return allPairsToDisplay;
         }
+        
         return allPairsToDisplay.filter(pair => {
             if (!pair.left || !pair.right) return false;
             const key = `${pair.left.unicode}-${pair.right.unicode}`;
-            return !kerningMap.has(key);
+            const isKerned = kerningMap.has(key);
+            
+            if (filterMode === 'completed') return isKerned;
+            if (filterMode === 'incomplete') return !isKerned;
+            
+            return true;
         });
-    }, [allPairsToDisplay, showOnlyUnkerned, kerningMap]);
+    }, [allPairsToDisplay, filterMode, kerningMap]);
     
     const visibleKernedCount = useMemo(() => {
         return filteredPairsToDisplay.reduce((count, pair) => {
@@ -161,12 +167,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         if (editingIndex === null) {
              setCurrentPage(1);
         }
-    }, [filteredPairsToDisplay.length, mode, selectedLeftChars, selectedRightChars, showOnlyUnkerned]); 
-
-    const paginatedPairs = useMemo(() => {
-        const startIndex = (currentPage - 1) * PAGE_SIZE;
-        return filteredPairsToDisplay.slice(startIndex, startIndex + PAGE_SIZE);
-    }, [currentPage, PAGE_SIZE, filteredPairsToDisplay]);
+    }, [filteredPairsToDisplay.length, mode, selectedLeftChars, selectedRightChars, filterMode]); 
 
     // --- Deep Linking Handling ---
     useEffect(() => {
@@ -184,6 +185,12 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
              // For now, simple deep linking assumes user can find it via search which sets correct workspace state.
         }
     }, [pendingNavigationTarget, filteredPairsToDisplay, setPendingNavigationTarget]);
+
+
+    const paginatedPairs = useMemo(() => {
+        const startIndex = (currentPage - 1) * PAGE_SIZE;
+        return filteredPairsToDisplay.slice(startIndex, startIndex + PAGE_SIZE);
+    }, [currentPage, PAGE_SIZE, filteredPairsToDisplay]);
 
 
     const handleSaveKerning = (pair: {left: Character, right: Character}, value: number) => {
@@ -392,7 +399,8 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             const isPartialSelection = !isReviewMode && (selectedLeftChars.size === 0 || selectedRightChars.size === 0);
 
             if (isReviewMode) {
-                if (kerningMap.size === 0) {
+                if (kerningMap.size === 0 && filterMode === 'all') {
+                    // Empty state only when filter is 'all'. If filter is 'completed/incomplete', standard no results is better.
                     return (
                         <div className="flex-grow flex items-center justify-center text-center p-8">
                             <div className="max-w-md">
@@ -486,19 +494,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                                 {t('resetVisible')}
                             </button>
 
-                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                                <span>{t('kerningShowUnkernedOnly')}</span>
-                                <div className="relative inline-flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        id="unkerned-toggle"
-                                        checked={showOnlyUnkerned}
-                                        onChange={(e) => setShowOnlyUnkerned(e.target.checked)}
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                                </div>
-                            </label>
+                            {/* Removed deprecated checkbox toggle in favor of header filter menu */}
                         </div>
                         {!areAllRecGlyphsDrawn && mode === 'recommended' && (
                             <div className="mx-4 mt-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">

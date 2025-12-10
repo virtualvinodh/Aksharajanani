@@ -1,9 +1,4 @@
 
-
-
-
-
-
 export interface Point {
   x: number;
   y: number;
@@ -285,3 +280,5 @@ export interface UnicodeBlock {
   start: number;
   end: number;
 }
+
+export type FilterMode = 'all' | 'completed' | 'incomplete';

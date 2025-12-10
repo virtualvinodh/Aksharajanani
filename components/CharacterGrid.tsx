@@ -40,7 +40,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
   const { t } = useLocale();
   const { settings } = useSettings();
   const { glyphDataMap } = useGlyphData();
-  const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
+  const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, filterMode } = useLayout();
   
   const showHidden = settings?.showHiddenGlyphs ?? false;
 
@@ -49,12 +49,15 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
       .filter(char => !char.hidden || showHidden)
       .map(char => ({ type: 'char', data: char }));
       
-    // Always show Add buttons at the end, but styled subtly (Progressive Disclosure)
-    items.push({ type: 'addGlyph' });
-    items.push({ type: 'addBlock' });
+    // Only show Add buttons if we are viewing "All" (Standard Mode)
+    // In "Completed" or "Incomplete" (Punch List Mode), these are distracting.
+    if (filterMode === 'all') {
+        items.push({ type: 'addGlyph' });
+        items.push({ type: 'addBlock' });
+    }
     
     return items;
-  }, [characters, showHidden]);
+  }, [characters, showHidden, filterMode]);
 
   const toggleSelection = (character: Character) => {
       if (!character.unicode) return;

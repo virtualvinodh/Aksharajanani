@@ -1,4 +1,4 @@
-
+// ... existing imports ...
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon, RulesIcon } from '../constants';
@@ -31,7 +31,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     positioningRules, markAttachmentRules, fontRules, markAttachmentClasses, baseAttachmentClasses
 }) => {
     const { t } = useLocale();
-    const { showNotification, pendingNavigationTarget, setPendingNavigationTarget } = useLayout();
+    const { showNotification, pendingNavigationTarget, setPendingNavigationTarget, filterMode } = useLayout();
     const { glyphDataMap, dispatch: glyphDataDispatch, version: glyphVersion } = useGlyphData();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { characterSets, dispatch: characterDispatch } = useProject();
@@ -54,6 +54,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     // Local ref to persist the scroll target even when pendingNavigationTarget is cleared or component re-renders
     const localScrollTarget = useRef<string | null>(null);
+    
+    const isFiltered = filterMode !== 'all';
     
     const allChars = useMemo<Map<string, Character>>(() => new Map(characterSets!.flatMap(set => set.characters).map(char => [char.name, char])), [characterSets]);
 
@@ -175,7 +177,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
 
     const navItems = useMemo(() => {
-        if (!positioningRules) return [];
+        if (!positioningRules || isFiltered) return [];
         const items = new Map<number, Character>();
         
         const sourceSet = viewBy === 'base'
@@ -190,56 +192,99 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         });
 
         return Array.from(items.values()).sort((a, b) => a.unicode - b.unicode);
-    }, [positioningRules, allChars, viewBy, glyphDataMap, glyphVersion]);
+    }, [positioningRules, allChars, viewBy, glyphDataMap, glyphVersion, isFiltered]);
 
     const activeItem = navItems[activeTab];
 
     const displayedCombinations = useMemo(() => {
-        if (!activeItem || !positioningRules) return [];
-    
+        if (!positioningRules) return [];
+        
         const allCombinations: { base: Character; mark: Character; ligature: Character }[] = [];
         const addedLigatures = new Set<number>();
     
-        for (const rule of positioningRules) {
+        // If filtered, we want ALL combinations across the font to filter them.
+        // If not filtered, we restrict to the active tab item.
+        
+        const rulesToProcess = positioningRules;
+        
+        for (const rule of rulesToProcess) {
             const ruleBases = rule.base || [];
             const ruleMarks = rule.mark || [];
-    
-            if (viewBy === 'base' && ruleBases.includes(activeItem.name)) {
-                for (const markName of ruleMarks) {
-                    const markChar = allChars.get(markName);
-                    if (markChar) {
-                        const ligature = positioningData.allLigaturesByKey.get(`${activeItem.unicode}-${markChar.unicode}`);
-                        if (ligature && !addedLigatures.has(ligature.unicode)) {
-                            allCombinations.push({ base: activeItem, mark: markChar, ligature });
-                            addedLigatures.add(ligature.unicode);
-                        }
-                    }
+            
+            // Determine loop context
+            let basesToCheck = ruleBases;
+            let marksToCheck = ruleMarks;
+            
+            if (!isFiltered) {
+                if (!activeItem) return []; // No tab selected in normal mode
+                
+                if (viewBy === 'base') {
+                     if (!ruleBases.includes(activeItem.name)) continue;
+                     basesToCheck = [activeItem.name];
+                } else {
+                     if (!ruleMarks.includes(activeItem.name)) continue;
+                     marksToCheck = [activeItem.name];
                 }
-            } else if (viewBy === 'mark' && ruleMarks.includes(activeItem.name)) {
-                for (const baseName of ruleBases) {
-                    const baseChar = allChars.get(baseName);
-                    if (baseChar) {
-                        const ligature = positioningData.allLigaturesByKey.get(`${baseChar.unicode}-${activeItem.unicode}`);
-                        if (ligature && !addedLigatures.has(ligature.unicode)) {
-                            allCombinations.push({ base: baseChar, mark: activeItem, ligature });
+            }
+
+            for (const baseName of basesToCheck) {
+                for (const markName of marksToCheck) {
+                     const baseChar = allChars.get(baseName);
+                     const markChar = allChars.get(markName);
+                     if (baseChar && markChar) {
+                         const ligature = positioningData.allLigaturesByKey.get(`${baseChar.unicode}-${markChar.unicode}`);
+                         if (ligature && !addedLigatures.has(ligature.unicode)) {
+                            allCombinations.push({ base: baseChar, mark: markChar, ligature });
                             addedLigatures.add(ligature.unicode);
-                        }
-                    }
+                         }
+                     }
                 }
             }
         }
 
-        return allCombinations.filter(
+        // Base filtering: Only show pairs where both components are drawn
+        let result = allCombinations.filter(
             ({ base, mark }) => isGlyphDrawn(glyphDataMap.get(base.unicode)) && isGlyphDrawn(glyphDataMap.get(mark.unicode))
         );
+        
+        // Mode filtering
+        if (isFiltered) {
+            if (filterMode === 'completed') {
+                result = result.filter(c => markPositioningMap.has(`${c.base.unicode}-${c.mark.unicode}`));
+            } else if (filterMode === 'incomplete') {
+                result = result.filter(c => !markPositioningMap.has(`${c.base.unicode}-${c.mark.unicode}`));
+            }
+            
+            // Sort flat list by base unicode then mark unicode for consistency
+            result.sort((a,b) => (a.base.unicode || 0) - (b.base.unicode || 0) || (a.mark.unicode || 0) - (b.mark.unicode || 0));
+        }
 
-    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion]);
+        return result;
+
+    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion, isFiltered, filterMode, markPositioningMap]);
 
     // Handle Deep Navigation from Command Palette
     // This effect identifies the target, switches tabs if necessary, and opens the editor if found.
     useEffect(() => {
-        if (!pendingNavigationTarget || navItems.length === 0) return;
+        if (!pendingNavigationTarget) return;
 
+        // In filtered mode, we don't need to switch tabs, just find it in the flat list
+        if (isFiltered) {
+             const [baseId, markId] = pendingNavigationTarget.split('-').map(Number);
+             const comboIndex = displayedCombinations.findIndex(
+                c => c.base.unicode === baseId && c.mark.unicode === markId
+             );
+             if (comboIndex !== -1) {
+                setEditingPair(displayedCombinations[comboIndex]);
+                setEditingIndex(comboIndex);
+                localScrollTarget.current = pendingNavigationTarget;
+                setPendingNavigationTarget(null);
+             }
+             return;
+        }
+
+        // Normal mode navigation logic
+        if (navItems.length === 0) return;
         const [baseId, markId] = pendingNavigationTarget.split('-').map(Number);
         const targetId = viewBy === 'base' ? baseId : markId;
         const tabIndex = navItems.findIndex(item => item.unicode === targetId);
@@ -274,12 +319,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             setPendingNavigationTarget(null);
         }
         
-    }, [pendingNavigationTarget, navItems, viewBy, activeTab, displayedCombinations, setPendingNavigationTarget]);
+    }, [pendingNavigationTarget, navItems, viewBy, activeTab, displayedCombinations, setPendingNavigationTarget, isFiltered]);
 
     // Scroll to card after tab switch or editor close
-    // This handles two cases: 
-    // 1. Direct navigation where editor wasn't opened (e.g. just scrolling).
-    // 2. Returning from the editor (using localScrollTarget) to restore context.
     useEffect(() => {
          const target = localScrollTarget.current || pendingNavigationTarget;
          
@@ -296,10 +338,10 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
     // Reset tab on view change, ONLY if not navigating
     useEffect(() => {
-        if (!pendingNavigationTarget) {
+        if (!pendingNavigationTarget && !isFiltered) {
              setActiveTab(0);
         }
-    }, [viewBy, pendingNavigationTarget]);
+    }, [viewBy, pendingNavigationTarget, isFiltered]);
     
 
     const savePositioningUpdate = useCallback((
@@ -416,6 +458,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     };
     
     const fullyPositionedItems = useMemo(() => {
+        if (isFiltered) return []; // Reuse modal might be weird in filtered mode, but list source is navItems which are based on viewBy
         return navItems.filter(item => {
             // Find all combinations for this item
             const combinations: { base: Character; mark: Character }[] = [];
@@ -438,7 +481,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`)
             );
         }).filter(item => item.unicode !== reuseSourceItem?.unicode);
-    }, [navItems, positioningRules, viewBy, allChars, markPositioningMap, reuseSourceItem]);
+    }, [navItems, positioningRules, viewBy, allChars, markPositioningMap, reuseSourceItem, isFiltered]);
     
     const handleCopyPositions = (copyFromItem: Character) => {
         if (!reuseSourceItem) return;
@@ -452,6 +495,15 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         let positionsCopiedCount = 0;
 
         targetCombinations.forEach(targetCombo => {
+            // Logic differs slightly in flattened view vs hierarchical view, but targetCombinations has everything we need
+            // If in flattened view, we might not have a consistent "viewBy" direction for the source mapping.
+            // Reuse feature implies structurally similar items.
+            // Assuming Reuse is typically used in 'viewBy' mode where structure is clear.
+            
+            // For now, allow reuse based on the current 'viewBy' toggle even if list is flattened?
+            // Actually, if flattened, `viewBy` might not match the pair's structure.
+            // Let's restrict Reuse to non-filtered mode for simplicity and safety, or assume standard structure.
+            
             const otherChar = viewBy === 'base' ? targetCombo.mark : targetCombo.base;
             const sourceBase = viewBy === 'base' ? copyFromItem : otherChar;
             const sourceMark = viewBy === 'base' ? otherChar : copyFromItem;
@@ -599,13 +651,14 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     }, [displayedCombinations, markPositioningMap]);
 
     const handleResetPositions = useCallback(() => {
-        if (!activeItem) return;
-    
+        // In filtered mode, reset everything in list. In nav mode, reset active item's stuff.
+        const pairsToReset = displayedCombinations; 
+        
         const newMarkPositioningMap = new Map(markPositioningMap);
         const newGlyphDataMap = new Map(glyphDataMap);
         let resetCount = 0;
     
-        for (const combo of displayedCombinations) {
+        for (const combo of pairsToReset) {
             const key = `${combo.base.unicode}-${combo.mark.unicode}`;
             
             if (markPositioningMap.has(key)) {
@@ -625,7 +678,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         if (resetCount > 0) {
             positioningDispatch({ type: 'SET_MAP', payload: newMarkPositioningMap });
             glyphDataDispatch({ type: 'SET_MAP', payload: newGlyphDataMap });
-            showNotification(t('positionsResetSuccess', { name: activeItem.name }), 'success');
+            showNotification(t('positionsResetSuccess', { name: activeItem ? activeItem.name : `${resetCount} pairs` }), 'success');
         }
         
         setIsResetConfirmOpen(false);
@@ -685,10 +738,17 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         <div className="w-full h-full flex flex-col">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <div className="flex justify-between items-center mb-4 relative">
-                    <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex gap-4">
-                        <button onClick={() => setViewBy('base')} className={`px-4 py-2 rounded-md font-semibold ${viewBy === 'base' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{t('viewByBase')}</button>
-                        <button onClick={() => setViewBy('mark')} className={`px-4 py-2 rounded-md font-semibold ${viewBy === 'mark' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{t('viewByMark')}</button>
-                    </div>
+                    {!isFiltered && (
+                        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex gap-4">
+                            <button onClick={() => setViewBy('base')} className={`px-4 py-2 rounded-md font-semibold ${viewBy === 'base' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{t('viewByBase')}</button>
+                            <button onClick={() => setViewBy('mark')} className={`px-4 py-2 rounded-md font-semibold ${viewBy === 'mark' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{t('viewByMark')}</button>
+                        </div>
+                    )}
+                    {isFiltered && (
+                         <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 font-bold text-gray-700 dark:text-gray-200">
+                             {filterMode === 'completed' ? t('filterCompleted') : t('filterIncomplete')}
+                         </div>
+                    )}
                     <div className="ml-auto">
                          <button 
                             onClick={() => setIsRulesModalOpen(true)} 
@@ -699,56 +759,63 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                         </button>
                     </div>
                 </div>
-                <div className="relative">
-                    {showNavArrows.left && (
-                         <button onClick={() => handleScroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 dark:bg-gray-800/70 p-1 rounded-full shadow-md hover:bg-white dark:hover:bg-gray-800"><LeftArrowIcon className="h-5 w-5"/></button>
-                    )}
-                    <div ref={navContainerRef} className="flex space-x-1 overflow-x-auto no-scrollbar py-1">
-                       {navItems.map((item, index) => (
-                            <button
-                                key={item.unicode}
-                                onClick={() => setActiveTab(index)}
-                                className={`flex-shrink-0 px-3 py-2 text-lg font-bold rounded-md whitespace-nowrap transition-colors ${activeTab === index ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
-                                style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}
-                            >
-                                {item.name}
-                            </button>
-                        ))}
+                
+                {!isFiltered && (
+                    <div className="relative">
+                        {showNavArrows.left && (
+                             <button onClick={() => handleScroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 dark:bg-gray-800/70 p-1 rounded-full shadow-md hover:bg-white dark:hover:bg-gray-800"><LeftArrowIcon className="h-5 w-5"/></button>
+                        )}
+                        <div ref={navContainerRef} className="flex space-x-1 overflow-x-auto no-scrollbar py-1">
+                           {navItems.map((item, index) => (
+                                <button
+                                    key={item.unicode}
+                                    onClick={() => setActiveTab(index)}
+                                    className={`flex-shrink-0 px-3 py-2 text-lg font-bold rounded-md whitespace-nowrap transition-colors ${activeTab === index ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
+                                    style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}
+                                >
+                                    {item.name}
+                                </button>
+                            ))}
+                        </div>
+                        {showNavArrows.right && (
+                            <button onClick={() => handleScroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 dark:bg-gray-800/70 p-1 rounded-full shadow-md hover:bg-white dark:hover:bg-gray-800"><RightArrowIcon className="h-5 w-5"/></button>
+                        )}
                     </div>
-                    {showNavArrows.right && (
-                        <button onClick={() => handleScroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 dark:bg-gray-800/70 p-1 rounded-full shadow-md hover:bg-white dark:hover:bg-gray-800"><RightArrowIcon className="h-5 w-5"/></button>
-                    )}
-                </div>
+                )}
             </div>
 
             <div className="flex-grow overflow-y-auto p-6">
-                {showIncompleteNotice && (
+                {showIncompleteNotice && !isFiltered && (
                     <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">
                         {t('positioningShowOnlyComplete')}
                     </div>
                 )}
 
-                {!activeItem && navItems.length === 0 && (
+                {((!isFiltered && navItems.length === 0) || (isFiltered && displayedCombinations.length === 0)) && (
                     <div className="text-center p-8 bg-gray-100 dark:bg-gray-800 rounded-lg">
                         <p className="text-gray-600 dark:text-gray-400">
-                            {viewBy === 'base' ? t('positioningNoBasesDrawn') : t('positioningNoMarksDrawn')}
+                            {isFiltered ? t('noResultsFound') : (viewBy === 'base' ? t('positioningNoBasesDrawn') : t('positioningNoMarksDrawn'))}
                         </p>
                     </div>
                 )}
                 
-                {activeItem && (
-                    <div key={activeItem.unicode}>
+                {(activeItem || (isFiltered && displayedCombinations.length > 0)) && (
+                    <div key={activeItem?.unicode || 'flat-list'}>
                         <div className="flex items-center gap-4 mb-4 flex-wrap">
-                            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
-                                {t('combinationsFor', { item: activeItem.name })}
-                            </h2>
-                            <button
-                                onClick={() => handleOpenReuseModal(activeItem)}
-                                title={t('copyPositionFrom')}
-                                className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                            >
-                                <CopyIcon />
-                            </button>
+                            {!isFiltered && (
+                                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
+                                    {t('combinationsFor', { item: activeItem!.name })}
+                                </h2>
+                            )}
+                            {!isFiltered && (
+                                <button
+                                    onClick={() => handleOpenReuseModal(activeItem!)}
+                                    title={t('copyPositionFrom')}
+                                    className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    <CopyIcon />
+                                </button>
+                            )}
                             <button
                                 onClick={handleAcceptAllDefaults}
                                 disabled={unpositionedCount === 0}
@@ -825,7 +892,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                     </div>
                 </div>
             )}
-             {isResetConfirmOpen && activeItem && (
+             {isResetConfirmOpen && (
                 <Modal
                     isOpen={isResetConfirmOpen}
                     onClose={() => setIsResetConfirmOpen(false)}
@@ -835,7 +902,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                         <button onClick={handleResetPositions} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">{t('reset')}</button>
                     </>}
                 >
-                    <p>{t('confirmResetMessage', { name: activeItem.name })}</p>
+                    <p>{t('confirmResetMessage', { name: activeItem ? activeItem.name : "Selected Items" })}</p>
                 </Modal>
             )}
             

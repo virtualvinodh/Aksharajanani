@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning } from '../types';
+import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning, FilterMode } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useProject } from '../contexts/ProjectContext';
-import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, CopyIcon, WrenchIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, AddIcon } from '../constants';
+import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, CopyIcon, WrenchIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, AddIcon, FilterIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import CommandPalette from './CommandPalette';
 
@@ -100,8 +100,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     const [isEditingFontName, setIsEditingFontName] = useState(false);
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
     const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+    const filterMenuRef = useRef<HTMLDivElement>(null);
     
-    const { selectCharacter, setWorkspace, setCurrentView, isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection } = useLayout();
+    const { selectCharacter, setWorkspace, setCurrentView, isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection, filterMode, setFilterMode } = useLayout();
     
     const kerningLabel = (settings.editorMode === 'advanced' || settings.preferKerningTerm) ? t('workspaceKerning') : t('workspaceSpacing');
     
@@ -136,6 +138,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
              setIsMetricsSelectionMode(true);
         }
     };
+    
+    const handleFilterChange = (mode: FilterMode) => {
+        setFilterMode(mode);
+        setIsFilterMenuOpen(false);
+    };
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -147,6 +154,19 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
+    
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
+                setIsFilterMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Helper to see if filtering is relevant for current workspace
+    const showFilter = activeWorkspace === 'drawing' || activeWorkspace === 'positioning' || activeWorkspace === 'kerning';
 
     return (
         <>
@@ -238,6 +258,34 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 <SearchIcon className="w-5 h-5" />
                                 <span className="hidden md:inline">Search</span>
                             </button>
+                            
+                            {showFilter && (
+                                <div className="relative" ref={filterMenuRef}>
+                                    <button
+                                        onClick={() => setIsFilterMenuOpen(p => !p)}
+                                        className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${filterMode !== 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                        title={t('filter')}
+                                    >
+                                        <FilterIcon />
+                                        <span className="hidden md:inline">{t('filter')}</span>
+                                    </button>
+                                    
+                                    {isFilterMenuOpen && (
+                                        <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-40 overflow-hidden">
+                                            <button onClick={() => handleFilterChange('all')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'all' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                {t('showAll')}
+                                            </button>
+                                            <button onClick={() => handleFilterChange('completed')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'completed' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                {t('showCompleted')}
+                                            </button>
+                                            <button onClick={() => handleFilterChange('incomplete')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'incomplete' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                {t('showIncomplete')}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                              {activeWorkspace === 'drawing' && (
                                  <button
                                      onClick={toggleSelectionMode}

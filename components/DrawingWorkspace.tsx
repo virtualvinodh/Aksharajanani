@@ -126,7 +126,7 @@ const CharacterSetTab: React.FC<{
 
 const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSelectCharacter, onAddGlyph, onAddBlock, drawingProgress }) => {
     const { t } = useLocale();
-    const { activeTab, setActiveTab, showNotification, metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
+    const { activeTab, setActiveTab, showNotification, metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, filterMode } = useLayout();
     const { dispatch: characterDispatch } = useProject();
     const { settings, metrics } = useSettings();
     const navContainerRef = useRef<HTMLDivElement>(null);
@@ -150,14 +150,49 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
 
     const showHidden = settings?.showHiddenGlyphs ?? false;
 
+    // Filter Logic
+    const isFiltered = filterMode !== 'all';
+    
     const visibleCharacterSets = useMemo(() => {
+        if (isFiltered) return []; // In filtered mode, we don't use sets
         return characterSets
             .map(set => ({
                 ...set,
                 characters: set.characters.filter(char => (!char.hidden || showHidden) && char.unicode !== 8205 && char.unicode !== 8204)
             }))
             .filter(set => set.nameKey !== 'dynamicLigatures');
-    }, [characterSets, showHidden]);
+    }, [characterSets, showHidden, isFiltered]);
+
+    const filteredFlatList = useMemo(() => {
+        if (!isFiltered) return [];
+        
+        return characterSets
+            .flatMap(set => set.characters)
+            .filter(char => {
+                // Filter out non-drawables
+                if (char.unicode === 8205 || char.unicode === 8204) return false;
+                
+                const drawn = isGlyphDrawn(glyphDataMap.get(char.unicode));
+                
+                // Show hidden glyphs if user explicitly wants incomplete/completed and they match
+                // Or respect showHidden setting. 
+                // Let's assume filterMode overrides hidden for matching items to be helpful.
+                const isMatch = (filterMode === 'completed' && drawn) || (filterMode === 'incomplete' && !drawn);
+                
+                if (!isMatch) return false;
+                
+                // If it matches filter, we show it, unless it's hidden AND showHidden is false.
+                // But for "Punch list" (incomplete), you probably want to see even hidden ones if you have tasks.
+                // Let's stick to standard visibility rules for consistency unless 'showHidden' is on.
+                return (!char.hidden || showHidden);
+            })
+            .sort((a, b) => (a.unicode || 0) - (b.unicode || 0));
+            
+    }, [characterSets, glyphDataMap, filterMode, showHidden, isFiltered, glyphVersion]);
+
+    const currentGridCharacters = isFiltered 
+        ? filteredFlatList 
+        : (visibleCharacterSets[activeTab]?.characters || []);
 
     const drawnCharacters = useMemo(() => {
         if (!characterSets) return [];
@@ -173,12 +208,12 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
 
     // Ensure active tab logic...
     useEffect(() => {
-        if (activeTab >= visibleCharacterSets.length && visibleCharacterSets.length > 0) {
+        if (!isFiltered && activeTab >= visibleCharacterSets.length && visibleCharacterSets.length > 0) {
             setActiveTab(visibleCharacterSets.length - 1);
-        } else if (visibleCharacterSets.length === 0) {
+        } else if (!isFiltered && visibleCharacterSets.length === 0) {
             setActiveTab(0);
         }
-    }, [activeTab, setActiveTab, visibleCharacterSets.length]);
+    }, [activeTab, setActiveTab, visibleCharacterSets.length, isFiltered]);
 
     // Scroll Logic...
     const checkNavOverflow = useCallback(() => {
@@ -281,45 +316,41 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     
     const handleSelectAll = () => {
         const allUnicodes = new Set<number>();
-        visibleCharacterSets.forEach(set => {
-            set.characters.forEach(c => {
-                if (c.unicode !== undefined) allUnicodes.add(c.unicode);
-            });
+        // Use visible characters depending on mode
+        currentGridCharacters.forEach(c => {
+             if (c.unicode !== undefined) allUnicodes.add(c.unicode);
         });
         setMetricsSelection(allUnicodes);
     };
 
     const handleSelectVisible = () => {
-        const currentSet = visibleCharacterSets[activeTab];
-        if (!currentSet) return;
-        setMetricsSelection(prev => {
-            const next = new Set(prev);
-            currentSet.characters.forEach(c => {
-                if (c.unicode !== undefined) next.add(c.unicode);
-            });
-            return next;
-        });
+        handleSelectAll(); // Same as select all for flattened view or current tab
     };
 
     return (
         <div className="flex flex-col h-full overflow-hidden relative">
             <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center pr-2">
                 
-                {/* Scrollable Tabs Container */}
-                <div className="flex-grow relative overflow-hidden flex items-center">
-                    {showNavArrows.left && <button onClick={() => handleNavScroll('left')} className="absolute left-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-r dark:border-gray-700"><LeftArrowIcon className="h-5 w-5" /></button>}
-                    
-                    <div ref={navContainerRef} className="flex space-x-1 overflow-x-auto no-scrollbar px-2 sm:px-4 w-full items-center">
-                        {visibleCharacterSets.map((set, index) => (
-                            <CharacterSetTab key={set.nameKey} set={set} index={index} activeTab={activeTab} setActiveTab={setActiveTab} glyphDataMap={glyphDataMap} onContextMenu={handleContextMenu} showHidden={showHidden} glyphVersion={glyphVersion} />
-                        ))}
-                        <button onClick={openCreateModal} title={t('newGroup')} className="flex-shrink-0 flex items-center justify-center p-1.5 ml-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors"><AddIcon className="h-5 w-5" /></button>
-                    </div>
+                {/* Scrollable Tabs Container - HIDDEN when Filter is active */}
+                {!isFiltered ? (
+                    <div className="flex-grow relative overflow-hidden flex items-center">
+                        {showNavArrows.left && <button onClick={() => handleNavScroll('left')} className="absolute left-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-r dark:border-gray-700"><LeftArrowIcon className="h-5 w-5" /></button>}
+                        
+                        <div ref={navContainerRef} className="flex space-x-1 overflow-x-auto no-scrollbar px-2 sm:px-4 w-full items-center">
+                            {visibleCharacterSets.map((set, index) => (
+                                <CharacterSetTab key={set.nameKey} set={set} index={index} activeTab={activeTab} setActiveTab={setActiveTab} glyphDataMap={glyphDataMap} onContextMenu={handleContextMenu} showHidden={showHidden} glyphVersion={glyphVersion} />
+                            ))}
+                            <button onClick={openCreateModal} title={t('newGroup')} className="flex-shrink-0 flex items-center justify-center p-1.5 ml-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors"><AddIcon className="h-5 w-5" /></button>
+                        </div>
 
-                    {showNavArrows.right && <button onClick={() => handleNavScroll('right')} className="absolute right-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-l dark:border-gray-700"><RightArrowIcon className="h-5 w-5" /></button>}
-                </div>
-                
-                {/* Removed Select Toggle from here (moved to AppHeader) */}
+                        {showNavArrows.right && <button onClick={() => handleNavScroll('right')} className="absolute right-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-l dark:border-gray-700"><RightArrowIcon className="h-5 w-5" /></button>}
+                    </div>
+                ) : (
+                    <div className="flex-grow p-3 px-4 font-bold text-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20">
+                        {filterMode === 'completed' ? 'Completed Glyphs' : 'Incomplete Glyphs (To-Do)'} 
+                        <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">({filteredFlatList.length} found)</span>
+                    </div>
+                )}
             </div>
             
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -327,13 +358,20 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
             </div>
 
             <div className="flex-grow overflow-hidden">
-                <CharacterGrid
-                    key={activeTab}
-                    characters={visibleCharacterSets[activeTab]?.characters || []}
-                    onSelectCharacter={onSelectCharacter}
-                    onAddGlyph={() => onAddGlyph(visibleCharacterSets[activeTab]?.nameKey)}
-                    onAddBlock={onAddBlock}
-                />
+                {currentGridCharacters.length > 0 ? (
+                    <CharacterGrid
+                        key={isFiltered ? 'flat-list' : activeTab}
+                        characters={currentGridCharacters}
+                        onSelectCharacter={onSelectCharacter}
+                        // Only allow adding glyphs in standard view to avoid context confusion
+                        onAddGlyph={!isFiltered ? () => onAddGlyph(visibleCharacterSets[activeTab]?.nameKey) : () => {}}
+                        onAddBlock={onAddBlock}
+                    />
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-500">
+                        {isFiltered ? 'No matches found.' : 'No characters.'}
+                    </div>
+                )}
             </div>
             
             {/* Contextual Action Bar for Selection */}
@@ -354,7 +392,6 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                              
                              <div className="flex gap-2">
                                 <button onClick={handleSelectAll} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors">{t('selectAll')}</button>
-                                <button onClick={handleSelectVisible} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors">{t('selectVisible')}</button>
                                 <button onClick={() => setMetricsSelection(new Set())} disabled={metricsSelection.size === 0} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors disabled:opacity-50">{t('selectNone')}</button>
                              </div>
                         </div>

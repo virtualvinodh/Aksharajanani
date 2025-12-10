@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useRef } from 'react';
-import { Character, ProjectData } from '../types';
+import { Character, ProjectData, FilterMode } from '../types';
 
 export type Workspace = 'drawing' | 'positioning' | 'kerning' | 'rules' | 'metrics';
 type View = 'grid' | 'comparison' | 'settings';
@@ -57,6 +57,10 @@ interface LayoutContextType {
   setMetricsSelection: React.Dispatch<React.SetStateAction<Set<number>>>;
   isMetricsSelectionMode: boolean;
   setIsMetricsSelectionMode: React.Dispatch<React.SetStateAction<boolean>>;
+  
+  // Filtering
+  filterMode: FilterMode;
+  setFilterMode: React.Dispatch<React.SetStateAction<FilterMode>>;
 
   // Deep Linking / Navigation Target
   pendingNavigationTarget: string | null;
@@ -87,6 +91,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [metricsSelection, setMetricsSelection] = useState<Set<number>>(new Set());
     const [isMetricsSelectionMode, setIsMetricsSelectionMode] = useState(false);
     const [pendingNavigationTarget, setPendingNavigationTarget] = useState<string | null>(null);
+    const [filterMode, setFilterMode] = useState<FilterMode>('all');
 
     // Session flags (non-persistent across refreshes)
     const sessionFlags = useRef<Set<string>>(new Set());
@@ -132,7 +137,8 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         metricsSelection, setMetricsSelection,
         isMetricsSelectionMode, setIsMetricsSelectionMode,
         pendingNavigationTarget, setPendingNavigationTarget,
-        checkAndSetFlag
+        checkAndSetFlag,
+        filterMode, setFilterMode
     };
 
     return (
