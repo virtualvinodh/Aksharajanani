@@ -108,28 +108,32 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
     onConfirmPosition();
   };
 
-  const cardClasses = `relative border-2 rounded-lg p-2 flex flex-col items-center justify-between transition-all duration-200 aspect-square ${
-    canEdit ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500' : 'opacity-50 cursor-not-allowed'
-  } ${
-    isPositioned ? 'bg-indigo-100 dark:bg-indigo-900/40 border-indigo-400 dark:border-indigo-600' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:border-indigo-500'
-  }`;
+  const baseContainerClasses = "relative rounded-lg p-2 sm:p-4 flex flex-col items-center justify-between transition-all duration-200 aspect-square h-full group select-none";
+  const cursorClass = canEdit ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed';
+  
+  let stateClasses = "";
+  if (isPositioned) {
+      stateClasses = "bg-indigo-50 dark:bg-indigo-900/30 border-2 border-indigo-200 dark:border-indigo-700";
+  } else {
+      stateClasses = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500";
+  }
 
   return (
-    <div ref={ref} onClick={canEdit ? onClick : undefined} className={cardClasses}>
+    <div ref={ref} onClick={canEdit ? onClick : undefined} className={`${baseContainerClasses} ${cursorClass} ${stateClasses}`}>
       {!isPositioned && canEdit && (
         <button
           onClick={handleConfirmClick}
           title="Mark as positioned"
-          className="absolute top-1 right-1 z-10 p-1 bg-white dark:bg-gray-700 rounded-full text-gray-400 hover:text-green-500 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
+          className="absolute top-1 right-1 z-10 p-1 bg-white dark:bg-gray-700 rounded-full text-gray-400 hover:text-green-500 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors border border-gray-200 dark:border-gray-600"
         >
           <CheckCircleIcon className="w-5 h-5" />
         </button>
       )}
-      <div className="w-full h-full flex items-center justify-center">
-        <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE}></canvas>
+      <div className="w-full flex-1 min-h-0 flex items-center justify-center">
+        <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className="transition-transform duration-200 max-w-full max-h-full object-contain group-hover:scale-110"></canvas>
       </div>
-      <div className="text-center mt-2 h-8 flex items-center justify-center">
-        <p className="text-lg font-bold text-gray-700 dark:text-gray-300" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
+      <div className="text-center mt-1 sm:mt-2 flex-shrink-0">
+        <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
           {ligature.name}
         </p>
       </div>
