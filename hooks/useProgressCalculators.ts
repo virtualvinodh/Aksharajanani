@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { CharacterSet, GlyphData, KerningMap, MarkPositioningMap, RecommendedKerning, Character, PositioningRules } from '../types';
 import { isGlyphDrawn } from '../utils/glyphUtils';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface UseProgressCalculatorsProps {
     characterSets: CharacterSet[] | null;
@@ -26,11 +27,15 @@ export const useProgressCalculators = ({
     glyphVersion = 0,
 }: UseProgressCalculatorsProps) => {
 
+    const { settings } = useSettings();
+    const showHidden = settings?.showHiddenGlyphs ?? false;
+
     const drawingProgress = useMemo(() => {
         if (!characterSets) return { completed: 0, total: 0 };
         
         const allDrawableChars = characterSets.flatMap(cs => cs.characters)
-            .filter(c => c.unicode !== 8205 && c.unicode !== 8204);
+            .filter(c => c.unicode !== 8205 && c.unicode !== 8204)
+             .filter(c => !c.hidden || showHidden); ;
         const totalDrawableChars = allDrawableChars.length;
         
         const drawnGlyphCount = allDrawableChars.filter(char => {
