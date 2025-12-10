@@ -1,7 +1,3 @@
-
-
-
-
 import React from 'react';
 
 // --- Canvas & Sizing Constants ---
@@ -80,6 +76,12 @@ export const ExportIcon: React.FC<{ className?: string }> = ({ className = 'h-5 
 export const ClearIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+);
+
+export const CloseIcon: React.FC<{ className?: string }> = ({ className = 'h-5 w-5' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
 );
 
@@ -496,4 +498,9 @@ export const SliceIcon = () => (
     <path fillRule="evenodd" d="M2.613 2.668a1.5 1.5 0 0 1 2.122.054l16.602 17.717a1.5 1.5 0 0 1-2.19 2.053L2.545 4.775a1.5 1.5 0 0 1 .068-2.107Z" clipRule="evenodd" />
     <path d="M13.56 5.865a1.5 1.5 0 0 1 1.58-.291l1.5.5a1.5 1.5 0 0 1 .465 2.696l-1.5.75a1.5 1.5 0 0 1-2.045-1.34V5.865ZM5.865 13.56a1.5 1.5 0 0 1 .291-1.58l.5-1.5a1.5 1.5 0 0 1 2.696-.465l.75 1.5a1.5 1.5 0 0 1-1.34 2.045H5.865Z" />
   </svg>
+);
+export const TransformIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+    </svg>
 );

@@ -4,7 +4,7 @@ import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { LeftArrowIcon, RightArrowIcon, CheckCircleIcon, AddIcon, EditIcon, TrashIcon, SelectIcon, SettingsIcon, BatchIcon, CompareIcon } from '../constants';
+import { LeftArrowIcon, RightArrowIcon, CheckCircleIcon, AddIcon, EditIcon, TrashIcon, SelectIcon, SettingsIcon, BatchIcon, CompareIcon, CloseIcon, TransformIcon } from '../constants';
 import ProgressIndicator from './ProgressIndicator';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -327,10 +327,19 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         }
     };
     
+    // Selects only what's currently visible in the grid (based on tab or filter)
+    const handleSelectVisible = () => {
+        const visibleUnicodes = new Set<number>();
+        currentGridCharacters.forEach(c => {
+             if (c.unicode !== undefined) visibleUnicodes.add(c.unicode);
+        });
+        setMetricsSelection(visibleUnicodes);
+    };
+
+    // Selects ALL characters in the font (across all tabs)
     const handleSelectAll = () => {
         const allUnicodes = new Set<number>();
-        // Use visible characters depending on mode
-        currentGridCharacters.forEach(c => {
+        characterSets.flatMap(set => set.characters).forEach(c => {
              if (c.unicode !== undefined) allUnicodes.add(c.unicode);
         });
         setMetricsSelection(allUnicodes);
@@ -343,6 +352,10 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
              return;
         }
         setComparisonCharacters(selectedChars);
+        
+        // Disable selection mode before switching views to ensure toolbar disappears
+        setIsMetricsSelectionMode(false);
+        
         setCurrentView('comparison');
     };
 
@@ -416,12 +429,12 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400">
                                      <span className="font-bold text-sm">{metricsSelection.size}</span>
                                  </div>
-                                 <span className="font-bold text-gray-900 dark:text-white hidden sm:inline">{t('metricsSelection', { count: metricsSelection.size })}</span>
                              </div>
                              
                              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 hidden md:block"></div>
                              
                              <div className="flex gap-2">
+                                <button onClick={handleSelectVisible} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors">{t('selectVisible')}</button>
                                 <button onClick={handleSelectAll} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors">{t('selectAll')}</button>
                                 <button onClick={() => setMetricsSelection(new Set())} disabled={metricsSelection.size === 0} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors disabled:opacity-50">{t('selectNone')}</button>
                              </div>
@@ -429,24 +442,24 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                         
                         {/* Right Side: Actions */}
                         <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 no-scrollbar justify-start md:justify-end">
-                             <button onClick={() => setIsTransformModalOpen(true)} disabled={metricsSelection.size === 0} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                <span className="hidden sm:inline">{t('transform')}</span>
+                             <button onClick={() => setIsTransformModalOpen(true)} disabled={metricsSelection.size === 0} title={t('transform')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
+                                <TransformIcon />
+                                <span className="hidden xl:inline">{t('transform')}</span>
                             </button>
-                            <button onClick={() => setIsPropertiesModalOpen(true)} disabled={metricsSelection.size === 0} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
-                                <SettingsIcon /> <span className="hidden sm:inline">{t('editProperties')}</span>
+                            <button onClick={() => setIsPropertiesModalOpen(true)} disabled={metricsSelection.size === 0} title={t('editProperties')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
+                                <SettingsIcon /> <span className="hidden xl:inline">{t('editProperties')}</span>
                             </button>
-                             <button onClick={handleCompareSelected} disabled={metricsSelection.size === 0} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
-                                <CompareIcon /> <span className="hidden sm:inline">{t('compare')}</span>
+                             <button onClick={handleCompareSelected} disabled={metricsSelection.size === 0} title={t('compare')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
+                                <CompareIcon /> <span className="hidden xl:inline">{t('compare')}</span>
                             </button>
-                            <button onClick={() => setIsDeleteConfirmOpen(true)} disabled={metricsSelection.size === 0} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
-                                <TrashIcon /> <span className="hidden sm:inline">{t('delete')}</span>
+                            <button onClick={() => setIsDeleteConfirmOpen(true)} disabled={metricsSelection.size === 0} title={t('delete')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
+                                <TrashIcon /> <span className="hidden xl:inline">{t('delete')}</span>
                             </button>
                             
                              <div className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-2 hidden md:block"></div>
                              
-                            <button onClick={toggleSelectionMode} className="px-6 py-2 bg-gray-800 dark:bg-white text-white dark:text-gray-900 font-bold rounded-lg hover:bg-gray-700 dark:hover:bg-gray-200 shadow-sm whitespace-nowrap">
-                                Done
+                            <button onClick={toggleSelectionMode} className="p-2 bg-gray-800 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-200 shadow-sm transition-colors" title="Close Selection Mode">
+                                <CloseIcon />
                             </button>
                         </div>
                     </div>
