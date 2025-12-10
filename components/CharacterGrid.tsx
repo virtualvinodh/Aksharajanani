@@ -1,5 +1,5 @@
 
-import React, { useMemo, forwardRef } from 'react';
+import React, { useMemo, forwardRef, useCallback } from 'react';
 import { Character } from '../types';
 import CharacterCard from './CharacterCard';
 import { useLocale } from '../contexts/LocaleContext';
@@ -59,7 +59,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
     return items;
   }, [characters, showHidden, filterMode]);
 
-  const toggleSelection = (character: Character) => {
+  const toggleSelection = useCallback((character: Character) => {
       if (!character.unicode) return;
       
       // If we are toggling, we implicitly enter selection mode if not already active
@@ -77,9 +77,9 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
           
           return newSet;
       });
-  };
+  }, [isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection]);
 
-  const ItemContent = (index: number) => {
+  const ItemContent = useCallback((index: number) => {
       const item = gridItems[index];
       
       if (item.type === 'char') {
@@ -125,7 +125,14 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
           );
       }
       return null;
-  };
+  }, [gridItems, glyphDataMap, onSelectCharacter, isMetricsSelectionMode, metricsSelection, toggleSelection, onAddGlyph, t, onAddBlock]);
+
+  const gridComponents = useMemo(() => ({
+    List: ListContainer,
+    Item: ItemContainer,
+    Header: GridHeader,
+    Footer: GridFooter
+  }), []);
 
   if (!settings) return null;
 
@@ -133,12 +140,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
       <VirtuosoGrid
         style={{ height: '100%' }}
         totalCount={gridItems.length}
-        components={{
-            List: ListContainer,
-            Item: ItemContainer,
-            Header: GridHeader,
-            Footer: GridFooter
-        }}
+        components={gridComponents}
         itemContent={ItemContent}
         overscan={400}
       />
