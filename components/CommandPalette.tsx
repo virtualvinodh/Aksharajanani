@@ -9,6 +9,7 @@ import { SearchIcon, EditIcon, SettingsIcon, CompareIcon, TestIcon, ExportIcon, 
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useSettings } from '../contexts/SettingsContext';
 import { useRules } from '../contexts/RulesContext';
+import { parseSearchQuery, getCharacterMatchScore } from '../utils/searchUtils';
 
 interface CommandPaletteProps {
     isOpen: boolean;
@@ -33,6 +34,8 @@ interface SearchResult {
     icon?: React.ReactNode;
     onExecute: () => void;
     unicode?: number;
+    // We add character object here for smart sorting
+    character?: Character;
 }
 
 const CommandPalette: React.FC<CommandPaletteProps> = ({ 
@@ -160,7 +163,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                                 subtitle: char.unicode ? `U+${char.unicode.toString(16).toUpperCase().padStart(4, '0')} • ${t(set.nameKey)}` : t(set.nameKey),
                                 icon: <span className="font-bold text-lg">{char.name}</span>,
                                 onExecute: () => onSelectGlyph(char),
-                                unicode: char.unicode
+                                unicode: char.unicode,
+                                character: char
                             });
                         }
                     });
@@ -180,7 +184,9 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     
     const dynamicResults = useMemo(() => {
         if (!searchTerm) return [];
-        const query = searchTerm.toLowerCase();
+        const query = parseSearchQuery(searchTerm);
+        if (!query.isEffective) return [];
+
         const results: SearchResult[] = [];
         const MAX_RESULTS = 20;
         
@@ -195,30 +201,41 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                      for (const markName of marks) {
                          if (posCount >= 5) break; // Limit positioning results to keep UI clean
                          
-                         const pairName = baseName + markName;
-                         if (pairName.toLowerCase().includes(query) || 
-                             (baseName.toLowerCase().includes(query) && markName.toLowerCase().includes(query))) {
-                             
-                             const baseChar = allCharsByName.get(baseName);
-                             const markChar = allCharsByName.get(markName);
+                         const baseChar = allCharsByName.get(baseName);
+                         const markChar = allCharsByName.get(markName);
 
-                             if (baseChar && markChar) {
-                                 // CHECK: Ensure both components are drawn before offering to position them
-                                 if (isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
-                                     const pairId = `${baseChar.unicode}-${markChar.unicode}`;
-                                     results.push({
-                                         id: `pos-${pairId}`,
-                                         type: 'positioning',
-                                         title: `${baseName} + ${markName}`,
-                                         subtitle: t('positioning'),
-                                         icon: <span className="flex gap-0.5"><span className="opacity-50">{baseName}</span><span>{markName}</span></span>,
-                                         onExecute: () => {
-                                             onSetWorkspace('positioning');
-                                             setPendingNavigationTarget(pairId);
-                                         }
-                                     });
-                                     posCount++;
-                                 }
+                         // Use smart score logic
+                         let score = 0;
+                         if (baseChar && markChar) {
+                             const scoreBase = getCharacterMatchScore(baseChar, query);
+                             const scoreMark = getCharacterMatchScore(markChar, query);
+                             
+                             // If either component matches, consider the pair a match
+                             if (scoreBase > 0) score = scoreBase;
+                             else if (scoreMark > 0) score = scoreMark;
+                             
+                             // Check pair name concatenation
+                             if (score === 0) {
+                                 const pairName = baseName + markName;
+                                 if (pairName.toLowerCase().includes(query.lower)) score = 3;
+                             }
+                         }
+
+                         if (score > 0 && baseChar && markChar) {
+                             if (isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
+                                 const pairId = `${baseChar.unicode}-${markChar.unicode}`;
+                                 results.push({
+                                     id: `pos-${pairId}`,
+                                     type: 'positioning',
+                                     title: `${baseName} + ${markName}`,
+                                     subtitle: t('positioning'),
+                                     icon: <span className="flex gap-0.5"><span className="opacity-50">{baseName}</span><span>{markName}</span></span>,
+                                     onExecute: () => {
+                                         onSetWorkspace('positioning');
+                                         setPendingNavigationTarget(pairId);
+                                     }
+                                 });
+                                 posCount++;
                              }
                          }
                      }
@@ -242,12 +259,21 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                     const right = allCharsByUnicode.get(rId);
                     
                     if (left && right) {
+                        // Use smart score logic
+                         let score = 0;
+                         const scoreL = getCharacterMatchScore(left, query);
+                         const scoreR = getCharacterMatchScore(right, query);
+                         
+                         if (scoreL > 0) score = scoreL;
+                         else if (scoreR > 0) score = scoreR;
+                         
+                         if (score === 0) {
+                             const pairName = left.name + right.name;
+                             if (pairName.toLowerCase().includes(query.lower)) score = 3;
+                         }
+
                         // CHECK: Ensure both glyphs exist and are drawn
-                         if (isGlyphDrawn(glyphDataMap.get(left.unicode)) && isGlyphDrawn(glyphDataMap.get(right.unicode))) {
-                            const pairName = left.name + right.name;
-                            if (pairName.toLowerCase().includes(query) || 
-                                (left.name.toLowerCase().includes(query) && right.name.toLowerCase().includes(query))) {
-                                
+                         if (score > 0 && isGlyphDrawn(glyphDataMap.get(left.unicode)) && isGlyphDrawn(glyphDataMap.get(right.unicode))) {
                                 results.push({
                                     id: `kern-${key}`,
                                     type: 'kerning-pair',
@@ -259,7 +285,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                                         setPendingNavigationTarget(key); // e.g. "65-86"
                                     }
                                 });
-                            }
                         }
                     }
                  });
@@ -284,10 +309,19 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                                  const pairId = `${leftChar.unicode}-${rightChar.unicode}`;
                                  if (existingPairs.has(pairId)) continue; // Already handled in custom list
                                  
-                                 const pairName = l + r;
-                                 if (pairName.toLowerCase().includes(query) || 
-                                    (l.toLowerCase().includes(query) && r.toLowerCase().includes(query))) {
-                                     
+                                 // Smart score
+                                 let score = 0;
+                                 const scoreL = getCharacterMatchScore(leftChar, query);
+                                 const scoreR = getCharacterMatchScore(rightChar, query);
+                                 if (scoreL > 0) score = scoreL;
+                                 else if (scoreR > 0) score = scoreR;
+
+                                 if (score === 0) {
+                                     const pairName = l + r;
+                                     if (pairName.toLowerCase().includes(query.lower)) score = 3;
+                                 }
+                                 
+                                 if (score > 0) {
                                      // CHECK: Ensure both components are drawn
                                      if (isGlyphDrawn(glyphDataMap.get(leftChar.unicode)) && isGlyphDrawn(glyphDataMap.get(rightChar.unicode))) {
                                          results.push({
@@ -322,33 +356,48 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             return cachedItems.filter(i => i.type === 'workspace' || i.type === 'action');
         }
         
-        const lowerTerm = searchTerm.toLowerCase();
+        const q = parseSearchQuery(searchTerm);
         const allCandidates = [...cachedItems, ...dynamicResults];
 
         // Scoring Algorithm
         const scoredItems = allCandidates.map(item => {
             let score = 0;
-            const titleLower = item.title.toLowerCase();
-            const subLower = item.subtitle?.toLowerCase() || '';
-            const aliases = item.aliases?.map(a => a.toLowerCase()) || [];
-
-            // 1. Title Matches (Highest Priority)
-            if (titleLower === lowerTerm) score = 100; // Exact match
-            else if (titleLower.startsWith(lowerTerm)) score = 80; // Starts with
-            else if (titleLower.includes(lowerTerm)) score = 60; // Contains
             
-            // 2. Alias Matches (High Priority - handles "Kerning" -> "Spacing")
-            if (score === 0 && aliases.length > 0) {
-                for (const alias of aliases) {
-                    if (alias === lowerTerm) { score = 90; break; } // Exact alias match
-                    else if (alias.startsWith(lowerTerm)) { score = 70; break; } // Alias starts with
-                    else if (alias.includes(lowerTerm)) { score = 50; break; } // Alias contains
+            // 0. Explicit Character Match (from new utility)
+            if (item.character) {
+                const charScore = getCharacterMatchScore(item.character, q);
+                if (charScore > 0) {
+                     // Invert utility score for our ranking (where higher is better here)
+                     if (charScore === 1) score = 100; // Exact
+                     else if (charScore === 2) score = 80; // Starts With
+                     else if (charScore === 4) score = 95; // Unicode Match
+                     else score = 60; // Contains
                 }
             }
 
-            // 3. Subtitle Matches (Lowest Priority)
-            if (score === 0 && subLower.includes(lowerTerm)) {
-                score = 10;
+            if (score === 0) {
+                const titleLower = item.title.toLowerCase();
+                const subLower = item.subtitle?.toLowerCase() || '';
+                const aliases = item.aliases?.map(a => a.toLowerCase()) || [];
+    
+                // 1. Title Matches
+                if (titleLower === q.lower) score = 100; // Exact match
+                else if (titleLower.startsWith(q.lower)) score = 80; // Starts with
+                else if (titleLower.includes(q.lower)) score = 60; // Contains
+                
+                // 2. Alias Matches (High Priority)
+                if (score === 0 && aliases.length > 0) {
+                    for (const alias of aliases) {
+                        if (alias === q.lower) { score = 90; break; } // Exact alias match
+                        else if (alias.startsWith(q.lower)) { score = 70; break; } // Alias starts with
+                        else if (alias.includes(q.lower)) { score = 50; break; } // Alias contains
+                    }
+                }
+    
+                // 3. Subtitle Matches (Lowest Priority)
+                if (score === 0 && subLower.includes(q.lower)) {
+                    score = 10;
+                }
             }
 
             return { item, score };
@@ -379,8 +428,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         
         // Progressive Disclosure: "Create Glyph" Option
         // If the search yields no exact glyph matches, offer to create it.
-        // We check if any of the results are of type 'glyph' that exactly match the search term
-        const hasExactGlyphMatch = results.some(i => i.type === 'glyph' && i.title.toLowerCase() === lowerTerm);
+        const hasExactGlyphMatch = results.some(i => i.type === 'glyph' && i.title.toLowerCase() === q.lower);
         
         if (!hasExactGlyphMatch && searchTerm.trim()) {
             results.push({

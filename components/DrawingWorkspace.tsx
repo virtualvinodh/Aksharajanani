@@ -12,6 +12,7 @@ import { useProject } from '../contexts/ProjectContext';
 import { useSettings } from '../contexts/SettingsContext';
 import Modal from './Modal';
 import { useBatchOperations } from '../hooks/useBatchOperations';
+import { filterAndSortCharacters } from '../utils/searchUtils';
 
 // Reusing modals from BulkEditWorkspace logic but integrated here
 const BulkPropertiesModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (l: string, r: string, w: string) => void, count: number }> = ({ isOpen, onClose, onSave, count }) => {
@@ -172,7 +173,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const filteredFlatList = useMemo(() => {
         if (!isFiltered) return [];
         
-        return characterSets
+        let candidates = characterSets
             .flatMap(set => set.characters)
             .filter(char => {
                 // Filter out non-drawables
@@ -185,19 +186,20 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                 const matchesStatus = filterMode === 'all' || filterMode === 'none' || (filterMode === 'completed' && drawn) || (filterMode === 'incomplete' && !drawn);
                 
                 if (!matchesStatus) return false;
-
-                // Name Search Filtering
-                if (isSearching) {
-                    const query = searchQuery.toLowerCase();
-                    const nameMatch = char.name.toLowerCase().includes(query);
-                    // Match only by name as requested
-                    if (!nameMatch) return false;
-                }
                 
                 // Respect hidden property unless showHidden is on
                 return (!char.hidden || showHidden);
-            })
-            .sort((a, b) => (a.unicode || 0) - (b.unicode || 0));
+            });
+
+        // Use new shared utility for Search Filtering & Sorting
+        if (isSearching) {
+            candidates = filterAndSortCharacters(candidates, searchQuery);
+        } else {
+            // Default Sort (Unicode) if not searching
+            candidates.sort((a, b) => (a.unicode || 0) - (b.unicode || 0));
+        }
+            
+        return candidates;
             
     }, [characterSets, glyphDataMap, filterMode, showHidden, isFiltered, glyphVersion, searchQuery, isSearching]);
 

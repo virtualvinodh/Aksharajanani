@@ -16,6 +16,7 @@ import { updatePositioningAndCascade } from '../services/positioningService';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import Modal from './Modal';
 import PositioningRulesModal from './PositioningRulesModal';
+import { parseSearchQuery, getCharacterMatchScore } from '../utils/searchUtils';
 
 
 // Main Positioning Page Component
@@ -257,14 +258,40 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             }
             // if filterMode === 'all', we just return the full list (already populated above)
             
-            // Search Filtering
+            // Search Filtering (Smart Sorting)
             if (isSearching) {
-                 const query = searchQuery.toLowerCase();
-                 result = result.filter(c => c.base.name.toLowerCase().includes(query) || c.mark.name.toLowerCase().includes(query));
+                const q = parseSearchQuery(searchQuery);
+                if (q.isEffective) {
+                    const matches = result.map(combo => {
+                        // Check base, mark, or ligature name against query
+                        const scoreBase = getCharacterMatchScore(combo.base, q);
+                        const scoreMark = getCharacterMatchScore(combo.mark, q);
+                        const scoreLig = getCharacterMatchScore(combo.ligature, q);
+
+                        let bestScore = -1;
+                        // Prioritize ligature match, then base/mark
+                        if (scoreLig > 0) bestScore = scoreLig;
+                        else {
+                            if (scoreBase > 0 && scoreMark > 0) bestScore = Math.min(scoreBase, scoreMark);
+                            else if (scoreBase > 0) bestScore = scoreBase;
+                            else if (scoreMark > 0) bestScore = scoreMark;
+                        }
+
+                        return { combo, score: bestScore };
+                    }).filter(item => item.score > 0);
+
+                    matches.sort((a, b) => {
+                        if (a.score !== b.score) return a.score - b.score;
+                        // Secondary sort by base unicode, then mark unicode
+                        return (a.combo.base.unicode || 0) - (b.combo.base.unicode || 0) || (a.combo.mark.unicode || 0) - (b.combo.mark.unicode || 0);
+                    });
+
+                    result = matches.map(m => m.combo);
+                }
+            } else {
+                // Default Sort for flat list
+                result.sort((a,b) => (a.base.unicode || 0) - (b.base.unicode || 0) || (a.mark.unicode || 0) - (b.mark.unicode || 0));
             }
-            
-            // Sort flat list by base unicode then mark unicode for consistency
-            result.sort((a,b) => (a.base.unicode || 0) - (b.base.unicode || 0) || (a.mark.unicode || 0) - (b.mark.unicode || 0));
         }
 
         return result;

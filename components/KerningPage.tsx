@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Character, GlyphData, FontMetrics, CharacterSet, KerningMap, RecommendedKerning, AppSettings } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { SparklesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon } from '../constants';
 import { calculateAutoKerning } from '../services/kerningService';
 import PairCard from './PairCard';
@@ -17,6 +18,7 @@ import AutoKerningProgressModal from './AutoKerningProgressModal';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import Modal from './Modal';
 import KerningEditorPage from './KerningEditorPage';
+import { parseSearchQuery, getCharacterMatchScore } from '../utils/searchUtils';
 
 interface KerningPageProps {
   recommendedKerning: RecommendedKerning[] | null;
@@ -152,13 +154,33 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
              });
         }
         
-        // Search Filter
+        // Search Filter (Smart Sorting)
         if (searchQuery.trim().length > 0) {
-            const query = searchQuery.toLowerCase();
-            result = result.filter(pair => 
-                pair.left.name.toLowerCase().includes(query) || 
-                pair.right.name.toLowerCase().includes(query)
-            );
+            const q = parseSearchQuery(searchQuery);
+            if (q.isEffective) {
+                const matches = result.map(pair => {
+                    // Check left OR right char against the query
+                    const scoreL = getCharacterMatchScore(pair.left, q);
+                    const scoreR = getCharacterMatchScore(pair.right, q);
+                    
+                    // Best score wins (if either matches, we include the pair)
+                    // If neither matches (-1), score is -1.
+                    let bestScore = -1;
+                    if (scoreL > 0 && scoreR > 0) bestScore = Math.min(scoreL, scoreR);
+                    else if (scoreL > 0) bestScore = scoreL;
+                    else if (scoreR > 0) bestScore = scoreR;
+                    
+                    return { pair, score: bestScore };
+                }).filter(item => item.score > 0);
+
+                matches.sort((a, b) => {
+                    if (a.score !== b.score) return a.score - b.score;
+                    // Secondary sort by name for stability
+                    return a.pair.left.name.localeCompare(b.pair.left.name) || a.pair.right.name.localeCompare(b.pair.right.name);
+                });
+                
+                result = matches.map(m => m.pair);
+            }
         }
         
         return result;
