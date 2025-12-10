@@ -748,25 +748,37 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     return (
         <div className="w-full h-full flex flex-col">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                <div className="flex justify-between items-center mb-4 relative">
+                <div className="flex flex-row justify-between items-center mb-4 relative gap-2 sm:gap-0">
                     {!isFiltered && (
-                        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex gap-4">
-                            <button onClick={() => setViewBy('base')} className={`px-4 py-2 rounded-md font-semibold ${viewBy === 'base' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{t('viewByBase')}</button>
-                            <button onClick={() => setViewBy('mark')} className={`px-4 py-2 rounded-md font-semibold ${viewBy === 'mark' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{t('viewByMark')}</button>
+                        <div className="flex-1 sm:flex-none flex justify-start sm:justify-center sm:absolute sm:left-1/2 sm:top-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 mr-2 sm:mr-0 min-w-0">
+                            <div className="inline-flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg shadow-inner w-full sm:w-auto h-full items-stretch">
+                                <button 
+                                    onClick={() => setViewBy('base')} 
+                                    className={`flex-1 sm:flex-none px-2 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-normal text-center leading-tight flex items-center justify-center ${viewBy === 'base' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                                >
+                                    {t('viewByBase')}
+                                </button>
+                                <button 
+                                    onClick={() => setViewBy('mark')} 
+                                    className={`flex-1 sm:flex-none px-2 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-normal text-center leading-tight flex items-center justify-center ${viewBy === 'mark' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                                >
+                                    {t('viewByMark')}
+                                </button>
+                            </div>
                         </div>
                     )}
                     {isFiltered && (
-                         <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 font-bold text-gray-700 dark:text-gray-200">
+                         <div className="flex-1 text-left sm:text-center sm:absolute sm:left-1/2 sm:top-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 font-bold text-gray-700 dark:text-gray-200 text-sm sm:text-base truncate">
                              {getBannerText()}
                          </div>
                     )}
-                    <div className="ml-auto">
+                    <div className="flex-shrink-0 ml-auto">
                          <button 
                             onClick={() => setIsRulesModalOpen(true)} 
-                            className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+                            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-xs sm:text-sm"
                         >
-                            <RulesIcon className="w-4 h-4" />
-                            <span>{t('manageRules')}</span>
+                            <RulesIcon className="w-4 h-4 flex-shrink-0" />
+                            <span className="whitespace-nowrap">{t('manageRules')}</span>
                         </button>
                     </div>
                 </div>
