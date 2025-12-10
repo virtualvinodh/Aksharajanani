@@ -23,7 +23,12 @@ const AppContainer: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     
     const { t } = useLocale();
-    const { openModal, closeModal, setActiveTab, setWorkspace, setCurrentView, closeCharacterModal, activeModal, notification, closeNotification } = useLayout();
+    const { 
+        openModal, closeModal, setActiveTab, setWorkspace, setCurrentView, closeCharacterModal, 
+        activeModal, notification, closeNotification,
+        setFilterMode, setSearchQuery, setMetricsSelection, setIsMetricsSelectionMode, 
+        setComparisonCharacters, setPendingNavigationTarget
+    } = useLayout();
     const { script, dispatch: characterDispatch } = useProject();
     const { dispatch: glyphDataDispatch } = useGlyphData();
     const { dispatch: kerningDispatch } = useKerning();
@@ -90,6 +95,14 @@ const AppContainer: React.FC = () => {
         setWorkspace('drawing');
         setCurrentView('grid');
         closeCharacterModal();
+        
+        // Clear filter and selection states to prevent carry-over
+        setFilterMode('none');
+        setSearchQuery('');
+        setMetricsSelection(new Set());
+        setIsMetricsSelectionMode(false);
+        setComparisonCharacters([]);
+        setPendingNavigationTarget(null);
 
         setProjectDataToRestore(null);
     };
