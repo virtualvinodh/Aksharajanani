@@ -27,7 +27,7 @@ interface KerningPageProps {
 
 const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMode, mode, showRecommendedLabel }) => {
     const { t } = useLocale();
-    const { showNotification, pendingNavigationTarget, setPendingNavigationTarget, filterMode } = useLayout();
+    const { showNotification, pendingNavigationTarget, setPendingNavigationTarget, filterMode, searchQuery } = useLayout();
     const { characterSets, allCharsByName } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
@@ -137,21 +137,32 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     }, [mode, drawnRecommendedKerning, allCharsByName, selectedLeftChars, selectedRightChars, allCharsByUnicode, isGlyphDrawn, kerningMap]);
 
     const filteredPairsToDisplay = useMemo(() => {
-        if (filterMode === 'none' || filterMode === 'all') {
-            return allPairsToDisplay;
+        let result = allPairsToDisplay;
+        
+        // Status Filter
+        if (filterMode === 'completed') {
+             result = result.filter(pair => {
+                 const key = `${pair.left.unicode}-${pair.right.unicode}`;
+                 return kerningMap.has(key);
+             });
+        } else if (filterMode === 'incomplete') {
+             result = result.filter(pair => {
+                 const key = `${pair.left.unicode}-${pair.right.unicode}`;
+                 return !kerningMap.has(key);
+             });
         }
         
-        return allPairsToDisplay.filter(pair => {
-            if (!pair.left || !pair.right) return false;
-            const key = `${pair.left.unicode}-${pair.right.unicode}`;
-            const isKerned = kerningMap.has(key);
-            
-            if (filterMode === 'completed') return isKerned;
-            if (filterMode === 'incomplete') return !isKerned;
-            
-            return true;
-        });
-    }, [allPairsToDisplay, filterMode, kerningMap]);
+        // Search Filter
+        if (searchQuery.trim().length > 0) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(pair => 
+                pair.left.name.toLowerCase().includes(query) || 
+                pair.right.name.toLowerCase().includes(query)
+            );
+        }
+        
+        return result;
+    }, [allPairsToDisplay, filterMode, kerningMap, searchQuery]);
     
     const visibleKernedCount = useMemo(() => {
         return filteredPairsToDisplay.reduce((count, pair) => {

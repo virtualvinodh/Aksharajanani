@@ -1,5 +1,4 @@
 
-// ... existing imports ...
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon, RulesIcon } from '../constants';
@@ -32,7 +31,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     positioningRules, markAttachmentRules, fontRules, markAttachmentClasses, baseAttachmentClasses
 }) => {
     const { t } = useLocale();
-    const { showNotification, pendingNavigationTarget, setPendingNavigationTarget, filterMode } = useLayout();
+    const { showNotification, pendingNavigationTarget, setPendingNavigationTarget, filterMode, searchQuery } = useLayout();
     const { glyphDataMap, dispatch: glyphDataDispatch, version: glyphVersion } = useGlyphData();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { characterSets, dispatch: characterDispatch } = useProject();
@@ -56,7 +55,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     // Local ref to persist the scroll target even when pendingNavigationTarget is cleared or component re-renders
     const localScrollTarget = useRef<string | null>(null);
     
-    const isFiltered = filterMode !== 'none';
+    const isSearching = searchQuery.trim().length > 0;
+    const isFiltered = filterMode !== 'none' || isSearching;
     
     const allChars = useMemo<Map<string, Character>>(() => new Map(characterSets!.flatMap(set => set.characters).map(char => [char.name, char])), [characterSets]);
 
@@ -257,13 +257,19 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             }
             // if filterMode === 'all', we just return the full list (already populated above)
             
+            // Search Filtering
+            if (isSearching) {
+                 const query = searchQuery.toLowerCase();
+                 result = result.filter(c => c.base.name.toLowerCase().includes(query) || c.mark.name.toLowerCase().includes(query));
+            }
+            
             // Sort flat list by base unicode then mark unicode for consistency
             result.sort((a,b) => (a.base.unicode || 0) - (b.base.unicode || 0) || (a.mark.unicode || 0) - (b.mark.unicode || 0));
         }
 
         return result;
 
-    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion, isFiltered, filterMode, markPositioningMap]);
+    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion, isFiltered, filterMode, markPositioningMap, searchQuery, isSearching]);
 
     // Handle Deep Navigation from Command Palette
     // This effect identifies the target, switches tabs if necessary, and opens the editor if found.
@@ -737,6 +743,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     }
 
     const getBannerText = () => {
+        if (isSearching) {
+            return `Searching: "${searchQuery}"`;
+        }
         switch(filterMode) {
             case 'completed': return t('filterCompleted');
             case 'incomplete': return t('filterIncomplete');
@@ -748,7 +757,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     return (
         <div className="w-full h-full flex flex-col">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                <div className="flex flex-row justify-between items-center mb-4 relative gap-2 sm:gap-0">
+                <div className="flex flex-row justify-between items-center relative gap-2 sm:gap-0">
                     {!isFiltered && (
                         <div className="flex-1 sm:flex-none flex justify-start sm:justify-center sm:absolute sm:left-1/2 sm:top-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 mr-2 sm:mr-0 min-w-0">
                             <div className="inline-flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg shadow-inner w-full sm:w-auto h-full items-stretch">

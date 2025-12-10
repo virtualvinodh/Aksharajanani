@@ -126,7 +126,12 @@ const CharacterSetTab: React.FC<{
 
 const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSelectCharacter, onAddGlyph, onAddBlock, drawingProgress }) => {
     const { t } = useLocale();
-    const { activeTab, setActiveTab, showNotification, metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, filterMode, setComparisonCharacters, setCurrentView } = useLayout();
+    const { 
+        activeTab, setActiveTab, showNotification, 
+        metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, 
+        filterMode, setComparisonCharacters, setCurrentView,
+        searchQuery
+    } = useLayout();
     const { dispatch: characterDispatch } = useProject();
     const { settings, metrics } = useSettings();
     const navContainerRef = useRef<HTMLDivElement>(null);
@@ -151,7 +156,8 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const showHidden = settings?.showHiddenGlyphs ?? false;
 
     // Filter Logic
-    const isFiltered = filterMode !== 'none';
+    const isSearching = searchQuery.trim().length > 0;
+    const isFiltered = filterMode !== 'none' || isSearching;
     
     const visibleCharacterSets = useMemo(() => {
         if (isFiltered) return []; // In filtered mode, we don't use sets
@@ -176,16 +182,24 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                 
                 // If filterMode is 'all', we show everything (flat list).
                 // If it's completed/incomplete, we filter by drawn status.
-                const isMatch = filterMode === 'all' || (filterMode === 'completed' && drawn) || (filterMode === 'incomplete' && !drawn);
+                const matchesStatus = filterMode === 'all' || filterMode === 'none' || (filterMode === 'completed' && drawn) || (filterMode === 'incomplete' && !drawn);
                 
-                if (!isMatch) return false;
+                if (!matchesStatus) return false;
+
+                // Name Search Filtering
+                if (isSearching) {
+                    const query = searchQuery.toLowerCase();
+                    const nameMatch = char.name.toLowerCase().includes(query);
+                    // Match only by name as requested
+                    if (!nameMatch) return false;
+                }
                 
                 // Respect hidden property unless showHidden is on
                 return (!char.hidden || showHidden);
             })
             .sort((a, b) => (a.unicode || 0) - (b.unicode || 0));
             
-    }, [characterSets, glyphDataMap, filterMode, showHidden, isFiltered, glyphVersion]);
+    }, [characterSets, glyphDataMap, filterMode, showHidden, isFiltered, glyphVersion, searchQuery, isSearching]);
 
     const currentGridCharacters = isFiltered 
         ? filteredFlatList 
@@ -331,6 +345,9 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     };
 
     const getBannerText = () => {
+        if (isSearching) {
+            return `Searching: "${searchQuery}"`;
+        }
         switch(filterMode) {
             case 'completed': return t('filterCompleted');
             case 'incomplete': return t('filterIncomplete');

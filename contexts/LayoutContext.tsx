@@ -61,6 +61,8 @@ interface LayoutContextType {
   // Filtering
   filterMode: FilterMode;
   setFilterMode: React.Dispatch<React.SetStateAction<FilterMode>>;
+  searchQuery: string;
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
 
   // Deep Linking / Navigation Target
   pendingNavigationTarget: string | null;
@@ -92,6 +94,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [isMetricsSelectionMode, setIsMetricsSelectionMode] = useState(false);
     const [pendingNavigationTarget, setPendingNavigationTarget] = useState<string | null>(null);
     const [filterMode, setFilterMode] = useState<FilterMode>('none');
+    const [searchQuery, setSearchQuery] = useState<string>('');
 
     // Session flags (non-persistent across refreshes)
     const sessionFlags = useRef<Set<string>>(new Set());
@@ -138,7 +141,8 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         isMetricsSelectionMode, setIsMetricsSelectionMode,
         pendingNavigationTarget, setPendingNavigationTarget,
         checkAndSetFlag,
-        filterMode, setFilterMode
+        filterMode, setFilterMode,
+        searchQuery, setSearchQuery
     };
 
     return (

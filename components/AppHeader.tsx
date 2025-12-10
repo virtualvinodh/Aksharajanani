@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning, FilterMode } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -101,8 +102,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     const [isPaletteOpen, setIsPaletteOpen] = useState(false);
     const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
     const filterMenuRef = useRef<HTMLDivElement>(null);
+    const filterInputRef = useRef<HTMLInputElement>(null);
     
-    const { selectCharacter, setWorkspace, setCurrentView, isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection, filterMode, setFilterMode } = useLayout();
+    const { 
+        selectCharacter, setWorkspace, setCurrentView, 
+        isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection, 
+        filterMode, setFilterMode,
+        searchQuery, setSearchQuery 
+    } = useLayout();
     
     const kerningLabel = (settings.editorMode === 'advanced' || settings.preferKerningTerm) ? t('workspaceKerning') : t('workspaceSpacing');
     
@@ -166,6 +173,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
     // Helper to see if filtering is relevant for current workspace
     const showFilter = activeWorkspace === 'drawing' || activeWorkspace === 'positioning' || activeWorkspace === 'kerning';
+
+    useEffect(() => {
+        if (isFilterMenuOpen && filterInputRef.current) {
+            filterInputRef.current.focus();
+        }
+    }, [isFilterMenuOpen]);
+
+    const isFilteredOrSearched = filterMode !== 'none' || searchQuery !== '';
 
     return (
         <>
@@ -244,18 +259,18 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                             <>
                             <button
                                 onClick={() => setIsPaletteOpen(true)}
-                                title="Search (Ctrl+K)"
+                                title="Command Palette (Ctrl+K)"
                                 className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
                             >
                                 <SearchIcon className="w-5 h-5" />
-                                <span className="hidden md:inline">Search</span>
+                                <span className="hidden md:inline">Command</span>
                             </button>
                             
                             {showFilter && (
                                 <div className="relative" ref={filterMenuRef}>
                                     <button
                                         onClick={() => setIsFilterMenuOpen(p => !p)}
-                                        className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${filterMode !== 'none' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                        className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${isFilteredOrSearched ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
                                         title={t('filter')}
                                     >
                                         <FilterIcon />
@@ -263,7 +278,17 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                     </button>
                                     
                                     {isFilterMenuOpen && (
-                                        <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-40 overflow-hidden">
+                                        <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-40 overflow-hidden">
+                                            <div className="p-2 border-b dark:border-gray-700">
+                                                <input 
+                                                    ref={filterInputRef}
+                                                    type="text" 
+                                                    placeholder="Filter by name..." 
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    className="w-full p-2 text-sm border rounded bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                                />
+                                            </div>
                                             <button onClick={() => handleFilterChange('none')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'none' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
                                                 {t('filterNone')}
                                             </button>

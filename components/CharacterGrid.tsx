@@ -40,7 +40,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
   const { t } = useLocale();
   const { settings } = useSettings();
   const { glyphDataMap } = useGlyphData();
-  const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, filterMode } = useLayout();
+  const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, filterMode, searchQuery } = useLayout();
   
   const showHidden = settings?.showHiddenGlyphs ?? false;
 
@@ -49,15 +49,15 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
       .filter(char => !char.hidden || showHidden)
       .map(char => ({ type: 'char', data: char }));
       
-    // Only show Add buttons if we are viewing "None" (Standard Mode)
+    // Only show Add buttons if we are viewing "None" (Standard Mode) AND not searching
     // In "Completed", "Incomplete", or "All" (Flat list) modes, these are distracting.
-    if (filterMode === 'none') {
+    if (filterMode === 'none' && !searchQuery) {
         items.push({ type: 'addGlyph' });
         items.push({ type: 'addBlock' });
     }
     
     return items;
-  }, [characters, showHidden, filterMode]);
+  }, [characters, showHidden, filterMode, searchQuery]);
 
   const toggleSelection = useCallback((character: Character) => {
       if (!character.unicode) return;
