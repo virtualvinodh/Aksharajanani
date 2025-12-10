@@ -1,9 +1,10 @@
 
 
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
-import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, LinkIcon, BrokenLinkIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
+import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
 
 interface DrawingToolbarProps {
@@ -35,9 +36,6 @@ interface DrawingToolbarProps {
   
   calligraphyAngle: 45 | 30 | 15;
   setCalligraphyAngle: (angle: 45 | 30 | 15) => void;
-
-  onUnlockClick: () => void;
-  onRelinkClick: () => void;
 
   onApplyTransform: (transform: TransformState & { flipX?: boolean; flipY?: boolean }) => void;
   previewTransform: TransformState | null;
@@ -75,7 +73,7 @@ const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: bo
 
 const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     const { t } = useLocale();
-    const { character, currentTool, setCurrentTool, settings, isLargeScreen, onUndo, canUndo, onRedo, canRedo, onCut, selectedPathIds, onCopy, onPaste, clipboard, onGroup, canGroup, onUngroup, canUngroup, onZoom, onImageImportClick, onSvgImportClick, calligraphyAngle, setCalligraphyAngle, onUnlockClick, onRelinkClick } = props;
+    const { character, currentTool, setCurrentTool, settings, isLargeScreen, onUndo, canUndo, onRedo, canRedo, onCut, selectedPathIds, onCopy, onPaste, clipboard, onGroup, canGroup, onUngroup, canUngroup, onZoom, onImageImportClick, onSvgImportClick, calligraphyAngle, setCalligraphyAngle } = props;
     
     const [isAnglePickerOpen, setIsAnglePickerOpen] = useState(false);
     const calligraphyToolButtonRef = useRef<HTMLDivElement>(null);
@@ -108,35 +106,10 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
         }
     };
     
-    const lockOrLinkButton = character.link ? (
-      <>
-        <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
-         <button
-            onClick={onUnlockClick}
-            title={t('unlockForDetailedEditing')}
-            className="p-2 rounded-md transition-colors bg-orange-500 text-white hover:bg-orange-600 flex items-center gap-1"
-        >
-            <BrokenLinkIcon />
-        </button>
-      </>
-    ) : character.sourceLink ? (
-      <>
-        <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
-         <button
-            onClick={onRelinkClick}
-            title={t('relinkGlyphTitle')}
-            className="p-2 rounded-md transition-colors bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1"
-        >
-            <LinkIcon />
-        </button>
-      </>
-    ) : null;
-
     const commonTools = (
         <>
             <ToolButton tool="select" currentTool={currentTool} label="Select" onClick={setCurrentTool}><SelectIcon /></ToolButton>
             <ToolButton tool="pan" currentTool={currentTool} label={t('pan')} onClick={setCurrentTool}><PanIcon /></ToolButton>
-            {lockOrLinkButton}
         </>
     );
 

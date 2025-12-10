@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment, TransformState } from '../types';
 import DrawingCanvas from './DrawingCanvas';
@@ -421,6 +423,8 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         isLocked={isLocked} isComposite={isComposite} onRefresh={handleRefresh}
         allCharacterSets={allCharacterSets}
         onSaveConstruction={handleSaveConstruction}
+        onUnlock={() => setIsUnlockConfirmOpen(true)}
+        onRelink={() => setIsRelinkConfirmOpen(true)}
       />
 
       <main className={layoutClasses}>
@@ -433,7 +437,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                     onGroup={handleGroup} canGroup={canGroup} onUngroup={handleUngroup} canUngroup={canUngroup}
                     onZoom={handleZoom} onImageImportClick={() => imageImportRef.current?.click()} onSvgImportClick={() => svgImportRef.current?.click()}
                     onImageTraceClick={() => imageTraceRef.current?.click()} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
-                    onUnlockClick={() => setIsUnlockConfirmOpen(true)} onRelinkClick={() => setIsRelinkConfirmOpen(true)}
                     onApplyTransform={handleApplyTransform}
                     previewTransform={previewTransform}
                     setPreviewTransform={setPreviewTransform}

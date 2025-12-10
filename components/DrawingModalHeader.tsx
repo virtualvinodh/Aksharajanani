@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon, MoreIcon } from '../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon, MoreIcon, LinkIcon, BrokenLinkIcon } from '../constants';
 import GlyphPropertiesPanel from './GlyphPropertiesPanel';
 
 interface DrawingModalHeaderProps {
@@ -27,12 +27,15 @@ interface DrawingModalHeaderProps {
   onRefresh?: () => void;
   allCharacterSets: CharacterSet[];
   onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => void;
+  onUnlock: () => void;
+  onRelink: () => void;
 }
 
 const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
   character, glyphData, prevCharacter, nextCharacter, onBackClick, onNavigate,
   settings, metrics, lsb, setLsb, rsb, setRsb, onDeleteClick, onClear, onSave,
-  isLocked = false, isComposite = false, onRefresh, allCharacterSets, onSaveConstruction
+  isLocked = false, isComposite = false, onRefresh, allCharacterSets, onSaveConstruction,
+  onUnlock, onRelink
 }) => {
   const { t } = useLocale();
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
@@ -112,6 +115,30 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               <span className="hidden xl:inline">{t('glyphProperties')}</span>
           </button>
           
+          {/* Unlink (For Linked Glyphs) */}
+          {isLocked && (
+             <button
+                onClick={onUnlock}
+                title={t('unlockForDetailedEditing')}
+                className="flex items-center gap-2 justify-center p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-semibold rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors duration-200"
+            >
+                <BrokenLinkIcon className="w-5 h-5" />
+                <span className="hidden xl:inline">{t('unlock')}</span>
+            </button>
+          )}
+
+          {/* Relink (For Unlinked Source Glyphs) */}
+          {!!character.sourceLink && (
+             <button
+                onClick={onRelink}
+                title={t('relinkGlyphTitle')}
+                className="flex items-center gap-2 justify-center p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors duration-200"
+            >
+                <LinkIcon className="w-5 h-5" />
+                <span className="hidden xl:inline">{t('relink')}</span>
+            </button>
+          )}
+
           {/* Refresh (Universal) */}
           {(isLocked || isComposite) && (
               <button
