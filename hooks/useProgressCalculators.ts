@@ -30,7 +30,7 @@ export const useProgressCalculators = ({
         if (!characterSets) return { completed: 0, total: 0 };
         
         const allDrawableChars = characterSets.flatMap(cs => cs.characters)
-            .filter(c => (c.glyphClass !== 'ligature' || !c.composite) && c.unicode !== 8205 && c.unicode !== 8204);
+            .filter(c => c.unicode !== 8205 && c.unicode !== 8204);
         const totalDrawableChars = allDrawableChars.length;
         
         const drawnGlyphCount = allDrawableChars.filter(char => {

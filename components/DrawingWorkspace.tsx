@@ -280,8 +280,25 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     };
     
     const handleSelectAll = () => {
-        const charsInView = visibleCharacterSets[activeTab]?.characters || [];
-        setMetricsSelection(new Set(charsInView.filter(c => c.unicode).map(c => c.unicode!)));
+        const allUnicodes = new Set<number>();
+        visibleCharacterSets.forEach(set => {
+            set.characters.forEach(c => {
+                if (c.unicode !== undefined) allUnicodes.add(c.unicode);
+            });
+        });
+        setMetricsSelection(allUnicodes);
+    };
+
+    const handleSelectVisible = () => {
+        const currentSet = visibleCharacterSets[activeTab];
+        if (!currentSet) return;
+        setMetricsSelection(prev => {
+            const next = new Set(prev);
+            currentSet.characters.forEach(c => {
+                if (c.unicode !== undefined) next.add(c.unicode);
+            });
+            return next;
+        });
     };
 
     return (
@@ -302,16 +319,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     {showNavArrows.right && <button onClick={() => handleNavScroll('right')} className="absolute right-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-l dark:border-gray-700"><RightArrowIcon className="h-5 w-5" /></button>}
                 </div>
                 
-                <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
-                
-                <button
-                    onClick={toggleSelectionMode}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${isMetricsSelectionMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-                    title="Toggle Batch Selection"
-                >
-                    <SelectIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{t('select')}</span>
-                </button>
+                {/* Removed Select Toggle from here (moved to AppHeader) */}
             </div>
             
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -346,6 +354,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                              
                              <div className="flex gap-2">
                                 <button onClick={handleSelectAll} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors">{t('selectAll')}</button>
+                                <button onClick={handleSelectVisible} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors">{t('selectVisible')}</button>
                                 <button onClick={() => setMetricsSelection(new Set())} disabled={metricsSelection.size === 0} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors disabled:opacity-50">{t('selectNone')}</button>
                              </div>
                         </div>

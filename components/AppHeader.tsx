@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -102,7 +101,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
     const [isPaletteOpen, setIsPaletteOpen] = useState(false);
     
-    const { selectCharacter, setWorkspace, setCurrentView } = useLayout();
+    const { selectCharacter, setWorkspace, setCurrentView, isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection } = useLayout();
     
     const kerningLabel = (settings.editorMode === 'advanced' || settings.preferKerningTerm) ? t('workspaceKerning') : t('workspaceSpacing');
     
@@ -126,6 +125,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         if (action === 'add-glyph') onAddGlyphClick(data);
         if (action === 'quick-add-glyph') {
             onQuickAddGlyph(data?.prefillName, data?.targetSet);
+        }
+    };
+
+    const toggleSelectionMode = () => {
+        if (isMetricsSelectionMode) {
+             setIsMetricsSelectionMode(false);
+             setMetricsSelection(new Set());
+        } else {
+             setIsMetricsSelectionMode(true);
         }
     };
 
@@ -186,7 +194,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         {isMoreMenuOpen && (
                             <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-30 max-h-[80vh] overflow-y-auto">
                                 <button onClick={() => { onSaveProject(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CodeBracketsIcon /> {t('exportJson')}</button>
-                                <button onClick={() => { onExportTemplate(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ExportIcon className="h-4 w-4" /> {t('exportTemplate')}</button>
+                                <button onClick={() => { onExportTemplate(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ExportIcon /> {t('exportTemplate')}</button>
                                 <button onClick={() => { onSaveAs(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CopyIcon /> Save Copy...</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                 <button onClick={() => { onAddGlyphClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><AddIcon className="h-5 w-5" /> {t('addGlyph')}</button>
@@ -221,6 +229,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         </div>
                         
                         {!isEditingFontName && (
+                            <>
                             <button
                                 onClick={() => setIsPaletteOpen(true)}
                                 title="Search (Ctrl+K)"
@@ -229,6 +238,17 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 <SearchIcon className="w-5 h-5" />
                                 <span className="hidden md:inline">Search</span>
                             </button>
+                             {activeWorkspace === 'drawing' && (
+                                 <button
+                                     onClick={toggleSelectionMode}
+                                     className={`flex items-center gap-1 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${isMetricsSelectionMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                     title="Toggle Batch Selection"
+                                 >
+                                     <BatchIcon className="w-5 h-5" />
+                                     <span className="hidden sm:inline">{t('select')}</span>
+                                 </button>
+                             )}
+                            </>
                         )}
                     </div>
                 </div>

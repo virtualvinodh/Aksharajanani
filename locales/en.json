@@ -1,3 +1,4 @@
+
 {
 	"about": "About",
 	"aboutAdvancedContent": "While designed for simplicity, the tool does not sacrifice capability. For experts who require granular control, Aksharajanani offers a full suite of advanced features, including a precise Bézier curve editor, detailed kerning workspaces, and a manual OpenType feature code editor.",
@@ -671,5 +672,6 @@
     "guideFontUrl": "Font URL (.ttf/.otf)",
     "guideFontStylisticSet": "CSS Font Feature Settings (e.g., 'ss01')",
     "sampleText": "Sample Text (Test Page)",
-    "sampleTextDescription": "This text will be pre-loaded when you open the Test Page."
+    "sampleTextDescription": "This text will be pre-loaded when you open the Test Page.",
+    "selectVisible": "Select Visible"
 }
