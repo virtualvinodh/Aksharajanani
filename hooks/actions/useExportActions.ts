@@ -243,6 +243,7 @@ export const useExportActions = ({
         handleSaveProject,
         handleSaveTemplate, // Exposed
         handleTestClick,
-        downloadFontBlob
+        downloadFontBlob,
+        getCachedOrGeneratedFont
     };
 };

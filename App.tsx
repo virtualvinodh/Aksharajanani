@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import DrawingModal from './components/DrawingModal';
@@ -27,6 +28,7 @@ import ExportAnimation from './components/ExportAnimation';
 import ImportGlyphsModal from './components/ImportGlyphsModal';
 import SnapshotRestoreModal from './components/SnapshotRestoreModal';
 import SaveAsModal from './components/SaveAsModal';
+import CreatorModal from './components/CreatorModal';
 import { useLocale } from './contexts/LocaleContext';
 import { useLayout } from './contexts/LayoutContext';
 import { useGlyphData } from './contexts/GlyphDataContext';
@@ -115,7 +117,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       handleTakeSnapshot,
       handleRestoreSnapshot,
       hasSnapshot,
-      openSaveAsModal
+      openSaveAsModal,
+      handleCreatorClick
   } = appActions;
 
   useEffect(() => {
@@ -220,6 +223,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         onAddGlyphClick={(options) => layout.openModal('addGlyph', options)}
         onExportClick={startExportProcess}
         onTestClick={handleTestClick}
+        onCreatorClick={handleCreatorClick}
         onCompareClick={() => setCurrentView('comparison')}
         onSettingsClick={() => setCurrentView('settings')}
         onChangeScriptClick={handleChangeScriptClick}
@@ -370,6 +374,16 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
             }}
          />
       )}
+      
+      {/* CREATOR MODAL */}
+      {layout.activeModal?.name === 'creator' && layout.activeModal.props.fontBlob && (
+          <CreatorModal
+             isOpen={true}
+             onClose={layout.closeModal}
+             fontBlob={layout.activeModal.props.fontBlob}
+          />
+      )}
+
       {layout.activeModal?.name === 'positioningUpdateWarning' && <PositioningUpdateWarningModal isOpen={true} onClose={() => layout.closeModal()} {...layout.activeModal.props} />}
       {layout.activeModal?.name === 'feaError' && feaErrorState && <FeaErrorModal isOpen={true} onClose={() => { layout.closeModal(); }} onConfirm={() => { downloadFontBlob(feaErrorState.blob, projectName); layout.closeModal(); }} errorMessage={feaErrorState.error} />}
       {layout.activeModal?.name === 'unsavedRules' && ( <UnsavedRulesModal isOpen={true} onClose={layout.closeModal} onDiscard={() => { layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} onSave={() => { handleSaveToDB(); layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} /> )}

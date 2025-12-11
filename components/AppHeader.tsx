@@ -5,7 +5,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useProject } from '../contexts/ProjectContext';
-import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, CopyIcon, WrenchIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, AddIcon, FilterIcon } from '../constants';
+import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, CopyIcon, WrenchIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, AddIcon, FilterIcon, CreatorIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import CommandPalette from './CommandPalette';
 
@@ -25,6 +25,7 @@ interface AppHeaderProps {
     onAddGlyphClick: (options?: { prefillName?: string; targetSet?: string }) => void;
     onExportClick: () => void;
     onTestClick: () => void;
+    onCreatorClick: () => void;
     onCompareClick: () => void;
     onSettingsClick: () => void;
     onChangeScriptClick: () => void;
@@ -93,7 +94,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     onShowHelp, onShowTestCases, onEditorModeChange, onWorkspaceChange, activeWorkspace, hasUnsavedChanges, hasUnsavedRules,
     hasPositioning, hasKerning, drawingProgress, positioningProgress, kerningProgress, rulesProgress, positioningRules,
     kerningMap, allCharsByUnicode, recommendedKerning, onTakeSnapshot, onRestoreSnapshot, hasSnapshot, onSaveAs, onExportTemplate,
-    onQuickAddGlyph
+    onQuickAddGlyph, onCreatorClick
 }) => {
     const { t } = useLocale();
     const { projectName, setProjectName } = useProject();
@@ -128,6 +129,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         if (action === 'load-json') onLoadProject();
         if (action === 'export') onExportClick();
         if (action === 'test') onTestClick();
+        if (action === 'creator') onCreatorClick();
         if (action === 'compare') onCompareClick();
         if (action === 'settings') onSettingsClick();
         if (action === 'add-glyph') onAddGlyphClick(data);
@@ -217,6 +219,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         {isExporting ? <SpinnerIcon /> : <ExportIcon />}
                         <span className="hidden md:inline">{isExporting ? t('exporting') : t('exportOtf')}</span>
                     </button>
+                    
+                    {/* Creator Button */}
+                    <button onClick={onCreatorClick} title="Creator Studio" className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base">
+                        <CreatorIcon />
+                        <span className="hidden md:inline">Create</span>
+                    </button>
+                    
                     <button onClick={onTestClick} title={t('testFont')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><TestIcon /><span className="hidden md:inline">{t('testFont')}</span></button>
                     <button onClick={onSettingsClick} title={t('settings')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><SettingsIcon /><span className="hidden md:inline">{t('settings')}</span></button>
 

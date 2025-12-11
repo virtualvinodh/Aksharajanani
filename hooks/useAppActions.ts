@@ -82,7 +82,8 @@ export const useAppActions = ({
     // 5. Export Actions Hook
     const {
         isExporting, feaErrorState, testPageFont,
-        startExportProcess, handleSaveProject, handleSaveTemplate, handleTestClick, downloadFontBlob
+        startExportProcess, handleSaveProject, handleSaveTemplate, handleTestClick, downloadFontBlob,
+        getCachedOrGeneratedFont
     } = useExportActions({
         getProjectState, projectId, projectName, setIsAnimatingExport, downloadTriggerRef
     });
@@ -209,6 +210,16 @@ export const useAppActions = ({
         });
     }, [layout, projectName, handleSaveAs]);
     
+    const handleCreatorClick = useCallback(async () => {
+        layout.showNotification(t('exportingNotice'), 'info');
+        const result = await getCachedOrGeneratedFont();
+        if (result) {
+            layout.openModal('creator', { fontBlob: result.blob });
+        } else {
+            layout.showNotification('Failed to prepare font for Creator.', 'error');
+        }
+    }, [getCachedOrGeneratedFont, layout, t]);
+
     const testText = settings?.customSampleText || '';
     const setTestText = (text: string) => {
         settingsDispatch({ type: 'UPDATE_SETTINGS', payload: s => s ? ({ ...s, customSampleText: text }) : null });
@@ -247,7 +258,7 @@ export const useAppActions = ({
         handleEditorModeChange,
         downloadFontBlob,
         handleAddGlyph,
-        handleQuickAddGlyph, // Expose
+        handleQuickAddGlyph, 
         handleCheckGlyphExists,
         handleCheckNameExists,
         handleAddBlock,
@@ -258,6 +269,7 @@ export const useAppActions = ({
         handleTakeSnapshot,
         handleRestoreSnapshot,
         hasSnapshot,
-        openSaveAsModal
+        openSaveAsModal,
+        handleCreatorClick
     };
 };
