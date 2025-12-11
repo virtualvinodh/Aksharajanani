@@ -57,7 +57,6 @@ const CharacterSetTab: React.FC<{
             }`}
         >
             <span>{t(set.nameKey)}</span>
-            {isSetComplete && <CheckCircleIcon className={`h-4 w-4 text-green-500 ${animationClass}`} />}
         </button>
     );
 };
