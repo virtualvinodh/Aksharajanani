@@ -73,6 +73,12 @@
         "priority": "medium"
     },
     { "id": "init_latin_toggle", "category": "App Initialization & File I/O", "description": "On script selection, toggle 'Include Basic Latin Letters'. Confirm the 'Basic Latin Letters' character set appears in the Drawing workspace.", "priority": "low" },
+    {
+        "id": "init_new_empty_project_modal",
+        "category": "App Initialization & File I/O",
+        "description": "Click 'New Empty Project' in the script selection screen. Enter a custom Project Name, Font Family, and UPM (e.g., 2048). Uncheck 'Include Basic Latin'. Start the project. Verify that the Settings -> Metrics tab reflects the custom UPM and the character grid is empty (no Latin chars).",
+        "priority": "medium"
+    },
     { "id": "nav_script_change_ui_reset", "category": "General UI & Navigation", "description": "Load one script and select a non-default character set tab (e.g., 'Consonants'). Then, go back to the script selection screen and load a different script. The app should open to the *first* character set tab ('Vowels'), not the previously active 'Consonants' tab.", "priority": "high" },
     { "id": "ui_progress_indicator_location", "category": "General UI & Navigation", "description": "Verify that detailed progress bars are visible *inside* the Drawing, Positioning, Kerning, and Rules workspaces. Confirm that the main header tabs do *not* display numerical progress (e.g., '10/180').", "priority": "high" },
     { "id": "ui_kerning_completion_no_pairs", "category": "General UI & Navigation", "description": "Load a script with no recommended kerning pairs. In Advanced mode, verify the 'Kerning' tab in the header has a completion checkmark, and its workspace progress bar shows 100% complete.", "priority": "high" },
@@ -100,7 +106,6 @@
     { "id": "ui_horizontal_scroll_arrows", "category": "General UI & Navigation", "description": "On a narrow screen, in the Drawing workspace, verify that scroll arrows appear for the character set tabs when they overflow, and that they function correctly.", "priority": "low" },
     { "id": "ui_theme_language_change", "category": "General UI & Navigation", "description": "Change the language and theme from the Settings page. All UI text and colors should update immediately and correctly.", "priority": "low" },
     { "id": "ui_donate_notice", "category": "General UI & Navigation", "description": "Wait for the 'Donate' notice to appear. Dismiss it. Refresh the page. The notice should not reappear.", "priority": "low" },
-    
     { "id": "cmd_palette_open_shortcut", "category": "General UI & Navigation", "description": "Press Ctrl+K (or Cmd+K on Mac) anywhere in the app. The Command Palette modal should open, with the input field focused.", "priority": "high" },
     { "id": "cmd_palette_open_button", "category": "General UI & Navigation", "description": "Click the 'Search' button in the header. The Command Palette modal should open.", "priority": "medium" },
     { "id": "cmd_palette_close_behavior", "category": "General UI & Navigation", "description": "Open Command Palette. 1. Press 'Escape' -> Should close. 2. Click backdrop -> Should close.", "priority": "high" },
@@ -122,8 +127,17 @@
         "description": "1. Modify the project (e.g., draw a glyph). 2. Go to 'More' menu -> 'Take Snapshot'. 3. Make further changes or delete the glyph. 4. Go to 'More' menu -> 'Restore Snapshot'. 5. Verify a confirmation modal appears showing the timestamp. 6. Confirm and verify the project reverts exactly to the snapshot state.",
         "priority": "high"
     },
+    { "id": "session_snapshot_delete", "category": "General UI & Navigation", "description": "Take a snapshot. Open the 'Restore Snapshot' modal. Hover over the snapshot item and click the Trash icon. Verify the snapshot is removed from the list.", "priority": "low" },
+    {
+      "id": "session_snapshot_limit",
+      "category": "General UI & Navigation",
+      "description": "Take more than 5 snapshots. Verify that the list only retains the 5 most recent snapshots and automatically deletes older ones.",
+      "priority": "medium"
+    },
     { "id": "search_smart_hex", "category": "General UI & Navigation", "description": "In Command Palette or Filter, type '0x0041' or 'U+0041'. Verify 'A' appears as the result.", "priority": "medium" },
     { "id": "search_create_glyph_flow", "category": "General UI & Navigation", "description": "In Command Palette, type a name that doesn't exist (e.g., 'MyLogo'). Verify a 'Create glyph for...' option appears. Click it. Verify a new glyph is created and opened.", "priority": "high" },
+    { "id": "search_exact_match_quotes", "category": "General UI & Navigation", "description": "In Command Palette, search for `\"a\"` (with quotes). Verify that the result list prioritizes the exact character 'a' over characters containing 'a' (like 'Alpha').", "priority": "low" },
+    { "id": "ui_grid_ghost_buttons_hidden", "category": "General UI & Navigation", "description": "In the Drawing Workspace, enter text into the Filter input (e.g., 'a'). Verify that the 'Add Glyph' and 'Add Block' ghost buttons at the end of the grid disappear while filtering.", "priority": "low" },
 
     {
       "id": "draw_linked_glyph_creation_and_lock",
@@ -195,6 +209,12 @@
     { "id": "glyph_add_custom_to_active_set", "category": "Drawing Workspace: Glyph Management", "description": "ADVANCED: Navigate to a non-default character set tab (e.g., 'Consonants'). Use the 'Add Glyph' feature to add a new custom character. Verify that the new character appears in the 'Consonants' grid and that no new 'Custom Glyphs' or 'Dynamic Ligatures' tab is created.", "priority": "high" },
     { "id": "glyph_add_unicode_block", "category": "Drawing Workspace: Glyph Management", "description": "ADVANCED: In the main grid, click 'Add Block'. Select a block like 'Basic Latin' from the modal. The app should add all characters from that block that are not already present in the font and show a success notification.", "priority": "medium" },
     { "id": "unicode_block_search", "category": "Drawing Workspace: Glyph Management", "description": "In the 'Add Block' modal, use the search bar to filter blocks (e.g., type 'Cyrillic'). Verify the dropdown updates to show only matching blocks.", "priority": "low" },
+    {
+        "id": "glyph_add_block_with_marks_warning",
+        "category": "Drawing Workspace: Glyph Management",
+        "description": "In the 'Add Block' modal, select 'Combining Diacritical Marks'. Click 'Add'. A warning modal ('Warning: Add Block with Marks') should appear advising about positioning rules. Verify you can 'Cancel' or 'Proceed'.",
+        "priority": "low"
+    },
     { "id": "draw_single_composite_prefill_tool", "category": "Drawing Workspace: Glyph Management", "description": "For a script with single-component composites (e.g., 'É' from 'E' in French), draw the base component ('E'). Open the editor for the composite ('É'). Verify it is pre-filled and that the default tool is the **Pen tool**, not the Select tool.", "priority": "medium" },
     { "id": "glyph_composite_prefill_incomplete", "category": "Drawing Workspace: Glyph Management", "description": "For a composite glyph (e.g., 'க்' = 'க' + '்'), draw only one component (e.g., 'க'). Open the editor for 'க்'. It should open empty without error, not partially pre-filled.", "priority": "medium" },
     { "id": "glyph_modal_navigation", "category": "Drawing Workspace: Glyph Management", "description": "Inside the drawing modal, use the left/right arrow buttons to navigate to the previous/next glyph in the character set.", "priority": "medium" },
@@ -202,12 +222,21 @@
     { "id": "glyph_delete_custom", "category": "Drawing Workspace: Glyph Management", "description": "ADVANCED: Open a custom-added glyph in the editor and click 'Delete Glyph'. Confirm deletion and verify it is removed from the character set.", "priority": "medium" },
     { "id": "glyph_delete_standard", "category": "Drawing Workspace: Glyph Management", "description": "ADVANCED: Try to delete a standard glyph from the script. A warning modal should appear before confirming deletion.", "priority": "medium" },
     { "id": "glyph_properties_panel", "category": "Drawing Workspace: Glyph Management", "description": "ADVANCED: Open the glyph properties panel in the Drawing Modal, change the LSB/RSB values, and save. The changes should persist.", "priority": "medium" },
+    { "id": "glyph_properties_non_spacing_toggle", "category": "Drawing Workspace: Glyph Management", "description": "Open Glyph Properties for a character. Set Glyph Class to 'Mark'. Toggle 'Non-spacing (Width: 0)' ON. Verify the 'Adv. Width' field becomes disabled/hidden or set to 0, and the glyph renders with 0 width in exports.", "priority": "medium" },
+    { "id": "glyph_properties_construction_type_switch", "category": "Drawing Workspace: Glyph Management", "description": "Open Glyph Properties. Switch Construction tab from 'Draw' to 'Composite'. Add a component. Switch to 'Link'. Verify the internal definition changes from `composite` to `link` and the UI updates (e.g., locking behavior).", "priority": "high" },
+    { "id": "glyph_properties_transform_modes", "category": "Drawing Workspace: Glyph Management", "description": "In Glyph Properties (Advanced), expand 'Advanced Transforms' for a component. Switch positioning mode from 'Rel' (Relative) to 'Abs' (Absolute) and 'Tch' (Touching). Verify the visual positioning of the component changes on the canvas according to the selected mode.", "priority": "high" },
     { "id": "glyph_add_existing_error", "category": "Drawing Workspace: Glyph Management", "description": "ADVANCED: In the 'Add New Glyph' modal, attempt to add a character that already exists (e.g., 'அ' in the Tamil script). An error message should be displayed.", "priority": "medium" },
     { "id": "file_load_project_with_custom_glyphs", "category": "Drawing Workspace: Glyph Management", "description": "Load a project file that contains custom glyphs added via the 'Add Glyph' modal. Verify they load correctly into a 'Dynamic Ligatures' or similar set.", "priority": "medium" },
     { "id": "glyph_add_supplementary", "category": "Drawing Workspace: Glyph Management", "description": "ADVANCED: In the 'Add New Glyph' modal, add a supplementary plane character (e.g., U+1F600). The glyph should be added to a 'Dynamic' character set and be editable.", "priority": "low" },
     { "id": "group_tab_create", "category": "Drawing Workspace: Glyph Management", "description": "In Drawing Workspace, click the '+' icon next to the character set tabs. Enter a name. Verify a new empty tab is created and activated.", "priority": "medium" },
     { "id": "group_tab_rename", "category": "Drawing Workspace: Glyph Management", "description": "Right-click (or long-press on touch) a character set tab. Select 'Rename Group'. Enter new name. Verify tab name updates.", "priority": "medium" },
     { "id": "group_tab_delete", "category": "Drawing Workspace: Glyph Management", "description": "Right-click a custom group tab. Select 'Delete Group'. Confirm warning. Verify tab is removed.", "priority": "medium" },
+    {
+      "id": "draw_construction_mode_warning",
+      "category": "Drawing Workspace: Glyph Management",
+      "description": "Draw a shape in a base glyph. Open Glyph Properties. Switch the Construction tab from 'Draw' to 'Composite' or 'Link'. Verify that a warning modal appears stating that existing drawings will be discarded.",
+      "priority": "medium"
+    },
 
     { "id": "draw_all_tools", "category": "Drawing Workspace: Editor & Tools", "description": "Sequentially use each drawing tool (Pen, Line, Circle, Ellipse, Curve, Dot) to create shapes on the canvas.", "priority": "high" },
     { "id": "draw_path_winding_holes", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a shape like an 'O' or 'e'. Ensure the outer path is drawn clockwise and the inner path (hole) is drawn counter-clockwise. Export the font and test it to verify the hole is rendered transparently (not filled black).", "priority": "high" },
@@ -265,6 +294,9 @@
     { "id": "draw_zero_point_handling", "category": "Drawing Workspace: Editor & Tools", "description": "Use the Pen tool to create paths with 0 or 1 points (clicks without drag). Save and reload the glyph. Verify these degenerate paths are cleaned up or handled without error.", "priority": "medium" },
     { "id": "draw_eraser_complex", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a filled `outline` shape (e.g., from an SVG import). Attempt to use the eraser on it. Verify the eraser is ignored and an informational notification appears. Draw a self-intersecting path and verify the eraser correctly splits it into multiple valid segments.", "priority": "low" },
     { "id": "tool_slice_basic", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a circle. Select Slice tool. Click outside the circle, drag across it to the other side. Verify the circle is split into two separate semi-circle paths.", "priority": "high" },
+    { "id": "tool_slice_closed_shape", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a closed circle. Use the Slice tool to cut it straight down the middle. Verify it splits into two separate open arcs (semi-circles) that can be moved independently.", "priority": "medium" },
+    { "id": "draw_contextual_toolbar_flip", "category": "Drawing Workspace: Editor & Tools", "description": "Select a path. In the floating Contextual Toolbar, click the 'Flip Horizontal' and 'Flip Vertical' icon buttons. Verify the path geometry mirrors accordingly in real-time.", "priority": "medium" },
+    { "id": "draw_contextual_toolbar_numeric_input", "category": "Drawing Workspace: Editor & Tools", "description": "Select a path. In the Contextual Toolbar, type '45' into the Rotation input and press Enter. Verify the selection rotates 45 degrees. Type '2.0' into Scale and press Enter. Verify it doubles in size.", "priority": "medium" },
 
     { "id": "batch_select_toggle", "category": "Drawing Workspace: Batch Operations", "description": "In Drawing Workspace, click the 'Select' (Batch) icon in the sub-header. Verify the UI changes: bottom/top action bar appears, glyph cards become selectable.", "priority": "high" },
     { "id": "batch_select_interaction", "category": "Drawing Workspace: Batch Operations", "description": "In Batch Mode, click multiple glyph cards. Verify the selection counter increments. Click 'Select All'. Click 'Select None'.", "priority": "medium" },
@@ -272,6 +304,12 @@
     { "id": "batch_transform_flip", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Transform'. Check 'Flip Horizontal'. Click Apply. Verify selected glyphs are mirrored.", "priority": "medium" },
     { "id": "batch_bulk_delete_confirm", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Delete'. Verify a confirmation modal appears with the count. Confirm. Verify glyphs are removed/cleared.", "priority": "high" },
     { "id": "batch_bulk_properties", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Edit Properties'. Change LSB to 50. Save. Verify all selected glyphs now have LSB 50.", "priority": "medium" },
+    {
+      "id": "batch_transform_undo",
+      "category": "Drawing Workspace: Batch Operations",
+      "description": "Perform a batch transform (e.g., Rotate 90 degrees). A toast notification with an 'Undo' button should appear. Click Undo. Verify all selected glyphs revert to their original orientation.",
+      "priority": "medium"
+    },
 
     { "id": "creator_open_render", "category": "Creator Studio", "description": "Click the 'Create' (purple) button in the header. Verify the Studio overlay opens. Type text in the sidebar input. Verify the text renders on the canvas using the current font.", "priority": "high" },
     { "id": "creator_styling", "category": "Creator Studio", "description": "In Studio, change Text Color and Background Color. Toggle Shadow on/off. Change Text Alignment. Verify visual updates on canvas immediately.", "priority": "medium" },
@@ -313,7 +351,7 @@
       "description": "1. Use a script where composite/linked characters are included in positioning rules (e.g., Malayalam, where conjuncts like 'ക്ക' are valid bases). 2. Draw the components (e.g., 'ക') and a mark that can be positioned on it (e.g., 'ു'). 3. Go to the Positioning workspace and select the composite character ('ക്ക') from the 'View by Base' list. 4. Verify that the combination card for 'ക്കു' appears. 5. Open the editor and confirm that the pre-filled 'ക്ക' glyph is displayed correctly as the base, ready for the 'ു' mark to be positioned.",
       "priority": "high"
     },
-    { "id": "pos_mark_attachment_class_cascade", "category": "Positioning Workspace", "description": "1. For a script with a `markAttachmentClass` (e.g., Tamil (Simple Design), with `['ி', 'ீ']` in a class), draw the base `க` and marks `ி`, `ீ`. 2. Position `ி` on `க` and save. 3. Verify that the card for `கீ` (`க`+`ீ`) automatically becomes 'Positioned' and that the mark `ீ` has the same relative position as `ி`.", "priority": "high" },
+    { "id": "pos_mark_attachment_class_cascade", "category": "Positioning Workspace", "description": "1. For a script with a `markAttachmentClass` (e.g., Tamil (Simple Design), with `['ி', 'ீ']` in a class), draw the base `க` and marks `ி`, `ீ`. 2. Position `ி` on `க` and save. 3. Verify that the card for `கീ` (`க`+`ீ`) automatically becomes 'Positioned' and that the mark `ீ` has the same relative position as `ி`.", "priority": "high" },
     { "id": "pos_base_attachment_class_cascade", "category": "Positioning Workspace", "description": "1. For a script with a `baseAttachmentClass` (e.g., Tamil (Simple Design), with `['க', 'ச']` in a class), draw the bases `க`, `ச`, and the mark `ி`. 2. Position `ி` on `க` and save. 3. Verify that the card for `சி` (`ச`+`ி`) automatically becomes 'Positioned', showing `ி` with the same relative position as it has on `கி`.", "priority": "high" },
     {
         "id": "pos_class_applies_and_exceptions",
@@ -335,6 +373,8 @@
     { "id": "pos_view_switch", "category": "Positioning Workspace", "description": "Switch between 'View by Base' and 'View by Mark'. The grouping of combination cards should update correctly.", "priority": "low" },
     { "id": "pos_ligature_map_override", "category": "Positioning Workspace", "description": "Create a custom script where a positioning rule's `ligatureMap` explicitly names a ligature (e.g., `k` + `i` -> `k_i_ligature`). Verify that when positioning this pair, the app creates a glyph with the name `k_i_ligature` instead of the default `ki`.", "priority": "low" },
     { "id": "pos_dynamic_ligature_generation", "category": "Positioning Workspace", "description": "1. Load a script with GSUB-based positioning rules. 2. Position a mark on a base to create a combination (e.g. 'k' + 'i'). 3. Save. 4. Go to the Drawing Workspace. 5. Verify that a new glyph (e.g. 'ki') has been created in the 'Positioned Glyphs' (or 'Dynamic Ligatures') tab.", "priority": "high" },
+    { "id": "pos_incomplete_pair_warning", "category": "Positioning Workspace", "description": "In the Positioning workspace, load a script where some required base or mark glyphs are not yet drawn. Verify that an information banner appears stating 'Some potential combinations are hidden...'.", "priority": "medium" },
+
     { "id": "kern_edit_pair", "category": "Kerning Workspace", "description": "ADVANCED: Click a recommended pair. In the modal, enter a value (e.g., -50) and save. The card should update with the new value.", "priority": "high" },
     { "id": "kern_toggle_unkerned", "category": "Kerning Workspace", "description": "In the Kerning workspace, set a value for a few pairs. Enable the \"Show unkerned only\" toggle. Verify that the kerned pairs disappear from view. Disable the toggle and verify they reappear.", "priority": "high" },
     {
@@ -353,6 +393,13 @@
     { "id": "kern_extreme_values", "category": "Kerning Workspace", "description": "ADVANCED: In the kerning modal, enter a very large positive (e.g., 500) and a very large negative (e.g., -500) value. Verify the preview updates correctly and the value is saved.", "priority": "low" },
     { "id": "kern_search_functionality", "category": "Kerning Workspace", "description": "ADVANCED: In the kerning workspace, use the search bar in both the left and right character selection panels to filter the character lists.", "priority": "low" },
     { "id": "kern_simple_mode_ui", "category": "Kerning Workspace", "description": "For a script with kerning enabled (e.g., Malayalam), switch to \"Simple\" editor mode. Verify the workspace tab and modal titles change from \"Kerning\" to \"Spacing\". Confirm that adjusting values still functions correctly.", "priority": "low" },
+    {
+      "id": "kern_pagination",
+      "category": "Kerning Workspace",
+      "description": "In 'All Pairs' mode, select enough characters to generate more than 100 pairs (or 20 on mobile). Verify that pagination controls appear at the bottom and allow navigation between pages of pairs.",
+      "priority": "medium"
+    },
+
     { "id": "rules_lookup_flags", "category": "Rules Workspace (GUI)", "description": "ADVANCED: Manually edit the 'Lookup Flags' in the FEA code or via future GUI support. Export the font and verify that flags like 'IgnoreMarks' are respected in the generated OpenType tables (e.g., marks don't interfere with ligatures).", "priority": "high" },
     {
         "id": "rules_lookup_lifecycle_and_ordering",
@@ -392,6 +439,8 @@
     { "id": "rules_rename_tags", "category": "Rules Workspace (GUI)", "description": "In the Rules workspace, click the edit icon next to the main script tag (e.g., `dev2`) and rename it (e.g., to `deva`). Then, select a feature and click its edit icon to rename it (e.g., `akhn` to `liga`). Verify all rules are preserved under the new names and the font exports correctly.", "priority": "medium" },
     { "id": "rules_group_delete_cascade", "category": "Rules Workspace (GUI)", "description": "ADVANCED: Create a glyph group (e.g., `@mycons`) and use it in a substitution rule. Then, delete the `@mycons` group from the Groups pane. Verify the rule that used it is handled gracefully (e.g., flagged as invalid, ignored on export) without crashing the app.", "priority": "medium" },
     { "id": "rules_add_feature", "category": "Rules Workspace (GUI)", "description": "ADVANCED: Click the '+' button in the feature tab list. Add a new valid feature tag (e.g., 'calt'). The new feature tab should appear.", "priority": "low" },
+    { "id": "rules_drag_drop_glyph", "category": "Rules Workspace (GUI)", "description": "In the Rule Editor, drag a glyph name from the 'Glyph Groups' pane (or simulate if possible) and drop it into a rule input slot. Verify the slot populates correctly.", "priority": "medium" },
+
     { "id": "fea_edit_code", "category": "Rules Workspace (FEA Code)", "description": "ADVANCED: Click 'Edit Manually'. The FEA editor should become active. Make a change, and verify it persists.", "priority": "high" },
     { "id": "fea_revert_to_gui", "category": "Rules Workspace (FEA Code)", "description": "ADVANCED: In manual FEA mode, click 'Revert to GUI'. The confirmation modal should appear. Confirming should re-enable the GUI editor and discard manual FEA changes.", "priority": "medium" },
     { "id": "fea_code_generation", "category": "Rules Workspace (FEA Code)", "description": "ADVANCED: In the GUI, create one of each rule type (liga, contextual), set one kerning pair, and position one mark. Switch to the FEA code view (without entering manual mode). Verify that `feature liga`, `feature kern`, `feature mark`, etc., have been generated with the correct syntax.", "priority": "medium" },
@@ -407,6 +456,13 @@
         "description": "ADVANCED: Change the 'Units Per Em' in Settings (e.g., from 1000 to 2048). Export the font. Verify that the characters are not visibly tiny or huge compared to standard fonts, ensuring the app scales drawing coordinates to the new UPM correctly.",
         "priority": "medium"
     },
+    {
+      "id": "settings_metrics_visualizer_update",
+      "category": "Settings & Properties Panels",
+      "description": "In Metrics Settings, change the Ascender and Descender values. Verify that the visual diagram above the inputs updates in real-time to reflect the new proportions.",
+      "priority": "low"
+    },
+
     { "id": "export_successful", "category": "Final Views & Export", "description": "With a reasonably complete set of glyphs drawn, click 'Export OTF'. A valid, installable .otf font file should download.", "priority": "high" },
     { "id": "export_metadata_check", "category": "Final Views & Export", "description": "In Settings, fill out Font Meta Data (Designer, License, etc.). Export the font, install it, and check its properties in your OS to confirm the metadata is embedded correctly.", "priority": "high" },
     { "id": "export_required_glyphs", "category": "Final Views & Export", "description": "Export a font with at least one drawn character. Use an external font editor (like FontForge or Glyphs) to inspect the OTF file. Verify that: 1. A `.notdef` glyph exists and has a visible shape (e.g., a rectangle). 2. Glyphs for 'space', ZWJ (U+200D), and ZWNJ (U+200C) exist. 3. The advance width for ZWJ and ZWNJ is exactly 0.", "priority": "high" },
@@ -576,21 +632,5 @@
         "description": "1. Setup Linked Chain: A -> B (Linked to A) -> C (Linked to B). 2. Delete Glyph B. 3. Verify Glyph C converts to a base glyph, retaining its shape, and does not crash the app.",
         "priority": "medium"
     },
-    { "id": "creator_open_render", "category": "Creator Studio", "description": "Click the 'Create' (purple) button in the header. Verify the Studio overlay opens. Type text in the sidebar input. Verify the text renders on the canvas using the current font.", "priority": "high" },
-    { "id": "creator_styling", "category": "Creator Studio", "description": "In Studio, change Text Color and Background Color. Toggle Shadow on/off. Change Text Alignment. Verify visual updates on canvas immediately.", "priority": "medium" },
-    { "id": "creator_drag_text", "category": "Creator Studio", "description": "In Studio, click and drag the rendered text on the canvas. It should move freely. Release mouse to place it.", "priority": "high" },
-    { "id": "creator_bg_image", "category": "Creator Studio", "description": "In Studio, upload a background image. Verify it appears behind the text. Adjust the 'Dimmer' opacity slider. Verify the overlay darkness changes.", "priority": "medium" },
-    { "id": "creator_export", "category": "Creator Studio", "description": "In Studio, click the Download icon. Verify a PNG image is generated and downloaded containing the composed text and background.", "priority": "high" },
-    { "id": "batch_select_toggle", "category": "Drawing Workspace: Batch Operations", "description": "In Drawing Workspace, click the 'Select' (Batch) icon in the sub-header. Verify the UI changes: bottom/top action bar appears, glyph cards become selectable.", "priority": "high" },
-    { "id": "batch_select_interaction", "category": "Drawing Workspace: Batch Operations", "description": "In Batch Mode, click multiple glyph cards. Verify the selection counter increments. Click 'Select All'. Click 'Select None'.", "priority": "medium" },
-    { "id": "batch_transform_rotate", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Transform'. Enter 90 degrees rotation. Click Apply. Verify all selected glyphs are rotated.", "priority": "high" },
-    { "id": "batch_transform_flip", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Transform'. Check 'Flip Horizontal'. Click Apply. Verify selected glyphs are mirrored.", "priority": "medium" },
-    { "id": "batch_bulk_delete_confirm", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Delete'. Verify a confirmation modal appears with the count. Confirm. Verify glyphs are removed/cleared.", "priority": "high" },
-    { "id": "batch_bulk_properties", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Edit Properties'. Change LSB to 50. Save. Verify all selected glyphs now have LSB 50.", "priority": "medium" },
-    { "id": "tool_slice_basic", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a circle. Select Slice tool. Click outside the circle, drag across it to the other side. Verify the circle is split into two separate semi-circle paths.", "priority": "high" },
-    { "id": "group_tab_create", "category": "Drawing Workspace: Glyph Management", "description": "In Drawing Workspace, click the '+' icon next to the character set tabs. Enter a name. Verify a new empty tab is created and activated.", "priority": "medium" },
-    { "id": "group_tab_rename", "category": "Drawing Workspace: Glyph Management", "description": "Right-click (or long-press on touch) a character set tab. Select 'Rename Group'. Enter new name. Verify tab name updates.", "priority": "medium" },
-    { "id": "group_tab_delete", "category": "Drawing Workspace: Glyph Management", "description": "Right-click a custom group tab. Select 'Delete Group'. Confirm warning. Verify tab is removed.", "priority": "medium" },
-    { "id": "search_smart_hex", "category": "General UI & Navigation", "description": "In Command Palette or Filter, type '0x0041' or 'U+0041'. Verify 'A' appears as the result.", "priority": "medium" },
-    { "id": "search_create_glyph_flow", "category": "General UI & Navigation", "description": "In Command Palette, type a name that doesn't exist (e.g., 'MyLogo'). Verify a 'Create glyph for...' option appears. Click it. Verify a new glyph is created and opened.", "priority": "high" }
+    { "id": "project_save_as_copy", "category": "App Initialization & File I/O", "description": "Open the 'More' menu and select 'Save Copy...'. Enter a new name 'MyFont v2'. Confirm. Verify the project name in the header updates to 'MyFont v2' and a new entry is created in the database (check Recent Projects after backing out).", "priority": "high" }
 ]
