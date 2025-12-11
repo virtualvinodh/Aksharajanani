@@ -119,13 +119,19 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const paddingClass = isCompact ? 'p-2' : 'p-2 sm:p-4';
   const baseContainerClasses = `relative rounded-lg ${paddingClass} flex flex-col items-center justify-between cursor-pointer transition-all duration-200 aspect-square h-full group select-none`;
   
+  const isDrawn = isGlyphDrawn(glyphData);
+
   let stateClasses = "";
   if (isSelected) {
       stateClasses = "ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 border-transparent";
+  } else if (character.hidden) {
+      stateClasses = "bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-500 opacity-70";
+  } else if (!isDrawn) {
+      // Style for undrawn/empty glyphs
+      stateClasses = "bg-white dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-indigo-500 opacity-90";
   } else {
-      stateClasses = character.hidden
-        ? "bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-500 opacity-70"
-        : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500";
+      // Style for drawn glyphs
+      stateClasses = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500";
   }
 
   return (
@@ -161,7 +167,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       </div>
       <div className="text-center mt-1 sm:mt-2 flex-shrink-0">
         <p 
-          className={`${isCompact ? 'text-sm' : 'text-lg sm:text-2xl'} font-bold text-gray-900 dark:text-white`}
+          className={`${isCompact ? 'text-sm' : 'text-lg sm:text-2xl'} font-bold ${!isDrawn ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}
           style={{
             fontFamily: 'var(--guide-font-family)',
             fontFeatureSettings: 'var(--guide-font-feature-settings)'

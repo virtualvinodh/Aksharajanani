@@ -57,6 +57,7 @@ const CharacterSetTab: React.FC<{
             }`}
         >
             <span>{t(set.nameKey)}</span>
+            {isSetComplete && <CheckCircleIcon className={`h-4 w-4 text-green-500 ${animationClass}`} />}
         </button>
     );
 };
@@ -73,19 +74,15 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
   const navContainerRef = useRef<HTMLDivElement>(null);
   const [showNavArrows, setShowNavArrows] = useState({ left: false, right: false });
 
-  const isGlyphDrawn = useCallback((char: Character): boolean => {
-    return isGlyphDrawnUtil(glyphDataMap.get(char.unicode));
-  }, [glyphDataMap, glyphVersion]);
-
-  const drawnCharacterSets = useMemo(() => {
+  const visibleCharacterSets = useMemo(() => {
     if (!characterSets) return [];
     return characterSets
         .map(set => ({
             ...set,
-            characters: set.characters.filter(char => !char.hidden && isGlyphDrawn(char))
+            characters: set.characters.filter(char => !char.hidden)
         }))
         .filter(set => set.characters.length > 0);
-  }, [characterSets, isGlyphDrawn, glyphVersion]);
+  }, [characterSets]);
 
   // Scroll Overflow Checker
   const checkNavOverflow = useCallback(() => {
@@ -121,7 +118,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
           }
           clearTimeout(timer);
       };
-  }, [checkNavOverflow, drawnCharacterSets, isOpen]);
+  }, [checkNavOverflow, visibleCharacterSets, isOpen]);
 
   const handleNavScroll = (dir: 'left' | 'right') => {
       const c = navContainerRef.current;
@@ -138,17 +135,17 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
   const currentCharacters = useMemo(() => {
     if (searchTerm) {
         // When searching, search across all characters from all visible sets.
-        return drawnCharacterSets
+        return visibleCharacterSets
             .flatMap(set => set.characters)
             .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     
-    if (drawnCharacterSets.length === 0) return [];
+    if (visibleCharacterSets.length === 0) return [];
     
-    // When not searching, show drawn characters from the active tab.
-    const currentActiveTab = Math.min(activeTab, drawnCharacterSets.length - 1);
-    return drawnCharacterSets[currentActiveTab]?.characters || [];
-  }, [drawnCharacterSets, activeTab, searchTerm]);
+    // When not searching, show characters from the active tab.
+    const currentActiveTab = Math.min(activeTab, visibleCharacterSets.length - 1);
+    return visibleCharacterSets[currentActiveTab]?.characters || [];
+  }, [visibleCharacterSets, activeTab, searchTerm]);
 
   const handleSelect = (char: Character) => {
     onSelect(char);
@@ -176,7 +173,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
                     )}
                     
                     <div ref={navContainerRef} className="flex space-x-1 overflow-x-auto no-scrollbar px-2 sm:px-4 w-full items-center">
-                        {drawnCharacterSets.map((set, index) => (
+                        {visibleCharacterSets.map((set, index) => (
                             <CharacterSetTab
                                 key={set.nameKey}
                                 set={set}
