@@ -1,6 +1,4 @@
 
-
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -17,13 +15,15 @@ interface CharacterCardProps {
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (character: Character) => void;
+  variant?: 'default' | 'compact';
 }
 
 declare var unicodeName: any;
 
 const CharacterCard: React.FC<CharacterCardProps> = ({ 
     character, glyphData, onSelect, 
-    isSelectionMode = false, isSelected = false, onToggleSelect 
+    isSelectionMode = false, isSelected = false, onToggleSelect,
+    variant = 'default'
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -115,7 +115,9 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
 
   if (!settings) return null;
 
-  const baseContainerClasses = "relative rounded-lg p-2 sm:p-4 flex flex-col items-center justify-between cursor-pointer transition-all duration-200 aspect-square h-full group select-none";
+  const isCompact = variant === 'compact';
+  const paddingClass = isCompact ? 'p-2' : 'p-2 sm:p-4';
+  const baseContainerClasses = `relative rounded-lg ${paddingClass} flex flex-col items-center justify-between cursor-pointer transition-all duration-200 aspect-square h-full group select-none`;
   
   let stateClasses = "";
   if (isSelected) {
@@ -159,7 +161,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       </div>
       <div className="text-center mt-1 sm:mt-2 flex-shrink-0">
         <p 
-          className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white"
+          className={`${isCompact ? 'text-sm' : 'text-lg sm:text-2xl'} font-bold text-gray-900 dark:text-white`}
           style={{
             fontFamily: 'var(--guide-font-family)',
             fontFeatureSettings: 'var(--guide-font-feature-settings)'

@@ -159,7 +159,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
       isOpen={isOpen}
       onClose={onClose}
       title={t('select')}
-      size="xl"
+      size="5xl"
       footer={<button onClick={onClose} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600">{t('cancel')}</button>}
     >
       <div className="flex flex-col h-[70vh]">
@@ -216,6 +216,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
                   character={char}
                   glyphData={glyphDataMap.get(char.unicode!)}
                   onSelect={handleSelect}
+                  variant="compact"
                 />
               )) : (
                 <p className="col-span-full text-center text-gray-500">{t('noResultsFound')}</p>
