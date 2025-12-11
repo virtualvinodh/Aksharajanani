@@ -122,6 +122,8 @@
         "description": "1. Modify the project (e.g., draw a glyph). 2. Go to 'More' menu -> 'Take Snapshot'. 3. Make further changes or delete the glyph. 4. Go to 'More' menu -> 'Restore Snapshot'. 5. Verify a confirmation modal appears showing the timestamp. 6. Confirm and verify the project reverts exactly to the snapshot state.",
         "priority": "high"
     },
+    { "id": "search_smart_hex", "category": "General UI & Navigation", "description": "In Command Palette or Filter, type '0x0041' or 'U+0041'. Verify 'A' appears as the result.", "priority": "medium" },
+    { "id": "search_create_glyph_flow", "category": "General UI & Navigation", "description": "In Command Palette, type a name that doesn't exist (e.g., 'MyLogo'). Verify a 'Create glyph for...' option appears. Click it. Verify a new glyph is created and opened.", "priority": "high" },
 
     {
       "id": "draw_linked_glyph_creation_and_lock",
@@ -203,6 +205,10 @@
     { "id": "glyph_add_existing_error", "category": "Drawing Workspace: Glyph Management", "description": "ADVANCED: In the 'Add New Glyph' modal, attempt to add a character that already exists (e.g., 'அ' in the Tamil script). An error message should be displayed.", "priority": "medium" },
     { "id": "file_load_project_with_custom_glyphs", "category": "Drawing Workspace: Glyph Management", "description": "Load a project file that contains custom glyphs added via the 'Add Glyph' modal. Verify they load correctly into a 'Dynamic Ligatures' or similar set.", "priority": "medium" },
     { "id": "glyph_add_supplementary", "category": "Drawing Workspace: Glyph Management", "description": "ADVANCED: In the 'Add New Glyph' modal, add a supplementary plane character (e.g., U+1F600). The glyph should be added to a 'Dynamic' character set and be editable.", "priority": "low" },
+    { "id": "group_tab_create", "category": "Drawing Workspace: Glyph Management", "description": "In Drawing Workspace, click the '+' icon next to the character set tabs. Enter a name. Verify a new empty tab is created and activated.", "priority": "medium" },
+    { "id": "group_tab_rename", "category": "Drawing Workspace: Glyph Management", "description": "Right-click (or long-press on touch) a character set tab. Select 'Rename Group'. Enter new name. Verify tab name updates.", "priority": "medium" },
+    { "id": "group_tab_delete", "category": "Drawing Workspace: Glyph Management", "description": "Right-click a custom group tab. Select 'Delete Group'. Confirm warning. Verify tab is removed.", "priority": "medium" },
+
     { "id": "draw_all_tools", "category": "Drawing Workspace: Editor & Tools", "description": "Sequentially use each drawing tool (Pen, Line, Circle, Ellipse, Curve, Dot) to create shapes on the canvas.", "priority": "high" },
     { "id": "draw_path_winding_holes", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a shape like an 'O' or 'e'. Ensure the outer path is drawn clockwise and the inner path (hole) is drawn counter-clockwise. Export the font and test it to verify the hole is rendered transparently (not filled black).", "priority": "high" },
     { "id": "draw_svg_import_and_edit", "category": "Drawing Workspace: Editor & Tools", "description": "In the drawing editor, use 'Import SVG' to load a simple vector file. The SVG should appear on the canvas. Switch to Advanced mode and use the 'Edit Points' tool to verify that the imported shape is a native, editable outline path with anchor and control points.", "priority": "high" },
@@ -229,7 +235,7 @@
     { "id": "draw_edit_points_tool", "category": "Drawing Workspace: Editor & Tools", "description": "ADVANCED: Use Edit Points tool. Select a path, drag its anchor (red) and control (yellow) points. Double-click a segment to add a point. Double-click a point to delete it.", "priority": "high" },
     { "id": "draw_undo_redo", "category": "Drawing Workspace: Editor & Tools", "description": "Perform an action (e.g., draw a stroke), click Undo, then click Redo. The action should be reversed and then restored.", "priority": "high" },
     { "id": "draw_image_trace", "category": "Drawing Workspace: Editor & Tools", "description": "In the drawing editor, use 'Trace Image'. Upload a simple black and white image. In the trace modal, adjust detail/noise sliders and see the live preview update. Toggle 'Remove white background'. Click 'Insert as Vector Path'. Verify the traced outline is added to the canvas and is selectable/editable.", "priority": "high" },
-    { "id": "draw_manual_counters", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a shape (e.g., a circle). Draw a smaller shape completely inside it (e.g., another circle). Export the font and verify that the inner shape creates a transparent hole (counter) in the glyph, testing correct path winding directions.", "priority": "medium" },
+    { "id": "draw_manual_counters", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a shape (e.g., a circle). Draw a smaller shape completely inside it (e.g., another circle). Export the font and test it to verify the hole is rendered transparently (not filled black).", "priority": "medium" },
     {
         "id": "draw_keyboard_shortcuts_modal",
         "category": "Drawing Workspace: Editor & Tools",
@@ -258,6 +264,21 @@
     { "id": "draw_svg_import_invalid", "category": "Drawing Workspace: Editor & Tools", "description": "In the drawing editor, attempt to import an empty or malformed SVG file. Verify that an appropriate error notification appears and the canvas remains unchanged.", "priority": "medium" },
     { "id": "draw_zero_point_handling", "category": "Drawing Workspace: Editor & Tools", "description": "Use the Pen tool to create paths with 0 or 1 points (clicks without drag). Save and reload the glyph. Verify these degenerate paths are cleaned up or handled without error.", "priority": "medium" },
     { "id": "draw_eraser_complex", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a filled `outline` shape (e.g., from an SVG import). Attempt to use the eraser on it. Verify the eraser is ignored and an informational notification appears. Draw a self-intersecting path and verify the eraser correctly splits it into multiple valid segments.", "priority": "low" },
+    { "id": "tool_slice_basic", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a circle. Select Slice tool. Click outside the circle, drag across it to the other side. Verify the circle is split into two separate semi-circle paths.", "priority": "high" },
+
+    { "id": "batch_select_toggle", "category": "Drawing Workspace: Batch Operations", "description": "In Drawing Workspace, click the 'Select' (Batch) icon in the sub-header. Verify the UI changes: bottom/top action bar appears, glyph cards become selectable.", "priority": "high" },
+    { "id": "batch_select_interaction", "category": "Drawing Workspace: Batch Operations", "description": "In Batch Mode, click multiple glyph cards. Verify the selection counter increments. Click 'Select All'. Click 'Select None'.", "priority": "medium" },
+    { "id": "batch_transform_rotate", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Transform'. Enter 90 degrees rotation. Click Apply. Verify all selected glyphs are rotated.", "priority": "high" },
+    { "id": "batch_transform_flip", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Transform'. Check 'Flip Horizontal'. Click Apply. Verify selected glyphs are mirrored.", "priority": "medium" },
+    { "id": "batch_bulk_delete_confirm", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Delete'. Verify a confirmation modal appears with the count. Confirm. Verify glyphs are removed/cleared.", "priority": "high" },
+    { "id": "batch_bulk_properties", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Edit Properties'. Change LSB to 50. Save. Verify all selected glyphs now have LSB 50.", "priority": "medium" },
+
+    { "id": "creator_open_render", "category": "Creator Studio", "description": "Click the 'Create' (purple) button in the header. Verify the Studio overlay opens. Type text in the sidebar input. Verify the text renders on the canvas using the current font.", "priority": "high" },
+    { "id": "creator_styling", "category": "Creator Studio", "description": "In Studio, change Text Color and Background Color. Toggle Shadow on/off. Change Text Alignment. Verify visual updates on canvas immediately.", "priority": "medium" },
+    { "id": "creator_drag_text", "category": "Creator Studio", "description": "In Studio, click and drag the rendered text on the canvas. It should move freely. Release mouse to place it.", "priority": "high" },
+    { "id": "creator_bg_image", "category": "Creator Studio", "description": "In Studio, upload a background image. Verify it appears behind the text. Adjust the 'Dimmer' opacity slider. Verify the overlay darkness changes.", "priority": "medium" },
+    { "id": "creator_export", "category": "Creator Studio", "description": "In Studio, click the Download icon. Verify a PNG image is generated and downloaded containing the composed text and background.", "priority": "high" },
+
     { "id": "pos_edit_position", "category": "Positioning Workspace", "description": "Select a base character, click a combination card, and move the mark in the editor. Save/go back. The card should reflect the new position.", "priority": "high" },
     { "id": "pos_nav_unsaved_modal", "category": "Positioning Workspace", "description": "Disable Autosave. In the Positioning editor, make a change to a pair's position. Click the 'Next', 'Previous', or 'Back' buttons. The 'Unsaved Changes' modal should appear. Test all three options: Save, Discard, and Cancel.", "priority": "high" },
     {
@@ -554,5 +575,22 @@
         "category": "Complex Integration & Data Integrity",
         "description": "1. Setup Linked Chain: A -> B (Linked to A) -> C (Linked to B). 2. Delete Glyph B. 3. Verify Glyph C converts to a base glyph, retaining its shape, and does not crash the app.",
         "priority": "medium"
-    }
+    },
+    { "id": "creator_open_render", "category": "Creator Studio", "description": "Click the 'Create' (purple) button in the header. Verify the Studio overlay opens. Type text in the sidebar input. Verify the text renders on the canvas using the current font.", "priority": "high" },
+    { "id": "creator_styling", "category": "Creator Studio", "description": "In Studio, change Text Color and Background Color. Toggle Shadow on/off. Change Text Alignment. Verify visual updates on canvas immediately.", "priority": "medium" },
+    { "id": "creator_drag_text", "category": "Creator Studio", "description": "In Studio, click and drag the rendered text on the canvas. It should move freely. Release mouse to place it.", "priority": "high" },
+    { "id": "creator_bg_image", "category": "Creator Studio", "description": "In Studio, upload a background image. Verify it appears behind the text. Adjust the 'Dimmer' opacity slider. Verify the overlay darkness changes.", "priority": "medium" },
+    { "id": "creator_export", "category": "Creator Studio", "description": "In Studio, click the Download icon. Verify a PNG image is generated and downloaded containing the composed text and background.", "priority": "high" },
+    { "id": "batch_select_toggle", "category": "Drawing Workspace: Batch Operations", "description": "In Drawing Workspace, click the 'Select' (Batch) icon in the sub-header. Verify the UI changes: bottom/top action bar appears, glyph cards become selectable.", "priority": "high" },
+    { "id": "batch_select_interaction", "category": "Drawing Workspace: Batch Operations", "description": "In Batch Mode, click multiple glyph cards. Verify the selection counter increments. Click 'Select All'. Click 'Select None'.", "priority": "medium" },
+    { "id": "batch_transform_rotate", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Transform'. Enter 90 degrees rotation. Click Apply. Verify all selected glyphs are rotated.", "priority": "high" },
+    { "id": "batch_transform_flip", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Transform'. Check 'Flip Horizontal'. Click Apply. Verify selected glyphs are mirrored.", "priority": "medium" },
+    { "id": "batch_bulk_delete_confirm", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Delete'. Verify a confirmation modal appears with the count. Confirm. Verify glyphs are removed/cleared.", "priority": "high" },
+    { "id": "batch_bulk_properties", "category": "Drawing Workspace: Batch Operations", "description": "Select multiple glyphs. Click 'Edit Properties'. Change LSB to 50. Save. Verify all selected glyphs now have LSB 50.", "priority": "medium" },
+    { "id": "tool_slice_basic", "category": "Drawing Workspace: Editor & Tools", "description": "Draw a circle. Select Slice tool. Click outside the circle, drag across it to the other side. Verify the circle is split into two separate semi-circle paths.", "priority": "high" },
+    { "id": "group_tab_create", "category": "Drawing Workspace: Glyph Management", "description": "In Drawing Workspace, click the '+' icon next to the character set tabs. Enter a name. Verify a new empty tab is created and activated.", "priority": "medium" },
+    { "id": "group_tab_rename", "category": "Drawing Workspace: Glyph Management", "description": "Right-click (or long-press on touch) a character set tab. Select 'Rename Group'. Enter new name. Verify tab name updates.", "priority": "medium" },
+    { "id": "group_tab_delete", "category": "Drawing Workspace: Glyph Management", "description": "Right-click a custom group tab. Select 'Delete Group'. Confirm warning. Verify tab is removed.", "priority": "medium" },
+    { "id": "search_smart_hex", "category": "General UI & Navigation", "description": "In Command Palette or Filter, type '0x0041' or 'U+0041'. Verify 'A' appears as the result.", "priority": "medium" },
+    { "id": "search_create_glyph_flow", "category": "General UI & Navigation", "description": "In Command Palette, type a name that doesn't exist (e.g., 'MyLogo'). Verify a 'Create glyph for...' option appears. Click it. Verify a new glyph is created and opened.", "priority": "high" }
 ]
