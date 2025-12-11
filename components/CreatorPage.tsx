@@ -1,0 +1,352 @@
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useLocale } from '../contexts/LocaleContext';
+import { BackIcon, DownloadIcon, ShareIcon, ImageIcon, TrashIcon } from '../constants';
+
+interface CreatorPageProps {
+    onClose: () => void;
+    fontBlob: Blob | null;
+}
+
+const FONT_FACE_ID = 'creator-font-face';
+
+const CreatorPage: React.FC<CreatorPageProps> = ({ onClose, fontBlob }) => {
+    const { t } = useLocale();
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // State
+    const [text, setText] = useState('Type your text here...');
+    const [fontSize, setFontSize] = useState(60);
+    const [textColor, setTextColor] = useState('#ffffff');
+    const [bgColor, setBgColor] = useState('#4f46e5'); // Indigo-600 default
+    const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
+    const [overlayOpacity, setOverlayOpacity] = useState(0.3);
+    const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('center');
+    const [fontLoaded, setFontLoaded] = useState(false);
+    const [aspectRatio, setAspectRatio] = useState<'square' | 'portrait' | 'landscape'>('square');
+    const [addShadow, setAddShadow] = useState(true);
+
+    const fontName = "CreatorFont";
+
+    // Initialize Font
+    useEffect(() => {
+        if (fontBlob) {
+            const loadFont = async () => {
+                try {
+                    const fontUrl = URL.createObjectURL(fontBlob);
+                    const fontFace = new FontFace(fontName, `url(${fontUrl})`);
+                    await fontFace.load();
+                    document.fonts.add(fontFace);
+                    setFontLoaded(true);
+                } catch (e) {
+                    console.error("Failed to load creator font", e);
+                }
+            };
+            loadFont();
+        }
+    }, [fontBlob]);
+
+    // Draw Canvas
+    const draw = useCallback(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (!canvas || !ctx || !fontLoaded) return;
+
+        // Dimensions
+        let width = 1080;
+        let height = 1080;
+        if (aspectRatio === 'portrait') height = 1920;
+        if (aspectRatio === 'landscape') height = 608;
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // 1. Background
+        if (bgImage) {
+             // Cover logic
+             const scale = Math.max(width / bgImage.width, height / bgImage.height);
+             const x = (width / 2) - (bgImage.width / 2) * scale;
+             const y = (height / 2) - (bgImage.height / 2) * scale;
+             ctx.drawImage(bgImage, x, y, bgImage.width * scale, bgImage.height * scale);
+             
+             // Overlay
+             ctx.fillStyle = `rgba(0, 0, 0, ${overlayOpacity})`;
+             ctx.fillRect(0, 0, width, height);
+        } else {
+             ctx.fillStyle = bgColor;
+             ctx.fillRect(0, 0, width, height);
+        }
+
+        // 2. Text Configuration
+        ctx.font = `${fontSize * 2}px "${fontName}"`; // Scale font up for hi-res canvas
+        ctx.fillStyle = textColor;
+        ctx.textBaseline = 'middle';
+        
+        if (addShadow) {
+            ctx.shadowColor = "rgba(0,0,0,0.8)";
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetX = 4;
+            ctx.shadowOffsetY = 4;
+        } else {
+            ctx.shadowColor = "transparent";
+        }
+
+        // 3. Text Wrapping Logic
+        const maxWidth = width * 0.8;
+        const lineHeight = fontSize * 2.5;
+        
+        const finalLines: string[] = [];
+        text.split('\n').forEach(paragraph => {
+             const words = paragraph.split(' ');
+             let currentLine = words[0];
+             for (let i = 1; i < words.length; i++) {
+                 let testLine = currentLine + " " + words[i];
+                 if (ctx.measureText(testLine).width > maxWidth) {
+                     finalLines.push(currentLine);
+                     currentLine = words[i];
+                 } else {
+                     currentLine = testLine;
+                 }
+             }
+             finalLines.push(currentLine);
+        });
+
+        // 4. Draw Lines
+        const totalTextHeight = finalLines.length * lineHeight;
+        let startY = (height - totalTextHeight) / 2 + (lineHeight / 2);
+
+        finalLines.forEach(line => {
+            let x = width / 2;
+            if (textAlign === 'left') x = width * 0.1;
+            if (textAlign === 'right') x = width * 0.9;
+            
+            ctx.textAlign = textAlign;
+            ctx.fillText(line, x, startY);
+            startY += lineHeight;
+        });
+
+        // 5. Draw Watermark
+        const watermarkText = "Made with Aksharajanani";
+        const watermarkFontSize = Math.max(20, width * 0.022); 
+        ctx.font = `italic 500 ${watermarkFontSize}px sans-serif`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowBlur = 2;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+        
+        const padding = width * 0.025;
+        ctx.fillText(watermarkText, width - padding, height - padding);
+
+    }, [text, fontSize, textColor, bgColor, bgImage, overlayOpacity, textAlign, fontLoaded, aspectRatio, addShadow]);
+
+    useEffect(() => {
+        draw();
+    }, [draw]);
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const img = new Image();
+            img.src = URL.createObjectURL(e.target.files[0]);
+            img.onload = () => {
+                setBgImage(img);
+            };
+        }
+    };
+
+    const handleDownload = () => {
+        if (canvasRef.current) {
+            const link = document.createElement('a');
+            link.download = `aksharajanani-${Date.now()}.png`;
+            link.href = canvasRef.current.toDataURL();
+            link.click();
+        }
+    };
+
+    const handleShare = async () => {
+        if (canvasRef.current) {
+            canvasRef.current.toBlob(async (blob) => {
+                if (blob && navigator.share) {
+                    try {
+                        await navigator.share({
+                            files: [new File([blob], 'share.png', { type: 'image/png' })],
+                            title: 'My Font Creation',
+                        });
+                    } catch (err) {
+                        console.error("Share failed", err);
+                    }
+                }
+            });
+        }
+    };
+
+    const presets = [
+        { name: 'Post', ratio: 'square' as const },
+        { name: 'Story', ratio: 'portrait' as const },
+        { name: 'Cover', ratio: 'landscape' as const },
+    ];
+
+    // -- Compact Control Section --
+    const controls = (
+        <div className="flex flex-col gap-3">
+             {/* Row 1: Aspect Ratio */}
+             <div className="flex bg-gray-100 dark:bg-gray-700/50 p-1 rounded-lg">
+                 {presets.map(p => (
+                     <button
+                        key={p.name}
+                        onClick={() => setAspectRatio(p.ratio)}
+                        className={`flex-1 py-1 text-xs font-semibold rounded-md transition-colors ${aspectRatio === p.ratio ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+                     >
+                         {p.name}
+                     </button>
+                 ))}
+             </div>
+
+             {/* Row 2: Size & Align */}
+             <div className="flex items-center gap-3">
+                 <div className="flex-grow flex flex-col justify-center">
+                    <input 
+                        type="range" 
+                        min="20" max="200" 
+                        value={fontSize} 
+                        onChange={(e) => setFontSize(Number(e.target.value))} 
+                        className="w-full accent-indigo-600 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" 
+                        title="Text Size"
+                    />
+                 </div>
+                 <div className="flex bg-gray-100 dark:bg-gray-700/50 rounded-lg p-1 shrink-0">
+                     {['left', 'center', 'right'].map((align) => (
+                         <button
+                             key={align}
+                             onClick={() => setTextAlign(align as any)}
+                             className={`p-1.5 rounded-md transition-all ${textAlign === align ? 'bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}
+                             title={`Align ${align}`}
+                         >
+                            {/* Simple Align Icons */}
+                            {align === 'left' && <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18v2H3V4zm0 5h12v2H3V9zm0 5h18v2H3v-2zm0 5h12v2H3v-2z"/></svg>}
+                            {align === 'center' && <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18v2H3V4zm3 5h12v2H6V9zm-3 5h18v2H3v-2zm3 5h12v2H6v-2z"/></svg>}
+                            {align === 'right' && <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18v2H3V4zm6 5h12v2H9V9zm-6 5h18v2H3v-2zm6 5h12v2H9v-2z"/></svg>}
+                         </button>
+                     ))}
+                 </div>
+             </div>
+
+             {/* Row 3: Colors & Effects Compact */}
+             <div className="flex items-center justify-center gap-6 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg border dark:border-gray-700">
+                
+                {/* Text Color */}
+                <label className="flex flex-col items-center cursor-pointer group" title="Text Color">
+                    <div className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-600 shadow-sm flex items-center justify-center font-bold text-xs" style={{ backgroundColor: textColor, color: textColor === '#ffffff' ? '#000' : '#fff' }}>T</div>
+                    <input type="color" className="sr-only" value={textColor} onChange={(e) => setTextColor(e.target.value)} />
+                </label>
+
+                {/* Bg Color */}
+                <label className={`flex flex-col items-center cursor-pointer group ${bgImage ? 'opacity-50' : ''}`} title="Background Color">
+                    <div className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-600 shadow-sm flex items-center justify-center font-bold text-xs text-white" style={{ backgroundColor: bgColor }}>B</div>
+                    <input type="color" className="sr-only" value={bgColor} onChange={(e) => setBgColor(e.target.value)} disabled={!!bgImage} />
+                </label>
+
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
+
+                {/* Shadow Toggle */}
+                <button 
+                    onClick={() => setAddShadow(!addShadow)}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors border-2 ${addShadow ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-400'}`}
+                    title="Toggle Shadow"
+                >
+                    <span className="font-bold text-xs">S</span>
+                </button>
+
+                {/* Image Upload */}
+                <div className="relative">
+                    {bgImage ? (
+                         <div className="flex items-center gap-2">
+                            <div className="w-20 px-2 h-8 flex items-center bg-gray-200 dark:bg-gray-700 rounded-full border border-gray-300 dark:border-gray-600">
+                                <input type="range" min="0" max="0.8" step="0.1" value={overlayOpacity} onChange={(e) => setOverlayOpacity(Number(e.target.value))} className="w-full h-1 accent-indigo-600" title="Image Dimmer"/>
+                            </div>
+                            <button onClick={() => setBgImage(null)} className="w-8 h-8 flex items-center justify-center text-red-500 bg-red-50 dark:bg-red-900/20 rounded-full border border-red-200 hover:bg-red-100" title="Remove Image"><TrashIcon/></button>
+                         </div>
+                    ) : (
+                        <button onClick={() => fileInputRef.current?.click()} className="w-8 h-8 rounded-full bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 flex items-center justify-center" title="Add Background Image">
+                            <ImageIcon />
+                        </button>
+                    )}
+                    <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
+                </div>
+             </div>
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col animate-fade-in-up">
+            {/* Header */}
+            <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-3 flex justify-between items-center shadow-sm w-full flex-shrink-0 z-10 border-b dark:border-gray-700">
+                <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200">
+                    <BackIcon />
+                </button>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Studio</h2>
+                <div className="flex gap-2">
+                    <button onClick={handleDownload} className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 shadow-md">
+                        <DownloadIcon />
+                    </button>
+                    {navigator.share && (
+                        <button onClick={handleShare} className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-full hover:bg-gray-300 shadow-md">
+                            <ShareIcon />
+                        </button>
+                    )}
+                </div>
+            </header>
+
+            {/* Main Content (Responsive) */}
+            <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+                
+                {/* Desktop Sidebar (Controls) */}
+                <div className="hidden md:flex w-80 bg-gray-50 dark:bg-gray-800 border-r dark:border-gray-700 flex-col p-6 gap-6 z-20 shadow-xl">
+                     <textarea 
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 shadow-sm resize-none"
+                        rows={4}
+                        placeholder="Your text..."
+                    />
+                    {controls}
+                    <div className="mt-auto text-xs text-gray-400 text-center">
+                        Pro Tip: Use transparent backgrounds for stickers.
+                    </div>
+                </div>
+
+                {/* Preview Area */}
+                <div className="flex-1 bg-gray-200 dark:bg-black/20 flex items-center justify-center p-4 relative overflow-hidden">
+                    {/* Checkered pattern for transparency */}
+                    <div className="absolute inset-0 opacity-10 pointer-events-none" 
+                         style={{ backgroundImage: `linear-gradient(45deg, #808080 25%, transparent 25%), linear-gradient(-45deg, #808080 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #808080 75%), linear-gradient(-45deg, transparent 75%, #808080 75%)`, backgroundSize: '20px 20px', backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px' }}>
+                    </div>
+                    
+                    <div className="relative shadow-2xl z-10 max-w-full max-h-full flex flex-col">
+                        <canvas 
+                            ref={canvasRef} 
+                            className="max-w-full max-h-[60vh] md:max-h-[85vh] object-contain bg-white mx-auto"
+                        />
+                    </div>
+                </div>
+
+                {/* Mobile Bottom Controls */}
+                <div className="md:hidden bg-white dark:bg-gray-800 border-t dark:border-gray-700 p-4 pb-8 flex flex-col gap-4 shadow-[0_-5px_15px_rgba(0,0,0,0.1)] z-20">
+                     <textarea 
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        className="w-full p-2 rounded-md border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 text-base resize-none"
+                        rows={2}
+                        placeholder="Type here..."
+                    />
+                    {controls}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default CreatorPage;

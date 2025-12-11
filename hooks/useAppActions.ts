@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
@@ -24,7 +23,7 @@ interface UseAppActionsProps {
 
 export const useAppActions = ({ 
     projectDataToRestore, onBackToSelection, allScripts, hasUnsavedRules, 
-    setIsAnimatingExport, downloadTriggerRef 
+    setIsAnimatingExport, downloadTriggerRef
 }: UseAppActionsProps) => {
     
     const { t } = useLocale();
@@ -81,8 +80,8 @@ export const useAppActions = ({
 
     // 5. Export Actions Hook
     const {
-        isExporting, feaErrorState, testPageFont,
-        startExportProcess, handleSaveProject, handleSaveTemplate, handleTestClick, downloadFontBlob,
+        isExporting, feaErrorState, testPageFont, creatorFont,
+        startExportProcess, handleSaveProject, handleSaveTemplate, handleTestClick, handleCreatorClick, downloadFontBlob,
         getCachedOrGeneratedFont
     } = useExportActions({
         getProjectState, projectId, projectName, setIsAnimatingExport, downloadTriggerRef
@@ -209,16 +208,6 @@ export const useAppActions = ({
             onConfirm: handleSaveAs
         });
     }, [layout, projectName, handleSaveAs]);
-    
-    const handleCreatorClick = useCallback(async () => {
-        layout.showNotification(t('exportingNotice'), 'info');
-        const result = await getCachedOrGeneratedFont();
-        if (result) {
-            layout.openModal('creator', { fontBlob: result.blob });
-        } else {
-            layout.showNotification('Failed to prepare font for Creator.', 'error');
-        }
-    }, [getCachedOrGeneratedFont, layout, t]);
 
     const testText = settings?.customSampleText || '';
     const setTestText = (text: string) => {
@@ -233,6 +222,7 @@ export const useAppActions = ({
         isFeaOnlyMode,
         feaErrorState,
         testPageFont,
+        creatorFont,
         testText,
         setTestText,
         fileInputRef,
@@ -266,10 +256,10 @@ export const useAppActions = ({
         startExportProcess,
         handleSaveToDB,
         handleTestClick,
+        handleCreatorClick,
         handleTakeSnapshot,
         handleRestoreSnapshot,
         hasSnapshot,
-        openSaveAsModal,
-        handleCreatorClick
+        openSaveAsModal
     };
 };

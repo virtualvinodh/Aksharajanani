@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -39,6 +40,9 @@ export const useExportActions = ({
     const [isExporting, setIsExporting] = useState(false);
     const [feaErrorState, setFeaErrorState] = useState<{ error: string, blob: Blob } | null>(null);
     const [testPageFont, setTestPageFont] = useState<{ blob: Blob | null, feaError: string | null }>({ blob: null, feaError: null });
+    
+    // State for Creator Page (mirroring Test Page pattern)
+    const [creatorFont, setCreatorFont] = useState<{ blob: Blob | null, feaError: string | null }>({ blob: null, feaError: null });
 
     const { drawingProgress } = useProgressCalculators({ 
         characterSets, glyphDataMap, markPositioningMap, recommendedKerning, 
@@ -105,10 +109,6 @@ export const useExportActions = ({
         if (settings.customSampleText) {
             // We store sample text in the script config structure for templates
             // This allows new projects created from this template to pick it up.
-            // (Note: ProjectData doesn't strictly have sampleText, but ScriptConfig does.
-            // When loading a template, we map it back).
-            // However, we are saving a PROJECT file structure here.
-            // The loader handles this by checking settings.customSampleText.
         }
 
         // 5. Clean DB IDs
@@ -185,14 +185,8 @@ export const useExportActions = ({
         setIsExporting(false);
     }, [getCachedOrGeneratedFont, downloadFontBlob, layout, t, projectName]);
 
-    const startExportProcess = useCallback(() => {
-        const triggerAnimation = () => {
-            setTimeout(() => {
-                downloadTriggerRef.current = performExportAfterAnimation;
-                setIsAnimatingExport(true);
-            }, 1000);
-        };
-
+    // Shared logic to check for completeness and warn if necessary
+    const checkAndExecute = useCallback((onProceed: () => void) => {
         if (drawingProgress.completed === 0) {
             layout.showNotification(t('errorNoGlyphs'), 'error');
             return;
@@ -204,7 +198,6 @@ export const useExportActions = ({
             kerning: (recommendedKerning?.length ?? 0) > kerningMap.size,
         };
         
-        // Modified logic: Always warn if any part is incomplete, regardless of editor mode.
         const shouldWarn = isIncomplete.drawing || isIncomplete.positioning || isIncomplete.kerning;
 
         if (shouldWarn) {
@@ -213,13 +206,24 @@ export const useExportActions = ({
                 editorMode: settings?.editorMode,
                 onConfirm: () => {
                     layout.closeModal();
-                    triggerAnimation();
+                    onProceed();
                 }
             });
         } else {
-            triggerAnimation();
+            onProceed();
         }
-    }, [drawingProgress, positioningRules, markPositioningMap, recommendedKerning, kerningMap, settings, layout, t, downloadTriggerRef, performExportAfterAnimation, setIsAnimatingExport]);
+    }, [drawingProgress, positioningRules, markPositioningMap, recommendedKerning, kerningMap, settings, layout, t]);
+
+    const startExportProcess = useCallback(() => {
+        const triggerAnimation = () => {
+            setTimeout(() => {
+                downloadTriggerRef.current = performExportAfterAnimation;
+                setIsAnimatingExport(true);
+            }, 1000);
+        };
+
+        checkAndExecute(triggerAnimation);
+    }, [checkAndExecute, downloadTriggerRef, performExportAfterAnimation, setIsAnimatingExport]);
 
     const handleTestClick = useCallback(async () => {
         setIsExporting(true);
@@ -233,16 +237,35 @@ export const useExportActions = ({
             layout.showNotification(t('errorFontGeneration', { error: 'Failed to prepare font for testing.' }), 'error');
         }
     }, [getCachedOrGeneratedFont, layout, t]);
+    
+    // New handler moved from useAppActions
+    const handleCreatorClick = useCallback(() => {
+        const proceedToCreator = async () => {
+            layout.showNotification(t('exportingNotice'), 'info');
+            const result = await getCachedOrGeneratedFont();
+            if (result) {
+                setCreatorFont(result);
+                layout.setCurrentView('creator');
+            } else {
+                layout.showNotification('Failed to prepare font for Creator.', 'error');
+            }
+        };
+
+        checkAndExecute(proceedToCreator);
+
+    }, [getCachedOrGeneratedFont, layout, t, checkAndExecute]);
 
     return {
         isExporting,
         feaErrorState,
         testPageFont,
+        creatorFont, // Exposed
         startExportProcess,
         performExportAfterAnimation,
         handleSaveProject,
-        handleSaveTemplate, // Exposed
+        handleSaveTemplate,
         handleTestClick,
+        handleCreatorClick, // Exposed
         downloadFontBlob,
         getCachedOrGeneratedFont
     };

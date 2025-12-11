@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import DrawingModal from './components/DrawingModal';
@@ -28,7 +24,7 @@ import ExportAnimation from './components/ExportAnimation';
 import ImportGlyphsModal from './components/ImportGlyphsModal';
 import SnapshotRestoreModal from './components/SnapshotRestoreModal';
 import SaveAsModal from './components/SaveAsModal';
-import CreatorModal from './components/CreatorModal';
+import CreatorPage from './components/CreatorPage';
 import { useLocale } from './contexts/LocaleContext';
 import { useLayout } from './contexts/LayoutContext';
 import { useGlyphData } from './contexts/GlyphDataContext';
@@ -114,6 +110,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       handleSaveToDB,
       handleTestClick,
       testPageFont,
+      creatorFont,
       handleTakeSnapshot,
       handleRestoreSnapshot,
       hasSnapshot,
@@ -212,85 +209,100 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   return (
     <div className="h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
-       <AppHeader
-        script={script}
-        settings={settings}
-        isExporting={isExporting}
-        onSaveProject={handleSaveProject}
-        onSaveToDB={handleSaveToDB}
-        onLoadProject={handleLoadProject}
-        onImportGlyphsClick={() => layout.openModal('importGlyphs')}
-        onAddGlyphClick={(options) => layout.openModal('addGlyph', options)}
-        onExportClick={startExportProcess}
-        onTestClick={handleTestClick}
-        onCreatorClick={handleCreatorClick}
-        onCompareClick={() => setCurrentView('comparison')}
-        onSettingsClick={() => setCurrentView('settings')}
-        onChangeScriptClick={handleChangeScriptClick}
-        onShowAbout={onShowAbout}
-        onShowHelp={onShowHelp}
-        onShowTestCases={onShowTestCases}
-        onEditorModeChange={handleEditorModeChange}
-        onWorkspaceChange={handleWorkspaceChange}
-        activeWorkspace={workspace}
-        hasUnsavedChanges={hasUnsavedChanges}
-        hasUnsavedRules={hasUnsavedRules}
-        hasPositioning={hasPositioning}
-        hasKerning={hasKerning}
-        drawingProgress={drawingProgress}
-        positioningProgress={positioningProgress}
-        kerningProgress={kerningProgress}
-        rulesProgress={rulesProgress}
-        positioningRules={positioningRules}
-        kerningMap={kerningMap}
-        allCharsByUnicode={allCharsByUnicode}
-        recommendedKerning={recommendedKerning}
-        onTakeSnapshot={handleTakeSnapshot}
-        onRestoreSnapshot={handleRestoreSnapshot}
-        hasSnapshot={hasSnapshot}
-        onSaveAs={openSaveAsModal}
-        onExportTemplate={handleSaveTemplate}
-        // Bind new handler for direct creation
-        onQuickAddGlyph={handleQuickAddGlyph}
-       />
-
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50">
-          {workspace === 'drawing' && (
-              <DrawingWorkspace
-                characterSets={characterSets}
-                onSelectCharacter={selectCharacter}
-                onAddGlyph={(targetSet) => layout.openModal('addGlyph', { targetSet })}
-                onAddBlock={() => layout.openModal('addBlock')}
+       
+       {/* Conditional Rendering for Full Page Views */}
+       {currentView === 'creator' ? (
+           <CreatorPage 
+                onClose={() => setCurrentView('grid')}
+                fontBlob={creatorFont?.blob ?? null}
+           />
+       ) : currentView === 'settings' ? (
+           <SettingsPage onClose={() => setCurrentView('grid')} toolRanges={TOOL_RANGES} />
+       ) : currentView === 'comparison' ? (
+           <ComparisonView onClose={() => setCurrentView('grid')} />
+       ) : (
+           // Main App Layout
+           <>
+               <AppHeader
+                script={script}
+                settings={settings}
+                isExporting={isExporting}
+                onSaveProject={handleSaveProject}
+                onSaveToDB={handleSaveToDB}
+                onLoadProject={handleLoadProject}
+                onImportGlyphsClick={() => layout.openModal('importGlyphs')}
+                onAddGlyphClick={(options) => layout.openModal('addGlyph', options)}
+                onExportClick={startExportProcess}
+                onTestClick={handleTestClick}
+                onCreatorClick={handleCreatorClick}
+                onCompareClick={() => setCurrentView('comparison')}
+                onSettingsClick={() => setCurrentView('settings')}
+                onChangeScriptClick={handleChangeScriptClick}
+                onShowAbout={onShowAbout}
+                onShowHelp={onShowHelp}
+                onShowTestCases={onShowTestCases}
+                onEditorModeChange={handleEditorModeChange}
+                onWorkspaceChange={handleWorkspaceChange}
+                activeWorkspace={workspace}
+                hasUnsavedChanges={hasUnsavedChanges}
+                hasUnsavedRules={hasUnsavedRules}
+                hasPositioning={hasPositioning}
+                hasKerning={hasKerning}
                 drawingProgress={drawingProgress}
-              />
-          )}
-          {workspace === 'positioning' && positioningRules && (
-            <PositioningWorkspace 
-              positioningRules={positioningRules}
-              markAttachmentRules={markAttachmentRules}
-              markAttachmentClasses={markAttachmentClasses}
-              baseAttachmentClasses={baseAttachmentClasses}
-              positioningProgress={positioningProgress}
-            />
-          )}
-          {workspace === 'kerning' && (
-              <KerningWorkspace 
-                recommendedKerning={recommendedKerning ?? []}
+                positioningProgress={positioningProgress}
                 kerningProgress={kerningProgress}
-              />
-          )}
-          {workspace === 'rules' && (
-              <RulesWorkspace 
-                positioningRules={positioningRules}
-                isFeaOnlyMode={isFeaOnlyMode}
                 rulesProgress={rulesProgress}
-              />
-          )}
-        </div>
-      </main>
-      
-      <Footer hideOnMobile={true} />
+                positioningRules={positioningRules}
+                kerningMap={kerningMap}
+                allCharsByUnicode={allCharsByUnicode}
+                recommendedKerning={recommendedKerning}
+                onTakeSnapshot={handleTakeSnapshot}
+                onRestoreSnapshot={handleRestoreSnapshot}
+                hasSnapshot={hasSnapshot}
+                onSaveAs={openSaveAsModal}
+                onExportTemplate={handleSaveTemplate}
+                onQuickAddGlyph={handleQuickAddGlyph}
+               />
+
+              <main className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50">
+                  {workspace === 'drawing' && (
+                      <DrawingWorkspace
+                        characterSets={characterSets}
+                        onSelectCharacter={selectCharacter}
+                        onAddGlyph={(targetSet) => layout.openModal('addGlyph', { targetSet })}
+                        onAddBlock={() => layout.openModal('addBlock')}
+                        drawingProgress={drawingProgress}
+                      />
+                  )}
+                  {workspace === 'positioning' && positioningRules && (
+                    <PositioningWorkspace 
+                      positioningRules={positioningRules}
+                      markAttachmentRules={markAttachmentRules}
+                      markAttachmentClasses={markAttachmentClasses}
+                      baseAttachmentClasses={baseAttachmentClasses}
+                      positioningProgress={positioningProgress}
+                    />
+                  )}
+                  {workspace === 'kerning' && (
+                      <KerningWorkspace 
+                        recommendedKerning={recommendedKerning ?? []}
+                        kerningProgress={kerningProgress}
+                      />
+                  )}
+                  {workspace === 'rules' && (
+                      <RulesWorkspace 
+                        positioningRules={positioningRules}
+                        isFeaOnlyMode={isFeaOnlyMode}
+                        rulesProgress={rulesProgress}
+                      />
+                  )}
+                </div>
+              </main>
+              
+              <Footer hideOnMobile={true} />
+           </>
+       )}
       
       {selectedCharacter && characterSets && (
         <DrawingModal
@@ -340,8 +352,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         />
       )}
 
-      {currentView === 'settings' && <SettingsPage onClose={() => setCurrentView('grid')} toolRanges={TOOL_RANGES} />}
-      {currentView === 'comparison' && <ComparisonView onClose={() => setCurrentView('grid')} />}
+      {/* Modals */}
       {layout.activeModal?.name === 'addGlyph' && (
           <AddGlyphModal 
             isOpen={true} 
@@ -375,15 +386,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
          />
       )}
       
-      {/* CREATOR MODAL */}
-      {layout.activeModal?.name === 'creator' && layout.activeModal.props.fontBlob && (
-          <CreatorModal
-             isOpen={true}
-             onClose={layout.closeModal}
-             fontBlob={layout.activeModal.props.fontBlob}
-          />
-      )}
-
       {layout.activeModal?.name === 'positioningUpdateWarning' && <PositioningUpdateWarningModal isOpen={true} onClose={() => layout.closeModal()} {...layout.activeModal.props} />}
       {layout.activeModal?.name === 'feaError' && feaErrorState && <FeaErrorModal isOpen={true} onClose={() => { layout.closeModal(); }} onConfirm={() => { downloadFontBlob(feaErrorState.blob, projectName); layout.closeModal(); }} errorMessage={feaErrorState.error} />}
       {layout.activeModal?.name === 'unsavedRules' && ( <UnsavedRulesModal isOpen={true} onClose={layout.closeModal} onDiscard={() => { layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} onSave={() => { handleSaveToDB(); layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} /> )}
