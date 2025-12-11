@@ -118,6 +118,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
     }, [localRules, scriptTag, activeFeature]);
 
     const lookupflags = useMemo(() => activeFeatureData.lookupflags || {}, [activeFeatureData]);
+    const hasInlineBlock = activeFeatureData.children?.some((c: any) => c.type === 'inline');
 
   const areAllGlyphsDrawn = useMemo(() => {
     return allCharacterSets
@@ -397,6 +398,42 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                             }
                             return null;
                         })}
+
+                         {/* Fallback buttons if no inline block exists to ensure rules can always be added */}
+                         {!hasInlineBlock && !addingRuleType && !editingRule && (
+                            <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg mt-6">
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                                        <span className="font-semibold text-gray-600 dark:text-gray-400">{t('addNewRule')}:</span>
+                                        <button onClick={() => setAddingRuleType('single')} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewSingleRule')}</button>
+                                        <button onClick={() => setAddingRuleType('ligature')} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewLigatureRule')}</button>
+                                        <button onClick={() => setAddingRuleType('contextual')} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewContextualRule')}</button>
+                                        <button onClick={() => setAddingRuleType('multiple')} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewMultipleRule')}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Editor for new rule when no inline block exists */}
+                        {!hasInlineBlock && addingRuleType && activeFeature && (
+                             <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg mt-6 bg-gray-50 dark:bg-gray-800/50">
+                                 <h4 className="font-semibold mb-4 text-gray-700 dark:text-gray-300">New Inline Rule</h4>
+                                 <RuleEditor
+                                    isNew={true}
+                                    ruleType={addingRuleType}
+                                    onSave={(newRule, type) => handleSaveNewRule(activeFeature, newRule, type, 'feature')}
+                                    onCancel={() => setAddingRuleType(null)}
+                                    allCharacterSets={allCharacterSets}
+                                    allCharsByName={allCharsByName}
+                                    glyphDataMap={glyphDataMap}
+                                    strokeThickness={strokeThickness}
+                                    showNotification={showNotification}
+                                    mode="editing"
+                                    groups={groups}
+                                    glyphVersion={glyphVersion}
+                                />
+                             </div>
+                        )}
 
                         <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg mt-6">
                             <div className="flex items-center justify-center gap-4">

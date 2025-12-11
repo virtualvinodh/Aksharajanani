@@ -140,6 +140,16 @@ export const useRulesState = () => {
             if (context === 'feature') {
                 if (!newRules[scriptTag!][contextName]) newRules[scriptTag!][contextName] = {};
                 targetObject = newRules[scriptTag!][contextName];
+                
+                // Ensure 'children' array exists and contains 'inline' for feature context
+                if (!targetObject.children) {
+                    targetObject.children = [];
+                }
+                const hasInline = targetObject.children.some((c: any) => c.type === 'inline');
+                if (!hasInline) {
+                    // Prepend inline to children if not present, to ensure visibility
+                    targetObject.children.unshift({ type: 'inline' });
+                }
             } else {
                 if (!newRules.lookups) newRules.lookups = {};
                 if (!newRules.lookups[contextName]) newRules.lookups[contextName] = {};
@@ -353,14 +363,22 @@ export const useRulesState = () => {
             const newRules = deepClone(prev);
             if (!newRules[scriptTag]) newRules[scriptTag] = {};
             if (!newRules[scriptTag][activeFeature]) newRules[scriptTag][activeFeature] = {};
-            if (!newRules[scriptTag][activeFeature][type]) {
-                 newRules[scriptTag][activeFeature][type] = (type === 'simple' ? {} : []);
+            
+            // Ensure children inline block exists for feature (same logic as handleSaveNewRule)
+            const targetObject = newRules[scriptTag][activeFeature];
+            if (!targetObject.children) targetObject.children = [];
+            if (!targetObject.children.some((c: any) => c.type === 'inline')) {
+                 targetObject.children.unshift({ type: 'inline' });
+            }
+
+            if (!targetObject[type]) {
+                 targetObject[type] = (type === 'simple' ? {} : []);
             }
             
             if (type === 'simple') {
-                newRules[scriptTag][activeFeature][type][rule.key] = rule.value;
+                targetObject[type][rule.key] = rule.value;
             } else { // contextual
-                newRules[scriptTag][activeFeature][type].push(rule);
+                targetObject[type].push(rule);
             }
 
             return newRules;
