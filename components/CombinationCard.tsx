@@ -22,6 +22,7 @@ interface CombinationCardProps {
   markPositioningMap?: MarkPositioningMap;
   characterSets: CharacterSet[];
   glyphVersion: number;
+  groups: Record<string, string[]>;
 }
 
 
@@ -38,7 +39,8 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
   markAttachmentRules,
   markPositioningMap,
   characterSets,
-  glyphVersion
+  glyphVersion,
+  groups
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
@@ -71,7 +73,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
             if (!offset) {
                 const baseBbox = getAccurateGlyphBBox(baseGlyph?.paths ?? [], strokeThickness);
                 const markBbox = getAccurateGlyphBBox(markGlyph.paths, strokeThickness);
-                offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets);
+                offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
             }
             
             const transformedMarkPaths = deepClone(markGlyph.paths);
@@ -101,7 +103,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
         color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
     });
     ctx.restore();
-  }, [baseChar, markChar, ligature, glyphDataMap, strokeThickness, theme, isPositioned, markAttachmentRules, markPositioningMap, metrics, characterSets, glyphVersion]);
+  }, [baseChar, markChar, ligature, glyphDataMap, strokeThickness, theme, isPositioned, markAttachmentRules, markPositioningMap, metrics, characterSets, glyphVersion, groups]);
   
   const handleConfirmClick = (e: React.MouseEvent) => {
     e.stopPropagation();

@@ -13,6 +13,7 @@ import { generateCompositeGlyphData, updateComponentInPaths } from '../../servic
 import { VEC } from '../../utils/vectorUtils';
 import * as dbService from '../../services/dbService';
 import { deepClone } from '../../utils/cloneUtils';
+import { useRules } from '../../contexts/RulesContext';
 
 declare var UnicodeProperties: any;
 
@@ -41,6 +42,8 @@ export const useGlyphActions = (
     const { settings, metrics, dispatch: settingsDispatch } = useSettings();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
+    const { state: rulesState } = useRules();
+    const groups = rulesState.fontRules?.groups || {};
     
     // --- Atomic PUA Cursor ---
     // Tracks the highest assigned PUA to prevent race conditions during rapid additions
@@ -228,7 +231,8 @@ export const useGlyphActions = (
                                 settings: settings!, 
                                 metrics: metrics!, 
                                 markAttachmentRules, 
-                                allCharacterSets: characterSets! 
+                                allCharacterSets: characterSets!,
+                                groups
                             });
                             if(regenerated) {
                                 resultData = regenerated;
@@ -277,7 +281,8 @@ export const useGlyphActions = (
                                             settings: settings!, 
                                             metrics: metrics!, 
                                             markAttachmentRules, 
-                                            allCharacterSets: characterSets! 
+                                            allCharacterSets: characterSets!,
+                                            groups
                                         });
                                         if(regenerated) resultData = regenerated;
                                     } else {
@@ -334,7 +339,7 @@ export const useGlyphActions = (
         
         if (onSuccess) onSuccess();
 
-    }, [allCharsByUnicode, glyphDataMap, dependencyMap, markPositioningMap, characterSets, glyphDataDispatch, characterDispatch, positioningDispatch, layout, settings, metrics, markAttachmentRules, allCharsByName, t]);
+    }, [allCharsByUnicode, glyphDataMap, dependencyMap, markPositioningMap, characterSets, glyphDataDispatch, characterDispatch, positioningDispatch, layout, settings, metrics, markAttachmentRules, allCharsByName, t, groups]);
 
     const handleDeleteGlyph = useCallback((unicode: number) => {
         const charToDelete = allCharsByUnicode.get(unicode); if (!charToDelete) return;
@@ -378,7 +383,8 @@ export const useGlyphActions = (
                         settings: settings!,
                         metrics: metrics!,
                         markAttachmentRules,
-                        allCharacterSets: characterSets!
+                        allCharacterSets: characterSets!,
+                        groups
                     });
                     if (compositeData) {
                         batchUpdates.push([depUni, compositeData]);
@@ -442,7 +448,7 @@ export const useGlyphActions = (
             'success',
             { onUndo: undo }
         );
-    }, [allCharsByUnicode, t, glyphDataDispatch, characterDispatch, kerningDispatch, positioningDispatch, layout, glyphDataMap, characterSets, kerningMap, markPositioningMap, dependencyMap, allCharsByName, settings, metrics, markAttachmentRules]);
+    }, [allCharsByUnicode, t, glyphDataDispatch, characterDispatch, kerningDispatch, positioningDispatch, layout, glyphDataMap, characterSets, kerningMap, markPositioningMap, dependencyMap, allCharsByName, settings, metrics, markAttachmentRules, groups]);
 
     const handleAddGlyph = useCallback((charData: { unicode?: number; name: string }, targetSetName?: string) => {
         let finalUnicode = charData.unicode;
@@ -603,7 +609,8 @@ export const useGlyphActions = (
                 settings,
                 metrics,
                 markAttachmentRules,
-                allCharacterSets: characterSets
+                allCharacterSets: characterSets,
+                groups
             });
             
             if (compositeData) {
@@ -627,7 +634,7 @@ export const useGlyphActions = (
                 }
             });
         }
-    }, [characterDispatch, glyphDataDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap]);
+    }, [characterDispatch, glyphDataDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap, groups]);
     
     const handleUpdateDependencies = useCallback((unicode: number, newLinkComponents: string[] | null) => {
         const currentChar = allCharsByUnicode.get(unicode);

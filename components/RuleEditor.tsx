@@ -62,6 +62,48 @@ const GlyphSlot: React.FC<GlyphSlotProps> = React.memo(({ onClick, char, glyphDa
     );
 });
 
+const GroupSlot: React.FC<{ 
+    value: string; 
+    groups: Record<string, string[]>; 
+    onChange: (newValue: string) => void; 
+    onRemove: () => void; 
+}> = ({ value, groups, onChange, onRemove }) => {
+    const groupNames = Object.keys(groups);
+    const prefix = value.charAt(0); // '$' or '@'
+
+    return (
+        <div className="relative group z-10">
+            <div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50 cursor-pointer border-purple-200 dark:border-purple-800 group-hover:border-purple-400">
+                <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{value.replace('$', '@')}</span>
+            </div>
+            <button 
+                onClick={(e) => { e.stopPropagation(); onRemove(); }} 
+                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 z-20"
+                type="button"
+            >
+                <ClearIcon />
+            </button>
+            
+            {groupNames.length > 0 && (
+                <div className="absolute hidden group-hover:block top-full pt-1 left-1/2 -translate-x-1/2 z-30">
+                    <div className="bg-white dark:bg-gray-700 rounded-md shadow-xl border dark:border-gray-600 p-1 min-w-[120px] max-h-48 overflow-y-auto">
+                        {groupNames.map(name => (
+                            <button
+                                key={name}
+                                type="button"
+                                onClick={() => onChange(`${prefix}${name}`)}
+                                className={`w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-purple-50 dark:hover:bg-gray-600 font-mono block ${value === prefix + name ? 'bg-purple-100 dark:bg-gray-600 font-bold' : ''}`}
+                            >
+                                @{name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const GroupSelector: React.FC<{ groups: Record<string, string[]>, onSelect: (groupName: string) => void, verticalPosition?: 'top' | 'bottom' }> = ({ groups, onSelect, verticalPosition = 'bottom' }) => {
     const { t } = useLocale();
     const groupNames = Object.keys(groups);
@@ -72,17 +114,19 @@ const GroupSelector: React.FC<{ groups: Record<string, string[]>, onSelect: (gro
                 {t('addGroup')}
             </button>
             {groupNames.length > 0 && (
-                <div className={`absolute hidden group-hover:block z-20 ${verticalPosition === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 min-w-[120px]`}>
-                    {groupNames.map(name => (
-                        <button
-                            key={name}
-                            type="button"
-                            onClick={() => onSelect(`$${name}`)}
-                            className="w-full text-left px-3 py-1 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-mono"
-                        >
-                            @{name}
-                        </button>
-                    ))}
+                <div className={`absolute hidden group-hover:block z-20 ${verticalPosition === 'bottom' ? 'top-full pt-2' : 'bottom-full pb-2'} left-1/2 -translate-x-1/2`}>
+                    <div className="bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 min-w-[120px]">
+                        {groupNames.map(name => (
+                            <button
+                                key={name}
+                                type="button"
+                                onClick={() => onSelect(`$${name}`)}
+                                className="w-full text-left px-3 py-1 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-mono"
+                            >
+                                @{name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
@@ -306,12 +350,12 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                             <div className="flex items-center gap-2">
                                 {singleInput ? (
                                     singleInput.startsWith('@') || singleInput.startsWith('$') ? (
-                                        <div className="relative">
-                                            <div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50">
-                                                <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{singleInput.replace('$', '@')}</span>
-                                            </div>
-                                            <button onClick={() => setSingleInput(null)} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"><ClearIcon /></button>
-                                        </div>
+                                        <GroupSlot
+                                            value={singleInput}
+                                            groups={groups}
+                                            onChange={(val) => setSingleInput(val)}
+                                            onRemove={() => setSingleInput(null)}
+                                        />
                                     ) : (
                                         <GlyphSlot
                                             onClick={() => openGlyphModal('single-input')}
@@ -339,12 +383,12 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                             <div className="flex items-center gap-2">
                                 {singleOutput ? (
                                     singleOutput.startsWith('@') || singleOutput.startsWith('$') ? (
-                                        <div className="relative">
-                                            <div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50">
-                                                <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{singleOutput.replace('$', '@')}</span>
-                                            </div>
-                                            <button onClick={() => setSingleOutput(null)} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"><ClearIcon /></button>
-                                        </div>
+                                        <GroupSlot
+                                            value={singleOutput}
+                                            groups={groups}
+                                            onChange={(val) => setSingleOutput(val)}
+                                            onRemove={() => setSingleOutput(null)}
+                                        />
                                     ) : (
                                         <GlyphSlot
                                             onClick={() => openGlyphModal('single-output')}
@@ -381,14 +425,13 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                 {components.map((name, index) => {
                                     if (name.startsWith('@') || name.startsWith('$')) {
                                         return (
-                                            <div key={`group-${index}`} className="relative">
-                                                <div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50">
-                                                    <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{name.replace('$', '@')}</span>
-                                                </div>
-                                                <button onClick={() => setComponents(p => p.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full">
-                                                    <ClearIcon />
-                                                </button>
-                                            </div>
+                                            <GroupSlot
+                                                key={`group-${index}`}
+                                                value={name}
+                                                groups={groups}
+                                                onChange={(val) => setComponents(p => p.map((v, i) => i === index ? val : v))}
+                                                onRemove={() => setComponents(p => p.filter((_, i) => i !== index))}
+                                            />
                                         );
                                     }
                                     const char = allCharsByName.get(name);
@@ -433,7 +476,13 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                             <h4 className="font-semibold mb-2 text-gray-700 dark:text-gray-300">{t('leftContext')}</h4>
                             <div className="flex flex-row md:flex-col items-center flex-wrap gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[120px]">
                                 {leftContext.map((name, index) => name.startsWith('@') || name.startsWith('$') ? 
-                                    <div key={index} className="relative"><div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50"><span className="font-mono text-sm text-purple-800 dark:text-purple-200">{name.replace('$', '@')}</span></div><button onClick={() => setLeftContext(p => p.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"><ClearIcon /></button></div> :
+                                    <GroupSlot
+                                        key={index}
+                                        value={name}
+                                        groups={groups}
+                                        onChange={(val) => setLeftContext(p => p.map((v, i) => i === index ? val : v))}
+                                        onRemove={() => setLeftContext(p => p.filter((_, i) => i !== index))}
+                                    /> :
                                     <GlyphSlot key={index} onClick={() => openGlyphModal('context-left-replace', index)} onClear={() => setLeftContext(p => p.filter((_, i) => i !== index))} char={allCharsByName.get(name) || null} glyphData={allCharsByName.get(name) ? glyphDataMap?.get(allCharsByName.get(name)!.unicode) : undefined} strokeThickness={strokeThickness} prompt='' />)}
                                 <GlyphSlot onClick={() => openGlyphModal('context-left-add')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('add')} />
                                 <GroupSelector groups={groups || {}} onSelect={groupName => setLeftContext(p => [...p, groupName])} />
@@ -467,7 +516,13 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                             <h4 className="font-semibold mb-2 text-gray-700 dark:text-gray-300">{t('rightContext')}</h4>
                              <div className="flex flex-row md:flex-col items-center flex-wrap gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[120px]">
                                 {rightContext.map((name, index) => name.startsWith('@') || name.startsWith('$') ? 
-                                    <div key={index} className="relative"><div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50"><span className="font-mono text-sm text-purple-800 dark:text-purple-200">{name.replace('$', '@')}</span></div><button onClick={() => setRightContext(p => p.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"><ClearIcon /></button></div> :
+                                    <GroupSlot
+                                        key={index}
+                                        value={name}
+                                        groups={groups}
+                                        onChange={(val) => setRightContext(p => p.map((v, i) => i === index ? val : v))}
+                                        onRemove={() => setRightContext(p => p.filter((_, i) => i !== index))}
+                                    /> :
                                     <GlyphSlot key={index} onClick={() => openGlyphModal('context-right-replace', index)} onClear={() => setRightContext(p => p.filter((_, i) => i !== index))} char={allCharsByName.get(name) || null} glyphData={allCharsByName.get(name) ? glyphDataMap?.get(allCharsByName.get(name)!.unicode) : undefined} strokeThickness={strokeThickness} prompt='' />)}
                                 <GlyphSlot onClick={() => openGlyphModal('context-right-add')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('add')} />
                                 <GroupSelector groups={groups || {}} onSelect={groupName => setRightContext(p => [...p, groupName])} />
@@ -508,14 +563,13 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                 {outputSequence.map((name, index) => {
                                     if (name.startsWith('@') || name.startsWith('$')) {
                                         return (
-                                            <div key={`group-${index}`} className="relative">
-                                                <div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50">
-                                                    <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{name.replace('$', '@')}</span>
-                                                </div>
-                                                <button onClick={() => setOutputSequence(p => p.filter((_, i) => i !== index))} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full">
-                                                    <ClearIcon />
-                                                </button>
-                                            </div>
+                                            <GroupSlot
+                                                key={`group-${index}`}
+                                                value={name}
+                                                groups={groups}
+                                                onChange={(val) => setOutputSequence(p => p.map((v, i) => i === index ? val : v))}
+                                                onRemove={() => setOutputSequence(p => p.filter((_, i) => i !== index))}
+                                            />
                                         );
                                     }
                                     const char = allCharsByName.get(name);
@@ -539,12 +593,12 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                             <div className="flex items-center gap-2">
                                 {singleInput ? (
                                     singleInput.startsWith('@') || singleInput.startsWith('$') ? (
-                                        <div className="relative">
-                                            <div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50">
-                                                <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{singleInput.replace('$', '@')}</span>
-                                            </div>
-                                            <button onClick={() => setSingleInput(null)} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"><ClearIcon /></button>
-                                        </div>
+                                        <GroupSlot
+                                            value={singleInput}
+                                            groups={groups}
+                                            onChange={(val) => setSingleInput(val)}
+                                            onRemove={() => setSingleInput(null)}
+                                        />
                                     ) : (
                                         <GlyphSlot
                                             onClick={() => openGlyphModal('single-input')}
@@ -572,12 +626,12 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                             <div className="flex items-center gap-2">
                                 {singleOutput ? (
                                     singleOutput.startsWith('@') || singleOutput.startsWith('$') ? (
-                                        <div className="relative">
-                                            <div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50">
-                                                <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{singleOutput.replace('$', '@')}</span>
-                                            </div>
-                                            <button onClick={() => setSingleOutput(null)} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"><ClearIcon /></button>
-                                        </div>
+                                        <GroupSlot
+                                            value={singleOutput}
+                                            groups={groups}
+                                            onChange={(val) => setSingleOutput(val)}
+                                            onRemove={() => setSingleOutput(null)}
+                                        />
                                     ) : (
                                         <GlyphSlot
                                             onClick={() => openGlyphModal('single-output')}

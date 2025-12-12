@@ -1,8 +1,9 @@
 
 import { Character, KerningMap, MarkPositioningMap, PositioningRules, GlyphData, FontMetrics, Path } from '../types';
-import { BoundingBox } from './glyphRenderService';
+import { getAccurateGlyphBBox, BoundingBox } from './glyphRenderService';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn as isGlyphDrawnUtil, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
+import { expandMembers } from './groupExpansionService';
 
 // Use ASCII-safe uniXXXX names, which fontService will also use.
 const getGlyphName = (char: Character | undefined): string | null => {
@@ -59,7 +60,7 @@ export const generateFea = (
         return isGlyphDrawn(nameToCharMap.get(name));
     };
     
-    const groups = fontRules.groups;
+    const groups = fontRules.groups || {};
     const lookups = fontRules.lookups;
 
     // Helper to check if a group contains at least one drawn glyph.
@@ -455,8 +456,12 @@ export const generateFea = (
         const pairToGposTag = new Map<string, string>();
         positioningRules.forEach(rule => {
             if (rule.gpos) {
-                rule.base.forEach(baseName => {
-                    (rule.mark || []).forEach(markName => {
+                // JIT EXPANSION for generating pair tags
+                const bases = expandMembers(rule.base, groups);
+                const marks = expandMembers(rule.mark || [], groups);
+
+                bases.forEach(baseName => {
+                    marks.forEach(markName => {
                         pairToGposTag.set(`${baseName}-${markName}`, rule.gpos!);
                     });
                 });
@@ -606,47 +611,46 @@ export const exportFeaFile = (
     fontName: string,
     positioningRules: PositioningRules[] | null,
     glyphDataMap: Map<number, GlyphData>,
-    metrics: FontMetrics
+    metrics: FontMetrics,
+    strokeThickness: number = 15
 ) => {
-    try {
-        // This is a simplified call; we'll create an empty map for bboxes as this export
-        // is just for user inspection, not compilation. The main export has the full logic.
-        const content = generateFea(fontRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, new Map());
-        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const safeFontName = fontName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        const now = new Date();
-        const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
-        a.download = `${safeFontName}-features_${timestamp}.fea`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error("Failed to generate or download FEA file:", error);
-        throw new Error(`An error occurred while creating the FEA file: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    const glyphBBoxes = new Map<number, BoundingBox | null>();
+    glyphDataMap.forEach((glyphData, unicode) => {
+        glyphBBoxes.set(unicode, getAccurateGlyphBBox(glyphData.paths, strokeThickness));
+    });
+
+    const feaContent = generateFea(
+        fontRules,
+        kerningMap,
+        markPositioningMap,
+        allCharsByUnicode,
+        fontName,
+        positioningRules,
+        glyphDataMap,
+        metrics,
+        glyphBBoxes
+    );
+
+    const blob = new Blob([feaContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fontName.replace(/\s+/g, '_')}.fea`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 };
 
-export const exportJsonRules = (fontRules: any, fontName: string) => {
-    try {
-        const content = JSON.stringify(fontRules, null, 2);
-        const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const safeFontName = fontName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        const now = new Date();
-        const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
-        a.download = `${safeFontName}-rules-${timestamp}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error("Failed to generate or download JSON rules file:", error);
-        throw new Error(`An error occurred while creating the JSON file: ${error instanceof Error ? error.message : String(error)}`);
-    }
+export const exportJsonRules = (rules: any, fontName: string) => {
+    const jsonString = JSON.stringify(rules, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fontName.replace(/\s+/g, '_')}_rules.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 };

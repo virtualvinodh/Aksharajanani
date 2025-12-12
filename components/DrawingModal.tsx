@@ -24,6 +24,7 @@ import ContextualToolbar from './ContextualToolbar';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
+import { useRules } from '../contexts/RulesContext';
 
 declare var paper: any;
 
@@ -55,6 +56,8 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   const { dispatch: characterDispatch, allCharsByName } = useProject();
   const { dispatch: glyphDataDispatch } = useGlyphDataContext();
+  const { state: rulesState } = useRules();
+  const groups = rulesState.fontRules?.groups || {};
 
   const [currentTool, setCurrentTool] = useState<Tool>('pen');
   const [zoom, setZoom] = useState(1);
@@ -182,7 +185,8 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
               settings,
               metrics,
               markAttachmentRules,
-              allCharacterSets
+              allCharacterSets,
+              groups
           });
 
           if (compositeData) {

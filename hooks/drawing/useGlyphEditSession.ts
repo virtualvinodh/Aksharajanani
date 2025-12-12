@@ -7,6 +7,7 @@ import { isGlyphDrawn } from '../../utils/glyphUtils';
 import { generateCompositeGlyphData } from '../../services/glyphRenderService';
 import { SaveOptions } from '../actions/useGlyphActions';
 import { deepClone } from '../../utils/cloneUtils';
+import { useRules } from '../../contexts/RulesContext';
 
 interface UseGlyphEditSessionProps {
     character: Character;
@@ -35,6 +36,8 @@ export const useGlyphEditSession = ({
 }: UseGlyphEditSessionProps) => {
     const { t } = useLocale();
     const { showNotification, checkAndSetFlag } = useLayout();
+    const { state: rulesState } = useRules();
+    const groups = rulesState.fontRules?.groups || {};
 
     // --- STATE INITIALIZATION ---
     
@@ -55,7 +58,8 @@ export const useGlyphEditSession = ({
                 settings,
                 metrics,
                 markAttachmentRules,
-                allCharacterSets
+                allCharacterSets,
+                groups
             });
             if (compositeGlyphData) return compositeGlyphData.paths;
         }
@@ -313,14 +317,15 @@ export const useGlyphEditSession = ({
             settings,
             metrics,
             markAttachmentRules,
-            allCharacterSets
+            allCharacterSets,
+            groups
         });
         
         if (compositeGlyphData) {
             handlePathsChange(compositeGlyphData.paths);
         }
         showNotification(t('glyphRefreshedSuccess'), 'info');
-    }, [character, allCharacterSets, allGlyphData, settings, metrics, markAttachmentRules, handlePathsChange, showNotification, t]);
+    }, [character, allCharacterSets, allGlyphData, settings, metrics, markAttachmentRules, handlePathsChange, showNotification, t, groups]);
 
     useEffect(() => {
         return () => {

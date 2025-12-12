@@ -94,6 +94,7 @@ export interface MarkAttachmentRules {
 }
 
 export interface AttachmentClass {
+  name?: string;
   members: string[];
   exceptions?: string[];
   applies?: string[];

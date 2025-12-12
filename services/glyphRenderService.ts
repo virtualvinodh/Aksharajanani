@@ -1,14 +1,11 @@
 
-
-
-
-
 // FIX: Added AppSettings to types import and added new imports for isGlyphDrawn and DRAWING_CANVAS_SIZE
 import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { deepClone } from '../utils/cloneUtils';
+import { expandMembers } from './groupExpansionService';
 
 declare var paper: any;
 
@@ -387,7 +384,8 @@ export const calculateDefaultMarkOffset = (
     markAttachmentRules: MarkAttachmentRules | null,
     metrics: FontMetrics,
     characterSets?: CharacterSet[],
-    isAbsolute: boolean = false
+    isAbsolute: boolean = false,
+    groups: Record<string, string[]> = {}
 ): Point => {
     if (isAbsolute) {
         return { x: 0, y: 0 };
@@ -397,18 +395,62 @@ export const calculateDefaultMarkOffset = (
         let rule = markAttachmentRules[baseChar.name]?.[markChar.name];
 
         // Priority 1.5: If no specific rule, check for a category-based rule (e.g., "$consonants").
-        if (!rule && characterSets) {
+        // NOW SUPPORTS RECURSIVE GROUP EXPANSION
+        if (!rule && (characterSets || Object.keys(groups).length > 0)) {
             for (const key in markAttachmentRules) {
-                if (key.startsWith('$')) {
+                // If key is a group (starts with $)
+                if (key.startsWith('$') || key.startsWith('@')) {
                     const setName = key.substring(1);
-                    // Find the character set that matches the key (e.g., "$consonants" -> find set with nameKey "consonants")
-                    const set = characterSets.find(s => s.nameKey === setName);
-                    // Check if the current base character is a member of this set
-                    if (set && set.characters.some(c => c.name === baseChar.name)) {
-                        // Check if this category rule has an entry for the current mark character
-                        const categoryRule = markAttachmentRules[key]?.[markChar.name];
-                        if (categoryRule) {
-                            rule = categoryRule;
+                    
+                    // Check if baseChar is in this group
+                    let isInGroup = false;
+
+                    // 1. Check Character Sets (legacy/UI sets)
+                    if (characterSets) {
+                        const set = characterSets.find(s => s.nameKey === setName);
+                        if (set && set.characters.some(c => c.name === baseChar.name)) {
+                            isInGroup = true;
+                        }
+                    }
+
+                    // 2. Check Global Groups (defined in Rules)
+                    if (!isInGroup && groups && groups[setName]) {
+                        // Use helper to check recursively if baseChar is in this group
+                        if (expandMembers([key], groups).includes(baseChar.name)) {
+                            isInGroup = true;
+                        }
+                    }
+
+                    if (isInGroup) {
+                        // Base matches group. Now check marks.
+                        // The rule might key off specific mark OR mark group
+                        const categoryRules = markAttachmentRules[key];
+                        
+                        // Direct match
+                        rule = categoryRules?.[markChar.name];
+                        
+                        // Mark Group match
+                        if (!rule) {
+                             for (const markKey in categoryRules) {
+                                 if ((markKey.startsWith('$') || markKey.startsWith('@'))) {
+                                     // Check if current mark is in this mark group
+                                     if (expandMembers([markKey], groups).includes(markChar.name)) {
+                                         rule = categoryRules[markKey];
+                                         break;
+                                     }
+                                     // Also check character sets for mark
+                                     if (characterSets) {
+                                         const mSet = characterSets.find(s => s.nameKey === markKey.substring(1));
+                                         if (mSet && mSet.characters.some(c => c.name === markChar.name)) {
+                                             rule = categoryRules[markKey];
+                                             break;
+                                         }
+                                     }
+                                 }
+                             }
+                        }
+
+                        if (rule) {
                             break; // Found a matching category rule, stop searching.
                         }
                     }
@@ -561,6 +603,7 @@ interface GenerateCompositeGlyphDataArgs {
     metrics: FontMetrics;
     markAttachmentRules: MarkAttachmentRules | null;
     allCharacterSets: CharacterSet[];
+    groups?: Record<string, string[]>;
 }
 
 export const generateCompositeGlyphData = ({
@@ -570,7 +613,8 @@ export const generateCompositeGlyphData = ({
     settings,
     metrics,
     markAttachmentRules,
-    allCharacterSets
+    allCharacterSets,
+    groups = {}
 }: GenerateCompositeGlyphDataArgs): GlyphData | null => {
     const componentNames = character.link || character.composite;
     if (!componentNames || componentNames.length === 0) return null;
@@ -677,31 +721,9 @@ export const generateCompositeGlyphData = ({
                 offset = { x: 0, y: 0 };
             }
         } else {
-            let ruleExists = false;
-            if (markAttachmentRules) {
-                ruleExists = !!markAttachmentRules[baseComponent.char.name]?.[markComponent.char.name];
-                if (!ruleExists && allCharacterSets) {
-                     for (const key in markAttachmentRules) {
-                        if (key.startsWith('$')) {
-                            const setName = key.substring(1);
-                            const set = allCharacterSets.find(s => s.nameKey === setName);
-                            if (set && set.characters.some(c => c.name === baseComponent.char.name)) {
-                                if (markAttachmentRules[key]?.[markComponent.char.name]) {
-                                    ruleExists = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
             let baseBboxForOffset: BoundingBox | null;
-            if (ruleExists) {
-                baseBboxForOffset = baseComponent.bbox;
-            } else {
-                baseBboxForOffset = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
-            }
+            
+            baseBboxForOffset = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
             
             offset = calculateDefaultMarkOffset(
                 baseComponent.char,
@@ -711,7 +733,8 @@ export const generateCompositeGlyphData = ({
                 markAttachmentRules,
                 metrics,
                 allCharacterSets,
-                isAbsolute
+                isAbsolute,
+                groups
             );
         }
 

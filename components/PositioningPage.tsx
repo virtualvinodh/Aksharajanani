@@ -17,6 +17,8 @@ import { isGlyphDrawn } from '../utils/glyphUtils';
 import Modal from './Modal';
 import PositioningRulesModal from './PositioningRulesModal';
 import { parseSearchQuery, getCharacterMatchScore } from '../utils/searchUtils';
+import { expandMembers } from '../services/groupExpansionService';
+import { useRules } from '../contexts/RulesContext';
 
 
 // Main Positioning Page Component
@@ -37,6 +39,10 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { characterSets, dispatch: characterDispatch } = useProject();
     const { settings, metrics } = useSettings();
+    const { state: rulesState } = useRules();
+
+    // Access groups from rules state
+    const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
 
     const [viewBy, setViewBy] = useState<'base' | 'mark'>('base');
     const [activeTab, setActiveTab] = useState(0);
@@ -83,8 +89,11 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         
         if (positioningRules) {
             for (const rule of positioningRules) {
-                const allPossibleMarks = rule.mark || [];
-                for (const baseName of rule.base) {
+                // JIT EXPANSION: Expand groups in the rule here
+                const allPossibleMarks = expandMembers(rule.mark || [], groups);
+                const allBases = expandMembers(rule.base, groups);
+
+                for (const baseName of allBases) {
                     for (const markName of allPossibleMarks) {
                         const baseChar = allChars.get(baseName);
                         const markChar = allChars.get(markName);
@@ -97,7 +106,40 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                         let targetLigatureName: string | undefined;
 
                         // 1. Check ligatureMap for an explicit name.
+                        // We check the specific names, assuming ligatureMap usually contains specific names,
+                        // but if ligatureMap used groups, we'd need deeper expansion logic there too.
+                        // For simplicity, we assume ligatureMap is explicit or expanded if needed.
+                        // If rule.ligatureMap contains groups, this lookup might fail without expanding keys.
+                        // However, standard usage usually puts specific overrides here.
+                        
+                        // Try exact match first
                         targetLigatureName = rule.ligatureMap?.[baseName]?.[markName];
+                        
+                        // If not found, check if ligatureMap used a group key for the base
+                        if (!targetLigatureName && rule.ligatureMap) {
+                             for (const groupKey in rule.ligatureMap) {
+                                 if (groupKey.startsWith('$') || groupKey.startsWith('@')) {
+                                     // If this group contains the current base char
+                                     if (expandMembers([groupKey], groups).includes(baseName)) {
+                                         // Check mark side
+                                         const marksMap = rule.ligatureMap[groupKey];
+                                          // Simple check for mark name
+                                         targetLigatureName = marksMap[markName];
+                                         if(!targetLigatureName) {
+                                             // Check if mark was also in a group in the map
+                                              for(const markGroupKey in marksMap) {
+                                                   if ((markGroupKey.startsWith('$') || markGroupKey.startsWith('@')) && 
+                                                       expandMembers([markGroupKey], groups).includes(markName)) {
+                                                        targetLigatureName = marksMap[markGroupKey];
+                                                        break;
+                                                   }
+                                              }
+                                         }
+                                         if (targetLigatureName) break;
+                                     }
+                                 }
+                             }
+                        }
                         
                         // 2. If not found, check font rules for a pre-defined ligature.
                         if (!targetLigatureName) {
@@ -107,7 +149,15 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
                         // 3. If a name is found (from either source), try to find the character.
                         if (targetLigatureName) {
-                            targetLigature = allChars.get(targetLigatureName);
+                            // If targetLigatureName is a group reference (e.g. from ligatureMap mapping $base to $lig), 
+                            // we need to resolve which specific ligature corresponds to this base.
+                            // This is complex. Assuming 1:1 mapping if groups are used.
+                            if (targetLigatureName.startsWith('$') || targetLigatureName.startsWith('@')) {
+                                 // Simple index matching if possible, otherwise skip complex resolution for now.
+                                 // Usually ligatureMap uses explicit names.
+                            } else {
+                                targetLigature = allChars.get(targetLigatureName);
+                            }
                         }
 
                         // 4. If no character was found by name, fall back to default behavior
@@ -141,7 +191,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         }
         return { allLigaturesByKey: newLigaturesByKey };
 
-    }, [characterSets, allChars, positioningRules, fontRules]);
+    }, [characterSets, allChars, positioningRules, fontRules, groups]);
     
     // Global check for incomplete pairs to control the notice
     useEffect(() => {
@@ -154,8 +204,10 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         let drawnPairCount = 0;
 
         for (const rule of positioningRules) {
-            const allPossibleMarks = rule.mark || [];
-            for (const baseName of rule.base) {
+            const allPossibleMarks = expandMembers(rule.mark || [], groups);
+            const allBases = expandMembers(rule.base, groups);
+            
+            for (const baseName of allBases) {
                 for (const markName of allPossibleMarks) {
                     const baseChar = allChars.get(baseName);
                     const markChar = allChars.get(markName);
@@ -175,16 +227,20 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         
         setShowIncompleteNotice(drawnPairCount < allPossiblePairs.size);
 
-    }, [positioningRules, allChars, glyphDataMap, glyphVersion]);
+    }, [positioningRules, allChars, glyphDataMap, glyphVersion, groups]);
 
 
     const navItems = useMemo(() => {
         if (!positioningRules || isFiltered) return [];
         const items = new Map<number, Character>();
         
-        const sourceSet = viewBy === 'base'
-            ? new Set(positioningRules.flatMap(r => r.base))
-            : new Set(positioningRules.flatMap(r => r.mark));
+        const sourceSet = new Set<string>();
+        
+        if (viewBy === 'base') {
+             positioningRules.flatMap(r => expandMembers(r.base, groups)).forEach(m => sourceSet.add(m));
+        } else {
+             positioningRules.flatMap(r => expandMembers(r.mark, groups)).forEach(m => sourceSet.add(m));
+        }
 
         sourceSet.forEach(name => {
             const char = allChars.get(name);
@@ -194,7 +250,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         });
 
         return Array.from(items.values()).sort((a, b) => a.unicode - b.unicode);
-    }, [positioningRules, allChars, viewBy, glyphDataMap, glyphVersion, isFiltered]);
+    }, [positioningRules, allChars, viewBy, glyphDataMap, glyphVersion, isFiltered, groups]);
 
     const activeItem = navItems[activeTab];
 
@@ -204,14 +260,12 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         const allCombinations: { base: Character; mark: Character; ligature: Character }[] = [];
         const addedLigatures = new Set<number>();
     
-        // If filtered, we want ALL combinations across the font to filter them.
-        // If not filtered, we restrict to the active tab item.
-        
         const rulesToProcess = positioningRules;
         
         for (const rule of rulesToProcess) {
-            const ruleBases = rule.base || [];
-            const ruleMarks = rule.mark || [];
+            // JIT Expansion
+            const ruleBases = expandMembers(rule.base, groups);
+            const ruleMarks = expandMembers(rule.mark, groups);
             
             // Determine loop context
             let basesToCheck = ruleBases;
@@ -296,7 +350,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
         return result;
 
-    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion, isFiltered, filterMode, markPositioningMap, searchQuery, isSearching]);
+    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion, isFiltered, filterMode, markPositioningMap, searchQuery, isSearching, groups]);
 
     // Handle Deep Navigation from Command Palette
     // This effect identifies the target, switches tabs if necessary, and opens the editor if found.
@@ -400,7 +454,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             baseChar, markChar, targetLigature, newGlyphData, newOffset, newBearings,
             allChars, allLigaturesByKey: positioningData.allLigaturesByKey,
             markAttachmentClasses, baseAttachmentClasses,
-            markPositioningMap, glyphDataMap, characterSets, positioningRules
+            markPositioningMap, glyphDataMap, characterSets, positioningRules,
+            groups // Pass groups for JIT expansion inside cascade logic
         });
     
         const propagatedCount = result.updatedMarkPositioningMap.size - markPositioningMap.size - 1;
@@ -421,7 +476,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                     markPositioningMap: snapshot.markPositioningMap, // Start from the snapshot
                     glyphDataMap: snapshot.glyphDataMap,
                     characterSets: snapshot.characterSets,
-                    positioningRules
+                    positioningRules,
+                    groups
                 });
     
                 positioningDispatch({ type: 'SET_MAP', payload: reapplyResult.updatedMarkPositioningMap });
@@ -456,7 +512,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     }, [
         characterSets, allChars, positioningData.allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses,
         markPositioningMap, glyphDataMap, positioningRules, positioningDispatch, glyphDataDispatch,
-        characterDispatch, showNotification, t
+        characterDispatch, showNotification, t, groups
     ]);
 
     const handleSavePair = useCallback((targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => {
@@ -471,7 +527,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
         const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, settings.strokeThickness);
         const markBbox = getAccurateGlyphBBox(markGlyph.paths, settings.strokeThickness);
-        const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, characterSets);
+        const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
     
         const transformedMarkPaths = JSON.parse(JSON.stringify(markGlyph.paths)).map((p: Path) => ({
             ...p,
@@ -485,7 +541,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     
         savePositioningUpdate(base, mark, ligature, newGlyphData, offset, newBearings);
         showNotification(`${t('positioningUpdated')} ${ligature.name}`, 'success');
-    }, [glyphDataMap, markAttachmentRules, savePositioningUpdate, showNotification, t, metrics, characterSets, settings]);
+    }, [glyphDataMap, markAttachmentRules, savePositioningUpdate, showNotification, t, metrics, characterSets, settings, groups]);
 
     const handleOpenReuseModal = (sourceItem: Character) => {
         setReuseSourceItem(sourceItem);
@@ -493,13 +549,17 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     };
     
     const fullyPositionedItems = useMemo(() => {
-        if (isFiltered) return []; // Reuse modal might be weird in filtered mode, but list source is navItems which are based on viewBy
+        if (isFiltered) return []; 
         return navItems.filter(item => {
             // Find all combinations for this item
             const combinations: { base: Character; mark: Character }[] = [];
             positioningRules?.forEach(rule => {
-                if ((viewBy === 'base' && rule.base.includes(item.name)) || (viewBy === 'mark' && rule.mark.includes(item.name))) {
-                    const otherSet = viewBy === 'base' ? rule.mark : rule.base;
+                // JIT Expansion
+                const ruleBases = expandMembers(rule.base, groups);
+                const ruleMarks = expandMembers(rule.mark, groups);
+
+                if ((viewBy === 'base' && ruleBases.includes(item.name)) || (viewBy === 'mark' && ruleMarks.includes(item.name))) {
+                    const otherSet = viewBy === 'base' ? ruleMarks : ruleBases;
                     otherSet.forEach(otherName => {
                         const otherChar = allChars.get(otherName);
                         if(otherChar) {
@@ -516,7 +576,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`)
             );
         }).filter(item => item.unicode !== reuseSourceItem?.unicode);
-    }, [navItems, positioningRules, viewBy, allChars, markPositioningMap, reuseSourceItem, isFiltered]);
+    }, [navItems, positioningRules, viewBy, allChars, markPositioningMap, reuseSourceItem, isFiltered, groups]);
     
     const handleCopyPositions = (copyFromItem: Character) => {
         if (!reuseSourceItem) return;
@@ -530,15 +590,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         let positionsCopiedCount = 0;
 
         targetCombinations.forEach(targetCombo => {
-            // Logic differs slightly in flattened view vs hierarchical view, but targetCombinations has everything we need
-            // If in flattened view, we might not have a consistent "viewBy" direction for the source mapping.
-            // Reuse feature implies structurally similar items.
-            // Assuming Reuse is typically used in 'viewBy' mode where structure is clear.
-            
-            // For now, allow reuse based on the current 'viewBy' toggle even if list is flattened?
-            // Actually, if flattened, `viewBy` might not match the pair's structure.
-            // Let's restrict Reuse to non-filtered mode for simplicity and safety, or assume standard structure.
-            
             const otherChar = viewBy === 'base' ? targetCombo.mark : targetCombo.base;
             const sourceBase = viewBy === 'base' ? copyFromItem : otherChar;
             const sourceMark = viewBy === 'base' ? otherChar : copyFromItem;
@@ -641,7 +692,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
             const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, settings.strokeThickness);
             const markBbox = getAccurateGlyphBBox(markGlyph.paths, settings.strokeThickness);
-            const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, tempCharacterSets);
+            // Pass groups for expansion inside offset calculation
+            const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, tempCharacterSets, false, groups);
 
             const transformedMarkPaths = JSON.parse(JSON.stringify(markGlyph.paths)).map((p: Path) => ({
                 ...p,
@@ -659,7 +711,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 markPositioningMap: tempMarkPositioningMap,
                 glyphDataMap: tempGlyphDataMap,
                 characterSets: tempCharacterSets,
-                positioningRules
+                positioningRules,
+                groups
             });
             
             tempMarkPositioningMap = result.updatedMarkPositioningMap;
@@ -676,7 +729,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         displayedCombinations, markPositioningMap, glyphDataMap, showNotification, t, 
         metrics, settings, markAttachmentRules, characterSets, allChars, positioningData.allLigaturesByKey, 
         markAttachmentClasses, baseAttachmentClasses, positioningRules, 
-        positioningDispatch, glyphDataDispatch, characterDispatch
+        positioningDispatch, glyphDataDispatch, characterDispatch, groups
     ]);
     
     const hasManuallyPositioned = useMemo(() => {
@@ -700,7 +753,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 newMarkPositioningMap.delete(key);
     
                 const relevantRule = positioningRules?.find(rule => 
-                    rule.base.includes(combo.base.name) && rule.mark?.includes(combo.mark.name)
+                    expandMembers(rule.base, groups).includes(combo.base.name) && 
+                    expandMembers(rule.mark, groups).includes(combo.mark.name)
                 );
                 
                 if (relevantRule?.gsub && combo.ligature.unicode) {
@@ -717,7 +771,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         }
         
         setIsResetConfirmOpen(false);
-    }, [activeItem, displayedCombinations, markPositioningMap, glyphDataMap, positioningRules, positioningDispatch, glyphDataDispatch, showNotification, t]);
+    }, [activeItem, displayedCombinations, markPositioningMap, glyphDataMap, positioningRules, positioningDispatch, glyphDataDispatch, showNotification, t, groups]);
 
     const handleResetSinglePair = useCallback((base: Character, mark: Character, ligature: Character) => {
         const key = `${base.unicode}-${mark.unicode}`;
@@ -728,7 +782,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         positioningDispatch({ type: 'SET_MAP', payload: newMarkPositioningMap });
     
         const relevantRule = positioningRules?.find(rule => 
-            rule.base.includes(base.name) && rule.mark?.includes(mark.name)
+            expandMembers(rule.base, groups).includes(base.name) && 
+            expandMembers(rule.mark, groups).includes(mark.name)
         );
     
         if (relevantRule?.gsub && ligature.unicode) {
@@ -739,7 +794,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     
         showNotification(t('positionResetSuccess', { name: ligature.name }), 'success');
     
-    }, [markPositioningMap, positioningDispatch, positioningRules, glyphDataMap, glyphDataDispatch, showNotification, t]);
+    }, [markPositioningMap, positioningDispatch, positioningRules, glyphDataMap, glyphDataDispatch, showNotification, t, groups]);
 
 
     if (!settings || !metrics) return null;
@@ -916,6 +971,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                         markPositioningMap={markPositioningMap}
                                         characterSets={characterSets!}
                                         glyphVersion={glyphVersion}
+                                        groups={groups}
                                     />
                                 );
                             })}

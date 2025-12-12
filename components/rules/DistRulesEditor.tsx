@@ -65,6 +65,48 @@ const GlyphSlot: React.FC<GlyphSlotProps> = React.memo(({ onClick, char, glyphDa
     );
 });
 
+const GroupSlot: React.FC<{ 
+    value: string; 
+    groups: Record<string, string[]>; 
+    onChange: (newValue: string) => void; 
+    onRemove: () => void; 
+}> = ({ value, groups, onChange, onRemove }) => {
+    const groupNames = Object.keys(groups);
+    const prefix = value.charAt(0); // '$' or '@'
+
+    return (
+        <div className="relative group z-10">
+            <div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50 cursor-pointer border-purple-200 dark:border-purple-800 group-hover:border-purple-400">
+                <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{value}</span>
+            </div>
+            <button 
+                onClick={(e) => { e.stopPropagation(); onRemove(); }} 
+                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 z-20"
+                type="button"
+            >
+                <ClearIcon />
+            </button>
+            
+            {groupNames.length > 0 && (
+                <div className="absolute hidden group-hover:block top-full pt-1 left-1/2 -translate-x-1/2 z-30">
+                    <div className="bg-white dark:bg-gray-700 rounded-md shadow-xl border dark:border-gray-600 p-1 min-w-[120px] max-h-48 overflow-y-auto">
+                        {groupNames.map(name => (
+                            <button
+                                key={name}
+                                type="button"
+                                onClick={() => onChange(`${prefix}${name}`)}
+                                className={`w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-purple-50 dark:hover:bg-gray-600 font-mono block ${value === prefix + name ? 'bg-purple-100 dark:bg-gray-600 font-bold' : ''}`}
+                            >
+                                @{name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const GroupSelector: React.FC<{ groups: Record<string, string[]>, onSelect: (groupName: string) => void }> = ({ groups, onSelect }) => {
     const { t } = useLocale();
     const groupNames = Object.keys(groups);
@@ -75,17 +117,19 @@ const GroupSelector: React.FC<{ groups: Record<string, string[]>, onSelect: (gro
                 {t('addGroup')}
             </button>
             {groupNames.length > 0 && (
-                <div className="absolute hidden group-hover:block z-20 bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 min-w-[120px]">
-                    {groupNames.map(name => (
-                        <button
-                            key={name}
-                            type="button"
-                            onClick={() => onSelect(`@${name}`)}
-                            className="w-full text-left px-3 py-1 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-mono"
-                        >
-                            @{name}
-                        </button>
-                    ))}
+                <div className="absolute hidden group-hover:block z-20 bottom-full pb-2 left-1/2 -translate-x-1/2">
+                    <div className="bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 min-w-[120px]">
+                        {groupNames.map(name => (
+                            <button
+                                key={name}
+                                type="button"
+                                onClick={() => onSelect(`@${name}`)}
+                                className="w-full text-left px-3 py-1 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-mono"
+                            >
+                                @{name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
@@ -239,7 +283,13 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
                         <h4 className="font-semibold mb-2 text-xs text-center text-gray-700 dark:text-gray-300">{t('leftContext')}</h4>
                         <div className="flex flex-col items-center gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[120px]">
                             {editorState.left.map((name, index) => name.startsWith('@') ? 
-                                <div key={index} className="relative"><div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50"><span className="font-mono text-sm text-purple-800 dark:text-purple-200">{name}</span></div><button onClick={() => setEditorState(s => ({...s, left: s.left.filter((_, i) => i !== index)}))} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"><ClearIcon /></button></div> :
+                                <GroupSlot
+                                    key={index}
+                                    value={name}
+                                    groups={groups}
+                                    onChange={(val) => setEditorState(s => ({...s, left: s.left.map((item, idx) => idx === index ? val : item)}))}
+                                    onRemove={() => setEditorState(s => ({...s, left: s.left.filter((_, i) => i !== index)}))}
+                                /> :
                                 <GlyphSlot key={index} onClick={() => openGlyphModal('left-replace', index)} onClear={() => setEditorState(s => ({...s, left: s.left.filter((_, i) => i !== index)}))} char={allCharsByName.get(name) || null} glyphData={allCharsByName.get(name) ? glyphDataMap.get(allCharsByName.get(name)!.unicode) : undefined} strokeThickness={strokeThickness} prompt={t('add')} />)}
                             <GlyphSlot onClick={() => openGlyphModal('left-add')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('add')} />
                             <GroupSelector groups={groups} onSelect={name => setEditorState(s => ({...s, left: [...s.left, name]}))} />
@@ -253,7 +303,13 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
                         <h4 className="font-semibold mb-2 text-xs text-center text-gray-700 dark:text-gray-300">{t('rightContext')}</h4>
                         <div className="flex flex-col items-center gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[120px]">
                             {editorState.right.map((name, index) => name.startsWith('@') ?
-                                <div key={index} className="relative"><div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50"><span className="font-mono text-sm text-purple-800 dark:text-purple-200">{name}</span></div><button onClick={() => setEditorState(s => ({...s, right: s.right.filter((_, i) => i !== index)}))} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"><ClearIcon /></button></div> :
+                                <GroupSlot
+                                    key={index}
+                                    value={name}
+                                    groups={groups}
+                                    onChange={(val) => setEditorState(s => ({...s, right: s.right.map((item, idx) => idx === index ? val : item)}))}
+                                    onRemove={() => setEditorState(s => ({...s, right: s.right.filter((_, i) => i !== index)}))}
+                                /> :
                                 <GlyphSlot key={index} onClick={() => openGlyphModal('right-replace', index)} onClear={() => setEditorState(s => ({...s, right: s.right.filter((_, i) => i !== index)}))} char={allCharsByName.get(name) || null} glyphData={allCharsByName.get(name) ? glyphDataMap.get(allCharsByName.get(name)!.unicode) : undefined} strokeThickness={strokeThickness} prompt={t('add')} />)}
                             <GlyphSlot onClick={() => openGlyphModal('right-add')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('add')} />
                             <GroupSelector groups={groups} onSelect={name => setEditorState(s => ({...s, right: [...s.right, name]}))} />
@@ -328,4 +384,4 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
     )
 };
 
-export default React.memo(DistRulesEditor);
+export default DistRulesEditor;

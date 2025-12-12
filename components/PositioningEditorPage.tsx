@@ -14,6 +14,7 @@ import PositioningToolbar from './PositioningToolbar';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import Modal from './Modal';
 import { deepClone } from '../utils/cloneUtils';
+import { useRules } from '../contexts/RulesContext'; // IMPORT useRules
 
 
 interface PositioningEditorPageProps {
@@ -42,6 +43,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     allPairs, currentIndex, onNavigate, characterSets, glyphVersion
 }) => {
     const { t } = useLocale();
+    const { state: rulesState } = useRules(); // ACCESS Rules State
+    const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]); // EXTRACT Groups
+
     const [markPaths, setMarkPaths] = useState<Path[]>([]);
     const [initialMarkPaths, setInitialMarkPaths] = useState<Path[]>([]);
     const [isReusePanelOpen, setIsReusePanelOpen] = useState(false);
@@ -98,7 +102,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         if (!offset && baseBbox) {
             const markGlyph = glyphDataMap.get(markChar.unicode);
             const markBbox = getAccurateGlyphBBox(markGlyph?.paths ?? [], settings.strokeThickness);
-            offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets);
+            // Pass groups to calculation
+            offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
         }
         
         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
@@ -171,7 +176,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             lastPairIdentifierRef.current = pairIdentifier;
         }
 
-    }, [baseChar, markChar, targetLigature, markPositioningMap, glyphDataMap, markAttachmentRules, baseBbox, metrics, baseGlyph, settings.strokeThickness, characterSets, pairIdentifier]);
+    }, [baseChar, markChar, targetLigature, markPositioningMap, glyphDataMap, markAttachmentRules, baseBbox, metrics, baseGlyph, settings.strokeThickness, characterSets, pairIdentifier, groups]);
 
      useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

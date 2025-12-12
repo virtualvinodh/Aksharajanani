@@ -129,7 +129,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
 
   const handleExportFea = () => {
     try {
-        exportFeaFile(localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics);
+        exportFeaFile(localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, strokeThickness);
     } catch (error) {
         showNotification(error instanceof Error ? error.message : 'Failed to export FEA file', 'error');
     }

@@ -1,13 +1,4 @@
 
-
-
-
-
-
-
-
-
-
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Path, KerningMap, MarkPositioningMap, PositioningRules, MarkAttachmentRules, Segment } from '../types';
 import { compileFeaturesAndPatch } from './pythonFontService';
 import { generateFea } from './feaService';
@@ -15,6 +6,7 @@ import { VEC } from '../utils/vectorUtils';
 import { curveToPolyline, quadraticCurveToPolyline, getAccurateGlyphBBox, calculateDefaultMarkOffset, BoundingBox, getStrokeOutlinePoints } from './glyphRenderService';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
+import { expandMembers } from './groupExpansionService';
 
 // opentype.js is loaded from a CDN in index.html and will be available on the window object.
 // This declaration informs TypeScript about the global 'opentype' variable.
@@ -431,13 +423,18 @@ export const exportToOtf = async (
     const allCharsByName = new Map<string, Character>();
     allCharsByUnicode.forEach(char => allCharsByName.set(char.name, char));
     
+    const groups = fontRules?.groups || {};
+
     // Create GPOS rules for default-positioned (non-interacted) mark combinations
     // instead of creating pre-rendered GSUB ligatures for them.
     const finalMarkPositioningMap = new Map(markPositioningMap.entries());
     if (positioningRules) {
         for (const rule of positioningRules) {
-            const allPossibleMarks = rule.mark || [];
-            for (const baseName of rule.base) {
+            // JIT EXPANSION for Export
+            const allPossibleMarks = expandMembers(rule.mark || [], groups);
+            const allBases = expandMembers(rule.base, groups);
+            
+            for (const baseName of allBases) {
                 for (const markName of allPossibleMarks) {
                     const baseChar = allCharsByName.get(baseName);
                     const markChar = allCharsByName.get(markName);
@@ -453,7 +450,7 @@ export const exportToOtf = async (
                     if (isGlyphDrawn(baseGlyphData) && isGlyphDrawn(markGlyphData)) {
                         const baseBbox = getAccurateGlyphBBox(baseGlyphData!.paths, settings.strokeThickness);
                         const markBbox = getAccurateGlyphBBox(markGlyphData!.paths, settings.strokeThickness);
-                        const offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets);
+                        const offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
                         finalMarkPositioningMap.set(key, offset);
                     }
                 }

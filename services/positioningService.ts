@@ -10,6 +10,7 @@ import {
     PositioningRules,
 } from '../types';
 import { deepClone } from '../utils/cloneUtils';
+import { expandMembers } from './groupExpansionService';
 
 interface UpdatePositioningAndCascadeArgs {
     baseChar: Character;
@@ -26,6 +27,7 @@ interface UpdatePositioningAndCascadeArgs {
     glyphDataMap: Map<number, GlyphData>;
     characterSets: CharacterSet[];
     positioningRules: PositioningRules[] | null;
+    groups?: Record<string, string[]>;
 }
 
 interface UpdatePositioningResult {
@@ -38,7 +40,8 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
     const {
         baseChar, markChar, targetLigature, newGlyphData, newOffset, newBearings,
         allChars, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses,
-        markPositioningMap, glyphDataMap, characterSets, positioningRules
+        markPositioningMap, glyphDataMap, characterSets, positioningRules,
+        groups = {}
     } = args;
 
     const newMarkPositioningMap = new Map(markPositioningMap);
@@ -51,7 +54,8 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
     
     // Find the rule that applies to this pair
     const relevantRule = positioningRules?.find(rule => 
-        rule.base.includes(baseChar.name) && rule.mark?.includes(markChar.name)
+        expandMembers(rule.base, groups).includes(baseChar.name) && 
+        expandMembers(rule.mark, groups).includes(markChar.name)
     );
     
     // Only save glyph data for the ligature if a GSUB feature is specified in the rule.
@@ -66,14 +70,15 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
     // 2. Gather all marks that should be affected by this change
     const marksToUpdate = new Set<Character>([markChar]);
     if (markAttachmentClasses) {
-        const attachmentClass = markAttachmentClasses.find(c => c.members.includes(markChar.name));
+        // Expand members for check
+        const attachmentClass = markAttachmentClasses.find(c => expandMembers(c.members, groups).includes(markChar.name));
         if (attachmentClass) {
             let shouldApply = true;
-            if (attachmentClass.exceptions?.includes(baseChar.name)) shouldApply = false;
-            if (attachmentClass.applies && !attachmentClass.applies.includes(baseChar.name)) shouldApply = false;
+            if (attachmentClass.exceptions && expandMembers(attachmentClass.exceptions, groups).includes(baseChar.name)) shouldApply = false;
+            if (attachmentClass.applies && !expandMembers(attachmentClass.applies, groups).includes(baseChar.name)) shouldApply = false;
 
             if (shouldApply) {
-                attachmentClass.members.forEach(otherMarkName => {
+                expandMembers(attachmentClass.members, groups).forEach(otherMarkName => {
                     const otherMarkChar = allChars.get(otherMarkName);
                     if (otherMarkChar) marksToUpdate.add(otherMarkChar);
                 });
@@ -84,14 +89,14 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
     // 3. Gather all bases that should be affected by this change
     const basesToUpdate = new Set<Character>([baseChar]);
     if (baseAttachmentClasses) {
-        const attachmentClass = baseAttachmentClasses.find(c => c.members.includes(baseChar.name));
+        const attachmentClass = baseAttachmentClasses.find(c => expandMembers(c.members, groups).includes(baseChar.name));
         if (attachmentClass) {
             let shouldApply = true;
-            if (attachmentClass.exceptions?.includes(markChar.name)) shouldApply = false;
-            if (attachmentClass.applies && !attachmentClass.applies.includes(markChar.name)) shouldApply = false;
+            if (attachmentClass.exceptions && expandMembers(attachmentClass.exceptions, groups).includes(markChar.name)) shouldApply = false;
+            if (attachmentClass.applies && !expandMembers(attachmentClass.applies, groups).includes(markChar.name)) shouldApply = false;
 
             if (shouldApply) {
-                attachmentClass.members.forEach(otherBaseName => {
+                expandMembers(attachmentClass.members, groups).forEach(otherBaseName => {
                     const otherBaseChar = allChars.get(otherBaseName);
                     if (otherBaseChar) basesToUpdate.add(otherBaseChar);
                 });
@@ -124,7 +129,8 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
 
                 // Check if the cascade should also create a GSUB ligature
                 const cascadeRule = positioningRules?.find(rule => 
-                    rule.base.includes(currentBase.name) && rule.mark?.includes(currentMark.name)
+                    expandMembers(rule.base, groups).includes(currentBase.name) && 
+                    expandMembers(rule.mark, groups).includes(currentMark.name)
                 );
 
                 if (cascadeRule && cascadeRule.gsub) {
