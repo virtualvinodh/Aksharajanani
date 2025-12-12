@@ -1,4 +1,5 @@
 
+
 [
   {
     "nameKey": "basicLatinLetters",
@@ -101,7 +102,7 @@
       },           
       { "unicode": 192, "name": "À", "glyphClass": "base", "link": ["A", "̀"] },
       { "unicode": 194, "name": "Â", "glyphClass": "base", "link": ["A",  "́"] },
-      { "unicode": 198, "name": "Æ", "glyphClass": "ligature", "composite": ["A", "E"], "compositeTransform": [[1], [1, "touching"]] },
+      { "unicode": 198, "name": "Æ", "glyphClass": "ligature", "composite": ["A", "E"], "compositeTransform": [{ "scale": 1 }, { "scale": 1, "mode": "touching" }] },
       { "unicode": 199, "name": "Ç", "glyphClass": "base", "link": ["C", "̧"] },
       { "unicode": 200, "name": "È", "glyphClass": "base", "link": ["E", "̀"] },
       { "unicode": 201, "name": "É", "glyphClass": "base", "link": ["E",  "́"] },
@@ -110,14 +111,14 @@
       { "unicode": 206, "name": "Î", "glyphClass": "base", "link": ["I", "̂"] },
       { "unicode": 207, "name": "Ï", "glyphClass": "base", "link": ["I",  "̈"] },
       { "unicode": 212, "name": "Ô", "glyphClass": "base", "link": ["O", "̂"] },
-      { "unicode": 338, "name": "Œ", "glyphClass": "ligature", "composite": ["O", "E"],"compositeTransform": [[1], [1, "touching"]] },
+      { "unicode": 338, "name": "Œ", "glyphClass": "ligature", "composite": ["O", "E"],"compositeTransform": [{ "scale": 1 }, { "scale": 1, "mode": "touching" }] },
       { "unicode": 217, "name": "Ù", "glyphClass": "base", "link": ["U", "̀"] },
       { "unicode": 219, "name": "Û", "glyphClass": "base", "link": ["U", "̂"] },
       { "unicode": 220, "name": "Ü", "glyphClass": "base", "link": ["U",  "̈"] },
       { "unicode": 376, "name": "Ÿ", "glyphClass": "base", "link": ["Y",  "̈"] },
       { "unicode": 224, "name": "à", "glyphClass": "base", "link": ["a", "̀"] },
       { "unicode": 226, "name": "â", "glyphClass": "base", "link": ["a",  "́"] },
-      { "unicode": 230, "name": "æ", "glyphClass": "ligature", "composite": ["a", "e"], "compositeTransform": [[1], [1, "touching"]] },
+      { "unicode": 230, "name": "æ", "glyphClass": "ligature", "composite": ["a", "e"], "compositeTransform": [{ "scale": 1 }, { "scale": 1, "mode": "touching" }] },
       { "unicode": 231, "name": "ç", "glyphClass": "base", "link": ["c", "̧"] },
       { "unicode": 232, "name": "è", "glyphClass": "base", "link": ["e", "̀"] },
       { "unicode": 233, "name": "é", "glyphClass": "base", "link": ["e", "́"] },
@@ -126,7 +127,7 @@
       { "unicode": 238, "name": "î", "glyphClass": "base", "link": ["ı", "̂"] },
       { "unicode": 239, "name": "ï", "glyphClass": "base", "link": ["ı",  "̈"] },
       { "unicode": 244, "name": "ô", "glyphClass": "base", "link": ["o", "̂"] },
-      { "unicode": 339, "name": "œ", "glyphClass": "ligature", "composite": ["o", "e"], "compositeTransform": [[1], [1, "touching"]] },
+      { "unicode": 339, "name": "œ", "glyphClass": "ligature", "composite": ["o", "e"], "compositeTransform": [{ "scale": 1 }, { "scale": 1, "mode": "touching" }] },
       { "unicode": 249, "name": "ù", "glyphClass": "base", "link": ["u", "̀"] },
       { "unicode": 251, "name": "û", "glyphClass": "base", "link": ["u", "̂"] },
       { "unicode": 252, "name": "ü", "glyphClass": "base", "link": ["u",  "̈"] },

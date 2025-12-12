@@ -1,4 +1,5 @@
 
+
 [
  {
     "nameKey": "vowelSigns",
@@ -105,7 +106,6 @@
       { "unicode": 3414, "name": "ൖ", "glyphClass": "base" }    
     ]
   },
-  
   {
     "nameKey": "conjuncts",
     "characters":[
@@ -152,11 +152,11 @@
   { "unicode": 57383, "name": "മ്പ", "glyphClass": "ligature" },
   { "unicode": 57384, "name": "യ്യ", "glyphClass": "ligature" },
   { "unicode": 57385, "name": "റ്റ", "glyphClass": "ligature", "composite": ["റ"] },
-  { "unicode": 57386, "name": "ള്ള", "glyphClass": "ligature", "composite": ["ള", "ള"], "compositeTransform": [[1], [1, "touching"]] },
+  { "unicode": 57386, "name": "ള്ള", "glyphClass": "ligature", "composite": ["ള", "ള"], "compositeTransform": [{ "scale": 1 }, { "scale": 1, "mode": "touching" }] },
   { "unicode": 57387, "name": "വ്വ", "glyphClass": "ligature" },
   { "unicode": 57388, "name": "ശ്ശ", "glyphClass": "ligature", "composite": ["ശ"] },
   { "unicode": 57389, "name": "ശ്ച", "glyphClass": "ligature" },
-  { "unicode": 57390, "name": "സ്സ", "glyphClass": "ligature", "link": ["സ", "സ"], "compositeTransform": [[1], [0.6, 200, "absolute"]] },
+  { "unicode": 57390, "name": "സ്സ", "glyphClass": "ligature", "link": ["സ", "സ"], "compositeTransform": [{ "scale": 1 }, { "scale": 0.6, "y": 200, "mode": "absolute" }] },
   { "unicode": 57391, "name": "സ്ഥ", "glyphClass": "ligature", "composite": ["സ"] },
   { "unicode": 57392, "name": "സ്റ്റ", "glyphClass": "ligature", "composite": ["സ"] },
   { "unicode": 57393, "name": "ത്സ", "glyphClass": "ligature" },

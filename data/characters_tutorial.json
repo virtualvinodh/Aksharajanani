@@ -1,3 +1,5 @@
+
+
 [
   {
     "nameKey": "letters",
@@ -14,7 +16,7 @@
         { "name": "̃", "glyphClass": "mark", "advWidth":0 },
         { "name": "Ñ", "glyphClass": "base", "link": ["N", "̃"] },
         { "name": "ñ", "glyphClass": "base", "link": ["n", "̃"] },                
-        { "name": "ͤ", "glyphClass": "mark", "advWidth":0, "link": ["e"], "compositeTransform": [0.5, -400]}
+        { "name": "ͤ", "glyphClass": "mark", "advWidth":0, "link": ["e"], "compositeTransform": [{ "scale": 0.5, "y": -400 }] }
     ]
   }
 ]
