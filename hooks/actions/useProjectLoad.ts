@@ -38,7 +38,8 @@ export const useProjectLoad = ({
         setMarkAttachmentClasses,
         setBaseAttachmentClasses,
         setRecommendedKerning,
-        setGuideFont
+        setGuideFont,
+        setPositioningGroupNames
     } = useProject();
 
     const [isScriptDataLoading, setIsScriptDataLoading] = useState(true);
@@ -177,6 +178,9 @@ export const useProjectLoad = ({
             const positioningGroups = (positioningDefinitions.find(i => 'groups' in i) as { groups: Record<string, string[]> } | undefined)?.groups || {};
             const rulesGroups = rulesData.groups || {};
             const customGroups = {...positioningGroups, ...rulesGroups};
+            
+            // Store positioning group names for UI filtering
+            setPositioningGroupNames(new Set(Object.keys(positioningGroups)));
             
             // JIT Change: We DO NOT expand groups here anymore. We pass the raw definitions to the context.
             // expansion happens in services/groupExpansionService when needed.
@@ -319,7 +323,7 @@ export const useProjectLoad = ({
         } finally {
             setIsScriptDataLoading(false);
         }
-    }, [allScripts, characterDispatch, rulesDispatch, settingsDispatch, glyphDataDispatch, kerningDispatch, positioningDispatch, t, setProjectId, setLastSavedState, setMarkAttachmentRules, setMarkAttachmentClasses, setBaseAttachmentClasses, setPositioningRules, setRecommendedKerning, dependencyMap, setProjectName, setGuideFont]);
+    }, [allScripts, characterDispatch, rulesDispatch, settingsDispatch, glyphDataDispatch, kerningDispatch, positioningDispatch, t, setProjectId, setLastSavedState, setMarkAttachmentRules, setMarkAttachmentClasses, setBaseAttachmentClasses, setPositioningRules, setRecommendedKerning, dependencyMap, setProjectName, setGuideFont, setPositioningGroupNames]);
 
     const handleLoadProject = () => fileInputRef.current?.click();
 

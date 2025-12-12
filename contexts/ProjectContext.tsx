@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { 
     GlyphData, KerningMap, CharacterSet, Path, 
@@ -54,6 +55,10 @@ interface ProjectContextType {
     setRecommendedKerning: React.Dispatch<React.SetStateAction<RecommendedKerning[] | null>>;
     guideFont: GuideFont | null;
     setGuideFont: React.Dispatch<React.SetStateAction<GuideFont | null>>;
+    
+    // Track groups that belong to positioning to filter them in Rules UI
+    positioningGroupNames: Set<string>;
+    setPositioningGroupNames: React.Dispatch<React.SetStateAction<Set<string>>>;
 
     // Dispatcher for character actions
     dispatchCharacterAction: (action: CharacterAction) => void;
@@ -81,6 +86,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [baseAttachmentClasses, setBaseAttachmentClasses] = useState<AttachmentClass[] | null>(null);
     const [recommendedKerning, setRecommendedKerning] = useState<RecommendedKerning[] | null>(null);
     const [guideFont, setGuideFont] = useState<GuideFont | null>(null);
+    const [positioningGroupNames, setPositioningGroupNames] = useState<Set<string>>(new Set());
 
     // Logic ported from CharacterContext reducer
     const dispatchCharacterAction = useCallback((action: CharacterAction) => {
@@ -213,6 +219,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
             case 'RESET':
                 setScript(null);
                 setCharacterSets(null);
+                setPositioningGroupNames(new Set());
                 break;
         }
     }, []);
@@ -254,6 +261,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         baseAttachmentClasses, setBaseAttachmentClasses,
         recommendedKerning, setRecommendedKerning,
         guideFont, setGuideFont,
+        positioningGroupNames, setPositioningGroupNames,
         
         dispatchCharacterAction,
         dispatch: dispatchCharacterAction // Alias for compatibility

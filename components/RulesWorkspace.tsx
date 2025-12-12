@@ -21,7 +21,7 @@ interface RulesWorkspaceProps {
 }
 
 const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
-    const { characterSets, allCharsByName, allCharsByUnicode } = useProject();
+    const { characterSets, allCharsByName, allCharsByUnicode, positioningGroupNames } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap } = useKerning();
     const { markPositioningMap } = usePositioning();
@@ -77,6 +77,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
                     onManualFeaCodeChange={(code) => dispatch({ type: 'SET_MANUAL_FEA_CODE', payload: code })}
                     onHasUnsavedChanges={(isDirty) => dispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: isDirty })}
                     glyphVersion={glyphVersion}
+                    hiddenGroupNames={positioningGroupNames}
                 />
             </div>
             <Footer hideOnMobile={true} />

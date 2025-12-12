@@ -38,13 +38,14 @@ interface RulesPageProps {
   isFeaOnlyMode: boolean;
   onHasUnsavedChanges: (isDirty: boolean) => void;
   glyphVersion: number;
+  hiddenGroupNames?: Set<string>;
 }
 
 const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
   allCharacterSets, allCharsByName, allCharsByUnicode, kerningMap, markPositioningMap, glyphDataMap,
   strokeThickness, fontRules, onFontRulesChange, fontName, settings, positioningRules,
   metrics, isFeaEditMode, onIsFeaEditModeChange, manualFeaCode, onManualFeaCodeChange, isFeaOnlyMode, onHasUnsavedChanges,
-  glyphVersion
+  glyphVersion, hiddenGroupNames
 }, ref) => {
   const { t } = useLocale();
   const { showNotification } = useLayout();
@@ -487,6 +488,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                 onSave={handleSaveGroup}
                 onDelete={handleDeleteGroup}
                 characterSets={allCharacterSets}
+                hiddenGroups={hiddenGroupNames}
             />
         )}
 
