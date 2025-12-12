@@ -46,6 +46,15 @@ export interface TransformState {
   flipY?: boolean;
 }
 
+export type PositioningMode = 'relative' | 'absolute' | 'touching';
+
+export interface ComponentTransform {
+  scale?: number;       // Default: 1.0
+  x?: number;           // Default: 0
+  y?: number;           // Default: 0
+  mode?: PositioningMode; // Default: 'relative'
+}
+
 export interface Character {
   unicode?: number;
   name: string;
@@ -55,7 +64,7 @@ export interface Character {
   composite?: string[];
   link?: string[];
   sourceLink?: string[]; // To remember original link after unlinking
-  compositeTransform?: [number, number] | (number | 'absolute' | 'touching')[][]; // [scale, yOffset] or [[scale, yOffset, 'absolute'?], ...]
+  compositeTransform?: ComponentTransform[];
   isCustom?: boolean;
   advWidth?: number | string;
   isPuaAssigned?: boolean;

@@ -1,6 +1,6 @@
 
 // FIX: Added AppSettings to types import and added new imports for isGlyphDrawn and DRAWING_CANVAS_SIZE
-import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings } from '../types';
+import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings, ComponentTransform } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { DRAWING_CANVAS_SIZE } from '../constants';
@@ -595,6 +595,46 @@ export const renderPaths = (ctx: CanvasRenderingContext2D, paths: Path[], option
 
 const generateId = () => `${Date.now()}-${Math.random()}`;
 
+// Helper: Normalize transform config to new object syntax
+const normalizeTransform = (config: any, index: number): ComponentTransform => {
+    // 1. New Syntax: Array of Objects
+    if (Array.isArray(config) && config.length > 0 && typeof config[0] === 'object' && !Array.isArray(config[0])) {
+         const entry = config[index];
+         if (!entry) return { scale: 1, x: 0, y: 0, mode: 'relative' };
+         return {
+             scale: entry.scale ?? 1,
+             x: entry.x ?? 0,
+             y: entry.y ?? 0,
+             mode: entry.mode ?? 'relative'
+         };
+    }
+
+    // 2. Legacy: Array of Arrays [[1], [1, "touching"]]
+    if (Array.isArray(config) && Array.isArray(config[0])) {
+         const entry = config[index];
+         if (!entry) return { scale: 1, x: 0, y: 0, mode: 'relative' };
+         return {
+             scale: typeof entry[0] === 'number' ? entry[0] : 1,
+             y: typeof entry[1] === 'number' ? entry[1] : 0,
+             mode: entry.includes('touching') ? 'touching' : (entry.includes('absolute') ? 'absolute' : 'relative'),
+             x: 0
+         };
+    }
+
+    // 3. Legacy: Simple Array [0.6, 200] -> Applies to all components (or specific ones depending on context)
+    // In legacy logic, this array was typically used for single-component glyphs (marks)
+    if (Array.isArray(config) && typeof config[0] === 'number') {
+         return {
+             scale: config[0] ?? 1,
+             y: config[1] ?? 0,
+             mode: 'relative',
+             x: 0
+         };
+    }
+
+    return { scale: 1, x: 0, y: 0, mode: 'relative' };
+};
+
 interface GenerateCompositeGlyphDataArgs {
     character: Character;
     allCharsByName: Map<string, Character>;
@@ -627,30 +667,20 @@ export const generateCompositeGlyphData = ({
 
     const transformComponentPaths = (paths: Path[], charDef: Character, componentIndex: number): Path[] => {
         const transformConfig = charDef.compositeTransform;
-        if (!transformConfig) return paths;
+        
+        // Use normalized helper to get structured data
+        const { scale, x, y, mode } = normalizeTransform(transformConfig, componentIndex);
 
-        let scale = 1.0;
-        let yOffset = 0;
-    
-        if (Array.isArray(transformConfig[0])) {
-            const perComponentTransform = (transformConfig as (number|string)[][])[componentIndex];
-            if (perComponentTransform) {
-                scale = (perComponentTransform[0] as number) ?? 1.0;
-                yOffset = (perComponentTransform[1] as number) ?? 0;
-            }
-        } else {
-            scale = (transformConfig as [number, number])[0] ?? 1.0;
-            yOffset = (transformConfig as [number, number])[1] ?? 0;
-        }
-    
-        if (scale === 1.0 && yOffset === 0) return paths;
+        if (scale === 1.0 && x === 0 && y === 0) return paths;
 
         const componentBbox = getAccurateGlyphBBox(paths, settings.strokeThickness);
         if (!componentBbox) return paths;
 
         const centerX = componentBbox.x + componentBbox.width / 2;
         const centerY = componentBbox.y + componentBbox.height / 2;
-        const transformPoint = (p: Point) => VEC.add(VEC.scale(VEC.sub(p, { x: centerX, y: centerY }), scale), { x: centerX, y: centerY });
+        
+        // Apply Scale around center
+        const transformPoint = (p: Point) => VEC.add(VEC.scale(VEC.sub(p, { x: centerX, y: centerY }), scale!), { x: centerX, y: centerY });
 
         let transformed = paths.map((p: Path) => ({
             ...p,
@@ -658,20 +688,26 @@ export const generateCompositeGlyphData = ({
             segmentGroups: p.segmentGroups ? p.segmentGroups.map((group: Segment[]) => group.map(seg => ({
                 ...seg,
                 point: transformPoint(seg.point),
-                handleIn: VEC.scale(seg.handleIn, scale),
-                handleOut: VEC.scale(seg.handleOut, scale)
+                handleIn: VEC.scale(seg.handleIn, scale!),
+                handleOut: VEC.scale(seg.handleOut, scale!)
             }))) : undefined
         }));
 
-        const newBaselineY = centerY + (metrics.baseLineY - centerY) * scale;
-        const targetBaselineY = metrics.baseLineY + yOffset;
-        const finalYShift = targetBaselineY - newBaselineY;
+        // Apply Translation (X/Y)
+        // Note: Y is usually inverted in font space vs canvas space, but here we treat raw values.
+        // For 'absolute' mode, we might need different logic, but usually absolute refers to positioning relative to origin vs relative to previous component.
+        // Since this function just prepares the component shape before layout, we apply local transforms here.
+        
+        // Logic fix: The `y` in transform config is often a baseline shift.
+        // If we want to shift Y, we just add it.
+        const xShift = x || 0;
+        const yShift = y || 0;
 
-        if (Math.abs(finalYShift) > 1e-4) {
+        if (xShift !== 0 || yShift !== 0) {
             transformed = transformed.map((p: Path) => ({
                 ...p,
-                points: p.points.map((pt: Point) => ({ ...pt, y: pt.y + finalYShift })),
-                segmentGroups: p.segmentGroups ? p.segmentGroups.map((group: Segment[]) => group.map(seg => ({ ...seg, point: { x: seg.point.x, y: seg.point.y + finalYShift } }))) : undefined
+                points: p.points.map((pt: Point) => ({ x: pt.x + xShift, y: pt.y + yShift })), // ADD Y because canvas Y grows down, and input is typically canvas-based offset or needs inversion if from font coords. Legacy files like [0.6, 200] for subscript implies moving down, which is +Y in canvas.
+                segmentGroups: p.segmentGroups ? p.segmentGroups.map((group: Segment[]) => group.map(seg => ({ ...seg, point: { x: seg.point.x + xShift, y: seg.point.y + yShift } }))) : undefined
             }));
         }
 
@@ -699,30 +735,33 @@ export const generateCompositeGlyphData = ({
         if (!markBbox) continue;
 
         let offset: Point;
-        let isAbsolute = false;
-        let isTouching = false;
+        
+        // Get transform info for CURRENT component
+        const { mode } = normalizeTransform(character.compositeTransform, i);
     
-        const transformConfig = character.compositeTransform;
-        if (transformConfig && Array.isArray(transformConfig[0])) {
-            const perComponentTransform = (transformConfig as (string | number)[][])[i];
-            if (perComponentTransform) {
-                isAbsolute = perComponentTransform.includes('absolute');
-                isTouching = perComponentTransform.includes('touching');
-            }
-        }
-    
-        if (isTouching) {
-            const firstComponent = transformedComponents[0];
-            const firstBbox = firstComponent.bbox;
-            if (firstBbox) {
-                const targetX = firstBbox.x + firstBbox.width;
+        if (mode === 'touching') {
+            const firstComponent = transformedComponents[0]; // Or previous? Usually previous in ligatures
+            // Actually 'touching' usually means attach to previous.
+            // Let's assume previous for general ligature building.
+            const prevBbox = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
+            
+            if (prevBbox) {
+                const targetX = prevBbox.x + prevBbox.width;
                 offset = { x: targetX - markBbox.x, y: 0 };
             } else {
                 offset = { x: 0, y: 0 };
             }
+        } else if (mode === 'absolute') {
+             // Absolute means we don't calculate relative offset.
+             // The local transform (x/y) was already applied in transformComponentPaths.
+             // So we just place it at its natural position (which might be 0,0 or shifted).
+             // However, `calculateDefaultMarkOffset` returns {0,0} for isAbsolute=true.
+             offset = { x: 0, y: 0 };
         } else {
+            // Relative (Default)
             let baseBboxForOffset: BoundingBox | null;
             
+            // For relative, we typically attach to the accumulated shape
             baseBboxForOffset = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
             
             // Pass characterSets for group expansion within offset calculation
@@ -734,7 +773,7 @@ export const generateCompositeGlyphData = ({
                 markAttachmentRules,
                 metrics,
                 allCharacterSets,
-                isAbsolute,
+                false, // isAbsolute handled by logic above
                 groups
             );
         }
@@ -774,7 +813,7 @@ export const updateComponentInPaths = (
     componentIndex: number,
     newSourcePaths: Path[],
     strokeThickness: number,
-    transformConfig?: [number, number] | (number | string)[][]
+    transformConfig?: any
 ): Path[] | null => {
     const groupIdToUpdate = `component-${componentIndex}`;
     const oldPathsOfComponent = currentPaths.filter(p =>
@@ -788,24 +827,14 @@ export const updateComponentInPaths = (
 
     if (!oldBbox || !newSourceBbox) return null;
 
-    let scale = 1.0;
-    if (transformConfig) {
-        if (Array.isArray(transformConfig[0])) {
-            const perComponentTransform = (transformConfig as (number | string)[][])[componentIndex];
-            if (perComponentTransform && typeof perComponentTransform[0] === 'number') {
-                scale = perComponentTransform[0];
-            }
-        } else if (typeof transformConfig[0] === 'number') {
-            scale = transformConfig[0];
-        }
-    }
+    const { scale } = normalizeTransform(transformConfig, componentIndex);
 
     const oldAnchor = { x: oldBbox.x, y: oldBbox.y + oldBbox.height };
     const newSourceAnchor = { x: newSourceBbox.x, y: newSourceBbox.y + newSourceBbox.height };
 
     const transformPoint = (pt: Point): Point => {
         const relativeVec = VEC.sub(pt, newSourceAnchor);
-        const scaledVec = VEC.scale(relativeVec, scale);
+        const scaledVec = VEC.scale(relativeVec, scale!);
         return VEC.add(scaledVec, oldAnchor);
     };
 
@@ -817,8 +846,8 @@ export const updateComponentInPaths = (
         segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({
             ...seg,
             point: transformPoint(seg.point),
-            handleIn: VEC.scale(seg.handleIn, scale),
-            handleOut: VEC.scale(seg.handleOut, scale)
+            handleIn: VEC.scale(seg.handleIn, scale!),
+            handleOut: VEC.scale(seg.handleOut, scale!)
         }))) : undefined
     }));
 

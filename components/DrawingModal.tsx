@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
-import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment, TransformState } from '../types';
+import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment, TransformState, ComponentTransform } from '../types';
 import DrawingCanvas from './DrawingCanvas';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
@@ -77,7 +77,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const [isUnlockConfirmOpen, setIsUnlockConfirmOpen] = useState(false);
   const [isRelinkConfirmOpen, setIsRelinkConfirmOpen] = useState(false);
   const [isConstructionWarningOpen, setIsConstructionWarningOpen] = useState(false);
-  const [pendingConstruction, setPendingConstruction] = useState<{type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]} | null>(null);
+  const [pendingConstruction, setPendingConstruction] = useState<{type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]} | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   
   const modalRef = useRef<HTMLDivElement>(null);
@@ -132,7 +132,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       clipboard, clipboardDispatch, showNotification, t
   });
 
-  const executeConstructionUpdate = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => {
+  const executeConstructionUpdate = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]) => {
       if (character.unicode === undefined) return;
       characterDispatch({
           type: 'UPDATE_CHARACTER_SETS',
@@ -201,7 +201,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       setPendingConstruction(null);
   };
 
-  const handleSaveConstruction = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => {
+  const handleSaveConstruction = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]) => {
       const hasContent = currentPaths.length > 0;
       const wasVisual = isLocked || isComposite;
       if (!wasVisual && (type === 'link' || type === 'composite') && hasContent) {

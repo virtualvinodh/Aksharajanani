@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet } from '../types';
+import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet, ComponentTransform } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon, MoreIcon, LinkIcon, BrokenLinkIcon, RefreshIcon } from '../constants';
 import GlyphPropertiesPanel from './GlyphPropertiesPanel';
@@ -25,7 +25,7 @@ interface DrawingModalHeaderProps {
   isComposite?: boolean;
   onRefresh?: () => void;
   allCharacterSets: CharacterSet[];
-  onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => void;
+  onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]) => void;
   onUnlock: () => void;
   onRelink: () => void;
   
@@ -226,6 +226,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
           {/* Properties Panel - Anchored to container */}
           {isPropertiesPanelOpen && (
             <GlyphPropertiesPanel
+              key={character.unicode} // FORCE RESET on navigation
               lsb={lsb}
               setLsb={setLsb}
               rsb={rsb}

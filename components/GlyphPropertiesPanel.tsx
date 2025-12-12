@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { FontMetrics, Character, CharacterSet, GlyphData } from '../types';
+import { FontMetrics, Character, CharacterSet, GlyphData, ComponentTransform, PositioningMode } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import GlyphSelect from './scriptcreator/GlyphSelect';
 import { AddIcon, SaveIcon, TrashIcon } from '../constants';
@@ -16,20 +16,13 @@ interface GlyphPropertiesPanelProps {
   character?: Character;
   glyphData?: GlyphData | undefined;
   allCharacterSets?: CharacterSet[];
-  onSaveConstruction?: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: (number | 'absolute' | 'touching')[][]) => void;
+  onSaveConstruction?: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]) => void;
   
   // Metadata props (Optional to support usage in PositioningEditorPage)
   glyphClass?: Character['glyphClass'];
   setGlyphClass?: (val: Character['glyphClass']) => void;
   advWidth?: number | string;
   setAdvWidth?: (val: number | string | undefined) => void;
-}
-
-interface TransformData {
-    scale: number;
-    y: number;
-    absolute: boolean;
-    touching: boolean;
 }
 
 const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({ 
@@ -61,27 +54,32 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
       }
   };
 
-  const parseInitialTransforms = (comps: string[]): TransformData[] => {
+  const parseInitialTransforms = (comps: string[]): ComponentTransform[] => {
       const raw = character?.compositeTransform;
-      const res: TransformData[] = [];
+      const res: ComponentTransform[] = [];
       
       for (let i = 0; i < comps.length; i++) {
-          let tData: TransformData = { scale: 1, y: 0, absolute: false, touching: false };
+          let tData: ComponentTransform = { scale: 1, x: 0, y: 0, mode: 'relative' };
+          
           if (raw) {
-              if (Array.isArray(raw[0])) {
-                  // Array of arrays format: [[1, 0], [0.5, -200, 'absolute']]
-                  const entry = (raw as any[])[i];
-                  if (entry) {
+              if (Array.isArray(raw)) {
+                  // Check for new object syntax
+                  if (raw.length > i && typeof raw[i] === 'object' && !Array.isArray(raw[i])) {
+                      tData = { ...raw[i] };
+                  } 
+                  // Legacy: Array of Arrays [[1], [1, "touching"]]
+                  else if (raw.length > i && Array.isArray(raw[i])) {
+                      const entry = raw[i] as any[];
                       tData.scale = typeof entry[0] === 'number' ? entry[0] : 1;
                       tData.y = typeof entry[1] === 'number' ? entry[1] : 0;
-                      tData.absolute = entry.includes('absolute');
-                      tData.touching = entry.includes('touching');
+                      tData.mode = entry.includes('touching') ? 'touching' : (entry.includes('absolute') ? 'absolute' : 'relative');
                   }
-              } else {
-                   // Simple format: [scale, y] - applies generally, but we map to individual for editing
-                   const entry = raw as [number, number];
-                   tData.scale = entry[0] ?? 1;
-                   tData.y = entry[1] ?? 0;
+                  // Legacy: Simple Array [0.6, 200]
+                  else if (raw.length === 2 && typeof raw[0] === 'number') {
+                       const entry = raw as unknown as [number, number];
+                       tData.scale = entry[0] ?? 1;
+                       tData.y = entry[1] ?? 0;
+                  }
               }
           }
           res.push(tData);
@@ -89,7 +87,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
       return res;
   };
 
-  const [transforms, setTransforms] = useState<TransformData[]>(() => parseInitialTransforms(components));
+  const [transforms, setTransforms] = useState<ComponentTransform[]>(() => parseInitialTransforms(components));
 
   const [isAddingComp, setIsAddingComp] = useState(false);
   const [isConstructionExpanded, setIsConstructionExpanded] = useState(false);
@@ -101,7 +99,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
           if (prev.length === components.length) return prev;
           if (prev.length > components.length) return prev.slice(0, components.length);
           // Added new components
-          const newItems = new Array(components.length - prev.length).fill({ scale: 1, y: 0, absolute: false, touching: false });
+          const newItems = new Array(components.length - prev.length).fill({ scale: 1, x: 0, y: 0, mode: 'relative' });
           return [...prev, ...newItems];
       });
   }, [components.length]);
@@ -111,7 +109,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   const originalComponents = character?.link || character?.composite || [];
   
   // Simplify dirty check for transforms (deep compare logic)
-  const getSerializedTransforms = (ts: TransformData[]) => JSON.stringify(ts.map(t => [t.scale, t.y, t.absolute ? 'absolute' : '', t.touching ? 'touching' : ''].filter(Boolean)));
+  const getSerializedTransforms = (ts: ComponentTransform[]) => JSON.stringify(ts);
   const originalTransformsState = parseInitialTransforms(originalComponents);
   
   const isDirty = type !== originalType || 
@@ -182,15 +180,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
 
   const handleApply = () => {
     if (isDirty && !cycleDetected && onSaveConstruction) {
-      // Convert internal TransformData back to (number|'absolute'|'touching')[][]
-      const exportTransforms = transforms.map(t => {
-          const entry: (number | 'absolute' | 'touching')[] = [t.scale, t.y];
-          if (t.absolute) entry.push('absolute');
-          if (t.touching) entry.push('touching');
-          return entry;
-      });
-      
-      onSaveConstruction(type, components, exportTransforms);
+      onSaveConstruction(type, components, transforms);
     }
   };
 
@@ -201,18 +191,14 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
     setIsAddingComp(false);
   };
 
-  const updateTransform = (index: number, field: keyof TransformData, value: any) => {
+  const updateTransform = (index: number, field: keyof ComponentTransform, value: any) => {
       setTransforms(prev => prev.map((t, i) => i === index ? { ...t, [field]: value } : t));
   };
 
-  const setPositionMode = (index: number, mode: 'relative' | 'absolute' | 'touching') => {
+  const setPositionMode = (index: number, mode: PositioningMode) => {
       setTransforms(prev => prev.map((t, i) => {
           if (i !== index) return t;
-          return {
-              ...t,
-              absolute: mode === 'absolute',
-              touching: mode === 'touching'
-          };
+          return { ...t, mode };
       }));
   };
 
@@ -414,6 +400,8 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                                 <div className="flex items-center gap-1">
                                                     <span className="text-gray-500">S:</span>
                                                     <input type="number" step="0.1" value={transforms[idx]?.scale} onChange={e => updateTransform(idx, 'scale', parseFloat(e.target.value))} className="w-10 p-0.5 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                                    <span className="text-gray-500 ml-1">X:</span>
+                                                    <input type="number" value={transforms[idx]?.x} onChange={e => updateTransform(idx, 'x', parseInt(e.target.value))} className="w-10 p-0.5 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                                     <span className="text-gray-500 ml-1">Y:</span>
                                                     <input type="number" value={transforms[idx]?.y} onChange={e => updateTransform(idx, 'y', parseInt(e.target.value))} className="w-10 p-0.5 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                                 </div>
@@ -423,19 +411,19 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                                     <button
                                                         type="button"
                                                         onClick={() => setPositionMode(idx, 'relative')}
-                                                        className={`px-2 py-0.5 text-[10px] rounded transition-colors ${!transforms[idx]?.absolute && !transforms[idx]?.touching ? 'bg-white dark:bg-gray-500 text-indigo-600 dark:text-indigo-300 shadow-sm font-semibold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+                                                        className={`px-2 py-0.5 text-[10px] rounded transition-colors ${transforms[idx]?.mode === 'relative' ? 'bg-white dark:bg-gray-500 text-indigo-600 dark:text-indigo-300 shadow-sm font-semibold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
                                                         title="Relative Position"
                                                     >Rel</button>
                                                     <button
                                                         type="button"
                                                         onClick={() => setPositionMode(idx, 'absolute')}
-                                                        className={`px-2 py-0.5 text-[10px] rounded transition-colors ${transforms[idx]?.absolute ? 'bg-white dark:bg-gray-500 text-indigo-600 dark:text-indigo-300 shadow-sm font-semibold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+                                                        className={`px-2 py-0.5 text-[10px] rounded transition-colors ${transforms[idx]?.mode === 'absolute' ? 'bg-white dark:bg-gray-500 text-indigo-600 dark:text-indigo-300 shadow-sm font-semibold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
                                                         title="Absolute Position"
                                                     >Abs</button>
                                                     <button
                                                         type="button"
                                                         onClick={() => setPositionMode(idx, 'touching')}
-                                                        className={`px-2 py-0.5 text-[10px] rounded transition-colors ${transforms[idx]?.touching ? 'bg-white dark:bg-gray-500 text-indigo-600 dark:text-indigo-300 shadow-sm font-semibold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+                                                        className={`px-2 py-0.5 text-[10px] rounded transition-colors ${transforms[idx]?.mode === 'touching' ? 'bg-white dark:bg-gray-500 text-indigo-600 dark:text-indigo-300 shadow-sm font-semibold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
                                                         title="Touching Previous"
                                                     >Tch</button>
                                                 </div>

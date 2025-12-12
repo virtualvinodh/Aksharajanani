@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { CharacterSet, Character } from '../../types';
+import { CharacterSet, Character, ComponentTransform } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { AddIcon, TrashIcon, EditIcon, SaveIcon } from '../../constants';
@@ -84,11 +85,15 @@ const AddCharacterForm: React.FC<{
 
         const scaleStr = newChar.compositeTransform[0].trim();
         const yOffsetStr = newChar.compositeTransform[1].trim();
+        const componentsList = newChar.isLinked ? newChar.link : newChar.composite;
 
-        if (newChar.composite.length > 0 && (scaleStr || yOffsetStr)) {
+        if (componentsList.length > 0 && (scaleStr || yOffsetStr)) {
             const scale = parseFloat(scaleStr) || 1.0;
             const yOffset = parseFloat(yOffsetStr) || 0;
-            charToAdd.compositeTransform = [scale, yOffset];
+            // Apply transform to all components to mimic simple global transform logic
+            charToAdd.compositeTransform = componentsList.map(() => ({ 
+                scale, y: yOffset, x: 0, mode: 'relative' 
+            }));
         }
     
         onAddChar(setIndex, charToAdd);
@@ -189,8 +194,15 @@ const CharactersPane: React.FC<CharactersPaneProps> = ({ sets, setSets, allChars
 
         const scaleStr = (data.compositeTransform[0] || '').toString().trim();
         const yOffsetStr = (data.compositeTransform[1] || '').toString().trim();
-        if ((data.composite.length > 0 || data.link.length > 0) && (scaleStr || yOffsetStr)) {
-            updatedChar.compositeTransform = [parseFloat(scaleStr) || 1.0, parseFloat(yOffsetStr) || 0];
+        const componentsList = data.isLinked ? data.link : data.composite;
+
+        if (componentsList.length > 0 && (scaleStr || yOffsetStr)) {
+            const scale = parseFloat(scaleStr) || 1.0;
+            const yOffset = parseFloat(yOffsetStr) || 0;
+            // Map transform to all components for simplicity in editing view
+            updatedChar.compositeTransform = componentsList.map(() => ({ 
+                scale, y: yOffset, x: 0, mode: 'relative' 
+            }));
         } else { delete updatedChar.compositeTransform; }
 
         updatedChar.option = data.option.trim() ? data.option.trim() : undefined;
@@ -205,6 +217,32 @@ const CharactersPane: React.FC<CharactersPaneProps> = ({ sets, setSets, allChars
     };
 
     const handleStartEdit = (setIndex: number, charIndex: number, char: Character) => {
+        // Handle transform data extraction for editing view (scale, y)
+        // Assume first component for simplified view, or legacy array
+        let scale = '';
+        let yOffset = '';
+        
+        if (char.compositeTransform) {
+            const t = char.compositeTransform;
+            if (Array.isArray(t) && t.length > 0) {
+                 if (typeof t[0] === 'object' && !Array.isArray(t[0])) {
+                     // New Object syntax
+                     const first = t[0] as ComponentTransform;
+                     scale = String(first.scale ?? 1);
+                     yOffset = String(first.y ?? 0);
+                 } else if (Array.isArray(t[0])) {
+                     // Legacy Array of Arrays
+                     const first = t[0] as any[];
+                     scale = String(first[0] ?? 1);
+                     yOffset = String(first[1] ?? 0);
+                 } else if (typeof t[0] === 'number') {
+                     // Legacy Simple Array
+                     scale = String(t[0] ?? 1);
+                     yOffset = String(t[1] ?? 0);
+                 }
+            }
+        }
+
         setEditingChar({ setIndex, charIndex, data: {
             name: char.name || '',
             unicode: char.unicode !== undefined && !char.isPuaAssigned ? char.unicode.toString(16).toUpperCase() : '',
@@ -215,10 +253,7 @@ const CharactersPane: React.FC<CharactersPaneProps> = ({ sets, setSets, allChars
             composite: char.composite || [],
             link: char.link || [],
             isLinked: !!char.link,
-            compositeTransform: [
-                (char.compositeTransform as any)?.[0] ?? '',
-                (char.compositeTransform as any)?.[1] ?? ''
-            ],
+            compositeTransform: [scale, yOffset],
             option: char.option || '',
             desc: char.desc || '',
             hidden: char.hidden || false,
