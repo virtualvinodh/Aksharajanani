@@ -81,8 +81,9 @@ const ManualRuleCard: React.FC<{
     mark: string; 
     points: { base: string, mark: string, x: string, y: string };
     onDelete: () => void;
+    onEdit: () => void;
     isVirtual?: boolean;
-}> = ({ base, mark, points, onDelete, isVirtual }) => (
+}> = ({ base, mark, points, onDelete, onEdit, isVirtual }) => (
     <div className={`bg-white dark:bg-gray-800 border ${isVirtual ? 'border-dashed border-indigo-200 dark:border-indigo-900' : 'border-gray-200 dark:border-gray-700'} rounded-lg p-3 shadow-sm flex items-center justify-between group`}>
         <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -96,9 +97,14 @@ const ManualRuleCard: React.FC<{
             </div>
         </div>
         {!isVirtual && (
-            <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 p-1.5 text-red-500 hover:bg-red-50 rounded transition-all">
-                <TrashIcon className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={onEdit} className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-all">
+                    <EditIcon className="w-4 h-4" />
+                </button>
+                <button onClick={onDelete} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all">
+                    <TrashIcon className="w-4 h-4" />
+                </button>
+            </div>
         )}
         {isVirtual && (
             <span className="text-[10px] text-indigo-400 italic">Expanded</span>
@@ -255,16 +261,18 @@ const RuleEditor: React.FC<{
 };
 
 const ManualAnchorForm: React.FC<{
-    onAdd: (data: { base: string, mark: string, basePoint: string, markPoint: string, x: string, y: string }) => void;
+    onSave: (data: { base: string, mark: string, basePoint: string, markPoint: string, x: string, y: string }) => void;
+    onCancel: () => void;
+    initialValues?: { base: string, mark: string, basePoint: string, markPoint: string, x: string, y: string };
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
-}> = ({ onAdd, characterSets, groups }) => {
-    const [base, setBase] = useState('');
-    const [mark, setMark] = useState('');
-    const [basePoint, setBasePoint] = useState<AttachmentPoint>('topRight');
-    const [markPoint, setMarkPoint] = useState<AttachmentPoint>('topLeft');
-    const [x, setX] = useState('0');
-    const [y, setY] = useState('0');
+}> = ({ onSave, onCancel, initialValues, characterSets, groups }) => {
+    const [base, setBase] = useState(initialValues?.base || '');
+    const [mark, setMark] = useState(initialValues?.mark || '');
+    const [basePoint, setBasePoint] = useState<AttachmentPoint>((initialValues?.basePoint as AttachmentPoint) || 'topRight');
+    const [markPoint, setMarkPoint] = useState<AttachmentPoint>((initialValues?.markPoint as AttachmentPoint) || 'topLeft');
+    const [x, setX] = useState(initialValues?.x || '0');
+    const [y, setY] = useState(initialValues?.y || '0');
     
     const attachmentPoints: AttachmentPoint[] = [
         'topLeft', 'topCenter', 'topRight', 
@@ -272,15 +280,20 @@ const ManualAnchorForm: React.FC<{
         'bottomLeft', 'bottomCenter', 'bottomRight'
     ];
 
-    const handleAdd = () => {
+    const handleSubmit = () => {
         if (base && mark) {
-            onAdd({ base, mark, basePoint, markPoint, x, y });
-            setBase(''); setMark('');
+            onSave({ base, mark, basePoint, markPoint, x, y });
         }
     };
 
+    const isEditing = !!initialValues;
+
     return (
-        <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 flex flex-col gap-3">
+        <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 flex flex-col gap-3 animate-fade-in-up">
+             <div className="flex justify-between items-center mb-2">
+                 <h4 className="font-bold text-gray-800 dark:text-white text-sm">{isEditing ? 'Edit Anchor' : 'New Anchor'}</h4>
+                 <button onClick={onCancel} className="text-gray-400 hover:text-gray-600"><CloseIcon className="w-4 h-4" /></button>
+             </div>
              <div className="flex gap-4">
                  <div className="flex-1">
                      <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Base</label>
@@ -313,7 +326,9 @@ const ManualAnchorForm: React.FC<{
                       <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Y Offset</label>
                       <input type="number" value={y} onChange={e => setY(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 text-sm" />
                   </div>
-                  <button onClick={handleAdd} disabled={!base || !mark} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold">Add</button>
+                  <button onClick={handleSubmit} disabled={!base || !mark} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold">
+                      {isEditing ? 'Save' : 'Add'}
+                  </button>
              </div>
         </div>
     );
@@ -325,8 +340,12 @@ const RuleManager: React.FC<RuleManagerProps> = ({
     const { t } = useLocale();
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [isAdding, setIsAdding] = useState(false);
-    const [expandGroups, setExpandGroups] = useState(false);
+    
+    // Anchor specific states
+    const [isAddingAnchor, setIsAddingAnchor] = useState(false);
+    const [editingAnchor, setEditingAnchor] = useState<{ base: string, mark: string } | null>(null);
 
+    // Rule Handlers
     const handleSaveRule = (rule: PositioningRules) => {
         if (editingIndex !== null) {
             const newRules = [...positioningRules];
@@ -343,11 +362,24 @@ const RuleManager: React.FC<RuleManagerProps> = ({
         setPositioningRules(positioningRules.filter((_, i) => i !== index));
     };
     
-    const handleAddAttachment = (data: { base: string, mark: string, basePoint: string, markPoint: string, x: string, y: string }) => {
+    // Anchor Handlers
+    const handleSaveAnchor = (data: { base: string, mark: string, basePoint: string, markPoint: string, x: string, y: string }) => {
         const newAttachment = { ...markAttachment };
+        
+        // If editing and key changed, delete old one
+        if (editingAnchor && (editingAnchor.base !== data.base || editingAnchor.mark !== data.mark)) {
+             if (newAttachment[editingAnchor.base]) {
+                delete newAttachment[editingAnchor.base][editingAnchor.mark];
+                if (Object.keys(newAttachment[editingAnchor.base]).length === 0) delete newAttachment[editingAnchor.base];
+             }
+        }
+
         if (!newAttachment[data.base]) newAttachment[data.base] = {};
         newAttachment[data.base][data.mark] = [data.basePoint as any, data.markPoint as any, data.x, data.y];
+        
         setMarkAttachment(newAttachment);
+        setIsAddingAnchor(false);
+        setEditingAnchor(null);
     };
 
     const handleDeleteAttachment = (base: string, mark: string, isVirtual?: boolean) => {
@@ -360,38 +392,12 @@ const RuleManager: React.FC<RuleManagerProps> = ({
         }
     };
 
-    const resolveMembers = (name: string): string[] => {
-        if (name.startsWith('$') || name.startsWith('@')) {
-            const key = name.slice(1);
-            return groups[key] || [name];
-        }
-        return [name];
-    };
-
     const visibleAttachments = useMemo(() => {
-        const raw = Object.entries(markAttachment).flatMap(([base, marks]) => 
+        // Return raw attachments directly
+        return Object.entries(markAttachment).flatMap(([base, marks]) => 
             Object.entries(marks).map(([mark, rule]) => ({ base, mark, rule, isVirtual: false }))
         );
-
-        if (!expandGroups) return raw;
-
-        const expanded: { base: string, mark: string, rule: any, isVirtual: boolean }[] = [];
-        raw.forEach(item => {
-            const baseMembers = resolveMembers(item.base);
-            const markMembers = resolveMembers(item.mark);
-            baseMembers.forEach(b => {
-                markMembers.forEach(m => {
-                    expanded.push({
-                        base: b,
-                        mark: m,
-                        rule: item.rule,
-                        isVirtual: item.base !== b || item.mark !== m
-                    });
-                });
-            });
-        });
-        return expanded;
-    }, [markAttachment, expandGroups, groups]);
+    }, [markAttachment]);
 
 
     return (
@@ -439,37 +445,65 @@ const RuleManager: React.FC<RuleManagerProps> = ({
                         <p className="text-sm text-gray-500">Manual attachment point overrides for specific pairs.</p>
                     </div>
                     
-                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors select-none">
-                        <input 
-                            type="checkbox" 
-                            checked={expandGroups} 
-                            onChange={e => setExpandGroups(e.target.checked)} 
-                            className="rounded text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span>Expand</span>
-                    </label>
+                    <div className="flex items-center gap-4">
+                        {!isAddingAnchor && !editingAnchor && (
+                            <button onClick={() => setIsAddingAnchor(true)} className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                                <AddIcon className="w-4 h-4" /> Add Anchor
+                            </button>
+                        )}
+                    </div>
                 </div>
                 
-                <div className="mb-6">
-                    <ManualAnchorForm onAdd={handleAddAttachment} characterSets={characterSets} groups={groups} />
-                </div>
+                {isAddingAnchor && (
+                    <div className="mb-6">
+                        <ManualAnchorForm 
+                            onSave={handleSaveAnchor} 
+                            onCancel={() => setIsAddingAnchor(false)}
+                            characterSets={characterSets} 
+                            groups={groups} 
+                        />
+                    </div>
+                )}
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {visibleAttachments.map((item, idx) => (
-                        <ManualRuleCard 
-                            key={`${item.base}-${item.mark}-${idx}`} 
-                            base={item.base} 
-                            mark={item.mark} 
-                            points={{
-                                base: item.rule[0],
-                                mark: item.rule[1],
-                                x: item.rule[2] || '0',
-                                y: item.rule[3] || '0'
-                            }}
-                            onDelete={() => handleDeleteAttachment(item.base, item.mark, item.isVirtual)}
-                            isVirtual={item.isVirtual}
-                        />
+                        (editingAnchor?.base === item.base && editingAnchor?.mark === item.mark) ? (
+                            <div key={`edit-${idx}`} className="col-span-full">
+                                <ManualAnchorForm 
+                                    onSave={handleSaveAnchor}
+                                    onCancel={() => setEditingAnchor(null)}
+                                    characterSets={characterSets}
+                                    groups={groups}
+                                    initialValues={{
+                                        base: item.base,
+                                        mark: item.mark,
+                                        basePoint: item.rule[0],
+                                        markPoint: item.rule[1],
+                                        x: item.rule[2] || '0',
+                                        y: item.rule[3] || '0'
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <ManualRuleCard 
+                                key={`${item.base}-${item.mark}-${idx}`} 
+                                base={item.base} 
+                                mark={item.mark} 
+                                points={{
+                                    base: item.rule[0],
+                                    mark: item.rule[1],
+                                    x: item.rule[2] || '0',
+                                    y: item.rule[3] || '0'
+                                }}
+                                onDelete={() => handleDeleteAttachment(item.base, item.mark, item.isVirtual)}
+                                onEdit={() => setEditingAnchor({ base: item.base, mark: item.mark })}
+                                isVirtual={item.isVirtual}
+                            />
+                        )
                     ))}
+                    {visibleAttachments.length === 0 && !isAddingAnchor && (
+                        <p className="col-span-full text-center text-gray-400 py-8 italic">No anchor defaults defined.</p>
+                    )}
                 </div>
             </section>
         </div>
