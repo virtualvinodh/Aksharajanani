@@ -13,26 +13,26 @@ export interface VariantGroup {
 interface ScriptVariantModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (selectedVariants: Map<string, number>) => void;
+  onConfirm: (selectedVariants: Map<string, string>) => void;
   script: ScriptConfig;
   variantGroups: VariantGroup[];
 }
 
 const ScriptVariantModal: React.FC<ScriptVariantModalProps> = ({ isOpen, onClose, onConfirm, script, variantGroups }) => {
   const { t } = useLocale();
-  const [selections, setSelections] = useState<Map<string, number>>(() => {
-    const initialSelections = new Map<string, number>();
+  const [selections, setSelections] = useState<Map<string, string>>(() => {
+    const initialSelections = new Map<string, string>();
     variantGroups.forEach(group => {
       // Default to the first variant in each group
       if (group.variants.length > 0) {
-        initialSelections.set(group.optionKey, group.variants[0].unicode!);
+        initialSelections.set(group.optionKey, group.variants[0].name);
       }
     });
     return initialSelections;
   });
 
-  const handleSelectionChange = (optionKey: string, unicode: number) => {
-    setSelections(new Map(selections).set(optionKey, unicode));
+  const handleSelectionChange = (optionKey: string, name: string) => {
+    setSelections(new Map(selections).set(optionKey, name));
   };
 
   const handleConfirm = () => {
@@ -70,13 +70,13 @@ const ScriptVariantModal: React.FC<ScriptVariantModalProps> = ({ isOpen, onClose
             </h3>
             <div className="space-y-2">
               {group.variants.map(variant => (
-                <label key={variant.unicode} className="flex items-center p-3 rounded-lg bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer">
+                <label key={variant.name} className="flex items-center p-3 rounded-lg bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer">
                   <input
                     type="radio"
                     name={group.optionKey}
-                    value={variant.unicode}
-                    checked={selections.get(group.optionKey) === variant.unicode}
-                    onChange={() => handleSelectionChange(group.optionKey, variant.unicode!)}
+                    value={variant.name}
+                    checked={selections.get(group.optionKey) === variant.name}
+                    onChange={() => handleSelectionChange(group.optionKey, variant.name)}
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-indigo-500"
                   />
                   <span

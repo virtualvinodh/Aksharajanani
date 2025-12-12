@@ -1,8 +1,3 @@
-
-
-
-
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ScriptConfig, CharacterSet, CharacterDefinition, ProjectData, Character, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -328,40 +323,13 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                 ...additionalCharDefs,
             ];
             
-            // Assign PUA unicodes for variant characters missing them,
-            // so they can be processed by the variant selection logic.
-            let puaCounter = 0xE000 - 1;
-            // Scan for existing PUA usage to avoid collisions
-            (combinedCharDefs.filter(d => 'characters' in d) as CharacterSet[])
-                .flatMap(cs => cs.characters)
-                .forEach(char => {
-                    if (char.unicode && char.unicode >= 0xE000 && char.unicode <= 0xF8FF) {
-                        puaCounter = Math.max(puaCounter, char.unicode);
-                    }
-                });
+            scriptWithAddons.characterSetData = combinedCharDefs;
 
-            const charDefsWithIds = combinedCharDefs.map(def => {
-                if ('characters' in def) {
-                    const set = def as CharacterSet;
-                    const newChars = set.characters.map(char => {
-                        if (char.unicode === undefined) {
-                            puaCounter++;
-                            return { ...char, unicode: puaCounter, isPuaAssigned: true };
-                        }
-                        return char;
-                    });
-                    return { ...set, characters: newChars };
-                }
-                return def;
-            });
-            
-            scriptWithAddons.characterSetData = charDefsWithIds;
-
-            const allChars = (charDefsWithIds.filter(d => 'characters' in d) as CharacterSet[]).flatMap(cs => cs.characters);
+            const allChars = (combinedCharDefs.filter(d => 'characters' in d) as CharacterSet[]).flatMap(cs => cs.characters);
             const variantsByOptionKey = new Map<string, Character[]>();
 
             allChars.forEach(char => {
-                if (char.option && char.unicode !== undefined) {
+                if (char.option) {
                     if (!variantsByOptionKey.has(char.option)) {
                         variantsByOptionKey.set(char.option, []);
                     }
@@ -372,7 +340,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
             if (variantsByOptionKey.size > 0) {
                 const groups: VariantGroup[] = Array.from(variantsByOptionKey.entries()).map(([key, variants]) => ({
                     optionKey: key,
-                    variants: variants.sort((a,b) => a.unicode! - b.unicode!),
+                    variants: variants.sort((a,b) => (a.unicode || 0) - (b.unicode || 0)),
                     description: variants[0]?.desc?.split(':')[0] || key,
                 }));
                 
@@ -389,16 +357,16 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
         }
     };
     
-    const handleConfirmVariants = (selectedVariants: Map<string, number>) => {
+    const handleConfirmVariants = (selectedVariants: Map<string, string>) => {
         if (!pendingScript || !pendingScript.characterSetData) return;
 
         const filteredCharData = pendingScript.characterSetData.map(def => {
             if ('characters' in def) {
                 const newChars = (def as CharacterSet).characters.filter(char => {
-                    if (!char.option || char.unicode === undefined) {
+                    if (!char.option) {
                         return true;
                     }
-                    return selectedVariants.get(char.option) === char.unicode;
+                    return selectedVariants.get(char.option) === char.name;
                 });
                 return { ...def, characters: newChars };
             }
@@ -714,7 +682,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                                     checked={includeLatin}
                                     onChange={(e) => setIncludeLatin(e.target.checked)}
                                 />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600 ${includeLatin ? 'bg-indigo-600' : ''}`}></div>
                             </div>
                         </label>
                     </div>
