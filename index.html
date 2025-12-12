@@ -71,10 +71,16 @@
         animation: fade-in-up 0.5s ease-out forwards;
       }
       .script-card-char {
-        font-size: 3.5rem;
+        font-size: 2.5rem;
         line-height: 1;
         color: #4f46e5; /* Tailwind indigo-600 */
-        margin-bottom: 0.5rem;
+        margin-bottom: 0;
+      }
+      @media (min-width: 640px) {
+        .script-card-char {
+          font-size: 3.5rem;
+          margin-bottom: 0.5rem;
+        }
       }
       .dark .script-card-char {
         color: #818cf8; /* Tailwind indigo-400 */

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { MarkAttachmentRules, PositioningRules, AttachmentPoint, CharacterSet } from '../../../types';
 import { useLocale } from '../../../contexts/LocaleContext';
@@ -69,7 +68,7 @@ const RuleCard: React.FC<{
             {tags.movement && <span className="text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400">{tags.movement}</span>}
             {ligatureMap && Object.keys(ligatureMap).length > 0 && (
                 <span className="text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-100 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-400">
-                    {Object.values(ligatureMap).reduce((acc, marks) => acc + Object.keys(marks).length, 0)} overrides
+                    {Object.values(ligatureMap).reduce((acc: number, marks) => acc + Object.keys(marks).length, 0)} overrides
                 </span>
             )}
         </div>

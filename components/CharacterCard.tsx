@@ -89,29 +89,31 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
     hideTooltip();
   };
 
+  // Check if drawn
+  const isDrawn = isGlyphDrawn(glyphData);
+
   useEffect(() => {
+    // Only attempt to draw if the canvas exists (which it won't if isDrawn is false)
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!ctx || !canvas || !settings) return;
+    if (!canvas || !settings) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
     ctx.clearRect(0, 0, PREVIEW_CANVAS_SIZE, PREVIEW_CANVAS_SIZE);
 
-    if (!isGlyphDrawn(glyphData)) {
-        return;
+    if (isDrawn) {
+        const scale = PREVIEW_CANVAS_SIZE / DRAWING_CANVAS_SIZE;
+        ctx.save();
+        ctx.scale(scale, scale);
+        renderPaths(ctx, glyphData!.paths, {
+            strokeThickness: settings.strokeThickness,
+            contrast: settings.contrast,
+            color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
+        });
+        ctx.restore();
     }
-
-    const scale = PREVIEW_CANVAS_SIZE / DRAWING_CANVAS_SIZE;
-    
-    ctx.save();
-    ctx.scale(scale, scale);
-    renderPaths(ctx, glyphData!.paths, {
-        strokeThickness: settings.strokeThickness,
-        contrast: settings.contrast,
-        color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
-    });
-    ctx.restore();
-    
-  }, [glyphData, settings, theme]);
+  }, [glyphData, settings, theme, isDrawn]);
 
   if (!settings) return null;
 
@@ -119,8 +121,6 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const paddingClass = isCompact ? 'p-2' : 'p-2 sm:p-4';
   const baseContainerClasses = `relative rounded-lg ${paddingClass} flex flex-col items-center justify-between cursor-pointer transition-all duration-200 aspect-square h-full group select-none`;
   
-  const isDrawn = isGlyphDrawn(glyphData);
-
   let stateClasses = "";
   if (isSelected) {
       stateClasses = "ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 border-transparent";
@@ -128,7 +128,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       stateClasses = "bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-500 opacity-70";
   } else if (!isDrawn) {
       // Style for undrawn/empty glyphs
-      stateClasses = "bg-white dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-indigo-500 opacity-90";
+      stateClasses = "bg-white dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-indigo-500 hover:border-solid opacity-90";
   } else {
       // Style for drawn glyphs
       stateClasses = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500";
@@ -162,24 +162,43 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
           <span className="absolute top-1 left-1 text-[10px] font-bold text-gray-400 border border-gray-300 rounded px-1 bg-white dark:bg-gray-800">HIDDEN</span>
       )}
 
-      <div className="w-full flex-1 min-h-0 flex items-center justify-center">
-        <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className={`transition-transform duration-200 max-w-full max-h-full object-contain ${!isSelectionMode ? 'group-hover:scale-110' : ''}`}></canvas>
-      </div>
-      <div className="text-center mt-1 sm:mt-2 flex-shrink-0">
-        <p 
-          className={`${isCompact ? 'text-sm' : 'text-lg sm:text-2xl'} font-bold ${!isDrawn ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}
-          style={{
-            fontFamily: 'var(--guide-font-family)',
-            fontFeatureSettings: 'var(--guide-font-feature-settings)'
-          }}
-        >
-          {character.name}
-          {character.link && <span className="ml-1 opacity-60" aria-label="Linked Glyph">🔗</span>}
-        </p>
-        {settings.showUnicodeValues && character.unicode !== undefined && (
-            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
-        )}
-      </div>
+      {isDrawn ? (
+        <>
+          <div className="w-full flex-1 min-h-0 flex items-center justify-center">
+            <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className={`transition-transform duration-200 max-w-full max-h-full object-contain ${!isSelectionMode ? 'group-hover:scale-110' : ''}`}></canvas>
+          </div>
+          <div className="text-center mt-1 sm:mt-2 flex-shrink-0">
+            <p 
+              className={`${isCompact ? 'text-sm' : 'text-lg sm:text-2xl'} font-bold text-gray-900 dark:text-white`}
+              style={{
+                fontFamily: 'var(--guide-font-family)',
+                fontFeatureSettings: 'var(--guide-font-feature-settings)'
+              }}
+            >
+              {character.name}
+              {character.link && <span className="ml-1 opacity-60" aria-label="Linked Glyph">🔗</span>}
+            </p>
+            {settings.showUnicodeValues && character.unicode !== undefined && (
+                <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center flex-col">
+            <span 
+                className="text-4xl sm:text-6xl text-gray-200 dark:text-gray-700 font-bold select-none transition-colors group-hover:text-gray-300 dark:group-hover:text-gray-600"
+                style={{
+                  fontFamily: 'var(--guide-font-family)',
+                  fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                }}
+            >
+                {character.name}
+            </span>
+             {settings.showUnicodeValues && character.unicode !== undefined && (
+                <span className="absolute bottom-2 text-[10px] text-gray-300 dark:text-gray-600">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</span>
+            )}
+        </div>
+      )}
     </div>
   );
 };
