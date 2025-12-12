@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Character, ScriptConfig } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import Modal from './Modal';
@@ -20,16 +20,20 @@ interface ScriptVariantModalProps {
 
 const ScriptVariantModal: React.FC<ScriptVariantModalProps> = ({ isOpen, onClose, onConfirm, script, variantGroups }) => {
   const { t } = useLocale();
-  const [selections, setSelections] = useState<Map<string, string>>(() => {
-    const initialSelections = new Map<string, string>();
-    variantGroups.forEach(group => {
-      // Default to the first variant in each group
-      if (group.variants.length > 0) {
-        initialSelections.set(group.optionKey, group.variants[0].name);
-      }
-    });
-    return initialSelections;
-  });
+  const [selections, setSelections] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    if (isOpen) {
+      const initialSelections = new Map<string, string>();
+      variantGroups.forEach(group => {
+        // Default to the first variant in each group
+        if (group.variants.length > 0) {
+          initialSelections.set(group.optionKey, group.variants[0].name);
+        }
+      });
+      setSelections(initialSelections);
+    }
+  }, [isOpen, variantGroups]);
 
   const handleSelectionChange = (optionKey: string, name: string) => {
     setSelections(new Map(selections).set(optionKey, name));
