@@ -632,5 +632,53 @@
         "description": "1. Setup Linked Chain: A -> B (Linked to A) -> C (Linked to B). 2. Delete Glyph B. 3. Verify Glyph C converts to a base glyph, retaining its shape, and does not crash the app.",
         "priority": "medium"
     },
-    { "id": "project_save_as_copy", "category": "App Initialization & File I/O", "description": "Open the 'More' menu and select 'Save Copy...'. Enter a new name 'MyFont v2'. Confirm. Verify the project name in the header updates to 'MyFont v2' and a new entry is created in the database (check Recent Projects after backing out).", "priority": "high" }
+    { "id": "project_save_as_copy", "category": "App Initialization & File I/O", "description": "Open the 'More' menu and select 'Save Copy...'. Enter a new name 'MyFont v2'. Confirm. Verify the project name in the header updates to 'MyFont v2' and a new entry is created in the database (check Recent Projects after backing out).", "priority": "high" },
+    {
+      "id": "group_sync_pos_to_rules",
+      "category": "Complex Integration & Data Integrity",
+      "description": "1. In Positioning Workspace -> Manage Rules -> Groups, create a new group '@test_pos_sync' with members. 2. Save. 3. Switch to Rules Workspace -> Glyph Groups. 4. Verify '@test_pos_sync' is visible and editable. 5. Check 'FEA Code' tab to ensure `@test_pos_sync = [...];` is generated.",
+      "priority": "high"
+    },
+    {
+      "id": "group_sync_rules_to_pos",
+      "category": "Complex Integration & Data Integrity",
+      "description": "1. In Rules Workspace -> Glyph Groups, create a new group '@test_rules_sync'. 2. Switch to Positioning Workspace -> Manage Rules -> Groups. 3. Verify '@test_rules_sync' is visible and editable there.",
+      "priority": "medium"
+    },
+    {
+      "id": "pos_manager_rule_lifecycle",
+      "category": "Positioning Workspace",
+      "description": "In 'Manage Rules' > 'Rules & Anchors': 1. Add a new Positioning Rule (Base: [A], Mark: [B]). 2. Save. 3. Edit the rule (Add Base [C], change GPOS tag). 4. Save. 5. Delete the rule. 6. Verify changes persist at each step.",
+      "priority": "high"
+    },
+    {
+      "id": "pos_manager_class_lifecycle",
+      "category": "Positioning Workspace",
+      "description": "In 'Manage Rules' > 'Groups & Classes': 1. Create a Mark Class. 2. Add members. 3. Add an 'Applies To' filter (e.g. restrict to specific bases). 4. Save. 5. Create a Base Class with 'Exceptions'. 6. Save. 7. Verify classes are listed correctly.",
+      "priority": "high"
+    },
+    {
+      "id": "pos_manager_anchor_lifecycle",
+      "category": "Positioning Workspace",
+      "description": "In 'Manage Rules' > 'Rules & Anchors': 1. Add a Manual Anchor definition. 2. Select Base/Mark and specific anchor points (e.g. TopRight -> BottomLeft). 3. Add X/Y offsets. 4. Save. 5. Verify it appears in the list. 6. Verify the positioning of that specific pair in the main grid updates to reflect these manual offsets.",
+      "priority": "high"
+    },
+    {
+      "id": "rules_group_smart_input",
+      "category": "Rules Workspace (GUI)",
+      "description": "In the Group Editor (Rules or Positioning): 1. Start typing '$' in the members input. 2. Verify autocomplete shows Character Sets (e.g. $vowels). 3. Start typing '@'. 4. Verify autocomplete shows existing Groups. 5. Select one of each and save. 6. Verify the group expands correctly when used in a rule.",
+      "priority": "medium"
+    },
+    {
+      "id": "fea_class_reference_generation",
+      "category": "Rules Workspace (FEA Code)",
+      "description": "1. Create a group '@my_class' in the Groups pane. 2. Use '@my_class' in a GUI Rule (e.g. 'sub @my_class by ...'). 3. Switch to FEA Code tab. 4. Verify the generated code uses `sub @my_class` explicitly, rather than enumerating all members inline.",
+      "priority": "high"
+    },
+    {
+        "id": "pos_manager_kerning_editor",
+        "category": "Positioning Workspace",
+        "description": "In 'Manage Rules' > 'Kerning': 1. Add a new kerning pair manually (Left: A, Right: V, Value: -50). 2. Save. 3. Verify it appears in the list. 4. Verify it appears in the main Kerning Workspace grid with the correct value.",
+        "priority": "medium"
+    }
 ]

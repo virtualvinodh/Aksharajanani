@@ -69,7 +69,7 @@ const RuleCard: React.FC<{
             {tags.movement && <span className="text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400">{tags.movement}</span>}
             {ligatureMap && Object.keys(ligatureMap).length > 0 && (
                 <span className="text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-100 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-400">
-                    {Object.keys(ligatureMap).length} overrides
+                    {Object.values(ligatureMap).reduce((acc, marks) => acc + Object.keys(marks).length, 0)} overrides
                 </span>
             )}
         </div>
@@ -126,7 +126,7 @@ const RuleEditor: React.FC<{
     const [gsub, setGsub] = useState(rule?.gsub || '');
     const [movement, setMovement] = useState(rule?.movement || 'none');
     
-    // Ligature Map state (flattened for UI: {base, mark, lig})
+    // Flatten ligature map for easier editing: [{base, mark, lig}, ...]
     const [ligOverrides, setLigOverrides] = useState<{base: string, mark: string, lig: string}[]>(() => {
         const overrides: {base: string, mark: string, lig: string}[] = [];
         if (rule?.ligatureMap) {
@@ -140,6 +140,7 @@ const RuleEditor: React.FC<{
     });
     
     const [newOverride, setNewOverride] = useState({ base: '', mark: '', lig: '' });
+    const [editingOverrideIndex, setEditingOverrideIndex] = useState<number | null>(null);
 
     const handleSave = () => {
         if (base.length === 0 || mark.length === 0) return;
@@ -148,7 +149,7 @@ const RuleEditor: React.FC<{
         if (gsub) newRule.gsub = gsub;
         if (movement !== 'none') newRule.movement = movement as any;
         
-        // Reconstruct ligatureMap
+        // Reconstruct ligatureMap from flat array
         if (ligOverrides.length > 0) {
             const map: { [base: string]: { [mark: string]: string } } = {};
             ligOverrides.forEach(o => {
@@ -169,11 +170,33 @@ const RuleEditor: React.FC<{
         setter(current.filter(t => t !== val));
     };
     
-    const addOverride = () => {
+    const handleSaveOverride = () => {
         if (newOverride.base && newOverride.mark && newOverride.lig) {
-            setLigOverrides([...ligOverrides, newOverride]);
+            const updated = [...ligOverrides];
+            if (editingOverrideIndex !== null) {
+                updated[editingOverrideIndex] = newOverride;
+            } else {
+                 const existsIndex = ligOverrides.findIndex(o => o.base === newOverride.base && o.mark === newOverride.mark);
+                 if (existsIndex >= 0) {
+                     updated[existsIndex] = newOverride;
+                 } else {
+                     updated.push(newOverride);
+                 }
+            }
+            setLigOverrides(updated);
             setNewOverride({ base: '', mark: '', lig: '' });
+            setEditingOverrideIndex(null);
         }
+    };
+    
+    const handleEditOverride = (index: number) => {
+        setNewOverride(ligOverrides[index]);
+        setEditingOverrideIndex(index);
+    };
+    
+    const handleCancelOverride = () => {
+        setNewOverride({ base: '', mark: '', lig: '' });
+        setEditingOverrideIndex(null);
     };
 
     return (
@@ -223,36 +246,62 @@ const RuleEditor: React.FC<{
                 </div>
             </div>
             
-            <div className="border-t dark:border-gray-700 pt-4 mb-4">
-                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">{t('ligatureNamingOverrides')}</h4>
-                 <div className="space-y-2">
-                     {ligOverrides.map((o, idx) => (
-                         <div key={idx} className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-gray-700 p-2 rounded">
-                             <span className="font-mono">{o.base} + {o.mark} → {o.lig}</span>
-                             <button onClick={() => setLigOverrides(ligOverrides.filter((_, i) => i !== idx))} className="ml-auto text-red-500">&times;</button>
-                         </div>
-                     ))}
-                     <div className="flex gap-2 items-end">
+            {/* Accordion for Ligature Overrides */}
+            <details className="border-t dark:border-gray-700 pt-4 mb-4 group" open={editingOverrideIndex !== null || ligOverrides.length > 0}>
+                 <summary className="text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-2 mb-2 select-none">
+                     <span>▶</span> {t('ligatureNamingOverrides')} {ligOverrides.length > 0 && <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-[10px]">{ligOverrides.length}</span>}
+                 </summary>
+                 <div className="pl-4 space-y-3 pt-2">
+                     <p className="text-xs text-gray-400 mb-2">Map specific Base+Mark pairs to a named ligature or group. Supports groups (e.g. $cons -> $ligs).</p>
+                     
+                     <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+                         {ligOverrides.map((o, idx) => (
+                             <div key={idx} className={`flex items-center gap-2 text-sm p-2 rounded transition-colors ${editingOverrideIndex === idx ? 'bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                                 <span className="font-mono text-xs flex-1 flex gap-2">
+                                     <span className={o.base.startsWith('$') ? "text-purple-600 font-bold" : ""}>{o.base}</span>
+                                     <span className="text-gray-400">+</span>
+                                     <span className={o.mark.startsWith('$') ? "text-purple-600 font-bold" : ""}>{o.mark}</span>
+                                     <span className="text-gray-400">→</span>
+                                     <span className={o.lig.startsWith('$') ? "text-purple-600 font-bold" : ""}>{o.lig}</span>
+                                 </span>
+                                 <div className="flex gap-1">
+                                    <button onClick={() => handleEditOverride(idx)} className="text-indigo-500 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 p-1.5 rounded"><EditIcon className="w-3 h-3"/></button>
+                                    <button onClick={() => setLigOverrides(ligOverrides.filter((_, i) => i !== idx))} className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 p-1.5 rounded"><TrashIcon className="w-3 h-3"/></button>
+                                 </div>
+                             </div>
+                         ))}
+                     </div>
+                     
+                     <div className="flex gap-2 items-end pt-2 border-t border-dashed dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-b-lg">
                          <div className="flex-1">
-                             <label className="text-[10px] uppercase text-gray-400">{t('baseLabel')}</label>
-                             <SmartGlyphInput value={newOverride.base} onChange={v => setNewOverride({...newOverride, base: v})} characterSets={characterSets} groups={groups} placeholder="Base" />
+                             <label className="text-[10px] uppercase text-gray-400 mb-1 block">{t('baseLabel')}</label>
+                             <SmartGlyphInput value={newOverride.base} onChange={v => setNewOverride({...newOverride, base: v})} characterSets={characterSets} groups={groups} placeholder="Base or $group" />
                          </div>
-                         <span className="pb-2 text-gray-400">+</span>
+                         <span className="pb-2 text-gray-400 font-bold">+</span>
                          <div className="flex-1">
-                             <label className="text-[10px] uppercase text-gray-400">{t('markLabel')}</label>
-                             <SmartGlyphInput value={newOverride.mark} onChange={v => setNewOverride({...newOverride, mark: v})} characterSets={characterSets} groups={groups} placeholder="Mark" />
+                             <label className="text-[10px] uppercase text-gray-400 mb-1 block">{t('markLabel')}</label>
+                             <SmartGlyphInput value={newOverride.mark} onChange={v => setNewOverride({...newOverride, mark: v})} characterSets={characterSets} groups={groups} placeholder="Mark or $group" />
                          </div>
-                         <span className="pb-2 text-gray-400">→</span>
+                         <span className="pb-2 text-gray-400 font-bold">→</span>
                          <div className="flex-1">
-                             <label className="text-[10px] uppercase text-gray-400">{t('ligatureName')}</label>
-                             <input type="text" value={newOverride.lig} onChange={e => setNewOverride({...newOverride, lig: e.target.value})} className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 text-sm" placeholder="my_ligature" />
+                             <label className="text-[10px] uppercase text-gray-400 mb-1 block">{t('ligatureName')}</label>
+                             <SmartGlyphInput value={newOverride.lig} onChange={v => setNewOverride({...newOverride, lig: v})} characterSets={characterSets} groups={groups} placeholder="Result or $group" />
                          </div>
-                         <button onClick={addOverride} className="px-3 py-2 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500 text-sm">{t('add')}</button>
+                         <div className="flex gap-1">
+                            <button onClick={handleSaveOverride} disabled={!newOverride.base || !newOverride.mark || !newOverride.lig} className="px-3 py-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" title={editingOverrideIndex !== null ? "Update Override" : "Add Override"}>
+                                {editingOverrideIndex !== null ? <SaveIcon className="w-5 h-5"/> : <AddIcon className="w-5 h-5"/>}
+                            </button>
+                            {editingOverrideIndex !== null && (
+                                <button onClick={handleCancelOverride} className="px-2 py-2 bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" title="Cancel">
+                                    <CloseIcon className="w-4 h-4"/>
+                                </button>
+                            )}
+                         </div>
                      </div>
                  </div>
-            </div>
+            </details>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 mt-6">
                 <button onClick={onCancel} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded">{t('cancel')}</button>
                 <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center gap-2"><SaveIcon className="w-4 h-4"/> {t('saveRule')}</button>
             </div>
