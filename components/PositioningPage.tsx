@@ -1,9 +1,9 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
-import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon, RulesIcon } from '../constants';
+import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon, RulesIcon, BackIcon, SaveIcon } from '../constants';
 import CombinationCard from './CombinationCard';
-import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, AttachmentClass } from '../types';
+import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, AttachmentClass, RecommendedKerning } from '../types';
 import PositioningEditorPage from './PositioningEditorPage';
 import { usePositioning } from '../contexts/PositioningContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
@@ -15,10 +15,11 @@ import { getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../services/gl
 import { updatePositioningAndCascade } from '../services/positioningService';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import Modal from './Modal';
-import PositioningRulesModal from './PositioningRulesModal';
+import PositioningRulesManager from './rules/manager/PositioningRulesManager';
 import { parseSearchQuery, getCharacterMatchScore } from '../utils/searchUtils';
 import { expandMembers } from '../services/groupExpansionService';
 import { useRules } from '../contexts/RulesContext';
+import { deepClone } from '../utils/cloneUtils';
 
 
 // Main Positioning Page Component
@@ -37,9 +38,18 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     const { showNotification, pendingNavigationTarget, setPendingNavigationTarget, filterMode, searchQuery } = useLayout();
     const { glyphDataMap, dispatch: glyphDataDispatch, version: glyphVersion } = useGlyphData();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
-    const { characterSets, dispatch: characterDispatch } = useProject();
+    const { 
+        characterSets, 
+        dispatch: characterDispatch,
+        setPositioningRules,
+        setMarkAttachmentRules,
+        setMarkAttachmentClasses,
+        setBaseAttachmentClasses,
+        setRecommendedKerning,
+        recommendedKerning
+    } = useProject();
     const { settings, metrics } = useSettings();
-    const { state: rulesState } = useRules();
+    const { state: rulesState, dispatch: rulesDispatch } = useRules();
 
     // Access groups from rules state
     const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
@@ -52,8 +62,18 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     const [reuseSourceItem, setReuseSourceItem] = useState<Character | null>(null);
     const [showIncompleteNotice, setShowIncompleteNotice] = useState(false);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
-    const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
     
+    // Inline Rules Manager State
+    const [isRulesManagerOpen, setIsRulesManagerOpen] = useState(false);
+    
+    // Local State for Rules Manager (Transactional Editing)
+    const [localPosRules, setLocalPosRules] = useState<PositioningRules[]>([]);
+    const [localMarkAttach, setLocalMarkAttach] = useState<MarkAttachmentRules>({});
+    const [localMarkClasses, setLocalMarkClasses] = useState<AttachmentClass[]>([]);
+    const [localBaseClasses, setLocalBaseClasses] = useState<AttachmentClass[]>([]);
+    const [localKerning, setLocalKerning] = useState<RecommendedKerning[]>([]);
+    const [localGroups, setLocalGroups] = useState<Record<string, string[]>>({});
+
     const navContainerRef = useRef<HTMLDivElement>(null);
     const { visibility: showNavArrows, handleScroll } = useHorizontalScroll(navContainerRef);
     
@@ -65,7 +85,46 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     const isSearching = searchQuery.trim().length > 0;
     const isFiltered = filterMode !== 'none' || isSearching;
     
-    const allChars = useMemo<Map<string, Character>>(() => new Map(characterSets!.flatMap(set => set.characters).map(char => [char.name, char])), [characterSets]);
+    const allChars = useMemo(() => new Map(characterSets!.flatMap(set => set.characters).map(char => [char.name, char])), [characterSets]);
+
+    const handleSetGroups = useCallback((newGroups: Record<string, string[]>) => {
+        if (rulesState.fontRules) {
+             const newRules = { ...rulesState.fontRules, groups: newGroups };
+             rulesDispatch({ type: 'SET_FONT_RULES', payload: newRules });
+        }
+    }, [rulesState.fontRules, rulesDispatch]);
+
+    // Initialize local state when manager opens
+    useEffect(() => {
+        if (isRulesManagerOpen) {
+            setLocalPosRules(deepClone(positioningRules || []));
+            setLocalMarkAttach(deepClone(markAttachmentRules || {}));
+            setLocalMarkClasses(deepClone(markAttachmentClasses || []));
+            setLocalBaseClasses(deepClone(baseAttachmentClasses || []));
+            setLocalKerning(deepClone(recommendedKerning || []));
+            setLocalGroups(deepClone(groups || {}));
+        }
+    }, [isRulesManagerOpen]); 
+
+    const saveManagerChanges = useCallback(() => {
+        setPositioningRules(localPosRules);
+        setMarkAttachmentRules(localMarkAttach);
+        setMarkAttachmentClasses(localMarkClasses);
+        setBaseAttachmentClasses(localBaseClasses);
+        setRecommendedKerning(localKerning);
+        handleSetGroups(localGroups);
+    }, [localPosRules, localMarkAttach, localMarkClasses, localBaseClasses, localKerning, localGroups, setPositioningRules, setMarkAttachmentRules, setMarkAttachmentClasses, setBaseAttachmentClasses, setRecommendedKerning, handleSetGroups]);
+
+    // Autosave effect for Manager
+    useEffect(() => {
+        if (!isRulesManagerOpen || !settings?.isAutosaveEnabled) return;
+        
+        const timer = setTimeout(() => {
+            saveManagerChanges();
+        }, 1000);
+        return () => clearTimeout(timer);
+    }, [localPosRules, localMarkAttach, localMarkClasses, localBaseClasses, localKerning, localGroups, isRulesManagerOpen, settings?.isAutosaveEnabled, saveManagerChanges]);
+
 
     const positioningData = useMemo(() => {
         const newLigaturesByKey = new Map<string, Character>();
@@ -87,11 +146,12 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             }
         }
         
-        if (positioningRules) {
+        if (positioningRules && characterSets) {
             for (const rule of positioningRules) {
                 // JIT EXPANSION: Expand groups in the rule here
-                const allPossibleMarks = expandMembers(rule.mark || [], groups);
-                const allBases = expandMembers(rule.base, groups);
+                // Pass characterSets to resolve $group references that map to character sets
+                const allPossibleMarks = expandMembers(rule.mark || [], groups, characterSets);
+                const allBases = expandMembers(rule.base, groups, characterSets);
 
                 for (const baseName of allBases) {
                     for (const markName of allPossibleMarks) {
@@ -106,13 +166,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                         let targetLigatureName: string | undefined;
 
                         // 1. Check ligatureMap for an explicit name.
-                        // We check the specific names, assuming ligatureMap usually contains specific names,
-                        // but if ligatureMap used groups, we'd need deeper expansion logic there too.
-                        // For simplicity, we assume ligatureMap is explicit or expanded if needed.
-                        // If rule.ligatureMap contains groups, this lookup might fail without expanding keys.
-                        // However, standard usage usually puts specific overrides here.
-                        
-                        // Try exact match first
                         targetLigatureName = rule.ligatureMap?.[baseName]?.[markName];
                         
                         // If not found, check if ligatureMap used a group key for the base
@@ -120,7 +173,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                              for (const groupKey in rule.ligatureMap) {
                                  if (groupKey.startsWith('$') || groupKey.startsWith('@')) {
                                      // If this group contains the current base char
-                                     if (expandMembers([groupKey], groups).includes(baseName)) {
+                                     if (expandMembers([groupKey], groups, characterSets).includes(baseName)) {
                                          // Check mark side
                                          const marksMap = rule.ligatureMap[groupKey];
                                           // Simple check for mark name
@@ -129,7 +182,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                              // Check if mark was also in a group in the map
                                               for(const markGroupKey in marksMap) {
                                                    if ((markGroupKey.startsWith('$') || markGroupKey.startsWith('@')) && 
-                                                       expandMembers([markGroupKey], groups).includes(markName)) {
+                                                       expandMembers([markGroupKey], groups, characterSets).includes(markName)) {
                                                         targetLigatureName = marksMap[markGroupKey];
                                                         break;
                                                    }
@@ -149,12 +202,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
                         // 3. If a name is found (from either source), try to find the character.
                         if (targetLigatureName) {
-                            // If targetLigatureName is a group reference (e.g. from ligatureMap mapping $base to $lig), 
-                            // we need to resolve which specific ligature corresponds to this base.
-                            // This is complex. Assuming 1:1 mapping if groups are used.
                             if (targetLigatureName.startsWith('$') || targetLigatureName.startsWith('@')) {
-                                 // Simple index matching if possible, otherwise skip complex resolution for now.
-                                 // Usually ligatureMap uses explicit names.
+                                 // Simple index matching if possible (complex)
                             } else {
                                 targetLigature = allChars.get(targetLigatureName);
                             }
@@ -171,7 +220,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                 targetLigature = existingChar;
                             } else {
                                 // Create a new virtual PUA character in Plane 16.
-                                // These are temporary for display only and won't be saved unless confirmed.
                                 virtualPuaCounter++;
                                 targetLigature = {
                                     name: finalLigatureName,
@@ -195,7 +243,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     
     // Global check for incomplete pairs to control the notice
     useEffect(() => {
-        if (!positioningRules || !allChars || !glyphDataMap) {
+        if (!positioningRules || !allChars || !glyphDataMap || !characterSets) {
             setShowIncompleteNotice(false);
             return;
         }
@@ -204,8 +252,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         let drawnPairCount = 0;
 
         for (const rule of positioningRules) {
-            const allPossibleMarks = expandMembers(rule.mark || [], groups);
-            const allBases = expandMembers(rule.base, groups);
+            const allPossibleMarks = expandMembers(rule.mark || [], groups, characterSets);
+            const allBases = expandMembers(rule.base, groups, characterSets);
             
             for (const baseName of allBases) {
                 for (const markName of allPossibleMarks) {
@@ -227,19 +275,19 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         
         setShowIncompleteNotice(drawnPairCount < allPossiblePairs.size);
 
-    }, [positioningRules, allChars, glyphDataMap, glyphVersion, groups]);
+    }, [positioningRules, allChars, glyphDataMap, glyphVersion, groups, characterSets]);
 
 
     const navItems = useMemo(() => {
-        if (!positioningRules || isFiltered) return [];
+        if (!positioningRules || isFiltered || !characterSets) return [];
         const items = new Map<number, Character>();
         
         const sourceSet = new Set<string>();
         
         if (viewBy === 'base') {
-             positioningRules.flatMap(r => expandMembers(r.base, groups)).forEach(m => sourceSet.add(m));
+             positioningRules.flatMap(r => expandMembers(r.base, groups, characterSets)).forEach(m => sourceSet.add(m));
         } else {
-             positioningRules.flatMap(r => expandMembers(r.mark, groups)).forEach(m => sourceSet.add(m));
+             positioningRules.flatMap(r => expandMembers(r.mark, groups, characterSets)).forEach(m => sourceSet.add(m));
         }
 
         sourceSet.forEach(name => {
@@ -250,12 +298,12 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         });
 
         return Array.from(items.values()).sort((a, b) => a.unicode - b.unicode);
-    }, [positioningRules, allChars, viewBy, glyphDataMap, glyphVersion, isFiltered, groups]);
+    }, [positioningRules, allChars, viewBy, glyphDataMap, glyphVersion, isFiltered, groups, characterSets]);
 
     const activeItem = navItems[activeTab];
 
     const displayedCombinations = useMemo(() => {
-        if (!positioningRules) return [];
+        if (!positioningRules || !characterSets) return [];
         
         const allCombinations: { base: Character; mark: Character; ligature: Character }[] = [];
         const addedLigatures = new Set<number>();
@@ -264,8 +312,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         
         for (const rule of rulesToProcess) {
             // JIT Expansion
-            const ruleBases = expandMembers(rule.base, groups);
-            const ruleMarks = expandMembers(rule.mark, groups);
+            const ruleBases = expandMembers(rule.base, groups, characterSets);
+            const ruleMarks = expandMembers(rule.mark, groups, characterSets);
             
             // Determine loop context
             let basesToCheck = ruleBases;
@@ -310,7 +358,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             } else if (filterMode === 'incomplete') {
                 result = result.filter(c => !markPositioningMap.has(`${c.base.unicode}-${c.mark.unicode}`));
             }
-            // if filterMode === 'all', we just return the full list (already populated above)
+            // if filterMode === 'all', we just return the full list
             
             // Search Filtering (Smart Sorting)
             if (isSearching) {
@@ -350,10 +398,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
         return result;
 
-    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion, isFiltered, filterMode, markPositioningMap, searchQuery, isSearching, groups]);
+    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion, isFiltered, filterMode, markPositioningMap, searchQuery, isSearching, groups, characterSets]);
 
     // Handle Deep Navigation from Command Palette
-    // This effect identifies the target, switches tabs if necessary, and opens the editor if found.
     useEffect(() => {
         if (!pendingNavigationTarget) return;
 
@@ -414,7 +461,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     useEffect(() => {
          const target = localScrollTarget.current || pendingNavigationTarget;
          
-         if (target && cardRefs.current.has(target) && !editingPair) {
+         if (target && cardRefs.current.has(target) && !editingPair && !isRulesManagerOpen) {
             // Short timeout to ensure DOM is stable after re-mounting grid
             setTimeout(() => {
                  cardRefs.current.get(target)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -423,7 +470,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                  if (target === localScrollTarget.current) localScrollTarget.current = null;
             }, 100);
          }
-    }, [activeTab, pendingNavigationTarget, setPendingNavigationTarget, displayedCombinations, editingPair]);
+    }, [activeTab, pendingNavigationTarget, setPendingNavigationTarget, displayedCombinations, editingPair, isRulesManagerOpen]);
 
     // Reset tab on view change, ONLY if not navigating
     useEffect(() => {
@@ -549,14 +596,14 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     };
     
     const fullyPositionedItems = useMemo(() => {
-        if (isFiltered) return []; 
+        if (isFiltered || !characterSets) return []; 
         return navItems.filter(item => {
             // Find all combinations for this item
             const combinations: { base: Character; mark: Character }[] = [];
             positioningRules?.forEach(rule => {
                 // JIT Expansion
-                const ruleBases = expandMembers(rule.base, groups);
-                const ruleMarks = expandMembers(rule.mark, groups);
+                const ruleBases = expandMembers(rule.base, groups, characterSets);
+                const ruleMarks = expandMembers(rule.mark, groups, characterSets);
 
                 if ((viewBy === 'base' && ruleBases.includes(item.name)) || (viewBy === 'mark' && ruleMarks.includes(item.name))) {
                     const otherSet = viewBy === 'base' ? ruleMarks : ruleBases;
@@ -576,7 +623,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`)
             );
         }).filter(item => item.unicode !== reuseSourceItem?.unicode);
-    }, [navItems, positioningRules, viewBy, allChars, markPositioningMap, reuseSourceItem, isFiltered, groups]);
+    }, [navItems, positioningRules, viewBy, allChars, markPositioningMap, reuseSourceItem, isFiltered, groups, characterSets]);
     
     const handleCopyPositions = (copyFromItem: Character) => {
         if (!reuseSourceItem) return;
@@ -669,6 +716,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     }, [displayedCombinations, markPositioningMap, glyphDataMap, glyphVersion]);
 
     const handleAcceptAllDefaults = useCallback(() => {
+        if (!characterSets) return;
         const unpositionedPairs = displayedCombinations.filter(combo => {
             const isPositioned = markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`);
             const baseIsDrawn = isGlyphDrawn(glyphDataMap.get(combo.base.unicode));
@@ -739,6 +787,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     }, [displayedCombinations, markPositioningMap]);
 
     const handleResetPositions = useCallback(() => {
+        if (!characterSets) return;
         // In filtered mode, reset everything in list. In nav mode, reset active item's stuff.
         const pairsToReset = displayedCombinations; 
         
@@ -753,8 +802,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 newMarkPositioningMap.delete(key);
     
                 const relevantRule = positioningRules?.find(rule => 
-                    expandMembers(rule.base, groups).includes(combo.base.name) && 
-                    expandMembers(rule.mark, groups).includes(combo.mark.name)
+                    expandMembers(rule.base, groups, characterSets).includes(combo.base.name) && 
+                    expandMembers(rule.mark, groups, characterSets).includes(combo.mark.name)
                 );
                 
                 if (relevantRule?.gsub && combo.ligature.unicode) {
@@ -771,9 +820,10 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         }
         
         setIsResetConfirmOpen(false);
-    }, [activeItem, displayedCombinations, markPositioningMap, glyphDataMap, positioningRules, positioningDispatch, glyphDataDispatch, showNotification, t, groups]);
+    }, [activeItem, displayedCombinations, markPositioningMap, glyphDataMap, positioningRules, positioningDispatch, glyphDataDispatch, showNotification, t, groups, characterSets]);
 
     const handleResetSinglePair = useCallback((base: Character, mark: Character, ligature: Character) => {
+        if (!characterSets) return;
         const key = `${base.unicode}-${mark.unicode}`;
         if (!markPositioningMap.has(key)) return;
     
@@ -782,8 +832,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         positioningDispatch({ type: 'SET_MAP', payload: newMarkPositioningMap });
     
         const relevantRule = positioningRules?.find(rule => 
-            expandMembers(rule.base, groups).includes(base.name) && 
-            expandMembers(rule.mark, groups).includes(mark.name)
+            expandMembers(rule.base, groups, characterSets).includes(base.name) && 
+            expandMembers(rule.mark, groups, characterSets).includes(mark.name)
         );
     
         if (relevantRule?.gsub && ligature.unicode) {
@@ -794,10 +844,10 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     
         showNotification(t('positionResetSuccess', { name: ligature.name }), 'success');
     
-    }, [markPositioningMap, positioningDispatch, positioningRules, glyphDataMap, glyphDataDispatch, showNotification, t, groups]);
+    }, [markPositioningMap, positioningDispatch, positioningRules, glyphDataMap, glyphDataDispatch, showNotification, t, groups, characterSets]);
 
 
-    if (!settings || !metrics) return null;
+    if (!settings || !metrics || !characterSets) return null;
 
     if (editingPair && editingIndex !== null) {
         return (
@@ -818,7 +868,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 allPairs={displayedCombinations}
                 currentIndex={editingIndex}
                 onNavigate={handleNavigatePair}
-                characterSets={characterSets!}
+                characterSets={characterSets}
                 glyphVersion={glyphVersion}
             />
         );
@@ -835,12 +885,14 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             default: return '';
         }
     };
+    
+    const bannerVisible = isFiltered || isRulesManagerOpen;
 
     return (
         <div className="w-full h-full flex flex-col">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <div className="flex flex-row justify-between items-center relative gap-2 sm:gap-0">
-                    {!isFiltered && (
+                    {!bannerVisible && (
                         <div className="flex-1 sm:flex-none flex justify-start sm:justify-center sm:absolute sm:left-1/2 sm:top-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 mr-2 sm:mr-0 min-w-0">
                             <div className="inline-flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg shadow-inner w-full sm:w-auto h-full items-stretch">
                                 <button 
@@ -863,18 +915,45 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                              {getBannerText()}
                          </div>
                     )}
-                    <div className="flex-shrink-0 ml-auto">
-                         <button 
-                            onClick={() => setIsRulesModalOpen(true)} 
-                            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-xs sm:text-sm"
-                        >
-                            <RulesIcon className="w-4 h-4 flex-shrink-0" />
-                            <span className="whitespace-nowrap">{t('manageRules')}</span>
-                        </button>
+                    {isRulesManagerOpen && (
+                         <div className="flex-1 text-left sm:text-center sm:absolute sm:left-1/2 sm:top-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 font-bold text-gray-900 dark:text-white text-lg sm:text-xl truncate">
+                             {t('manageRules')}
+                         </div>
+                    )}
+
+                    <div className="flex-shrink-0 ml-auto flex items-center gap-2">
+                        {!isRulesManagerOpen ? (
+                             <button 
+                                onClick={() => setIsRulesManagerOpen(true)} 
+                                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-xs sm:text-sm"
+                            >
+                                <RulesIcon className="w-4 h-4 flex-shrink-0" />
+                                <span className="whitespace-nowrap">{t('manageRules')}</span>
+                            </button>
+                        ) : (
+                             <>
+                                {!settings?.isAutosaveEnabled && (
+                                    <button 
+                                        onClick={() => { saveManagerChanges(); showNotification(t('projectSaved'), 'success'); }}
+                                        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors text-xs sm:text-sm"
+                                    >
+                                        <SaveIcon className="w-4 h-4 flex-shrink-0" />
+                                        <span className="whitespace-nowrap">{t('save')}</span>
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={() => setIsRulesManagerOpen(false)} 
+                                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-xs sm:text-sm"
+                                >
+                                    <BackIcon className="w-4 h-4 flex-shrink-0" />
+                                    <span className="whitespace-nowrap">Back to Grid</span>
+                                </button>
+                             </>
+                        )}
                     </div>
                 </div>
                 
-                {!isFiltered && (
+                {!isRulesManagerOpen && !isFiltered && (
                     <div className="relative">
                         {showNavArrows.left && (
                              <button onClick={() => handleScroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 dark:bg-gray-800/70 p-1 rounded-full shadow-md hover:bg-white dark:hover:bg-gray-800"><LeftArrowIcon className="h-5 w-5"/></button>
@@ -899,84 +978,98 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             </div>
 
             <div className="flex-grow overflow-y-auto p-6">
-                {showIncompleteNotice && !isFiltered && (
-                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">
-                        {t('positioningShowOnlyComplete')}
-                    </div>
-                )}
+                {isRulesManagerOpen ? (
+                    <PositioningRulesManager
+                        positioningRules={localPosRules} setPositioningRules={setLocalPosRules}
+                        markAttachmentRules={localMarkAttach} setMarkAttachmentRules={setLocalMarkAttach}
+                        markAttachmentClasses={localMarkClasses} setMarkAttachmentClasses={setLocalMarkClasses}
+                        baseAttachmentClasses={localBaseClasses} setBaseAttachmentClasses={setLocalBaseClasses}
+                        recommendedKerning={localKerning} setRecommendedKerning={setLocalKerning}
+                        groups={localGroups} setGroups={setLocalGroups}
+                        characterSets={characterSets || []}
+                    />
+                ) : (
+                    <>
+                        {showIncompleteNotice && !isFiltered && (
+                            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">
+                                {t('positioningShowOnlyComplete')}
+                            </div>
+                        )}
 
-                {((!isFiltered && navItems.length === 0) || (isFiltered && displayedCombinations.length === 0)) && (
-                    <div className="text-center p-8 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                        <p className="text-gray-600 dark:text-gray-400">
-                            {isFiltered ? t('noResultsFound') : (viewBy === 'base' ? t('positioningNoBasesDrawn') : t('positioningNoMarksDrawn'))}
-                        </p>
-                    </div>
-                )}
-                
-                {(activeItem || (isFiltered && displayedCombinations.length > 0)) && (
-                    <div key={activeItem?.unicode || 'flat-list'}>
-                        <div className="flex items-center gap-4 mb-4 flex-wrap">
-                            {!isFiltered && (
-                                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
-                                    {t('combinationsFor', { item: activeItem!.name })}
-                                </h2>
-                            )}
-                            {!isFiltered && (
-                                <button
-                                    onClick={() => handleOpenReuseModal(activeItem!)}
-                                    title={t('copyPositionFrom')}
-                                    className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                                >
-                                    <CopyIcon />
-                                </button>
-                            )}
-                            <button
-                                onClick={handleAcceptAllDefaults}
-                                disabled={unpositionedCount === 0}
-                                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                            >
-                                <CheckCircleIcon className="h-4 w-4" />
-                                {t('acceptAllDefaults')}
-                            </button>
-                             <button
-                                onClick={() => setIsResetConfirmOpen(true)}
-                                disabled={!hasManuallyPositioned}
-                                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                            >
-                                <UndoIcon />
-                                {t('resetPositions')}
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4">
-                            {displayedCombinations.map(({ base, mark, ligature }, index) => {
-                                const isPositioned = markPositioningMap.has(`${base.unicode}-${mark.unicode}`);
-                                const pairId = `${base.unicode}-${mark.unicode}`;
-                                return (
-                                    <CombinationCard
-                                        key={ligature.unicode}
-                                        ref={(el) => { if (el) cardRefs.current.set(pairId, el); else cardRefs.current.delete(pairId); }}
-                                        baseChar={base}
-                                        markChar={mark}
-                                        ligature={ligature}
-                                        glyphDataMap={glyphDataMap}
-                                        strokeThickness={settings.strokeThickness}
-                                        isPositioned={isPositioned}
-                                        canEdit={true}
-                                        onClick={() => {
-                                            setEditingPair({ base, mark, ligature });
-                                            setEditingIndex(index);
-                                        }}
-                                        onConfirmPosition={() => handleConfirmPosition(base, mark, ligature)}
-                                        markAttachmentRules={markAttachmentRules}
-                                        markPositioningMap={markPositioningMap}
-                                        characterSets={characterSets!}
-                                        glyphVersion={glyphVersion}
-                                        groups={groups}
-                                    />
-                                );
-                            })}
-                        </div>
-                    </div>
+                        {((!isFiltered && navItems.length === 0) || (isFiltered && displayedCombinations.length === 0)) && (
+                            <div className="text-center p-8 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                                <p className="text-gray-600 dark:text-gray-400">
+                                    {isFiltered ? t('noResultsFound') : (viewBy === 'base' ? t('positioningNoBasesDrawn') : t('positioningNoMarksDrawn'))}
+                                </p>
+                            </div>
+                        )}
+                        
+                        {(activeItem || (isFiltered && displayedCombinations.length > 0)) && (
+                            <div key={activeItem?.unicode || 'flat-list'}>
+                                <div className="flex items-center gap-4 mb-4 flex-wrap">
+                                    {!isFiltered && (
+                                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
+                                            {t('combinationsFor', { item: activeItem!.name })}
+                                        </h2>
+                                    )}
+                                    {!isFiltered && (
+                                        <button
+                                            onClick={() => handleOpenReuseModal(activeItem!)}
+                                            title={t('copyPositionFrom')}
+                                            className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                        >
+                                            <CopyIcon />
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={handleAcceptAllDefaults}
+                                        disabled={unpositionedCount === 0}
+                                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                    >
+                                        <CheckCircleIcon className="h-4 w-4" />
+                                        {t('acceptAllDefaults')}
+                                    </button>
+                                     <button
+                                        onClick={() => setIsResetConfirmOpen(true)}
+                                        disabled={!hasManuallyPositioned}
+                                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                    >
+                                        <UndoIcon />
+                                        {t('resetPositions')}
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4">
+                                    {displayedCombinations.map(({ base, mark, ligature }, index) => {
+                                        const isPositioned = markPositioningMap.has(`${base.unicode}-${mark.unicode}`);
+                                        const pairId = `${base.unicode}-${mark.unicode}`;
+                                        return (
+                                            <CombinationCard
+                                                key={ligature.unicode}
+                                                ref={(el) => { if (el) cardRefs.current.set(pairId, el); else cardRefs.current.delete(pairId); }}
+                                                baseChar={base}
+                                                markChar={mark}
+                                                ligature={ligature}
+                                                glyphDataMap={glyphDataMap}
+                                                strokeThickness={settings.strokeThickness}
+                                                isPositioned={isPositioned}
+                                                canEdit={true}
+                                                onClick={() => {
+                                                    setEditingPair({ base, mark, ligature });
+                                                    setEditingIndex(index);
+                                                }}
+                                                onConfirmPosition={() => handleConfirmPosition(base, mark, ligature)}
+                                                markAttachmentRules={markAttachmentRules}
+                                                markPositioningMap={markPositioningMap}
+                                                characterSets={characterSets!}
+                                                glyphVersion={glyphVersion}
+                                                groups={groups}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
             
@@ -1020,11 +1113,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                     <p>{t('confirmResetMessage', { name: activeItem ? activeItem.name : "Selected Items" })}</p>
                 </Modal>
             )}
-            
-            <PositioningRulesModal 
-                isOpen={isRulesModalOpen}
-                onClose={() => setIsRulesModalOpen(false)}
-            />
         </div>
     );
 };

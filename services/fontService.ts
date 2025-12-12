@@ -1,4 +1,5 @@
 
+
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Path, KerningMap, MarkPositioningMap, PositioningRules, MarkAttachmentRules, Segment } from '../types';
 import { compileFeaturesAndPatch } from './pythonFontService';
 import { generateFea } from './feaService';
@@ -431,8 +432,9 @@ export const exportToOtf = async (
     if (positioningRules) {
         for (const rule of positioningRules) {
             // JIT EXPANSION for Export
-            const allPossibleMarks = expandMembers(rule.mark || [], groups);
-            const allBases = expandMembers(rule.base, groups);
+            // Pass characterSets for group expansion
+            const allPossibleMarks = expandMembers(rule.mark || [], groups, characterSets);
+            const allBases = expandMembers(rule.base, groups, characterSets);
             
             for (const baseName of allBases) {
                 for (const markName of allPossibleMarks) {
@@ -450,6 +452,7 @@ export const exportToOtf = async (
                     if (isGlyphDrawn(baseGlyphData) && isGlyphDrawn(markGlyphData)) {
                         const baseBbox = getAccurateGlyphBBox(baseGlyphData!.paths, settings.strokeThickness);
                         const markBbox = getAccurateGlyphBBox(markGlyphData!.paths, settings.strokeThickness);
+                        // Pass groups and characterSets for expansion
                         const offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
                         finalMarkPositioningMap.set(key, offset);
                     }

@@ -114,7 +114,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     
     const kerningLabel = (settings.editorMode === 'advanced' || settings.preferKerningTerm) ? t('workspaceKerning') : t('workspaceSpacing');
     
-    // Removed metrics and rules tabs from count
     const visibleTabCount = 1 + // Drawing
         (hasPositioning ? 1 : 0) +
         (hasKerning ? 1 : 0);
@@ -209,7 +208,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         </button>
                     )}
                     
-                    <button onClick={() => onWorkspaceChange('rules')} title={t('workspaceRules')} className={`relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base ${activeWorkspace === 'rules' ? 'ring-2 ring-indigo-500' : ''}`}>
+                    <button onClick={() => setCurrentView('rules')} title={t('workspaceRules')} className="relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
                          <RulesIcon />
                         <span className="hidden md:inline">{t('workspaceRules')}</span>
                          {hasUnsavedRules && <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white dark:ring-gray-800" title="Unsaved changes"></span>}

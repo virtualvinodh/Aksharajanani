@@ -43,9 +43,9 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
     }, [groups, characterSets, t]);
 
     const filteredOptions = useMemo(() => {
-        if (!value) return options.slice(0, 50); // Show some defaults
+        if (!value) return options; // Show all options if no input
         const lower = value.toLowerCase();
-        return options.filter(o => o.value.toLowerCase().includes(lower) || o.label.toLowerCase().includes(lower)).slice(0, 20);
+        return options.filter(o => o.value.toLowerCase().includes(lower) || o.label.toLowerCase().includes(lower));
     }, [options, value]);
 
     useEffect(() => {
@@ -76,14 +76,17 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
                 onKeyDown={onKeyDown}
                 placeholder={placeholder}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow"
-                style={{ fontFamily: 'var(--guide-font-family), monospace' }}
+                style={{ 
+                    fontFamily: 'var(--guide-font-family), monospace',
+                    fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                }}
             />
             
             {/* Type Indicator Badge inside input */}
             {value && (value.startsWith('$') || value.startsWith('@')) && (
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                     <span className="text-[10px] uppercase font-bold text-purple-500 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/40 rounded">
-                        GROUP
+                        {t('groupLabel')}
                     </span>
                 </div>
             )}
@@ -96,13 +99,21 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
                             onClick={() => { onChange(opt.value); setIsOpen(false); }}
                             className="px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between group"
                         >
-                            <span className="font-medium text-gray-800 dark:text-gray-200" style={{ fontFamily: 'var(--guide-font-family)' }}>{opt.label}</span>
+                            <span 
+                                className="font-medium text-gray-800 dark:text-gray-200" 
+                                style={{ 
+                                    fontFamily: 'var(--guide-font-family)',
+                                    fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                                }}
+                            >
+                                {opt.label}
+                            </span>
                             <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${getTypeColor(opt.type)}`}>
                                 {opt.type}
                             </span>
                         </li>
                     )) : (
-                        <li className="px-3 py-2 text-xs text-gray-400 italic">No matches found</li>
+                        <li className="px-3 py-2 text-xs text-gray-400 italic">{t('noMatchesFound')}</li>
                     )}
                 </ul>
             )}

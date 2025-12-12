@@ -239,8 +239,9 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
       <main className="flex-1 flex flex-col p-4 overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">{t('openTypeRules')}</h2>
+             {/* Title Removed as it's now in parent header, kept controls */}
             <div className="flex items-center gap-2">
+              <span className="text-gray-500 dark:text-gray-400 font-semibold text-sm">Script Tag:</span>
               {isEditingScriptTag ? (
                 <input
                     type="text" value={scriptTagInput} onChange={(e) => setScriptTagInput(e.target.value.toLowerCase())}

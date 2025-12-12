@@ -1,8 +1,9 @@
+
 import React, { createContext, useState, useContext, ReactNode, useCallback, useRef } from 'react';
 import { Character, ProjectData, FilterMode } from '../types';
 
 export type Workspace = 'drawing' | 'positioning' | 'kerning' | 'rules' | 'metrics';
-type View = 'grid' | 'comparison' | 'settings' | 'creator';
+type View = 'grid' | 'comparison' | 'settings' | 'creator' | 'rules';
 
 interface ModalState {
   name: 'confirmChangeScript' | 'incompleteWarning' | 'mismatchedScript' | 'testPage' | 'addGlyph' | 'positioningUpdateWarning' | 'feaError' | 'unsavedRules' | 'about' | 'help' | 'restoreSession' | 'testCases' | 'confirmLoadProject' | 'addBlock' | 'importGlyphs' | 'confirmSnapshotRestore' | 'snapshotRestore' | 'saveAs';

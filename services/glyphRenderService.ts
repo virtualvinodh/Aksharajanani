@@ -416,7 +416,7 @@ export const calculateDefaultMarkOffset = (
                     // 2. Check Global Groups (defined in Rules)
                     if (!isInGroup && groups && groups[setName]) {
                         // Use helper to check recursively if baseChar is in this group
-                        if (expandMembers([key], groups).includes(baseChar.name)) {
+                        if (expandMembers([key], groups, characterSets).includes(baseChar.name)) {
                             isInGroup = true;
                         }
                     }
@@ -434,7 +434,7 @@ export const calculateDefaultMarkOffset = (
                              for (const markKey in categoryRules) {
                                  if ((markKey.startsWith('$') || markKey.startsWith('@'))) {
                                      // Check if current mark is in this mark group
-                                     if (expandMembers([markKey], groups).includes(markChar.name)) {
+                                     if (expandMembers([markKey], groups, characterSets).includes(markChar.name)) {
                                          rule = categoryRules[markKey];
                                          break;
                                      }
@@ -725,6 +725,7 @@ export const generateCompositeGlyphData = ({
             
             baseBboxForOffset = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
             
+            // Pass characterSets for group expansion within offset calculation
             offset = calculateDefaultMarkOffset(
                 baseComponent.char,
                 markComponent.char,

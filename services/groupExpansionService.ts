@@ -1,14 +1,16 @@
 
-import { Character } from '../types';
+import { Character, CharacterSet } from '../types';
 
 /**
  * Expands a list of items which may contain direct glyph names or group references (starting with $ or @)
  * into a flat array of unique glyph names.
  * Handles recursive groups (groups containing groups).
+ * Falls back to Character Sets if a group name matches a set nameKey.
  */
 export const expandMembers = (
     items: string[] | undefined,
-    groups: Record<string, string[]>
+    groups: Record<string, string[]>,
+    characterSets?: CharacterSet[]
 ): string[] => {
     if (!items || items.length === 0) return [];
 
@@ -26,7 +28,16 @@ export const expandMembers = (
             if (visitedGroups.has(groupName)) return;
             visitedGroups.add(groupName);
 
-            const groupMembers = groups[groupName];
+            let groupMembers = groups[groupName];
+            
+            // Fallback: Check character sets if not found in explicit groups
+            if (!groupMembers && characterSets) {
+                const set = characterSets.find(s => s.nameKey === groupName);
+                if (set) {
+                    groupMembers = set.characters.map(c => c.name);
+                }
+            }
+
             if (groupMembers) {
                 groupMembers.forEach(member => processItem(member));
             }
@@ -45,13 +56,13 @@ export const expandMembers = (
 export const isCharInList = (
     charName: string,
     list: string[],
-    groups: Record<string, string[]>
+    groups: Record<string, string[]>,
+    characterSets?: CharacterSet[]
 ): boolean => {
     // 1. Direct check (optimization)
     if (list.includes(charName)) return true;
 
     // 2. Group check
-    // We iterate manually to avoid expanding everything if we find a match early
     const visitedGroups = new Set<string>();
     
     const checkRecursive = (currentList: string[]): boolean => {
@@ -62,7 +73,15 @@ export const isCharInList = (
                 const groupName = item.substring(1);
                 if (!visitedGroups.has(groupName)) {
                     visitedGroups.add(groupName);
-                    const members = groups[groupName];
+                    
+                    let members = groups[groupName];
+                    
+                    // Fallback: Check character sets
+                    if (!members && characterSets) {
+                         const set = characterSets.find(s => s.nameKey === groupName);
+                         if (set) members = set.characters.map(c => c.name);
+                    }
+
                     if (members && checkRecursive(members)) return true;
                 }
             }

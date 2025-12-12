@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import DrawingModal from './components/DrawingModal';
@@ -220,6 +221,13 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
            <SettingsPage onClose={() => setCurrentView('grid')} toolRanges={TOOL_RANGES} />
        ) : currentView === 'comparison' ? (
            <ComparisonView onClose={() => setCurrentView('grid')} />
+       ) : currentView === 'rules' ? (
+           <RulesWorkspace 
+                onClose={() => setCurrentView('grid')}
+                positioningRules={positioningRules}
+                isFeaOnlyMode={isFeaOnlyMode}
+                rulesProgress={rulesProgress}
+            />
        ) : (
            // Main App Layout
            <>
@@ -288,13 +296,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                       <KerningWorkspace 
                         recommendedKerning={recommendedKerning ?? []}
                         kerningProgress={kerningProgress}
-                      />
-                  )}
-                  {workspace === 'rules' && (
-                      <RulesWorkspace 
-                        positioningRules={positioningRules}
-                        isFeaOnlyMode={isFeaOnlyMode}
-                        rulesProgress={rulesProgress}
                       />
                   )}
                 </div>

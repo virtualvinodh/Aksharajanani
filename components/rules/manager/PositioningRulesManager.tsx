@@ -34,9 +34,9 @@ const PositioningRulesManager: React.FC<PositioningRulesManagerProps> = (props) 
     const [activeTab, setActiveTab] = useState<'groups' | 'rules' | 'kerning'>('groups');
 
     const tabs = [
-        { id: 'groups', label: 'Groups & Classes' },
-        { id: 'rules', label: 'Rules & Anchors' },
-        { id: 'kerning', label: 'Kerning' },
+        { id: 'groups', label: t('groupsAndClasses') },
+        { id: 'rules', label: t('rulesAndAnchors') },
+        { id: 'kerning', label: t('kerning') },
     ] as const;
 
     return (
