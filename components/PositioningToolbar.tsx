@@ -8,17 +8,17 @@ interface PositioningToolbarProps {
   pageTool: 'select' | 'pan';
   onToggleTool: () => void;
   onZoom: (factor: number) => void;
-  isLargeScreen: boolean;
+  orientation?: 'vertical' | 'horizontal';
 }
 
 const ToolButton: React.FC<{ isActive: boolean, label: string, onClick: () => void, children: React.ReactNode }> = React.memo(({ isActive, label, onClick, children }) => (
     <button
       onClick={onClick}
       title={label}
-      className={`p-2 rounded-md transition-colors ${
+      className={`p-2 rounded-lg transition-all shadow-sm ${
         isActive
-          ? 'bg-indigo-600 text-white'
-          : 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white hover:bg-gray-400 dark:hover:bg-gray-500'
+          ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 dark:ring-indigo-900'
+          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
       }`}
     >
       {children}
@@ -29,52 +29,48 @@ const ActionButton: React.FC<{ onClick: () => void, title: string, children: Rea
   <button
     onClick={onClick}
     title={title}
-    className="p-2 rounded-md transition-colors bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white hover:bg-gray-400 dark:hover:bg-gray-500"
+    className="p-2 rounded-lg transition-all bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 shadow-sm"
   >
     {children}
   </button>
 ));
 
-const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ onReuseClick, pageTool, onToggleTool, onZoom, isLargeScreen }) => {
+const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ onReuseClick, pageTool, onToggleTool, onZoom, orientation = 'vertical' }) => {
   const { t } = useLocale();
+  const isVertical = orientation === 'vertical';
 
-  const toolToggle = (
-    <ToolButton
-      isActive={pageTool === 'pan'}
-      label={pageTool === 'select' ? t('pan') : t('select')}
-      onClick={onToggleTool}
-    >
-      {pageTool === 'select' ? <PanIcon /> : <SelectIcon />}
-    </ToolButton>
-  );
-
-  const tools = (
-    <>
+  return (
+    <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2 p-1.5 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg`}>
       <ActionButton onClick={onReuseClick} title={t('copyPositionFrom')}>
         <PasteIcon />
       </ActionButton>
-      {toolToggle}
-      <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2' : 'border-l h-6 mx-2'}`}></div>
+      
+      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'w-px h-full mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+
+      <ToolButton
+        isActive={pageTool === 'select'}
+        label={t('select')}
+        onClick={pageTool === 'select' ? () => {} : onToggleTool}
+      >
+        <SelectIcon />
+      </ToolButton>
+      
+      <ToolButton
+        isActive={pageTool === 'pan'}
+        label={t('pan')}
+        onClick={pageTool === 'pan' ? () => {} : onToggleTool}
+      >
+        <PanIcon />
+      </ToolButton>
+
+      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'w-px h-full mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+
       <ActionButton onClick={() => onZoom(1.25)} title={t('zoomIn')}>
         <ZoomInIcon />
       </ActionButton>
       <ActionButton onClick={() => onZoom(0.8)} title={t('zoomOut')}>
         <ZoomOutIcon />
       </ActionButton>
-    </>
-  );
-
-  if (isLargeScreen) {
-    return (
-      <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-xl grid grid-cols-1 gap-2 justify-items-center content-start shadow-inner">
-        {tools}
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center flex-wrap gap-2 shadow-inner">
-      {tools}
     </div>
   );
 };

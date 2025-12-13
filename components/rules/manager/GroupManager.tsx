@@ -26,10 +26,11 @@ const GroupCard: React.FC<{
     members: string[];
     applies?: string[];
     exceptions?: string[];
+    exceptPairs?: string[];
     type: 'group' | 'class';
     onDelete: () => void;
     onEdit: () => void;
-}> = ({ title, members, applies, exceptions, type, onDelete, onEdit }) => {
+}> = ({ title, members, applies, exceptions, exceptPairs, type, onDelete, onEdit }) => {
     const { t } = useLocale();
     const isGroup = type === 'group';
     return (
@@ -78,6 +79,18 @@ const GroupCard: React.FC<{
                             <span key={i} className="text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-800 font-mono" style={fontStyle}>{m}</span>
                         ))}
                         {exceptions.length > 5 && <span className="text-xs text-gray-400">+{exceptions.length - 5}</span>}
+                    </div>
+                </div>
+            )}
+
+            {(exceptPairs && exceptPairs.length > 0) && (
+                <div className="mt-2 pt-2 border-t dark:border-gray-700">
+                    <span className="text-[10px] uppercase font-bold text-gray-500">Unlinked Pairs</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                        {exceptPairs.slice(0, 5).map((m, i) => (
+                            <span key={i} className="text-xs bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-300 px-1.5 py-0.5 rounded border border-orange-100 dark:border-orange-800 font-mono" style={fontStyle}>{m}</span>
+                        ))}
+                        {exceptPairs.length > 5 && <span className="text-xs text-gray-400">+{exceptPairs.length - 5}</span>}
                     </div>
                 </div>
             )}
@@ -154,12 +167,15 @@ const EditorPanel: React.FC<{
     exceptions?: string[];
     onExceptionsChange?: (m: string[]) => void;
 
+    exceptPairs?: string[];
+    onExceptPairsChange?: (m: string[]) => void;
+
     onSave: () => void;
     onCancel: () => void;
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
     showNameInput?: boolean;
-}> = ({ title, nameValue, onNameChange, namePrefix = '', members, onMembersChange, applies, onAppliesChange, exceptions, onExceptionsChange, onSave, onCancel, characterSets, groups, showNameInput = true }) => {
+}> = ({ title, nameValue, onNameChange, namePrefix = '', members, onMembersChange, applies, onAppliesChange, exceptions, onExceptionsChange, exceptPairs, onExceptPairsChange, onSave, onCancel, characterSets, groups, showNameInput = true }) => {
     const { t } = useLocale();
 
     return (
@@ -216,6 +232,18 @@ const EditorPanel: React.FC<{
                         characterSets={characterSets} 
                         groups={groups}
                         color="red"
+                    />
+                )}
+
+                {onExceptPairsChange && (
+                     <ChipInput 
+                        label="Unlinked Pairs (Base-Mark)"
+                        items={exceptPairs || []} 
+                        onChange={onExceptPairsChange} 
+                        placeholder="e.g. ka-u"
+                        characterSets={characterSets} 
+                        groups={groups}
+                        color="orange"
                     />
                 )}
                 
@@ -349,7 +377,7 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                     <div className="bg-gray-50/50 dark:bg-gray-800/30 p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
                         <div className="flex justify-between items-center mb-4">
                             <h4 className="font-bold text-teal-700 dark:text-teal-400">{t('markClasses')}</h4>
-                            <button onClick={() => setEditingState({ type: 'markClass', id: -1, data: { members: [], applies: [], exceptions: [], name: '' } })} className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded hover:bg-teal-200 dark:bg-teal-900 dark:text-teal-200">+ {t('add')}</button>
+                            <button onClick={() => setEditingState({ type: 'markClass', id: -1, data: { members: [], applies: [], exceptions: [], exceptPairs: [], name: '' } })} className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded hover:bg-teal-200 dark:bg-teal-900 dark:text-teal-200">+ {t('add')}</button>
                         </div>
                         
                         {editingState?.type === 'markClass' && editingState.id === -1 && (
@@ -364,6 +392,8 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                                 onAppliesChange={(m) => updateEditingData('applies', m)}
                                 exceptions={editingState.data.exceptions}
                                 onExceptionsChange={(m) => updateEditingData('exceptions', m)}
+                                exceptPairs={editingState.data.exceptPairs}
+                                onExceptPairsChange={(m) => updateEditingData('exceptPairs', m)}
                                 onSave={() => handleSaveClass('markClass', -1, editingState.data)}
                                 onCancel={() => setEditingState(null)}
                                 characterSets={characterSets}
@@ -386,6 +416,8 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                                         onAppliesChange={(m) => updateEditingData('applies', m)}
                                         exceptions={editingState.data.exceptions}
                                         onExceptionsChange={(m) => updateEditingData('exceptions', m)}
+                                        exceptPairs={editingState.data.exceptPairs}
+                                        onExceptPairsChange={(m) => updateEditingData('exceptPairs', m)}
                                         onSave={() => handleSaveClass('markClass', idx, editingState.data)}
                                         onCancel={() => setEditingState(null)}
                                         characterSets={characterSets}
@@ -398,6 +430,7 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                                         members={cls.members} 
                                         applies={cls.applies}
                                         exceptions={cls.exceptions}
+                                        exceptPairs={cls.exceptPairs}
                                         type="class" 
                                         onDelete={() => handleDeleteClass('markClass', idx)}
                                         onEdit={() => setEditingState({ type: 'markClass', id: idx, data: cls })}
@@ -411,7 +444,7 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                     <div className="bg-gray-50/50 dark:bg-gray-800/30 p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
                          <div className="flex justify-between items-center mb-4">
                             <h4 className="font-bold text-blue-700 dark:text-blue-400">{t('baseClasses')}</h4>
-                            <button onClick={() => setEditingState({ type: 'baseClass', id: -1, data: { members: [], applies: [], exceptions: [], name: '' } })} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200">+ {t('add')}</button>
+                            <button onClick={() => setEditingState({ type: 'baseClass', id: -1, data: { members: [], applies: [], exceptions: [], exceptPairs: [], name: '' } })} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200">+ {t('add')}</button>
                         </div>
 
                          {editingState?.type === 'baseClass' && editingState.id === -1 && (
@@ -426,6 +459,8 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                                 onAppliesChange={(m) => updateEditingData('applies', m)}
                                 exceptions={editingState.data.exceptions}
                                 onExceptionsChange={(m) => updateEditingData('exceptions', m)}
+                                exceptPairs={editingState.data.exceptPairs}
+                                onExceptPairsChange={(m) => updateEditingData('exceptPairs', m)}
                                 onSave={() => handleSaveClass('baseClass', -1, editingState.data)}
                                 onCancel={() => setEditingState(null)}
                                 characterSets={characterSets}
@@ -448,6 +483,8 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                                         onAppliesChange={(m) => updateEditingData('applies', m)}
                                         exceptions={editingState.data.exceptions}
                                         onExceptionsChange={(m) => updateEditingData('exceptions', m)}
+                                        exceptPairs={editingState.data.exceptPairs}
+                                        onExceptPairsChange={(m) => updateEditingData('exceptPairs', m)}
                                         onSave={() => handleSaveClass('baseClass', idx, editingState.data)}
                                         onCancel={() => setEditingState(null)}
                                         characterSets={characterSets}
@@ -460,6 +497,7 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                                         members={cls.members}
                                         applies={cls.applies}
                                         exceptions={cls.exceptions}
+                                        exceptPairs={cls.exceptPairs}
                                         type="class" 
                                         onDelete={() => handleDeleteClass('baseClass', idx)}
                                         onEdit={() => setEditingState({ type: 'baseClass', id: idx, data: cls })}

@@ -107,6 +107,7 @@ export interface AttachmentClass {
   members: string[];
   exceptions?: string[];
   applies?: string[];
+  exceptPairs?: string[]; // "BaseName-MarkName" format
 }
 
 

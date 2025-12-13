@@ -79,6 +79,12 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
 
             if (shouldApply) {
                 expandMembers(attachmentClass.members, groups, characterSets).forEach(otherMarkName => {
+                    // Specific Pair Exception Check
+                    const pairId = `${baseChar.name}-${otherMarkName}`;
+                    if (attachmentClass.exceptPairs && attachmentClass.exceptPairs.includes(pairId)) {
+                        return; // Skip this mark for this specific base
+                    }
+
                     const otherMarkChar = allChars.get(otherMarkName);
                     if (otherMarkChar) marksToUpdate.add(otherMarkChar);
                 });
@@ -97,6 +103,12 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
 
             if (shouldApply) {
                 expandMembers(attachmentClass.members, groups, characterSets).forEach(otherBaseName => {
+                    // Specific Pair Exception Check
+                    const pairId = `${otherBaseName}-${markChar.name}`;
+                    if (attachmentClass.exceptPairs && attachmentClass.exceptPairs.includes(pairId)) {
+                        return; // Skip this base for this specific mark
+                    }
+
                     const otherBaseChar = allChars.get(otherBaseName);
                     if (otherBaseChar) basesToUpdate.add(otherBaseChar);
                 });
