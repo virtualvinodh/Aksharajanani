@@ -1,5 +1,5 @@
 
-import { Character, KerningMap, MarkPositioningMap, PositioningRules, GlyphData, FontMetrics, Path } from '../types';
+import { Character, KerningMap, MarkPositioningMap, PositioningRules, GlyphData, FontMetrics, Path, CharacterSet } from '../types';
 import { getAccurateGlyphBBox, BoundingBox } from './glyphRenderService';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn as isGlyphDrawnUtil, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
@@ -26,7 +26,8 @@ export const generateFea = (
     positioningRules: PositioningRules[] | null,
     glyphDataMap: Map<number, GlyphData>,
     metrics: FontMetrics,
-    glyphBBoxes: Map<number, BoundingBox | null>
+    glyphBBoxes: Map<number, BoundingBox | null>,
+    characterSets: CharacterSet[]
 ): string => {
     const scriptTag = Object.keys(fontRules).find(key => key !== 'groups' && key !== 'lookups');
     if (!scriptTag) {
@@ -457,8 +458,8 @@ export const generateFea = (
         positioningRules.forEach(rule => {
             if (rule.gpos) {
                 // JIT EXPANSION for generating pair tags
-                const bases = expandMembers(rule.base, groups);
-                const marks = expandMembers(rule.mark || [], groups);
+                const bases = expandMembers(rule.base, groups, characterSets);
+                const marks = expandMembers(rule.mark || [], groups, characterSets);
 
                 bases.forEach(baseName => {
                     marks.forEach(markName => {
@@ -612,7 +613,8 @@ export const exportFeaFile = (
     positioningRules: PositioningRules[] | null,
     glyphDataMap: Map<number, GlyphData>,
     metrics: FontMetrics,
-    strokeThickness: number = 15
+    strokeThickness: number = 15,
+    characterSets: CharacterSet[]
 ) => {
     const glyphBBoxes = new Map<number, BoundingBox | null>();
     glyphDataMap.forEach((glyphData, unicode) => {
@@ -628,7 +630,8 @@ export const exportFeaFile = (
         positioningRules,
         glyphDataMap,
         metrics,
-        glyphBBoxes
+        glyphBBoxes,
+        characterSets
     );
 
     const blob = new Blob([feaContent], { type: 'text/plain' });

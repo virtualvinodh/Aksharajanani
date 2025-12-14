@@ -784,7 +784,7 @@ export const exportToOtf = async (
 
     const feaContent = isFeaEditMode 
         ? manualFeaCode || '' 
-        : generateFea(fontRules, kerningMap, finalMarkPositioningMap, allCharsByUnicode, settings.fontName, positioningRules, finalGlyphData, metrics, glyphBBoxes);
+        : generateFea(fontRules, kerningMap, finalMarkPositioningMap, allCharsByUnicode, settings.fontName, positioningRules, finalGlyphData, metrics, glyphBBoxes, characterSets);
 
     // Stage 3: Use Pyodide to compile the FEA and patch the font
     // FIX: Added missing 't' argument to the function call.

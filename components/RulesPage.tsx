@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { Character, CharacterSet, GlyphData, AppSettings, KerningMap, MarkPositioningMap, PositioningRules, FontMetrics } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -130,7 +131,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
 
   const handleExportFea = () => {
     try {
-        exportFeaFile(localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, strokeThickness);
+        exportFeaFile(localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, strokeThickness, allCharacterSets);
     } catch (error) {
         showNotification(error instanceof Error ? error.message : 'Failed to export FEA file', 'error');
     }
@@ -150,8 +151,8 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
     glyphDataMap.forEach((glyphData, unicode) => {
         glyphBBoxes.set(unicode, getAccurateGlyphBBox(glyphData.paths, strokeThickness));
     });
-    return generateFea(localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, glyphBBoxes);
-  }, [localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, strokeThickness, glyphVersion]);
+    return generateFea(localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, glyphBBoxes, allCharacterSets);
+  }, [localRules, kerningMap, markPositioningMap, allCharsByUnicode, fontName, positioningRules, glyphDataMap, metrics, strokeThickness, glyphVersion, allCharacterSets]);
 
   const handleEnterEditMode = () => {
       if (!manualFeaCode || manualFeaCode.trim() === '') {
