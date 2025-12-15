@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
-import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon, RulesIcon, BackIcon, SaveIcon } from '../constants';
+import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon, RulesIcon, BackIcon, SaveIcon, FilterIcon } from '../constants';
 import CombinationCard from './CombinationCard';
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, AttachmentClass, RecommendedKerning } from '../types';
 import PositioningEditorPage from './PositioningEditorPage';
@@ -11,7 +11,7 @@ import { useProject } from '../contexts/ProjectContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useHorizontalScroll } from '../hooks/useHorizontalScroll';
-import { getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../services/glyphRenderService';
+import { getAccurateGlyphBBox, calculateDefaultMarkOffset, resolveAttachmentRule } from '../services/glyphRenderService';
 import { updatePositioningAndCascade, syncAttachmentClasses } from '../services/positioningService';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import Modal from './Modal';
@@ -20,6 +20,7 @@ import { parseSearchQuery, getCharacterMatchScore } from '../utils/searchUtils';
 import { expandMembers } from '../services/groupExpansionService';
 import { useRules } from '../contexts/RulesContext';
 import { deepClone } from '../utils/cloneUtils';
+import PositioningRuleBlock from './positioning/PositioningRuleBlock';
 
 
 // Main Positioning Page Component
@@ -54,10 +55,24 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     // Access groups from rules state
     const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
 
-    const [viewBy, setViewBy] = useState<'base' | 'mark'>('base');
+    // View Mode State: 'rules' (New Default) | 'base' | 'mark'
+    const [viewMode, setViewMode] = useState<'rules' | 'base' | 'mark'>('rules');
+    
+    // Rule Drill-Down State
+    const [selectedRuleGroupId, setSelectedRuleGroupId] = useState<number | null>(null);
+    const [rulePage, setRulePage] = useState(1);
+    const ITEMS_PER_PAGE = 36;
+    
+    // For 'base'/'mark' modes (Grid View)
     const [activeTab, setActiveTab] = useState(0);
+    
+    // Shared Editing State
     const [editingPair, setEditingPair] = useState<{ base: Character, mark: Character, ligature: Character } | null>(null);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    
+    // We need to know WHICH list we are editing (Grid or Rule) to support navigation properly
+    const [editingContextList, setEditingContextList] = useState<{ base: Character, mark: Character, ligature: Character }[]>([]);
+
     const [isReuseModalOpen, setIsReuseModalOpen] = useState(false);
     const [reuseSourceItem, setReuseSourceItem] = useState<Character | null>(null);
     const [showIncompleteNotice, setShowIncompleteNotice] = useState(false);
@@ -79,8 +94,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     
     // Ref map to scroll cards into view
     const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-    // Local ref to persist the scroll target even when pendingNavigationTarget is cleared or component re-renders
-    const localScrollTarget = useRef<string | null>(null);
     
     const isSearching = searchQuery.trim().length > 0;
     const isFiltered = filterMode !== 'none' || isSearching;
@@ -109,8 +122,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         
         if (positioningRules && characterSets) {
             for (const rule of positioningRules) {
-                // JIT EXPANSION: Expand groups in the rule here
-                // Pass characterSets to resolve $group references that map to character sets
                 const allPossibleMarks = expandMembers(rule.mark || [], groups, characterSets);
                 const allBases = expandMembers(rule.base, groups, characterSets);
 
@@ -126,21 +137,15 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                         let targetLigature: Character | undefined;
                         let targetLigatureName: string | undefined;
 
-                        // 1. Check ligatureMap for an explicit name.
                         targetLigatureName = rule.ligatureMap?.[baseName]?.[markName];
                         
-                        // If not found, check if ligatureMap used a group key for the base
                         if (!targetLigatureName && rule.ligatureMap) {
                              for (const groupKey in rule.ligatureMap) {
                                  if (groupKey.startsWith('$') || groupKey.startsWith('@')) {
-                                     // If this group contains the current base char
                                      if (expandMembers([groupKey], groups, characterSets).includes(baseName)) {
-                                         // Check mark side
                                          const marksMap = rule.ligatureMap[groupKey];
-                                          // Simple check for mark name
                                          targetLigatureName = marksMap[markName];
                                          if(!targetLigatureName) {
-                                             // Check if mark was also in a group in the map
                                               for(const markGroupKey in marksMap) {
                                                    if ((markGroupKey.startsWith('$') || markGroupKey.startsWith('@')) && 
                                                        expandMembers([markGroupKey], groups, characterSets).includes(markName)) {
@@ -155,32 +160,24 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                              }
                         }
                         
-                        // 2. If not found, check font rules for a pre-defined ligature.
                         if (!targetLigatureName) {
                             const componentKey = `${baseChar.name}-${markChar.name}`;
                             targetLigatureName = componentsToLigs.get(componentKey);
                         }
 
-                        // 3. If a name is found (from either source), try to find the character.
                         if (targetLigatureName) {
-                            if (targetLigatureName.startsWith('$') || targetLigatureName.startsWith('@')) {
-                                 // Simple index matching if possible (complex)
-                            } else {
+                            if (!targetLigatureName.startsWith('$') && !targetLigatureName.startsWith('@')) {
                                 targetLigature = allChars.get(targetLigatureName);
                             }
                         }
 
-                        // 4. If no character was found by name, fall back to default behavior
-                        //    or create a new PUA character if an explicit name was given.
                         if (!targetLigature) {
-                            // Use the explicit name if provided, otherwise concatenate
                             const finalLigatureName = targetLigatureName || (baseChar.name + markChar.name);
                             const existingChar = allChars.get(finalLigatureName);
 
                             if (existingChar) {
                                 targetLigature = existingChar;
                             } else {
-                                // Create a new virtual PUA character in Plane 16.
                                 virtualPuaCounter++;
                                 targetLigature = {
                                     name: finalLigatureName,
@@ -209,7 +206,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         }
     }, [rulesState.fontRules, rulesDispatch]);
 
-    // Initialize local state when manager opens
     useEffect(() => {
         if (isRulesManagerOpen) {
             setLocalPosRules(deepClone(positioningRules || []));
@@ -229,28 +225,22 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         setRecommendedKerning(localKerning);
         handleSetGroups(localGroups);
         
-        // --- CONTINUOUS SYNC TRIGGER ---
-        // When rules/classes are updated, enforce synchronization
         if (settings && metrics && characterSets) {
             const syncResult = syncAttachmentClasses({
                 markPositioningMap,
                 glyphDataMap,
                 allCharsByName: allChars,
                 allLigaturesByKey: positioningData.allLigaturesByKey,
-                
-                // Use the NEW rules/classes for synchronization
                 markAttachmentClasses: localMarkClasses,
                 baseAttachmentClasses: localBaseClasses,
                 positioningRules: localPosRules,
                 markAttachmentRules: localMarkAttach,
                 groups: localGroups,
-                
                 characterSets: characterSets,
                 strokeThickness: settings.strokeThickness,
                 metrics: metrics
             });
             
-            // Apply updates
             positioningDispatch({ type: 'SET_MAP', payload: syncResult.updatedMarkPositioningMap });
             glyphDataDispatch({ type: 'SET_MAP', payload: syncResult.updatedGlyphDataMap });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: syncResult.updatedCharacterSets });
@@ -258,62 +248,119 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
     }, [localPosRules, localMarkAttach, localMarkClasses, localBaseClasses, localKerning, localGroups, setPositioningRules, setMarkAttachmentRules, setMarkAttachmentClasses, setBaseAttachmentClasses, setRecommendedKerning, handleSetGroups, markPositioningMap, glyphDataMap, allChars, positioningData.allLigaturesByKey, characterSets, settings, metrics, positioningDispatch, glyphDataDispatch, characterDispatch]);
 
-    // Autosave effect for Manager
     useEffect(() => {
         if (!isRulesManagerOpen || !settings?.isAutosaveEnabled) return;
-        
-        const timer = setTimeout(() => {
-            saveManagerChanges();
-        }, 1000);
+        const timer = setTimeout(() => { saveManagerChanges(); }, 1000);
         return () => clearTimeout(timer);
     }, [localPosRules, localMarkAttach, localMarkClasses, localBaseClasses, localKerning, localGroups, isRulesManagerOpen, settings?.isAutosaveEnabled, saveManagerChanges]);
 
-
     
-    // Global check for incomplete pairs to control the notice
-    useEffect(() => {
-        if (!positioningRules || !allChars || !glyphDataMap || !characterSets) {
-            setShowIncompleteNotice(false);
-            return;
-        }
-
-        const allPossiblePairs = new Set<string>();
-        let drawnPairCount = 0;
-
-        for (const rule of positioningRules) {
-            const allPossibleMarks = expandMembers(rule.mark || [], groups, characterSets);
-            const allBases = expandMembers(rule.base, groups, characterSets);
+    // --- Data Preparation for Rule-Centric View ---
+    const ruleGroups = useMemo(() => {
+        if (!positioningRules || !characterSets) return [];
+        
+        return positioningRules.map((rule, index) => {
+            const ruleBases = expandMembers(rule.base, groups, characterSets);
+            const ruleMarks = expandMembers(rule.mark || [], groups, characterSets);
             
-            for (const baseName of allBases) {
-                for (const markName of allPossibleMarks) {
+            const pairs: { base: Character; mark: Character; ligature: Character }[] = [];
+            
+            for (const baseName of ruleBases) {
+                for (const markName of ruleMarks) {
                     const baseChar = allChars.get(baseName);
                     const markChar = allChars.get(markName);
-
-                    if (baseChar && markChar) {
-                        const pairKey = `${baseChar.unicode}-${markChar.unicode}`;
-                        if (!allPossiblePairs.has(pairKey)) {
-                            allPossiblePairs.add(pairKey);
-                            if (isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
-                                drawnPairCount++;
-                            }
+                    if (baseChar && markChar && isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
+                        const ligature = positioningData.allLigaturesByKey.get(`${baseChar.unicode}-${markChar.unicode}`);
+                        if (ligature) {
+                            pairs.push({ base: baseChar, mark: markChar, ligature });
                         }
                     }
                 }
             }
+            return { rule, pairs, id: index };
+        }).filter(group => group.pairs.length > 0);
+
+    }, [positioningRules, groups, characterSets, allChars, glyphDataMap, positioningData.allLigaturesByKey, glyphVersion]);
+    
+    // Active Rule Group for Drill Down
+    const activeRuleGroup = useMemo(() => 
+        ruleGroups.find(g => g.id === selectedRuleGroupId),
+    [ruleGroups, selectedRuleGroupId]);
+
+    // --- Helper: Generate Unique Key for a Pair based on Class Membership ---
+    const getPairClassKey = useCallback((pair: { base: Character, mark: Character }) => {
+        const pairNameKey = `${pair.base.name}-${pair.mark.name}`;
+
+        // 1. Identify Base Key (Class ID or Char Name)
+        let baseKey = `B:${pair.base.name}`;
+        const baseClassIdx = baseAttachmentClasses?.findIndex(cls => 
+            expandMembers(cls.members, groups, characterSets).includes(pair.base.name)
+        );
+        
+        if (baseClassIdx !== undefined && baseClassIdx > -1) {
+            const cls = baseAttachmentClasses![baseClassIdx];
+            const isException = (cls.exceptions && expandMembers(cls.exceptions, groups, characterSets).includes(pair.base.name)) || 
+                                (cls.exceptPairs && cls.exceptPairs.includes(pairNameKey));
+            
+            if (!isException) {
+                baseKey = `BC:${baseClassIdx}`;
+            }
+        }
+
+        // 2. Identify Mark Key (Class ID or Char Name)
+        let markKey = `M:${pair.mark.name}`;
+        const markClassIdx = markAttachmentClasses?.findIndex(cls => 
+            expandMembers(cls.members, groups, characterSets).includes(pair.mark.name)
+        );
+        
+        if (markClassIdx !== undefined && markClassIdx > -1) {
+            const cls = markAttachmentClasses![markClassIdx];
+            const isException = (cls.exceptions && expandMembers(cls.exceptions, groups, characterSets).includes(pair.mark.name)) || 
+                                (cls.exceptPairs && cls.exceptPairs.includes(pairNameKey));
+                                
+             if (!isException) {
+                 markKey = `MC:${markClassIdx}`;
+             }
         }
         
-        setShowIncompleteNotice(drawnPairCount < allPossiblePairs.size);
+        return `${baseKey}-${markKey}`;
+    }, [baseAttachmentClasses, markAttachmentClasses, groups, characterSets]);
 
-    }, [positioningRules, allChars, glyphDataMap, glyphVersion, groups, characterSets]);
 
+    // --- Filtered Pairs Logic (Consolidated by Class) ---
+    const uniqueRepPairs = useMemo(() => {
+        if (!activeRuleGroup) return [];
 
-    const navItems = useMemo(() => {
-        if (!positioningRules || isFiltered || !characterSets) return [];
-        const items = new Map<number, Character>();
+        const seenKeys = new Set<string>();
         
+        return activeRuleGroup.pairs.filter(pair => {
+            const uniqueKey = getPairClassKey(pair);
+            
+            if (seenKeys.has(uniqueKey)) {
+                return false; // Skip redundant siblings
+            }
+            
+            seenKeys.add(uniqueKey);
+            return true; // Keep representative
+        });
+
+    }, [activeRuleGroup, getPairClassKey]);
+
+    const pagedRulePairs = useMemo(() => {
+        if (!uniqueRepPairs) return [];
+        const start = (rulePage - 1) * ITEMS_PER_PAGE;
+        return uniqueRepPairs.slice(start, start + ITEMS_PER_PAGE);
+    }, [uniqueRepPairs, rulePage]);
+
+    const ruleTotalPages = uniqueRepPairs ? Math.ceil(uniqueRepPairs.length / ITEMS_PER_PAGE) : 0;
+    
+    // --- Data Preparation for Grid View (Base/Mark) ---
+    const navItems = useMemo(() => {
+        if (!positioningRules || isFiltered || !characterSets || viewMode === 'rules') return [];
+        const items = new Map<number, Character>();
         const sourceSet = new Set<string>();
         
-        if (viewBy === 'base') {
+        if (viewMode === 'base') {
              positioningRules.flatMap(r => expandMembers(r.base, groups, characterSets)).forEach(m => sourceSet.add(m));
         } else {
              positioningRules.flatMap(r => expandMembers(r.mark, groups, characterSets)).forEach(m => sourceSet.add(m));
@@ -327,12 +374,12 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         });
 
         return Array.from(items.values()).sort((a, b) => a.unicode - b.unicode);
-    }, [positioningRules, allChars, viewBy, glyphDataMap, glyphVersion, isFiltered, groups, characterSets]);
+    }, [positioningRules, allChars, viewMode, glyphDataMap, glyphVersion, isFiltered, groups, characterSets]);
 
     const activeItem = navItems[activeTab];
 
     const displayedCombinations = useMemo(() => {
-        if (!positioningRules || !characterSets) return [];
+        if (!positioningRules || !characterSets || viewMode === 'rules') return [];
         
         const allCombinations: { base: Character; mark: Character; ligature: Character }[] = [];
         const addedLigatures = new Set<number>();
@@ -340,18 +387,15 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         const rulesToProcess = positioningRules;
         
         for (const rule of rulesToProcess) {
-            // JIT Expansion
             const ruleBases = expandMembers(rule.base, groups, characterSets);
             const ruleMarks = expandMembers(rule.mark, groups, characterSets);
             
-            // Determine loop context
             let basesToCheck = ruleBases;
             let marksToCheck = ruleMarks;
             
             if (!isFiltered) {
-                if (!activeItem) return []; // No tab selected in normal mode
-                
-                if (viewBy === 'base') {
+                if (!activeItem) return []; 
+                if (viewMode === 'base') {
                      if (!ruleBases.includes(activeItem.name)) continue;
                      basesToCheck = [activeItem.name];
                 } else {
@@ -375,32 +419,25 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             }
         }
 
-        // Base filtering: Only show pairs where both components are drawn
         let result = allCombinations.filter(
             ({ base, mark }) => isGlyphDrawn(glyphDataMap.get(base.unicode)) && isGlyphDrawn(glyphDataMap.get(mark.unicode))
         );
         
-        // Mode filtering
         if (isFiltered) {
             if (filterMode === 'completed') {
                 result = result.filter(c => markPositioningMap.has(`${c.base.unicode}-${c.mark.unicode}`));
             } else if (filterMode === 'incomplete') {
                 result = result.filter(c => !markPositioningMap.has(`${c.base.unicode}-${c.mark.unicode}`));
             }
-            // if filterMode === 'all', we just return the full list
-            
-            // Search Filtering (Smart Sorting)
             if (isSearching) {
                 const q = parseSearchQuery(searchQuery);
                 if (q.isEffective) {
                     const matches = result.map(combo => {
-                        // Check base, mark, or ligature name against query
                         const scoreBase = getCharacterMatchScore(combo.base, q);
                         const scoreMark = getCharacterMatchScore(combo.mark, q);
                         const scoreLig = getCharacterMatchScore(combo.ligature, q);
 
                         let bestScore = -1;
-                        // Prioritize ligature match, then base/mark
                         if (scoreLig > 0) bestScore = scoreLig;
                         else {
                             if (scoreBase > 0 && scoreMark > 0) bestScore = Math.min(scoreBase, scoreMark);
@@ -413,101 +450,67 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
                     matches.sort((a, b) => {
                         if (a.score !== b.score) return a.score - b.score;
-                        // Secondary sort by base unicode, then mark unicode
                         return (a.combo.base.unicode || 0) - (b.combo.base.unicode || 0) || (a.combo.mark.unicode || 0) - (b.combo.mark.unicode || 0);
                     });
 
                     result = matches.map(m => m.combo);
                 }
             } else {
-                // Default Sort for flat list
                 result.sort((a,b) => (a.base.unicode || 0) - (b.base.unicode || 0) || (a.mark.unicode || 0) - (b.mark.unicode || 0));
             }
         }
-
         return result;
+    }, [activeItem, positioningRules, viewMode, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion, isFiltered, filterMode, markPositioningMap, searchQuery, isSearching, groups, characterSets]);
 
-    }, [activeItem, positioningRules, viewBy, allChars, positioningData.allLigaturesByKey, glyphDataMap, glyphVersion, isFiltered, filterMode, markPositioningMap, searchQuery, isSearching, groups, characterSets]);
-
-    // Handle Deep Navigation from Command Palette
+    // Handle Deep Navigation / URL Linking
     useEffect(() => {
         if (!pendingNavigationTarget) return;
 
-        // In filtered mode, we don't need to switch tabs, just find it in the flat list
-        if (isFiltered) {
-             const [baseId, markId] = pendingNavigationTarget.split('-').map(Number);
-             const comboIndex = displayedCombinations.findIndex(
-                c => c.base.unicode === baseId && c.mark.unicode === markId
-             );
+        const [baseId, markId] = pendingNavigationTarget.split('-').map(Number);
+
+        // 1. Try finding in Rules View (Preferred)
+        if (viewMode === 'rules') {
+             for (const group of ruleGroups) {
+                 const comboIndex = group.pairs.findIndex(c => c.base.unicode === baseId && c.mark.unicode === markId);
+                 if (comboIndex !== -1) {
+                     // Auto-expand the rule group and navigate
+                     setSelectedRuleGroupId(group.id);
+                     const page = Math.floor(comboIndex / ITEMS_PER_PAGE) + 1;
+                     setRulePage(page);
+                     
+                     const pair = group.pairs[comboIndex];
+                     setEditingPair(pair);
+
+                     // IMPORTANT: Context list must be filtered by class key for correct navigation scope
+                     const classKey = getPairClassKey(pair);
+                     const filteredContext = group.pairs.filter(p => getPairClassKey(p) === classKey);
+                     setEditingContextList(filteredContext);
+                     
+                     // Find index in filtered list
+                     const filteredIndex = filteredContext.findIndex(p => p.base.unicode === baseId && p.mark.unicode === markId);
+                     setEditingIndex(filteredIndex);
+
+                     setPendingNavigationTarget(null);
+                     return;
+                 }
+             }
+        }
+        
+        // 2. Try finding in Grid View (Legacy/Filtered)
+        // If we are in grid view, check displayedCombinations
+        if (viewMode !== 'rules') {
+             const comboIndex = displayedCombinations.findIndex(c => c.base.unicode === baseId && c.mark.unicode === markId);
              if (comboIndex !== -1) {
                 setEditingPair(displayedCombinations[comboIndex]);
                 setEditingIndex(comboIndex);
-                localScrollTarget.current = pendingNavigationTarget;
+                setEditingContextList(displayedCombinations);
                 setPendingNavigationTarget(null);
+                return;
              }
-             return;
-        }
-
-        // Normal mode navigation logic
-        if (navItems.length === 0) return;
-        const [baseId, markId] = pendingNavigationTarget.split('-').map(Number);
-        const targetId = viewBy === 'base' ? baseId : markId;
-        const tabIndex = navItems.findIndex(item => item.unicode === targetId);
-
-        if (tabIndex === -1) {
-            // Try switching view mode if not found in current mode
-            const otherView = viewBy === 'base' ? 'mark' : 'base';
-            if (viewBy !== otherView) setViewBy(otherView);
-            // The effect will re-run after viewBy changes and navItems re-calcs
-            return;
-        }
-
-        if (activeTab !== tabIndex) {
-            setActiveTab(tabIndex);
-            // We return here to allow the component to re-render with the new tab active.
-            // This ensures 'displayedCombinations' is updated before we try to find the pair.
-            return; 
-        }
-
-        // Tab is active and displayedCombinations should be ready. 
-        // Try to find the specific pair and open the editor immediately.
-        const comboIndex = displayedCombinations.findIndex(
-            c => c.base.unicode === baseId && c.mark.unicode === markId
-        );
-
-        if (comboIndex !== -1) {
-            setEditingPair(displayedCombinations[comboIndex]);
-            setEditingIndex(comboIndex);
-            // Store the target in a local ref so we can scroll to it later when the editor closes.
-            localScrollTarget.current = pendingNavigationTarget;
-            // Clear the global pending target so we don't re-trigger this logic.
-            setPendingNavigationTarget(null);
         }
         
-    }, [pendingNavigationTarget, navItems, viewBy, activeTab, displayedCombinations, setPendingNavigationTarget, isFiltered]);
+    }, [pendingNavigationTarget, viewMode, ruleGroups, displayedCombinations, setPendingNavigationTarget, getPairClassKey]);
 
-    // Scroll to card after tab switch or editor close
-    useEffect(() => {
-         const target = localScrollTarget.current || pendingNavigationTarget;
-         
-         if (target && cardRefs.current.has(target) && !editingPair && !isRulesManagerOpen) {
-            // Short timeout to ensure DOM is stable after re-mounting grid
-            setTimeout(() => {
-                 cardRefs.current.get(target)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                 // Clear targets after scrolling
-                 if (target === pendingNavigationTarget) setPendingNavigationTarget(null);
-                 if (target === localScrollTarget.current) localScrollTarget.current = null;
-            }, 100);
-         }
-    }, [activeTab, pendingNavigationTarget, setPendingNavigationTarget, displayedCombinations, editingPair, isRulesManagerOpen]);
-
-    // Reset tab on view change, ONLY if not navigating
-    useEffect(() => {
-        if (!pendingNavigationTarget && !isFiltered) {
-             setActiveTab(0);
-        }
-    }, [viewBy, pendingNavigationTarget, isFiltered]);
-    
 
     const savePositioningUpdate = useCallback((
         baseChar: Character,
@@ -531,27 +534,25 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             allChars, allLigaturesByKey: positioningData.allLigaturesByKey,
             markAttachmentClasses, baseAttachmentClasses,
             markPositioningMap, glyphDataMap, characterSets, positioningRules,
-            markAttachmentRules, // Pass explicit rules here
-            groups, // Pass groups for JIT expansion inside cascade logic
-            strokeThickness: settings.strokeThickness // Pass actual stroke thickness for correct bbox calculations
+            markAttachmentRules,
+            groups,
+            strokeThickness: settings.strokeThickness
         });
     
         const propagatedCount = result.updatedMarkPositioningMap.size - markPositioningMap.size - 1;
     
         if (propagatedCount > 0) {
             const undoPropagation = () => {
-                // 1. Revert everything to the state before the user's action
                 glyphDataDispatch({ type: 'SET_MAP', payload: snapshot.glyphDataMap });
                 characterDispatch({ type: 'SET_CHARACTER_SETS', payload: snapshot.characterSets });
                 positioningDispatch({ type: 'SET_MAP', payload: snapshot.markPositioningMap });
     
-                // 2. Re-apply just the single manual change
                 const reapplyResult = updatePositioningAndCascade({
                     baseChar, markChar, targetLigature, newGlyphData, newOffset, newBearings,
                     allChars, allLigaturesByKey: positioningData.allLigaturesByKey,
-                    markAttachmentClasses: [], // Prevent re-cascading
-                    baseAttachmentClasses: [], // Prevent re-cascading
-                    markPositioningMap: snapshot.markPositioningMap, // Start from the snapshot
+                    markAttachmentClasses: [], 
+                    baseAttachmentClasses: [], 
+                    markPositioningMap: snapshot.markPositioningMap,
                     glyphDataMap: snapshot.glyphDataMap,
                     characterSets: snapshot.characterSets,
                     positioningRules,
@@ -564,31 +565,21 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 glyphDataDispatch({ type: 'SET_MAP', payload: reapplyResult.updatedGlyphDataMap });
                 characterDispatch({ type: 'SET_CHARACTER_SETS', payload: reapplyResult.updatedCharacterSets });
     
-                showNotification(t('positionPropagationReverted'), 'info');
+                showNotification(t('positioningPropagationReverted'), 'info');
             };
     
-            // Perform the optimistic update
             positioningDispatch({ type: 'SET_MAP', payload: result.updatedMarkPositioningMap });
             glyphDataDispatch({ type: 'SET_MAP', payload: result.updatedGlyphDataMap });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: result.updatedCharacterSets });
     
-            // Show undoable notification - ONLY if not autosave
             if (!isAutosave) {
-                showNotification(
-                    t('propagatedPositions', { count: propagatedCount }),
-                    'success',
-                    { onUndo: undoPropagation, duration: 7000 }
-                );
+                showNotification(t('propagatedPositions', { count: propagatedCount }), 'success', { onUndo: undoPropagation, duration: 7000 });
             }
-    
         } else {
-            // No propagation, just a simple save
             positioningDispatch({ type: 'SET_MAP', payload: result.updatedMarkPositioningMap });
             glyphDataDispatch({ type: 'SET_MAP', payload: result.updatedGlyphDataMap });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: result.updatedCharacterSets });
-            if (!isAutosave) {
-                showNotification(t('positioningUpdated'), 'success');
-            }
+            if (!isAutosave) showNotification(t('positioningUpdated'), 'success');
         }
     
     }, [
@@ -618,7 +609,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         }));
         const combinedPaths = [...baseGlyph.paths, ...transformedMarkPaths];
         const newGlyphData = { paths: combinedPaths };
-    
         const newBearings = { lsb: ligature.lsb, rsb: ligature.rsb };
     
         savePositioningUpdate(base, mark, ligature, newGlyphData, offset, newBearings);
@@ -630,51 +620,50 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         setIsReuseModalOpen(true);
     };
     
+    // Reuse functionality (kept for grid view compatibility, might need adaptation for rule view)
     const fullyPositionedItems = useMemo(() => {
-        if (isFiltered || !characterSets) return []; 
+        if (isFiltered || !characterSets || viewMode === 'rules') return []; 
         return navItems.filter(item => {
-            // Find all combinations for this item
             const combinations: { base: Character; mark: Character }[] = [];
             positioningRules?.forEach(rule => {
-                // JIT Expansion
                 const ruleBases = expandMembers(rule.base, groups, characterSets);
                 const ruleMarks = expandMembers(rule.mark, groups, characterSets);
 
-                if ((viewBy === 'base' && ruleBases.includes(item.name)) || (viewBy === 'mark' && ruleMarks.includes(item.name))) {
-                    const otherSet = viewBy === 'base' ? ruleMarks : ruleBases;
+                if ((viewMode === 'base' && ruleBases.includes(item.name)) || (viewMode === 'mark' && ruleMarks.includes(item.name))) {
+                    const otherSet = viewMode === 'base' ? ruleMarks : ruleBases;
                     otherSet.forEach(otherName => {
                         const otherChar = allChars.get(otherName);
                         if(otherChar) {
                             combinations.push({
-                                base: viewBy === 'base' ? item : otherChar,
-                                mark: viewBy === 'base' ? otherChar : item
+                                base: viewMode === 'base' ? item : otherChar,
+                                mark: viewMode === 'base' ? otherChar : item
                             });
                         }
                     });
                 }
             });
-            // Check if all of its combinations are positioned
             return combinations.length > 0 && combinations.every(combo =>
                 markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`)
             );
         }).filter(item => item.unicode !== reuseSourceItem?.unicode);
-    }, [navItems, positioningRules, viewBy, allChars, markPositioningMap, reuseSourceItem, isFiltered, groups, characterSets]);
+    }, [navItems, positioningRules, viewMode, allChars, markPositioningMap, reuseSourceItem, isFiltered, groups, characterSets]);
     
     const handleCopyPositions = (copyFromItem: Character) => {
+        // Reuse logic simplified: works on displayedCombinations (Grid View).
+        // For Rule View, reuse is less direct via this modal, relying more on Class linking.
         if (!reuseSourceItem) return;
 
         const newMarkPositioningMap = new Map(markPositioningMap);
         const newGlyphDataMap = new Map(glyphDataMap);
         const ligaturesToAddOrUpdate: Character[] = [];
-
-        const targetCombinations = displayedCombinations;
         
         let positionsCopiedCount = 0;
-
-        targetCombinations.forEach(targetCombo => {
-            const otherChar = viewBy === 'base' ? targetCombo.mark : targetCombo.base;
-            const sourceBase = viewBy === 'base' ? copyFromItem : otherChar;
-            const sourceMark = viewBy === 'base' ? otherChar : copyFromItem;
+        
+        // Only works in Grid View efficiently
+        displayedCombinations.forEach(targetCombo => {
+            const otherChar = viewMode === 'base' ? targetCombo.mark : targetCombo.base;
+            const sourceBase = viewMode === 'base' ? copyFromItem : otherChar;
+            const sourceMark = viewMode === 'base' ? otherChar : copyFromItem;
             
             const sourceKey = `${sourceBase.unicode}-${sourceMark.unicode}`;
             const sourceOffset = markPositioningMap.get(sourceKey);
@@ -735,34 +724,34 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     };
 
     const handleNavigatePair = (newIndex: number) => {
-        if (newIndex >= 0 && newIndex < displayedCombinations.length) {
-            setEditingPair(displayedCombinations[newIndex]);
+        if (newIndex >= 0 && newIndex < editingContextList.length) {
+            setEditingPair(editingContextList[newIndex]);
             setEditingIndex(newIndex);
         }
     };
     
+    // Auto-Position (Grid View specific, or filtered list)
     const unpositionedCount = useMemo(() => {
-        return displayedCombinations.filter(combo => {
+        // In Rule View, this is not shown globally but per block? 
+        // For simplicity, this button applies to "Visible List"
+        const listToCheck = viewMode === 'rules' ? [] : displayedCombinations;
+        
+        return listToCheck.filter(combo => {
             const isPositioned = markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`);
-            const baseIsDrawn = isGlyphDrawn(glyphDataMap.get(combo.base.unicode));
-            const markIsDrawn = isGlyphDrawn(glyphDataMap.get(combo.mark.unicode));
-            return !isPositioned && baseIsDrawn && markIsDrawn;
+            return !isPositioned;
         }).length;
-    }, [displayedCombinations, markPositioningMap, glyphDataMap, glyphVersion]);
+    }, [displayedCombinations, markPositioningMap, viewMode]);
 
     const handleAcceptAllDefaults = useCallback(() => {
         if (!characterSets) return;
+        
+        // Apply only to currently visible list (Grid View)
         const unpositionedPairs = displayedCombinations.filter(combo => {
             const isPositioned = markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`);
-            const baseIsDrawn = isGlyphDrawn(glyphDataMap.get(combo.base.unicode));
-            const markIsDrawn = isGlyphDrawn(glyphDataMap.get(combo.mark.unicode));
-            return !isPositioned && baseIsDrawn && markIsDrawn;
+            return !isPositioned;
         });
 
-        if (unpositionedPairs.length === 0) {
-            showNotification(t('noUnpositionedPairs'), 'info');
-            return;
-        }
+        if (unpositionedPairs.length === 0) return;
         
         let tempMarkPositioningMap = new Map(markPositioningMap);
         let tempGlyphDataMap = new Map(glyphDataMap);
@@ -775,7 +764,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
             const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, settings.strokeThickness);
             const markBbox = getAccurateGlyphBBox(markGlyph.paths, settings.strokeThickness);
-            // Pass groups for expansion inside offset calculation
             const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, tempCharacterSets, false, groups);
 
             const transformedMarkPaths = JSON.parse(JSON.stringify(markGlyph.paths)).map((p: Path) => ({
@@ -810,22 +798,18 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         characterDispatch({ type: 'SET_CHARACTER_SETS', payload: tempCharacterSets });
 
         showNotification(t('acceptedAllDefaults', { count: unpositionedPairs.length }), 'success');
-    }, [
-        displayedCombinations, markPositioningMap, glyphDataMap, showNotification, t, 
-        metrics, settings, markAttachmentRules, characterSets, allChars, positioningData.allLigaturesByKey, 
-        markAttachmentClasses, baseAttachmentClasses, positioningRules, 
-        positioningDispatch, glyphDataDispatch, characterDispatch, groups
-    ]);
+    }, [displayedCombinations, markPositioningMap, glyphDataMap, showNotification, t, metrics, settings, markAttachmentRules, characterSets, allChars, positioningData.allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses, positioningRules, positioningDispatch, glyphDataDispatch, characterDispatch, groups]);
     
     const hasManuallyPositioned = useMemo(() => {
+        // Only checked for displayed grid
+        if (viewMode === 'rules') return false;
         return displayedCombinations.some(combo => 
             markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`)
         );
-    }, [displayedCombinations, markPositioningMap]);
+    }, [displayedCombinations, markPositioningMap, viewMode]);
 
     const handleResetPositions = useCallback(() => {
         if (!characterSets) return;
-        // In filtered mode, reset everything in list. In nav mode, reset active item's stuff.
         const pairsToReset = displayedCombinations; 
         
         const newMarkPositioningMap = new Map(markPositioningMap);
@@ -834,28 +818,23 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     
         for (const combo of pairsToReset) {
             const key = `${combo.base.unicode}-${combo.mark.unicode}`;
-            
             if (markPositioningMap.has(key)) {
                 newMarkPositioningMap.delete(key);
-    
                 const relevantRule = positioningRules?.find(rule => 
                     expandMembers(rule.base, groups, characterSets).includes(combo.base.name) && 
                     expandMembers(rule.mark, groups, characterSets).includes(combo.mark.name)
                 );
-                
                 if (relevantRule?.gsub && combo.ligature.unicode) {
                      newGlyphDataMap.delete(combo.ligature.unicode);
                 }
                 resetCount++;
             }
         }
-    
         if (resetCount > 0) {
             positioningDispatch({ type: 'SET_MAP', payload: newMarkPositioningMap });
             glyphDataDispatch({ type: 'SET_MAP', payload: newGlyphDataMap });
             showNotification(t('positionsResetSuccess', { name: activeItem ? activeItem.name : `${resetCount} pairs` }), 'success');
         }
-        
         setIsResetConfirmOpen(false);
     }, [activeItem, displayedCombinations, markPositioningMap, glyphDataMap, positioningRules, positioningDispatch, glyphDataDispatch, showNotification, t, groups, characterSets]);
 
@@ -878,9 +857,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             newGlyphDataMap.delete(ligature.unicode);
             glyphDataDispatch({ type: 'SET_MAP', payload: newGlyphDataMap });
         }
-    
         showNotification(t('positionResetSuccess', { name: ligature.name }), 'success');
-    
     }, [markPositioningMap, positioningDispatch, positioningRules, glyphDataMap, glyphDataDispatch, showNotification, t, groups, characterSets]);
 
 
@@ -902,7 +879,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 markAttachmentRules={markAttachmentRules}
                 positioningRules={positioningRules}
                 allChars={allChars}
-                allPairs={displayedCombinations}
+                // Pass the specific context list for navigation
+                allPairs={editingContextList}
                 currentIndex={editingIndex}
                 onNavigate={handleNavigatePair}
                 characterSets={characterSets}
@@ -924,6 +902,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     };
     
     const bannerVisible = isFiltered || isRulesManagerOpen;
+    const isGridView = viewMode === 'base' || viewMode === 'mark';
 
     return (
         <div className="w-full h-full flex flex-col">
@@ -931,18 +910,25 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 <div className="flex flex-row justify-between items-center relative gap-2 sm:gap-0">
                     {!bannerVisible && (
                         <div className="flex-1 sm:flex-none flex justify-start sm:justify-center sm:absolute sm:left-1/2 sm:top-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 mr-2 sm:mr-0 min-w-0">
+                            {/* View Toggle */}
                             <div className="inline-flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg shadow-inner w-full sm:w-auto h-full items-stretch">
                                 <button 
-                                    onClick={() => setViewBy('base')} 
-                                    className={`flex-1 sm:flex-none px-2 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-normal text-center leading-tight flex items-center justify-center ${viewBy === 'base' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                                    onClick={() => setViewMode('rules')} 
+                                    className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-normal text-center leading-tight flex items-center justify-center ${viewMode === 'rules' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
                                 >
-                                    {t('viewByBase')}
+                                    By Rule
                                 </button>
                                 <button 
-                                    onClick={() => setViewBy('mark')} 
-                                    className={`flex-1 sm:flex-none px-2 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-normal text-center leading-tight flex items-center justify-center ${viewBy === 'mark' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                                    onClick={() => setViewMode('base')} 
+                                    className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-normal text-center leading-tight flex items-center justify-center ${viewMode === 'base' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
                                 >
-                                    {t('viewByMark')}
+                                    By Base
+                                </button>
+                                <button 
+                                    onClick={() => setViewMode('mark')} 
+                                    className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-normal text-center leading-tight flex items-center justify-center ${viewMode === 'mark' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                                >
+                                    By Mark
                                 </button>
                             </div>
                         </div>
@@ -983,15 +969,16 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                     className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-xs sm:text-sm"
                                 >
                                     <BackIcon className="w-4 h-4 flex-shrink-0" />
-                                    <span className="whitespace-nowrap">Back to Grid</span>
+                                    <span className="whitespace-nowrap">Back</span>
                                 </button>
                              </>
                         )}
                     </div>
                 </div>
                 
-                {!isRulesManagerOpen && !isFiltered && (
-                    <div className="relative">
+                {/* Secondary Nav for Grid View */}
+                {!isRulesManagerOpen && !isFiltered && isGridView && (
+                    <div className="relative mt-2">
                         {showNavArrows.left && (
                              <button onClick={() => handleScroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 dark:bg-gray-800/70 p-1 rounded-full shadow-md hover:bg-white dark:hover:bg-gray-800"><LeftArrowIcon className="h-5 w-5"/></button>
                         )}
@@ -1014,7 +1001,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 )}
             </div>
 
-            <div className="flex-grow overflow-y-auto p-6">
+            <div className="flex-grow overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/50">
                 {isRulesManagerOpen ? (
                     <PositioningRulesManager
                         positioningRules={localPosRules} setPositioningRules={setLocalPosRules}
@@ -1033,78 +1020,208 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                             </div>
                         )}
 
-                        {((!isFiltered && navItems.length === 0) || (isFiltered && displayedCombinations.length === 0)) && (
-                            <div className="text-center p-8 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    {isFiltered ? t('noResultsFound') : (viewBy === 'base' ? t('positioningNoBasesDrawn') : t('positioningNoMarksDrawn'))}
-                                </p>
-                            </div>
+                        {/* MODE 1: Rule-Centric View */}
+                        {viewMode === 'rules' && !isFiltered && (
+                            selectedRuleGroupId === null ? (
+                                // Level 1: List of Blocks
+                                <div className="space-y-6 max-w-4xl mx-auto">
+                                    {ruleGroups.map((group, idx) => (
+                                        <PositioningRuleBlock
+                                            key={group.id}
+                                            rule={group.rule}
+                                            pairs={group.pairs}
+                                            onEditPair={() => {
+                                                setSelectedRuleGroupId(group.id);
+                                                setRulePage(1);
+                                            }}
+                                            glyphDataMap={glyphDataMap}
+                                            markPositioningMap={markPositioningMap}
+                                            strokeThickness={settings.strokeThickness}
+                                            markAttachmentRules={markAttachmentRules}
+                                            characterSets={characterSets}
+                                            groups={groups}
+                                            glyphVersion={glyphVersion}
+                                            metrics={metrics}
+                                        />
+                                    ))}
+                                    {ruleGroups.length === 0 && (
+                                         <div className="text-center p-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                                            <p className="text-gray-500 italic">No rules defined or no glyphs drawn for rules.</p>
+                                         </div>
+                                    )}
+                                </div>
+                            ) : (
+                                // Level 2: Drill-down Grid
+                                <div className="max-w-6xl mx-auto animate-fade-in-up">
+                                    {/* Header with Back Button */}
+                                    <div className="flex items-center justify-between mb-6 border-b dark:border-gray-700 pb-4">
+                                        <div className="flex items-center gap-4">
+                                            <button 
+                                                onClick={() => setSelectedRuleGroupId(null)}
+                                                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                                title="Back to Rules"
+                                            >
+                                                <BackIcon />
+                                            </button>
+                                            <div>
+                                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Rule Details</h3>
+                                                {activeRuleGroup && (
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                        {activeRuleGroup.pairs.length} pairs total • Page {rulePage}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Grid */}
+                                    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4">
+                                        {pagedRulePairs.map((pair, idx) => {
+                                            const isPositioned = markPositioningMap.has(`${pair.base.unicode}-${pair.mark.unicode}`);
+                                            const pairId = `${pair.base.unicode}-${pair.mark.unicode}`;
+                                            // Calculate global index for navigation context
+                                            const globalIndex = ((rulePage - 1) * ITEMS_PER_PAGE) + idx;
+                                            
+                                            return (
+                                                <CombinationCard
+                                                    key={pairId}
+                                                    baseChar={pair.base}
+                                                    markChar={pair.mark}
+                                                    ligature={pair.ligature}
+                                                    isPositioned={isPositioned}
+                                                    canEdit={true}
+                                                    onClick={() => {
+                                                        setEditingPair(pair);
+                                                        // Find actual index in the full context list to allow proper navigation
+                                                        const actualIndex = activeRuleGroup!.pairs.indexOf(pair);
+                                                        setEditingIndex(actualIndex);
+                                                        
+                                                        // IMPORTANT: Filter context list by class key
+                                                        const classKey = getPairClassKey(pair);
+                                                        const filteredContext = activeRuleGroup!.pairs.filter(p => getPairClassKey(p) === classKey);
+                                                        setEditingContextList(filteredContext);
+                                                        
+                                                        // Recalculate index in filtered list
+                                                        const filteredIndex = filteredContext.findIndex(p => p.base.unicode === pair.base.unicode && p.mark.unicode === pair.mark.unicode);
+                                                        setEditingIndex(filteredIndex);
+                                                    }}
+                                                    onConfirmPosition={() => handleConfirmPosition(pair.base, pair.mark, pair.ligature)}
+                                                    glyphDataMap={glyphDataMap}
+                                                    strokeThickness={settings.strokeThickness}
+                                                    markAttachmentRules={markAttachmentRules}
+                                                    markPositioningMap={markPositioningMap}
+                                                    characterSets={characterSets}
+                                                    glyphVersion={glyphVersion}
+                                                    groups={groups}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Pagination Controls */}
+                                    {ruleTotalPages > 1 && (
+                                        <div className="flex justify-center items-center gap-4 mt-8">
+                                            <button
+                                                onClick={() => setRulePage(p => Math.max(1, p - 1))}
+                                                disabled={rulePage === 1}
+                                                className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 disabled:opacity-50 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                            >
+                                                <LeftArrowIcon />
+                                            </button>
+                                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                                Page {rulePage} of {ruleTotalPages}
+                                            </span>
+                                            <button
+                                                onClick={() => setRulePage(p => Math.min(ruleTotalPages, p + 1))}
+                                                disabled={rulePage === ruleTotalPages}
+                                                className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 disabled:opacity-50 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                            >
+                                                <RightArrowIcon />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )
                         )}
-                        
-                        {(activeItem || (isFiltered && displayedCombinations.length > 0)) && (
-                            <div key={activeItem?.unicode || 'flat-list'}>
-                                <div className="flex items-center gap-4 mb-4 flex-wrap">
-                                    {!isFiltered && (
-                                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
-                                            {t('combinationsFor', { item: activeItem!.name })}
-                                        </h2>
-                                    )}
-                                    {!isFiltered && (
+
+                        {/* MODE 2: Grid View (Base/Mark or Filtered) */}
+                        {(isGridView || isFiltered) && (
+                            <>
+                            {((!isFiltered && navItems.length === 0) || (isFiltered && displayedCombinations.length === 0)) && (
+                                <div className="text-center p-8 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                                    <p className="text-gray-600 dark:text-gray-400">
+                                        {isFiltered ? t('noResultsFound') : (viewMode === 'base' ? t('positioningNoBasesDrawn') : t('positioningNoMarksDrawn'))}
+                                    </p>
+                                </div>
+                            )}
+                            
+                            {(activeItem || (isFiltered && displayedCombinations.length > 0)) && (
+                                <div key={activeItem?.unicode || 'flat-list'}>
+                                    <div className="flex items-center gap-4 mb-4 flex-wrap">
+                                        {!isFiltered && (
+                                            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
+                                                {t('combinationsFor', { item: activeItem!.name })}
+                                            </h2>
+                                        )}
+                                        {!isFiltered && (
+                                            <button
+                                                onClick={() => handleOpenReuseModal(activeItem!)}
+                                                title={t('copyPositionFrom')}
+                                                className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                            >
+                                                <CopyIcon />
+                                            </button>
+                                        )}
                                         <button
-                                            onClick={() => handleOpenReuseModal(activeItem!)}
-                                            title={t('copyPositionFrom')}
-                                            className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                            onClick={handleAcceptAllDefaults}
+                                            disabled={unpositionedCount === 0}
+                                            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                                         >
-                                            <CopyIcon />
+                                            <CheckCircleIcon className="h-4 w-4" />
+                                            {t('acceptAllDefaults')}
                                         </button>
-                                    )}
-                                    <button
-                                        onClick={handleAcceptAllDefaults}
-                                        disabled={unpositionedCount === 0}
-                                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                    >
-                                        <CheckCircleIcon className="h-4 w-4" />
-                                        {t('acceptAllDefaults')}
-                                    </button>
-                                     <button
-                                        onClick={() => setIsResetConfirmOpen(true)}
-                                        disabled={!hasManuallyPositioned}
-                                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                    >
-                                        <UndoIcon />
-                                        {t('resetPositions')}
-                                    </button>
+                                        <button
+                                            onClick={() => setIsResetConfirmOpen(true)}
+                                            disabled={!hasManuallyPositioned}
+                                            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                        >
+                                            <UndoIcon />
+                                            {t('resetPositions')}
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4">
+                                        {displayedCombinations.map(({ base, mark, ligature }, index) => {
+                                            const isPositioned = markPositioningMap.has(`${base.unicode}-${mark.unicode}`);
+                                            const pairId = `${base.unicode}-${mark.unicode}`;
+                                            return (
+                                                <CombinationCard
+                                                    key={ligature.unicode}
+                                                    ref={(el) => { if (el) cardRefs.current.set(pairId, el); else cardRefs.current.delete(pairId); }}
+                                                    baseChar={base}
+                                                    markChar={mark}
+                                                    ligature={ligature}
+                                                    glyphDataMap={glyphDataMap}
+                                                    strokeThickness={settings.strokeThickness}
+                                                    isPositioned={isPositioned}
+                                                    canEdit={true}
+                                                    onClick={() => {
+                                                        setEditingPair({ base, mark, ligature });
+                                                        setEditingIndex(index);
+                                                        setEditingContextList(displayedCombinations);
+                                                    }}
+                                                    onConfirmPosition={() => handleConfirmPosition(base, mark, ligature)}
+                                                    markAttachmentRules={markAttachmentRules}
+                                                    markPositioningMap={markPositioningMap}
+                                                    characterSets={characterSets!}
+                                                    glyphVersion={glyphVersion}
+                                                    groups={groups}
+                                                />
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4">
-                                    {displayedCombinations.map(({ base, mark, ligature }, index) => {
-                                        const isPositioned = markPositioningMap.has(`${base.unicode}-${mark.unicode}`);
-                                        const pairId = `${base.unicode}-${mark.unicode}`;
-                                        return (
-                                            <CombinationCard
-                                                key={ligature.unicode}
-                                                ref={(el) => { if (el) cardRefs.current.set(pairId, el); else cardRefs.current.delete(pairId); }}
-                                                baseChar={base}
-                                                markChar={mark}
-                                                ligature={ligature}
-                                                glyphDataMap={glyphDataMap}
-                                                strokeThickness={settings.strokeThickness}
-                                                isPositioned={isPositioned}
-                                                canEdit={true}
-                                                onClick={() => {
-                                                    setEditingPair({ base, mark, ligature });
-                                                    setEditingIndex(index);
-                                                }}
-                                                onConfirmPosition={() => handleConfirmPosition(base, mark, ligature)}
-                                                markAttachmentRules={markAttachmentRules}
-                                                markPositioningMap={markPositioningMap}
-                                                characterSets={characterSets!}
-                                                glyphVersion={glyphVersion}
-                                                groups={groups}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                            )}
+                            </>
                         )}
                     </>
                 )}
