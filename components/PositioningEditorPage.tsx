@@ -388,6 +388,13 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         }
 
     }, [markPaths, glyphDataMap, markChar, settings.strokeThickness, isInputFocused, alignmentOffset]);
+    
+    // Calculate the user's manual deviation from the default anchor snap point.
+    // This value is passed to the preview strip to allow siblings to calculate their own
+    // relative positions based on their specific anchor points, ensuring accurate "Class Sync" preview.
+    const anchorDelta = useMemo(() => {
+        return VEC.sub(currentOffset, alignmentOffset);
+    }, [currentOffset, alignmentOffset]);
 
     useEffect(() => {
         return () => {
@@ -627,10 +634,14 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                 siblings={classSiblings}
                                 glyphDataMap={glyphDataMap}
                                 strokeThickness={settings.strokeThickness}
-                                currentOffset={currentOffset}
+                                anchorDelta={anchorDelta}
                                 isLinked={true} // Always render strip content, opacity handles visual cue
                                 orientation="horizontal"
                                 onSelectPair={handleSelectSibling}
+                                metrics={metrics}
+                                markAttachmentRules={markAttachmentRules}
+                                characterSets={characterSets}
+                                groups={groups}
                             />
                         </div>
                     )}

@@ -1,10 +1,11 @@
 
-import React, { useRef, useEffect, useState } from 'react';
-import { Character, GlyphData, Point } from '../../types';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
-import { renderPaths } from '../../services/glyphRenderService';
+import { renderPaths, calculateDefaultMarkOffset, getAccurateGlyphBBox } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
-import { LeftArrowIcon, RightArrowIcon, FoldIcon } from '../../constants';
+import { LeftArrowIcon, RightArrowIcon, FoldIcon, CloseIcon } from '../../constants';
+import { VEC } from '../../utils/vectorUtils';
 
 interface SiblingPair {
     base: Character;
@@ -16,70 +17,107 @@ interface ClassPreviewStripProps {
     siblings: SiblingPair[];
     glyphDataMap: Map<number, GlyphData>;
     strokeThickness: number;
-    currentOffset: Point;
+    anchorDelta: Point; // The manual deviation from the default anchor snap (calculated in Editor)
     isLinked: boolean;
     orientation?: 'horizontal' | 'vertical';
     onSelectPair: (pair: SiblingPair) => void;
+    
+    // Dependencies for anchor calculation
+    metrics: FontMetrics;
+    markAttachmentRules: MarkAttachmentRules | null;
+    characterSets: CharacterSet[];
+    groups: Record<string, string[]>;
 }
 
-const PREVIEW_SIZE = 80;
 const DRAWING_CANVAS_SIZE = 1000;
 
 const SiblingThumbnail: React.FC<{
     pair: SiblingPair;
     glyphDataMap: Map<number, GlyphData>;
     strokeThickness: number;
-    currentOffset: Point;
+    anchorDelta: Point;
     onClick: () => void;
-}> = React.memo(({ pair, glyphDataMap, strokeThickness, currentOffset, onClick }) => {
+    size?: number;
+    metrics: FontMetrics;
+    markAttachmentRules: MarkAttachmentRules | null;
+    characterSets: CharacterSet[];
+    groups: Record<string, string[]>;
+}> = React.memo(({ pair, glyphDataMap, strokeThickness, anchorDelta, onClick, size = 80, metrics, markAttachmentRules, characterSets, groups }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
+
+    const baseGlyph = glyphDataMap.get(pair.base.unicode);
+    const markGlyph = glyphDataMap.get(pair.mark.unicode);
+
+    // Memoize the default anchor offset for this specific sibling pair.
+    // This allows us to apply the "manual delta" relative to this sibling's own anchor points.
+    const defaultAnchorOffset = useMemo(() => {
+        if (!baseGlyph || !markGlyph) return { x: 0, y: 0 };
+        
+        // Calculate bounding boxes for the sibling's glyphs
+        const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, strokeThickness);
+        const markBbox = getAccurateGlyphBBox(markGlyph.paths, strokeThickness);
+        
+        // Calculate default anchor-based position
+        return calculateDefaultMarkOffset(
+            pair.base, 
+            pair.mark, 
+            baseBbox, 
+            markBbox, 
+            markAttachmentRules, 
+            metrics, 
+            characterSets, 
+            false, 
+            groups
+        );
+    }, [pair, baseGlyph, markGlyph, strokeThickness, markAttachmentRules, metrics, characterSets, groups]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (!ctx || !canvas) return;
 
-        ctx.clearRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
-
-        const baseGlyph = glyphDataMap.get(pair.base.unicode);
-        const markGlyph = glyphDataMap.get(pair.mark.unicode);
+        ctx.clearRect(0, 0, size, size);
         
         if (!baseGlyph || !markGlyph) return;
 
-        const scale = PREVIEW_SIZE / DRAWING_CANVAS_SIZE;
+        const scale = size / DRAWING_CANVAS_SIZE;
 
         ctx.save();
         ctx.scale(scale, scale);
 
-        // 1. Draw Base (Fixed)
-        renderPaths(ctx, baseGlyph.paths, { strokeThickness: strokeThickness * 1.5, color: theme === 'dark' ? '#475569' : '#CBD5E1' }); 
+        // 1. Draw Base (Fixed) - Darker shade for better visibility
+        renderPaths(ctx, baseGlyph.paths, { strokeThickness, color: theme === 'dark' ? '#64748B' : '#94A3B8' }); 
 
-        // 2. Draw Mark (Dynamic Offset)
+        // 2. Draw Mark (Relative to Sibling Anchor + Manual Delta)
+        // Current Visual Position = DefaultAnchorOffset + ManualDelta
+        const finalOffset = VEC.add(defaultAnchorOffset, anchorDelta);
+        
         ctx.save();
-        ctx.translate(currentOffset.x, currentOffset.y);
-        renderPaths(ctx, markGlyph.paths, { strokeThickness: strokeThickness * 1.5, color: theme === 'dark' ? '#818CF8' : '#4F46E5' }); 
+        ctx.translate(finalOffset.x, finalOffset.y);
+        renderPaths(ctx, markGlyph.paths, { strokeThickness, color: theme === 'dark' ? '#818CF8' : '#4F46E5' }); 
         ctx.restore();
 
         ctx.restore();
 
-    }, [pair, glyphDataMap, strokeThickness, currentOffset, theme]);
+    }, [pair, glyphDataMap, strokeThickness, defaultAnchorOffset, anchorDelta, theme, size, baseGlyph, markGlyph]);
 
     return (
         <div 
             onClick={onClick}
-            className="flex-shrink-0 flex flex-col items-center gap-1 p-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded shadow-sm w-16 sm:w-20 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all hover:-translate-y-0.5"
+            style={{ width: size }}
+            className="flex-shrink-0 flex flex-col items-center justify-center bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all hover:-translate-y-0.5 aspect-square"
             title={`Edit ${pair.base.name} + ${pair.mark.name}`}
         >
-            <canvas ref={canvasRef} width={PREVIEW_SIZE} height={PREVIEW_SIZE} className="w-10 h-10 sm:w-12 sm:h-12 opacity-90" />
-            <span className="text-[9px] sm:text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate w-full text-center">
-                {pair.base.name}
-            </span>
+            <canvas ref={canvasRef} width={size} height={size} className="opacity-90" />
         </div>
     );
 });
 
-const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ siblings, glyphDataMap, strokeThickness, currentOffset, isLinked, onSelectPair }) => {
+const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ 
+    siblings, glyphDataMap, strokeThickness, anchorDelta, isLinked, onSelectPair,
+    metrics, markAttachmentRules, characterSets, groups
+}) => {
     const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -93,43 +131,78 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ siblings, glyphDa
     }, [siblings, checkVisibility, isExpanded]);
 
     if (!isLinked || siblings.length === 0) return null;
+    
+    // Shared props for thumbnails
+    const thumbProps = {
+        glyphDataMap,
+        strokeThickness,
+        anchorDelta, // Pass the manual delta, not absolute offset
+        metrics,
+        markAttachmentRules,
+        characterSets,
+        groups
+    };
 
     return (
-        <div className={`w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative transition-all duration-300 ${isExpanded ? 'h-64 items-start' : 'items-center'}`}>
-             
-             {/* Control Column */}
-             <div className="flex flex-col items-center justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 self-stretch">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide text-center leading-tight">
-                    Syncing<br/>
-                    <span className="text-indigo-600 dark:text-indigo-400 text-xs">{siblings.length}</span>
-                </span>
-                <button 
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"
-                    title={isExpanded ? "Collapse View" : "Expand All"}
-                >
-                    <FoldIcon className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
-                </button>
-             </div>
-
-             {isExpanded ? (
-                 /* Expanded Grid View */
-                 <div className="flex-grow overflow-y-auto pr-1 h-full">
-                     <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 pb-2">
-                        {siblings.map((pair) => (
-                            <SiblingThumbnail 
-                                key={`${pair.base.unicode}-${pair.mark.unicode}`} 
-                                pair={pair} 
-                                glyphDataMap={glyphDataMap} 
-                                strokeThickness={strokeThickness}
-                                currentOffset={currentOffset}
-                                onClick={() => onSelectPair(pair)}
-                            />
-                        ))}
-                     </div>
+        <>
+            {isExpanded && (
+                 <div className="fixed inset-0 z-[100] bg-gray-100/95 dark:bg-gray-900/95 backdrop-blur-md flex flex-col animate-fade-in-up">
+                    <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md flex-shrink-0">
+                         <div className="flex items-center gap-4">
+                             <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
+                                <FoldIcon className="w-6 h-6 text-indigo-600 dark:text-indigo-400 rotate-180" />
+                             </div>
+                             <div>
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Class Sync Preview</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {siblings.length} items syncing with current position
+                                </p>
+                             </div>
+                         </div>
+                         <button 
+                            onClick={() => setIsExpanded(false)}
+                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300 transition-colors"
+                        >
+                            <CloseIcon className="w-8 h-8" />
+                        </button>
+                    </div>
+                    <div className="flex-grow overflow-y-auto p-4">
+                         <div className="flex flex-wrap justify-center gap-3">
+                            {siblings.map((pair) => (
+                                <SiblingThumbnail 
+                                    key={`expanded-${pair.base.unicode}-${pair.mark.unicode}`} 
+                                    pair={pair} 
+                                    {...thumbProps}
+                                    onClick={() => {
+                                        setIsExpanded(false);
+                                        onSelectPair(pair);
+                                    }}
+                                    size={160}
+                                />
+                            ))}
+                         </div>
+                    </div>
                  </div>
-             ) : (
-                 /* Collapsed Scroll View */
+            )}
+
+            <div className="w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center transition-all duration-300">
+                 
+                 {/* Control Column */}
+                 <div className="flex flex-col items-center justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 self-stretch">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide text-center leading-tight">
+                        Syncing<br/>
+                        <span className="text-indigo-600 dark:text-indigo-400 text-xs">{siblings.length}</span>
+                    </span>
+                    <button 
+                        onClick={() => setIsExpanded(true)}
+                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"
+                        title="Expand to Fullscreen"
+                    >
+                        <FoldIcon className="w-4 h-4 rotate-180" />
+                    </button>
+                 </div>
+
+                 {/* Collapsed Scroll View */}
                  <div className="relative flex-grow overflow-hidden flex items-center">
                      {visibility.left && (
                         <button
@@ -147,10 +220,9 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ siblings, glyphDa
                             <SiblingThumbnail 
                                 key={`${pair.base.unicode}-${pair.mark.unicode}`} 
                                 pair={pair} 
-                                glyphDataMap={glyphDataMap} 
-                                strokeThickness={strokeThickness}
-                                currentOffset={currentOffset}
+                                {...thumbProps}
                                 onClick={() => onSelectPair(pair)}
+                                size={80}
                             />
                         ))}
                     </div>
@@ -166,8 +238,8 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ siblings, glyphDa
                         </button>
                     )}
                  </div>
-             )}
-        </div>
+            </div>
+        </>
     );
 };
 
