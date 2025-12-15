@@ -33,10 +33,8 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
   const didRunAutoSelect = useRef(false);
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
-  const horizontalScrollRef = useRef<HTMLDivElement>(null);
-  const { visibility: showHorizontalArrows, handleScroll: handleHorizontalScroll } = useHorizontalScroll(horizontalScrollRef);
-  const categoryScrollRef = useRef<HTMLDivElement>(null);
-  const { visibility: showCategoryArrows, handleScroll: handleCategoryScroll } = useHorizontalScroll(categoryScrollRef);
+  const { visibility: showHorizontalArrows, handleScroll: handleHorizontalScroll, scrollRef: horizontalScrollRef } = useHorizontalScroll();
+  const { visibility: showCategoryArrows, handleScroll: handleCategoryScroll, scrollRef: categoryScrollRef } = useHorizontalScroll();
 
 
   useEffect(() => {

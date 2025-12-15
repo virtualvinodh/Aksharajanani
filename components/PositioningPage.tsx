@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, PositioningRules, AttachmentClass } from '../types';
@@ -8,7 +7,6 @@ import { useProject } from '../contexts/ProjectContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useRules } from '../contexts/RulesContext';
-import { useHorizontalScroll } from '../hooks/useHorizontalScroll';
 import Modal from './Modal';
 import { usePositioningData } from '../hooks/positioning/usePositioningData';
 import { usePositioningActions } from '../hooks/positioning/usePositioningActions';
@@ -66,9 +64,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     // Inline Rules Manager State
     const [isRulesManagerOpen, setIsRulesManagerOpen] = useState(false);
 
-    const navContainerRef = useRef<HTMLDivElement>(null);
-    const { visibility: showNavArrows, handleScroll } = useHorizontalScroll(navContainerRef);
-    
     // Ref map to scroll cards into view
     const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     
@@ -269,7 +264,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 saveManagerChanges={() => { showNotification(t('projectSaved'), 'success'); }} // Autosave handles actual save, this just closes or confirms
                 settingsAutosaveEnabled={settings.isAutosaveEnabled}
                 navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab}
-                showNavArrows={showNavArrows} handleScroll={handleScroll} navContainerRef={navContainerRef}
                 isGridView={viewMode === 'base' || viewMode === 'mark'}
             />
 

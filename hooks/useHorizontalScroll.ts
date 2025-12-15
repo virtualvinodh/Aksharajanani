@@ -1,40 +1,59 @@
-import { useState, useCallback, useEffect, RefObject } from 'react';
 
-export const useHorizontalScroll = (scrollRef: RefObject<HTMLDivElement>) => {
+import { useState, useCallback, useEffect } from 'react';
+
+export const useHorizontalScroll = () => {
+    const [node, setNode] = useState<HTMLElement | null>(null);
     const [visibility, setVisibility] = useState({ left: false, right: false });
 
+    // Use a callback ref to reliably detect when the element is mounted/unmounted
+    const scrollRef = useCallback((element: HTMLElement | null) => {
+        if (element !== null) {
+            setNode(element);
+        }
+    }, []);
+
     const checkVisibility = useCallback(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        const tolerance = 1;
-        const canScrollLeft = el.scrollLeft > tolerance;
-        const canScrollRight = el.scrollLeft < el.scrollWidth - el.clientWidth - tolerance;
-        setVisibility({ left: canScrollLeft, right: canScrollRight });
-    }, [scrollRef]);
+        if (!node) return;
+        const tolerance = 1; // 1px tolerance for sub-pixel rendering issues
+        const canScrollLeft = node.scrollLeft > tolerance;
+        const canScrollRight = Math.abs(node.scrollWidth - node.clientWidth - node.scrollLeft) > tolerance;
+        
+        setVisibility(prev => {
+            if (prev.left === canScrollLeft && prev.right === canScrollRight) {
+                return prev;
+            }
+            return { left: canScrollLeft, right: canScrollRight };
+        });
+    }, [node]);
 
     useEffect(() => {
-        const el = scrollRef.current;
-        if (!el) return;
+        if (!node) return;
 
+        // Check initially
         checkVisibility();
-        const resizeObserver = new ResizeObserver(checkVisibility);
-        resizeObserver.observe(el);
-        el.addEventListener('scroll', checkVisibility, { passive: true });
+        
+        // Listen for scroll and resize
+        const handleEvent = () => requestAnimationFrame(checkVisibility);
+        
+        node.addEventListener('scroll', handleEvent, { passive: true });
+        window.addEventListener('resize', handleEvent);
+        
+        // Also use ResizeObserver for container size changes
+        const resizeObserver = new ResizeObserver(handleEvent);
+        resizeObserver.observe(node);
 
         return () => {
-            if (el) {
-                resizeObserver.unobserve(el);
-                el.removeEventListener('scroll', checkVisibility);
-            }
+            node.removeEventListener('scroll', handleEvent);
+            window.removeEventListener('resize', handleEvent);
+            resizeObserver.disconnect();
         };
-    }, [checkVisibility, scrollRef]);
+    }, [node, checkVisibility]);
 
-    const handleScroll = (direction: 'left' | 'right') => {
-        const el = scrollRef.current;
-        if (!el) return;
-        const scrollAmount = el.clientWidth * 0.8;
-        el.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
-    };
+    const handleScroll = useCallback((direction: 'left' | 'right') => {
+        if (!node) return;
+        const scrollAmount = node.clientWidth * 0.75;
+        node.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+    }, [node]);
 
-    return { visibility, handleScroll };
+    return { visibility, handleScroll, scrollRef, checkVisibility };
 };

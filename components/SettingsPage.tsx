@@ -51,8 +51,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
   const [localGuideFont, setLocalGuideFont] = useState<GuideFont>(guideFont || script?.guideFont || { fontName: '', fontUrl: '', stylisticSet: '' });
 
   // Scroll Logic
-  const tabsContainerRef = useRef<HTMLDivElement>(null);
-  const { visibility, handleScroll } = useHorizontalScroll(tabsContainerRef);
+  const { visibility, handleScroll, scrollRef } = useHorizontalScroll();
 
   const handleClose = () => {
     dispatch({ type: 'SET_SETTINGS', payload: localSettings });
@@ -95,7 +94,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
                 )}
 
                 <div 
-                    ref={tabsContainerRef} 
+                    ref={scrollRef} 
                     className="overflow-x-auto overflow-y-hidden no-scrollbar flex flex-nowrap"
                 >
                     <nav className="-mb-px flex" aria-label="Tabs">

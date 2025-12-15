@@ -1,10 +1,10 @@
 
-
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Character } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { LeftArrowIcon, RightArrowIcon } from '../../constants';
 import CharacterChip from './CharacterChip';
+import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 
 interface CharacterSelectionRowProps {
     title: string;
@@ -17,39 +17,15 @@ interface CharacterSelectionRowProps {
 
 const CharacterSelectionRow: React.FC<CharacterSelectionRowProps> = ({ title, characters, selectedChars, onSelectionChange, onSelectAll, onSelectNone }) => {
     const { t } = useLocale();
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const [showArrows, setShowArrows] = useState({ left: false, right: false });
+    const { visibility: showArrows, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
 
-    const checkArrowVisibility = useCallback(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        const tolerance = 1;
-        const canScrollLeft = el.scrollLeft > tolerance;
-        const canScrollRight = el.scrollLeft < el.scrollWidth - el.clientWidth - tolerance;
-        setShowArrows({ left: canScrollLeft, right: canScrollRight });
-    }, []);
-
+    // Trigger check on data change
     useEffect(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        checkArrowVisibility();
-        const resizeObserver = new ResizeObserver(checkArrowVisibility);
-        resizeObserver.observe(el);
-        el.addEventListener('scroll', checkArrowVisibility);
-        return () => {
-            if (el) {
-                resizeObserver.unobserve(el);
-                el.removeEventListener('scroll', checkArrowVisibility);
-            }
-        };
-    }, [checkArrowVisibility, characters]);
-
-    const handleScroll = (direction: 'left' | 'right') => {
-        const el = scrollRef.current;
-        if (!el) return;
-        const scrollAmount = el.clientWidth * 0.8;
-        el.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
-    };
+        checkVisibility();
+        // Delay check to allow layout calculation
+        const t = setTimeout(checkVisibility, 50);
+        return () => clearTimeout(t);
+    }, [characters, checkVisibility]);
 
     return (
         <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">

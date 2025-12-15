@@ -7,6 +7,7 @@ import CharacterCard from './CharacterCard';
 import { LeftArrowIcon, RightArrowIcon, CheckCircleIcon } from '../constants';
 import { isGlyphDrawn as isGlyphDrawnUtil } from '../utils/glyphUtils';
 import { useGlyphData } from '../contexts/GlyphDataContext';
+import { useHorizontalScroll } from '../hooks/useHorizontalScroll';
 
 interface GlyphSelectionModalProps {
   isOpen: boolean;
@@ -70,9 +71,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Manual Scroll Logic (Ported from DrawingWorkspace for consistency)
-  const navContainerRef = useRef<HTMLDivElement>(null);
-  const [showNavArrows, setShowNavArrows] = useState({ left: false, right: false });
+  const { visibility: showNavArrows, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
 
   const visibleCharacterSets = useMemo(() => {
     if (!characterSets) return [];
@@ -84,46 +83,16 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
         .filter(set => set.characters.length > 0);
   }, [characterSets]);
 
-  // Scroll Overflow Checker
-  const checkNavOverflow = useCallback(() => {
-      const c = navContainerRef.current;
-      if (!c) return;
-      const tol = 2; // Tolerance
-      const isOverflowing = c.scrollWidth > c.clientWidth + tol;
-      setShowNavArrows({
-          left: isOverflowing && c.scrollLeft > tol,
-          right: isOverflowing && c.scrollLeft < c.scrollWidth - c.clientWidth - tol,
-      });
-  }, []);
-
-  // Attach ResizeObserver and Scroll Listeners
+  // Re-check visibility when modal opens or sets change
   useEffect(() => {
-      const c = navContainerRef.current;
-      if (!c) return;
-      
-      // Run immediately
-      checkNavOverflow();
-      
-      const resizeObserver = new ResizeObserver(checkNavOverflow);
-      resizeObserver.observe(c);
-      c.addEventListener('scroll', checkNavOverflow);
-      
-      // Delay check slightly for modal animation to finish
-      const timer = setTimeout(checkNavOverflow, 100);
+      if (isOpen) {
+          checkVisibility();
+          // Delay for animation/layout
+          const t = setTimeout(checkVisibility, 150);
+          return () => clearTimeout(t);
+      }
+  }, [isOpen, visibleCharacterSets, checkVisibility]);
 
-      return () => {
-          if(c) {
-              resizeObserver.disconnect();
-              c.removeEventListener('scroll', checkNavOverflow);
-          }
-          clearTimeout(timer);
-      };
-  }, [checkNavOverflow, visibleCharacterSets, isOpen]);
-
-  const handleNavScroll = (dir: 'left' | 'right') => {
-      const c = navContainerRef.current;
-      if (c) c.scrollBy({ left: dir === 'left' ? -c.clientWidth * 0.75 : c.clientWidth * 0.75, behavior: 'smooth' });
-  };
 
   useEffect(() => {
     if (isOpen) {
@@ -165,14 +134,14 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
                <div className="relative w-full flex items-center overflow-hidden bg-gray-50 dark:bg-gray-800 rounded-t-lg">
                     {showNavArrows.left && (
                         <button
-                            onClick={() => handleNavScroll('left')}
+                            onClick={() => handleScroll('left')}
                             className="absolute left-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-r dark:border-gray-700 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
                             <LeftArrowIcon className="h-5 w-5" />
                         </button>
                     )}
                     
-                    <div ref={navContainerRef} className="flex space-x-1 overflow-x-auto no-scrollbar px-2 sm:px-4 w-full items-center">
+                    <div ref={scrollRef} className="flex space-x-1 overflow-x-auto no-scrollbar px-2 sm:px-4 w-full items-center">
                         {visibleCharacterSets.map((set, index) => (
                             <CharacterSetTab
                                 key={set.nameKey}
@@ -188,7 +157,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
 
                     {showNavArrows.right && (
                          <button
-                            onClick={() => handleNavScroll('right')}
+                            onClick={() => handleScroll('right')}
                             className="absolute right-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-l dark:border-gray-700 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
                             <RightArrowIcon className="h-5 w-5" />
