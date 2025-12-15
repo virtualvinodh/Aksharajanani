@@ -1,8 +1,9 @@
+
 import React from 'react';
 import PositioningRuleBlock from './PositioningRuleBlock';
 import CombinationCard from '../CombinationCard';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, PositioningRules, CharacterSet, FontMetrics } from '../../types';
-import { BackIcon, LeftArrowIcon, RightArrowIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon } from '../../constants';
 
 interface PositioningRulesViewProps {
     ruleGroups: { rule: PositioningRules, pairs: any[], id: number }[];
@@ -28,6 +29,7 @@ interface PositioningRulesViewProps {
     glyphVersion: number;
     metrics: FontMetrics;
     ITEMS_PER_PAGE: number;
+    handleAcceptAllDefaults: (pairs: any[]) => void;
 }
 
 const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
@@ -35,7 +37,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
     pagedRulePairs, rulePage, setRulePage, ruleTotalPages, markPositioningMap,
     getPairClassKey, classCounts, setEditingPair, setEditingIndex, setEditingContextList,
     handleConfirmPosition, glyphDataMap, strokeThickness, markAttachmentRules, characterSets,
-    groups, glyphVersion, metrics, ITEMS_PER_PAGE
+    groups, glyphVersion, metrics, ITEMS_PER_PAGE, handleAcceptAllDefaults
 }) => {
     if (selectedRuleGroupId === null) {
         // Level 1: List of Blocks
@@ -70,6 +72,8 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
     }
 
     // Level 2: Drill-down Grid
+    const unpositionedCount = activeRuleGroup?.pairs.filter((p: any) => !markPositioningMap.has(`${p.base.unicode}-${p.mark.unicode}`)).length || 0;
+
     return (
         <div className="animate-fade-in-up">
             {/* Header with Back Button */}
@@ -91,6 +95,18 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                         )}
                     </div>
                 </div>
+                
+                {/* Accept All Button */}
+                {activeRuleGroup && (
+                    <button
+                        onClick={() => handleAcceptAllDefaults(activeRuleGroup.pairs)}
+                        disabled={unpositionedCount === 0}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                        <CheckCircleIcon className="h-4 w-4" />
+                        <span>Accept All ({unpositionedCount})</span>
+                    </button>
+                )}
             </div>
 
             {/* Grid */}

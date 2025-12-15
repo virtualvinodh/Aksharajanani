@@ -149,11 +149,13 @@ export const usePositioningActions = ({
         showNotification(`${t('positioningUpdated')} ${ligature.name}`, 'success');
     }, [glyphDataMap, markAttachmentRules, savePositioningUpdate, showNotification, t, metrics, characterSets, settings, groups]);
 
-    const handleAcceptAllDefaults = useCallback(() => {
+    const handleAcceptAllDefaults = useCallback((pairsToProcess?: { base: Character; mark: Character; ligature: Character }[]) => {
         if (!characterSets) return;
         
-        // Apply only to currently visible list (Grid View)
-        const unpositionedPairs = displayedCombinations.filter(combo => {
+        const targetList = pairsToProcess || displayedCombinations;
+
+        // Apply only to unpositioned pairs in the list
+        const unpositionedPairs = targetList.filter(combo => {
             const isPositioned = markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`);
             return !isPositioned;
         });

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, PositioningRules, AttachmentClass } from '../types';
@@ -289,6 +290,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                 setEditingContextList={setEditingContextList} handleConfirmPosition={handleConfirmPosition}
                                 glyphDataMap={glyphDataMap} strokeThickness={settings.strokeThickness} markAttachmentRules={markAttachmentRules}
                                 characterSets={characterSets} groups={groups} glyphVersion={glyphVersion} metrics={metrics} ITEMS_PER_PAGE={ITEMS_PER_PAGE}
+                                handleAcceptAllDefaults={handleAcceptAllDefaults}
                             />
                         ) : (
                             <PositioningGridView 
@@ -298,7 +300,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                 setEditingPair={setEditingPair} setEditingIndex={setEditingIndex} setEditingContextList={setEditingContextList}
                                 handleConfirmPosition={handleConfirmPosition} cardRefs={cardRefs} activeItem={activeItem} isFiltered={isFiltered}
                                 viewMode={viewMode === 'rules' ? 'base' : viewMode} // Fallback to base if rules but filtered
-                                handleOpenReuseModal={handleOpenReuseModal} handleAcceptAllDefaults={handleAcceptAllDefaults}
+                                handleOpenReuseModal={handleOpenReuseModal} handleAcceptAllDefaults={() => handleAcceptAllDefaults()}
                                 unpositionedCount={unpositionedCount} setIsResetConfirmOpen={setIsResetConfirmOpen} hasManuallyPositioned={hasManuallyPositioned}
                                 navItemsLength={navItems.length} t={t}
                             />

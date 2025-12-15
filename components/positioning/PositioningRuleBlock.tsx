@@ -80,9 +80,6 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
 
     // 4. Hero Selection (First Pair)
     const heroPair = pairs[0];
-    
-    // Check if hero is positioned
-    const isHeroPositioned = markPositioningMap.has(`${heroPair.base.unicode}-${heroPair.mark.unicode}`);
 
     return (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
@@ -115,7 +112,8 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
                             baseChar={heroPair.base}
                             markChar={heroPair.mark}
                             ligature={heroPair.ligature}
-                            isPositioned={isHeroPositioned}
+                            // Always force false to keep the hero plain
+                            isPositioned={false}
                             canEdit={true}
                             onClick={() => onEditPair(heroPair)}
                             // Pass dummy callback for inline confirm
@@ -140,6 +138,9 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
             {/* Footer: Progress */}
             <div className="bg-white dark:bg-gray-800 p-4">
                  <div className="flex items-center gap-3">
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap flex-shrink-0">
+                        {completedPairs} / {totalPairs} ({percentage}%)
+                    </div>
                     <div className="flex-grow bg-gray-300 dark:bg-gray-700 rounded-full h-2 overflow-hidden" role="presentation">
                         <div
                         className={`${isComplete ? 'bg-green-500' : 'bg-indigo-600'} h-2 rounded-full transition-all duration-500`}
@@ -149,9 +150,6 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
                         aria-valuemin={0}
                         aria-valuemax={100}
                         />
-                    </div>
-                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap flex-shrink-0">
-                        {completedPairs} / {totalPairs} ({percentage}%)
                     </div>
                  </div>
             </div>
