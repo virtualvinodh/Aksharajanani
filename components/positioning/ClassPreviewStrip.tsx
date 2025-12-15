@@ -1,5 +1,6 @@
 
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths, calculateDefaultMarkOffset, getAccurateGlyphBBox } from '../../services/glyphRenderService';
@@ -27,6 +28,10 @@ interface ClassPreviewStripProps {
     markAttachmentRules: MarkAttachmentRules | null;
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
+    
+    // Lifted State
+    isExpanded: boolean;
+    setIsExpanded: (expanded: boolean) => void;
 }
 
 const DRAWING_CANVAS_SIZE = 1000;
@@ -50,15 +55,12 @@ const SiblingThumbnail: React.FC<{
     const markGlyph = glyphDataMap.get(pair.mark.unicode);
 
     // Memoize the default anchor offset for this specific sibling pair.
-    // This allows us to apply the "manual delta" relative to this sibling's own anchor points.
     const defaultAnchorOffset = useMemo(() => {
         if (!baseGlyph || !markGlyph) return { x: 0, y: 0 };
         
-        // Calculate bounding boxes for the sibling's glyphs
         const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, strokeThickness);
         const markBbox = getAccurateGlyphBBox(markGlyph.paths, strokeThickness);
         
-        // Calculate default anchor-based position
         return calculateDefaultMarkOffset(
             pair.base, 
             pair.mark, 
@@ -81,18 +83,55 @@ const SiblingThumbnail: React.FC<{
         
         if (!baseGlyph || !markGlyph) return;
 
-        const scale = size / DRAWING_CANVAS_SIZE;
+        // --- Dynamic Sizing Logic ---
+        const finalOffset = VEC.add(defaultAnchorOffset, anchorDelta);
+        const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, strokeThickness);
+        const markBbox = getAccurateGlyphBBox(markGlyph.paths, strokeThickness);
+
+        let contentMinX = 0, contentMinY = 0, contentMaxX = DRAWING_CANVAS_SIZE, contentMaxY = DRAWING_CANVAS_SIZE;
+
+        if (baseBbox && markBbox) {
+             const mMinX = markBbox.x + finalOffset.x;
+             const mMinY = markBbox.y + finalOffset.y;
+             
+             contentMinX = Math.min(baseBbox.x, mMinX);
+             contentMinY = Math.min(baseBbox.y, mMinY);
+             contentMaxX = Math.max(baseBbox.x + baseBbox.width, mMinX + markBbox.width);
+             contentMaxY = Math.max(baseBbox.y + baseBbox.height, mMinY + markBbox.height);
+        } else if (baseBbox) {
+             contentMinX = baseBbox.x;
+             contentMinY = baseBbox.y;
+             contentMaxX = baseBbox.x + baseBbox.width;
+             contentMaxY = baseBbox.y + baseBbox.height;
+        }
+
+        const contentWidth = contentMaxX - contentMinX;
+        const contentHeight = contentMaxY - contentMinY;
+        const padding = 100; // Font units padding
+        
+        // Calculate fit scale
+        const fitScaleX = size / (contentWidth + padding * 2);
+        const fitScaleY = size / (contentHeight + padding * 2);
+        const standardScale = size / DRAWING_CANVAS_SIZE;
+        
+        // Use fit scale, but cap at standard scale to prevent over-zooming on small glyphs
+        const scale = Math.min(fitScaleX, fitScaleY, standardScale);
+
+        // Center the content bounds in the canvas
+        const contentCenterX = contentMinX + contentWidth / 2;
+        const contentCenterY = contentMinY + contentHeight / 2;
+        const canvasCenter = size / 2;
 
         ctx.save();
+        // Move to canvas center, apply scale, then move content center to origin
+        ctx.translate(canvasCenter, canvasCenter);
         ctx.scale(scale, scale);
+        ctx.translate(-contentCenterX, -contentCenterY);
 
-        // 1. Draw Base (Fixed) - Darker shade for better visibility
+        // 1. Draw Base (Fixed)
         renderPaths(ctx, baseGlyph.paths, { strokeThickness, color: theme === 'dark' ? '#64748B' : '#94A3B8' }); 
 
-        // 2. Draw Mark (Relative to Sibling Anchor + Manual Delta)
-        // Current Visual Position = DefaultAnchorOffset + ManualDelta
-        const finalOffset = VEC.add(defaultAnchorOffset, anchorDelta);
-        
+        // 2. Draw Mark (Relative)
         ctx.save();
         ctx.translate(finalOffset.x, finalOffset.y);
         renderPaths(ctx, markGlyph.paths, { strokeThickness, color: theme === 'dark' ? '#818CF8' : '#4F46E5' }); 
@@ -116,15 +155,14 @@ const SiblingThumbnail: React.FC<{
 
 const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ 
     siblings, glyphDataMap, strokeThickness, anchorDelta, isLinked, onSelectPair,
-    metrics, markAttachmentRules, characterSets, groups
+    metrics, markAttachmentRules, characterSets, groups,
+    isExpanded, setIsExpanded
 }) => {
     const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
-    const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
         if (!isExpanded) {
             checkVisibility();
-            // Give layout a moment to settle if siblings changed
             const timer = setTimeout(checkVisibility, 100);
             return () => clearTimeout(timer);
         }
@@ -136,54 +174,58 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
     const thumbProps = {
         glyphDataMap,
         strokeThickness,
-        anchorDelta, // Pass the manual delta, not absolute offset
+        anchorDelta, 
         metrics,
         markAttachmentRules,
         characterSets,
         groups
     };
+    
+    // Render the expanded view into a Portal to ensure it sits on top of everything
+    // Increased z-index to 200 and made background fully opaque to hide underlying controls
+    const expandedView = isExpanded ? (
+         <div className="fixed inset-0 z-[200] bg-white dark:bg-gray-900 flex flex-col animate-fade-in-up">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md flex-shrink-0">
+                 <div className="flex items-center gap-4">
+                     <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
+                        <FoldIcon className="w-6 h-6 text-indigo-600 dark:text-indigo-400 rotate-180" />
+                     </div>
+                     <div>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Class Sync Preview</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {siblings.length} items syncing with current position
+                        </p>
+                     </div>
+                 </div>
+                 <button 
+                    onClick={() => setIsExpanded(false)}
+                    className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300 transition-colors"
+                >
+                    <CloseIcon className="w-8 h-8" />
+                </button>
+            </div>
+            <div className="flex-grow overflow-y-auto p-4">
+                 <div className="flex flex-wrap justify-center gap-3">
+                    {siblings.map((pair) => (
+                        <SiblingThumbnail 
+                            key={`expanded-${pair.base.unicode}-${pair.mark.unicode}`} 
+                            pair={pair} 
+                            {...thumbProps}
+                            onClick={() => {
+                                setIsExpanded(false);
+                                onSelectPair(pair);
+                            }}
+                            size={160}
+                        />
+                    ))}
+                 </div>
+            </div>
+         </div>
+    ) : null;
 
     return (
         <>
-            {isExpanded && (
-                 <div className="fixed inset-0 z-[100] bg-gray-100/95 dark:bg-gray-900/95 backdrop-blur-md flex flex-col animate-fade-in-up">
-                    <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md flex-shrink-0">
-                         <div className="flex items-center gap-4">
-                             <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
-                                <FoldIcon className="w-6 h-6 text-indigo-600 dark:text-indigo-400 rotate-180" />
-                             </div>
-                             <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Class Sync Preview</h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {siblings.length} items syncing with current position
-                                </p>
-                             </div>
-                         </div>
-                         <button 
-                            onClick={() => setIsExpanded(false)}
-                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300 transition-colors"
-                        >
-                            <CloseIcon className="w-8 h-8" />
-                        </button>
-                    </div>
-                    <div className="flex-grow overflow-y-auto p-4">
-                         <div className="flex flex-wrap justify-center gap-3">
-                            {siblings.map((pair) => (
-                                <SiblingThumbnail 
-                                    key={`expanded-${pair.base.unicode}-${pair.mark.unicode}`} 
-                                    pair={pair} 
-                                    {...thumbProps}
-                                    onClick={() => {
-                                        setIsExpanded(false);
-                                        onSelectPair(pair);
-                                    }}
-                                    size={160}
-                                />
-                            ))}
-                         </div>
-                    </div>
-                 </div>
-            )}
+            {expandedView && createPortal(expandedView, document.body)}
 
             <div className="w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center transition-all duration-300">
                  

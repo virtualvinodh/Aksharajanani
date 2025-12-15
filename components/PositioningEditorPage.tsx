@@ -70,6 +70,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const [isLinked, setIsLinked] = useState(true);
     const [currentOffset, setCurrentOffset] = useState<Point>({ x: 0, y: 0 }); // Visual offset from origin
     
+    // Strip Expansion State
+    const [isStripExpanded, setIsStripExpanded] = useState(false);
+    
     const [lsb, setLsb] = useState<number | undefined>(targetLigature.lsb);
     const [rsb, setRsb] = useState<number | undefined>(targetLigature.rsb);
     const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
@@ -491,7 +494,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         handlePathsChange(newPaths);
     };
 
-    const coordinateControls = (
+    const coordinateControls = !isStripExpanded && (
         <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 mr-2 flex-shrink-0">
              <div className="flex items-center gap-1">
                 <label className="text-[10px] font-bold text-gray-500 uppercase select-none">X</label>
@@ -580,7 +583,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             </header>
             
             {/* Mobile Toolbar (Top) - Outside Main, under header */}
-            {!isLargeScreen && (
+            {!isLargeScreen && !isStripExpanded && (
                 <div className="flex-shrink-0 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-2 flex justify-center z-20 items-center gap-2 overflow-x-auto no-scrollbar">
                      {coordinateControls}
                      <PositioningToolbar 
@@ -599,7 +602,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                     {/* Top Area: Toolbar + Canvas - Maximize space */}
                     <div className="flex-1 w-full max-w-5xl flex flex-row items-center justify-center gap-3 min-h-0 relative">
                         {/* Desktop Toolbar - Vertical Stack */}
-                        {isLargeScreen && (
+                        {isLargeScreen && !isStripExpanded && (
                             <div className="flex-shrink-0 z-20">
                                 <PositioningToolbar 
                                     orientation="vertical"
@@ -642,6 +645,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                 markAttachmentRules={markAttachmentRules}
                                 characterSets={characterSets}
                                 groups={groups}
+                                isExpanded={isStripExpanded}
+                                setIsExpanded={setIsStripExpanded}
                             />
                         </div>
                     )}
