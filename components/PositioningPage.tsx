@@ -12,7 +12,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useHorizontalScroll } from '../hooks/useHorizontalScroll';
 import { getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../services/glyphRenderService';
-import { updatePositioningAndCascade } from '../services/positioningService';
+import { updatePositioningAndCascade, syncAttachmentClasses } from '../services/positioningService';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import Modal from './Modal';
 import PositioningRulesManager from './rules/manager/PositioningRulesManager';
@@ -86,45 +86,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     const isFiltered = filterMode !== 'none' || isSearching;
     
     const allChars = useMemo(() => new Map(characterSets!.flatMap(set => set.characters).map(char => [char.name, char])), [characterSets]);
-
-    const handleSetGroups = useCallback((newGroups: Record<string, string[]>) => {
-        if (rulesState.fontRules) {
-             const newRules = { ...rulesState.fontRules, groups: newGroups };
-             rulesDispatch({ type: 'SET_FONT_RULES', payload: newRules });
-        }
-    }, [rulesState.fontRules, rulesDispatch]);
-
-    // Initialize local state when manager opens
-    useEffect(() => {
-        if (isRulesManagerOpen) {
-            setLocalPosRules(deepClone(positioningRules || []));
-            setLocalMarkAttach(deepClone(markAttachmentRules || {}));
-            setLocalMarkClasses(deepClone(markAttachmentClasses || []));
-            setLocalBaseClasses(deepClone(baseAttachmentClasses || []));
-            setLocalKerning(deepClone(recommendedKerning || []));
-            setLocalGroups(deepClone(groups || {}));
-        }
-    }, [isRulesManagerOpen]); 
-
-    const saveManagerChanges = useCallback(() => {
-        setPositioningRules(localPosRules);
-        setMarkAttachmentRules(localMarkAttach);
-        setMarkAttachmentClasses(localMarkClasses);
-        setBaseAttachmentClasses(localBaseClasses);
-        setRecommendedKerning(localKerning);
-        handleSetGroups(localGroups);
-    }, [localPosRules, localMarkAttach, localMarkClasses, localBaseClasses, localKerning, localGroups, setPositioningRules, setMarkAttachmentRules, setMarkAttachmentClasses, setBaseAttachmentClasses, setRecommendedKerning, handleSetGroups]);
-
-    // Autosave effect for Manager
-    useEffect(() => {
-        if (!isRulesManagerOpen || !settings?.isAutosaveEnabled) return;
-        
-        const timer = setTimeout(() => {
-            saveManagerChanges();
-        }, 1000);
-        return () => clearTimeout(timer);
-    }, [localPosRules, localMarkAttach, localMarkClasses, localBaseClasses, localKerning, localGroups, isRulesManagerOpen, settings?.isAutosaveEnabled, saveManagerChanges]);
-
 
     const positioningData = useMemo(() => {
         const newLigaturesByKey = new Map<string, Character>();
@@ -240,6 +201,74 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         return { allLigaturesByKey: newLigaturesByKey };
 
     }, [characterSets, allChars, positioningRules, fontRules, groups]);
+
+    const handleSetGroups = useCallback((newGroups: Record<string, string[]>) => {
+        if (rulesState.fontRules) {
+             const newRules = { ...rulesState.fontRules, groups: newGroups };
+             rulesDispatch({ type: 'SET_FONT_RULES', payload: newRules });
+        }
+    }, [rulesState.fontRules, rulesDispatch]);
+
+    // Initialize local state when manager opens
+    useEffect(() => {
+        if (isRulesManagerOpen) {
+            setLocalPosRules(deepClone(positioningRules || []));
+            setLocalMarkAttach(deepClone(markAttachmentRules || {}));
+            setLocalMarkClasses(deepClone(markAttachmentClasses || []));
+            setLocalBaseClasses(deepClone(baseAttachmentClasses || []));
+            setLocalKerning(deepClone(recommendedKerning || []));
+            setLocalGroups(deepClone(groups || {}));
+        }
+    }, [isRulesManagerOpen]); 
+
+    const saveManagerChanges = useCallback(() => {
+        setPositioningRules(localPosRules);
+        setMarkAttachmentRules(localMarkAttach);
+        setMarkAttachmentClasses(localMarkClasses);
+        setBaseAttachmentClasses(localBaseClasses);
+        setRecommendedKerning(localKerning);
+        handleSetGroups(localGroups);
+        
+        // --- CONTINUOUS SYNC TRIGGER ---
+        // When rules/classes are updated, enforce synchronization
+        if (settings && metrics && characterSets) {
+            const syncResult = syncAttachmentClasses({
+                markPositioningMap,
+                glyphDataMap,
+                allCharsByName: allChars,
+                allLigaturesByKey: positioningData.allLigaturesByKey,
+                
+                // Use the NEW rules/classes for synchronization
+                markAttachmentClasses: localMarkClasses,
+                baseAttachmentClasses: localBaseClasses,
+                positioningRules: localPosRules,
+                markAttachmentRules: localMarkAttach,
+                groups: localGroups,
+                
+                characterSets: characterSets,
+                strokeThickness: settings.strokeThickness,
+                metrics: metrics
+            });
+            
+            // Apply updates
+            positioningDispatch({ type: 'SET_MAP', payload: syncResult.updatedMarkPositioningMap });
+            glyphDataDispatch({ type: 'SET_MAP', payload: syncResult.updatedGlyphDataMap });
+            characterDispatch({ type: 'SET_CHARACTER_SETS', payload: syncResult.updatedCharacterSets });
+        }
+
+    }, [localPosRules, localMarkAttach, localMarkClasses, localBaseClasses, localKerning, localGroups, setPositioningRules, setMarkAttachmentRules, setMarkAttachmentClasses, setBaseAttachmentClasses, setRecommendedKerning, handleSetGroups, markPositioningMap, glyphDataMap, allChars, positioningData.allLigaturesByKey, characterSets, settings, metrics, positioningDispatch, glyphDataDispatch, characterDispatch]);
+
+    // Autosave effect for Manager
+    useEffect(() => {
+        if (!isRulesManagerOpen || !settings?.isAutosaveEnabled) return;
+        
+        const timer = setTimeout(() => {
+            saveManagerChanges();
+        }, 1000);
+        return () => clearTimeout(timer);
+    }, [localPosRules, localMarkAttach, localMarkClasses, localBaseClasses, localKerning, localGroups, isRulesManagerOpen, settings?.isAutosaveEnabled, saveManagerChanges]);
+
+
     
     // Global check for incomplete pairs to control the notice
     useEffect(() => {
