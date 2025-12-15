@@ -1,4 +1,5 @@
 
+
 export interface Point {
   x: number;
   y: number;
@@ -115,6 +116,19 @@ export interface AttachmentClass {
 // This resolves a TypeScript error where a find and cast operation for a `groups` property was failing because the type was missing from the union.
 export type CharacterDefinition = CharacterSet | { recommendedKerning: RecommendedKerning[] } | { positioning: PositioningRules[] } | { markAttachment: MarkAttachmentRules } | { markAttachmentClass: AttachmentClass[] } | { baseAttachmentClass: AttachmentClass[] } | { groups: Record<string, string[]> };
 
+export interface CreatorSettings {
+  text: string;
+  fontSize: number;
+  textColor: string;
+  bgColor: string;
+  overlayOpacity: number;
+  textAlign: 'left' | 'center' | 'right';
+  aspectRatio: 'square' | 'portrait' | 'landscape';
+  addShadow: boolean;
+  textPos: { x: number; y: number } | null;
+  bgImageData: string | null;
+}
+
 export interface AppSettings {
   strokeThickness: number;
   contrast: number;
@@ -138,6 +152,8 @@ export interface AppSettings {
   testPage?: TestPageConfig;
   isDebugKerningEnabled?: boolean;
   customSampleText?: string;
+  // Creator Studio Persistence
+  creatorSettings?: CreatorSettings;
 }
 
 export type KerningMap = Map<string, number>;

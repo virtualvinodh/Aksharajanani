@@ -2,6 +2,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon, DownloadIcon, ShareIcon, ImageIcon, TrashIcon } from '../constants';
+import { useSettings } from '../contexts/SettingsContext';
+import { CreatorSettings } from '../types';
 
 interface CreatorPageProps {
     onClose: () => void;
@@ -12,23 +14,27 @@ const FONT_FACE_ID = 'creator-font-face';
 
 const CreatorPage: React.FC<CreatorPageProps> = ({ onClose, fontBlob }) => {
     const { t } = useLocale();
+    const { settings, dispatch: settingsDispatch } = useSettings();
+    const saved = settings?.creatorSettings;
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // State
-    const [text, setText] = useState('Type your text here...');
-    const [fontSize, setFontSize] = useState(60);
-    const [textColor, setTextColor] = useState('#ffffff');
-    const [bgColor, setBgColor] = useState('#4f46e5'); // Indigo-600 default
+    // State - initialized from saved settings or defaults
+    const [text, setText] = useState(saved?.text ?? 'Type your text here...');
+    const [fontSize, setFontSize] = useState(saved?.fontSize ?? 60);
+    const [textColor, setTextColor] = useState(saved?.textColor ?? '#ffffff');
+    const [bgColor, setBgColor] = useState(saved?.bgColor ?? '#4f46e5'); // Indigo-600 default
+    const [bgImageData, setBgImageData] = useState<string | null>(saved?.bgImageData ?? null);
     const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
-    const [overlayOpacity, setOverlayOpacity] = useState(0.3);
-    const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('center');
+    const [overlayOpacity, setOverlayOpacity] = useState(saved?.overlayOpacity ?? 0.3);
+    const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>(saved?.textAlign ?? 'center');
     const [fontLoaded, setFontLoaded] = useState(false);
-    const [aspectRatio, setAspectRatio] = useState<'square' | 'portrait' | 'landscape'>('square');
-    const [addShadow, setAddShadow] = useState(true);
+    const [aspectRatio, setAspectRatio] = useState<'square' | 'portrait' | 'landscape'>(saved?.aspectRatio ?? 'square');
+    const [addShadow, setAddShadow] = useState(saved?.addShadow ?? true);
     
     // Position State
-    const [textPos, setTextPos] = useState<{x: number, y: number} | null>(null);
+    const [textPos, setTextPos] = useState<{x: number, y: number} | null>(saved?.textPos ?? null);
     const [isDragging, setIsDragging] = useState(false);
     const lastPointerPos = useRef<{x: number, y: number} | null>(null);
 
@@ -52,10 +58,44 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ onClose, fontBlob }) => {
         }
     }, [fontBlob]);
     
-    // Reset text position when aspect ratio changes to prevent losing text off-screen
+    // Sync bgImageData string to actual Image element
     useEffect(() => {
-        setTextPos(null);
-    }, [aspectRatio]);
+        if (bgImageData) {
+            const img = new Image();
+            img.src = bgImageData;
+            img.onload = () => setBgImage(img);
+        } else {
+            setBgImage(null);
+        }
+    }, [bgImageData]);
+
+    // Persist settings to context
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            const newCreatorSettings: CreatorSettings = {
+                text,
+                fontSize,
+                textColor,
+                bgColor,
+                overlayOpacity,
+                textAlign,
+                aspectRatio,
+                addShadow,
+                textPos,
+                bgImageData
+            };
+
+            // Avoid unnecessary updates if nothing changed deeply
+            if (JSON.stringify(newCreatorSettings) !== JSON.stringify(settings?.creatorSettings)) {
+                settingsDispatch({ 
+                    type: 'UPDATE_SETTINGS', 
+                    payload: (prev) => prev ? ({ ...prev, creatorSettings: newCreatorSettings }) : null 
+                });
+            }
+        }, 500); // Debounce saves
+        
+        return () => clearTimeout(timeoutId);
+    }, [text, fontSize, textColor, bgColor, overlayOpacity, textAlign, aspectRatio, addShadow, textPos, bgImageData, settings?.creatorSettings, settingsDispatch]);
 
     // Draw Canvas
     const draw = useCallback(() => {
@@ -214,13 +254,17 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ onClose, fontBlob }) => {
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            const img = new Image();
-            img.src = URL.createObjectURL(e.target.files[0]);
-            img.onload = () => {
-                setBgImage(img);
-                // Optional: Reset text pos on new image? Kept sticky for now.
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const result = ev.target?.result as string;
+                setBgImageData(result);
             };
+            reader.readAsDataURL(e.target.files[0]);
         }
+    };
+    
+    const handleRemoveImage = () => {
+        setBgImageData(null);
     };
 
     const handleDownload = () => {
@@ -254,6 +298,12 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ onClose, fontBlob }) => {
         { name: 'Story', ratio: 'portrait' as const },
         { name: 'Cover', ratio: 'landscape' as const },
     ];
+    
+    const changeAspectRatio = (ratio: 'square' | 'portrait' | 'landscape') => {
+        setAspectRatio(ratio);
+        // Reset text position when changing layout significantly
+        setTextPos(null);
+    };
 
     // -- Compact Control Section --
     const controls = (
@@ -263,7 +313,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ onClose, fontBlob }) => {
                  {presets.map(p => (
                      <button
                         key={p.name}
-                        onClick={() => setAspectRatio(p.ratio)}
+                        onClick={() => changeAspectRatio(p.ratio)}
                         className={`flex-1 py-1 text-xs font-semibold rounded-md transition-colors ${aspectRatio === p.ratio ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
                      >
                          {p.name}
@@ -332,7 +382,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ onClose, fontBlob }) => {
                 {/* Image Upload */}
                 <div className="flex flex-col items-center w-full relative">
                     {bgImage ? (
-                        <button onClick={() => setBgImage(null)} className="w-8 h-8 flex items-center justify-center text-red-500 bg-red-50 dark:bg-red-900/20 rounded-full border border-red-200 hover:bg-red-100" title="Remove Image"><TrashIcon/></button>
+                        <button onClick={handleRemoveImage} className="w-8 h-8 flex items-center justify-center text-red-500 bg-red-50 dark:bg-red-900/20 rounded-full border border-red-200 hover:bg-red-100" title="Remove Image"><TrashIcon/></button>
                     ) : (
                         <button onClick={() => fileInputRef.current?.click()} className="w-8 h-8 rounded-full bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 flex items-center justify-center" title="Add Background Image">
                             <ImageIcon />
