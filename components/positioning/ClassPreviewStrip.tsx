@@ -3,6 +3,8 @@ import React, { useRef, useEffect } from 'react';
 import { Character, GlyphData, Point } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths } from '../../services/glyphRenderService';
+import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
+import { LeftArrowIcon, RightArrowIcon } from '../../constants';
 
 interface SiblingPair {
     base: Character;
@@ -72,11 +74,32 @@ const SiblingThumbnail: React.FC<{
 });
 
 const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ siblings, glyphDataMap, strokeThickness, currentOffset, isLinked }) => {
+    const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
+
+    useEffect(() => {
+        checkVisibility();
+        // Give layout a moment to settle if siblings changed
+        const timer = setTimeout(checkVisibility, 100);
+        return () => clearTimeout(timer);
+    }, [siblings, checkVisibility]);
+
     if (!isLinked || siblings.length === 0) return null;
 
     return (
-        <div className="w-full flex flex-col border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up">
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center">
+        <div className="w-full flex flex-col border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative">
+             {/* Left Scroll Button */}
+             {visibility.left && (
+                <button
+                    onClick={() => handleScroll('left')}
+                    className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-10 bg-gradient-to-r from-gray-50 via-gray-50/80 to-transparent dark:from-gray-800 dark:via-gray-800/80"
+                >
+                    <div className="p-1 bg-white dark:bg-gray-700 rounded-full shadow-md border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                        <LeftArrowIcon className="h-4 w-4 text-gray-500 dark:text-gray-300" />
+                    </div>
+                </button>
+            )}
+
+            <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center scroll-smooth px-1">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mr-2 flex-shrink-0 px-2 border-r border-gray-300 dark:border-gray-600">
                     Syncing {siblings.length}
                 </span>
@@ -90,6 +113,18 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ siblings, glyphDa
                     />
                 ))}
             </div>
+
+            {/* Right Scroll Button */}
+            {visibility.right && (
+                <button
+                    onClick={() => handleScroll('right')}
+                    className="absolute right-0 top-0 bottom-0 z-20 flex items-center justify-center w-10 bg-gradient-to-l from-gray-50 via-gray-50/80 to-transparent dark:from-gray-800 dark:via-gray-800/80"
+                >
+                    <div className="p-1 bg-white dark:bg-gray-700 rounded-full shadow-md border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                        <RightArrowIcon className="h-4 w-4 text-gray-500 dark:text-gray-300" />
+                    </div>
+                </button>
+            )}
         </div>
     );
 };

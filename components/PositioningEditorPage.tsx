@@ -587,7 +587,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                     settings={settings} allGlyphData={new Map()} allCharacterSets={[]} currentCharacter={targetLigature}
                                     gridConfig={{ characterNameSize: 450 }} backgroundImage={null} backgroundImageOpacity={1} imageTransform={null} onImageTransformChange={() => {}}
                                     selectedPathIds={selectedPathIds} onSelectionChange={handleSelectionChange} isImageSelected={false} onImageSelectionChange={() => {}}
-                                    lsb={lsb} rsb={rsb} showBearingGuides={true} disableTransformations={false} transformMode="move-only" movementConstraint={movementConstraint} isInitiallyDrawn={true}
+                                    lsb={lsb} rsb={rsb} showBearingGuides={false} disableTransformations={false} transformMode="move-only" movementConstraint={movementConstraint} isInitiallyDrawn={true}
                                 />
                             </div>
                         </div>
