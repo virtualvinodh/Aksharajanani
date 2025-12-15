@@ -3,8 +3,10 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon, SaveIcon, PropertiesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, LinkIcon, BrokenLinkIcon } from '../constants';
 import DrawingCanvas from './DrawingCanvas';
-import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, CharacterSet, AttachmentClass } from '../types';
-import { calculateDefaultMarkOffset, getAccurateGlyphBBox } from '../services/glyphRenderService';
+import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, CharacterSet, AttachmentClass, AttachmentPoint } from '../types';
+import { calculateDefaultMarkOffset, getAccurateGlyphBBox, resolveAttachmentRule, getAttachmentPointCoords } from '../services/glyphRenderService';
+import { updatePositioningAndCascade } from '../services/positioningService';
+import { isGlyphDrawn } from '../utils/glyphUtils';
 import ReusePreviewCard from './ReusePreviewCard';
 import UnsavedChangesModal from './UnsavedChangesModal';
 import { VEC } from '../utils/vectorUtils';
@@ -64,7 +66,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     
     // Class Linking State
     const [isLinked, setIsLinked] = useState(true);
-    const [currentOffset, setCurrentOffset] = useState<Point>({ x: 0, y: 0 }); // Track for strip
+    const [currentOffset, setCurrentOffset] = useState<Point>({ x: 0, y: 0 }); // Visual offset from origin
     
     const [lsb, setLsb] = useState<number | undefined>(targetLigature.lsb);
     const [rsb, setRsb] = useState<number | undefined>(targetLigature.rsb);
@@ -75,7 +77,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const [pendingNavigation, setPendingNavigation] = useState<'prev' | 'next' | 'back' | null>(null);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
-    // Manual Coordinate Inputs
+    // Manual Coordinate Inputs (Anchor Delta)
     const [manualX, setManualX] = useState<string>('0');
     const [manualY, setManualY] = useState<string>('0');
     const [isInputFocused, setIsInputFocused] = useState(false);
@@ -126,6 +128,37 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
 
     const baseGlyph = glyphDataMap.get(baseChar.unicode);
     const baseBbox = useMemo(() => getAccurateGlyphBBox(baseGlyph?.paths ?? [], settings.strokeThickness), [baseGlyph, settings.strokeThickness]);
+    
+    // Geometric Alignment Offset: The offset required to make anchors touch (Delta = 0)
+    // We calculate this dynamically based on the current rule definition or default
+    const alignmentOffset = useMemo(() => {
+        const markGlyph = glyphDataMap.get(markChar.unicode);
+        const markBbox = getAccurateGlyphBBox(markGlyph?.paths ?? [], settings.strokeThickness);
+        
+        if (!baseBbox || !markBbox) return { x: 0, y: 0 };
+
+        let rule = resolveAttachmentRule(baseChar.name, markChar.name, markAttachmentRules, characterSets, groups);
+        if (!rule) {
+            rule = ["topCenter", "bottomCenter"]; // Default
+        }
+        
+        // We only care about the anchor POINTS here, ignoring any hardcoded offsets (index 2, 3) in the rule
+        // because we want the UI to show the deviation from the geometric anchor.
+        const basePointName = rule[0] as AttachmentPoint;
+        const markPointName = rule[1] as AttachmentPoint;
+
+        const baseAnchor = getAttachmentPointCoords(baseBbox, basePointName);
+        const markAnchor = getAttachmentPointCoords(markBbox, markPointName);
+        
+        // Offset needed to move Mark Anchor to Base Anchor
+        // NewMarkPos = OldMarkPos + Offset
+        // Target: NewMarkAnchor = BaseAnchor
+        // (OldMarkAnchor + Offset) = BaseAnchor
+        // Offset = BaseAnchor - OldMarkAnchor
+        return VEC.sub(baseAnchor, markAnchor);
+
+    }, [baseChar, markChar, baseBbox, markAttachmentRules, characterSets, groups, settings.strokeThickness, glyphDataMap]);
+
 
     // Initial Load Logic
     useEffect(() => {
@@ -310,20 +343,24 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         const originalBbox = getAccurateGlyphBBox(originalMarkPaths, settings.strokeThickness);
         const currentBbox = getAccurateGlyphBBox(markPaths, settings.strokeThickness);
         
+        let newCurrentOffset = { x: 0, y: 0 };
         if (originalBbox && currentBbox) {
              const dx = currentBbox.x - originalBbox.x;
              const dy = currentBbox.y - originalBbox.y;
-             setCurrentOffset({ x: dx, y: dy });
+             newCurrentOffset = { x: dx, y: dy };
         }
-    }, [markPaths, glyphDataMap, markChar, settings.strokeThickness]);
-    
-    // Sync manual inputs with currentOffset
-    useEffect(() => {
+        setCurrentOffset(newCurrentOffset);
+        
+        // Sync manual inputs with Delta (Current - Alignment)
         if (!isInputFocused) {
-            setManualX(Math.round(currentOffset.x).toString());
-            setManualY(Math.round(currentOffset.y).toString());
+            const deltaX = newCurrentOffset.x - alignmentOffset.x;
+            const deltaY = newCurrentOffset.y - alignmentOffset.y;
+            // Round for display
+            setManualX(Math.round(deltaX).toString());
+            setManualY(Math.round(deltaY).toString());
         }
-    }, [currentOffset, isInputFocused]);
+
+    }, [markPaths, glyphDataMap, markChar, settings.strokeThickness, isInputFocused, alignmentOffset]);
 
     useEffect(() => {
         return () => {
@@ -393,22 +430,27 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     };
 
     const commitManualChange = () => {
-        const targetX = parseFloat(manualX);
-        const targetY = parseFloat(manualY);
+        const inputDeltaX = parseFloat(manualX);
+        const inputDeltaY = parseFloat(manualY);
 
-        if (isNaN(targetX) || isNaN(targetY)) return;
+        if (isNaN(inputDeltaX) || isNaN(inputDeltaY)) return;
 
-        const deltaX = targetX - currentOffset.x;
-        const deltaY = targetY - currentOffset.y;
+        // Target Visual Offset = Alignment Offset + Delta
+        const targetOffsetX = alignmentOffset.x + inputDeltaX;
+        const targetOffsetY = alignmentOffset.y + inputDeltaY;
 
-        if (Math.abs(deltaX) < 0.01 && Math.abs(deltaY) < 0.01) return;
+        // Move Delta = Target Offset - Current Offset
+        const moveDeltaX = targetOffsetX - currentOffset.x;
+        const moveDeltaY = targetOffsetY - currentOffset.y;
+
+        if (Math.abs(moveDeltaX) < 0.01 && Math.abs(moveDeltaY) < 0.01) return;
 
         const newPaths = markPaths.map(p => ({
             ...p,
-            points: p.points.map(pt => ({ x: pt.x + deltaX, y: pt.y + deltaY })),
+            points: p.points.map(pt => ({ x: pt.x + moveDeltaX, y: pt.y + moveDeltaY })),
             segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({
                 ...seg,
-                point: { x: seg.point.x + deltaX, y: seg.point.y + deltaY }
+                point: { x: seg.point.x + moveDeltaX, y: seg.point.y + moveDeltaY }
             }))) : undefined
         }));
 
@@ -427,6 +469,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                     onBlur={() => { setIsInputFocused(false); commitManualChange(); }}
                     onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                     className="w-10 sm:w-12 p-1 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    title="X Deviation from Anchor"
                 />
             </div>
             <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
@@ -440,6 +483,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                     onBlur={() => { setIsInputFocused(false); commitManualChange(); }}
                     onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                     className="w-10 sm:w-12 p-1 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    title="Y Deviation from Anchor"
                 />
             </div>
         </div>

@@ -376,6 +376,64 @@ export const getAttachmentPointCoords = (bbox: BoundingBox, pointName: Attachmen
     }
 };
 
+/**
+ * Robustly finds the correct attachment rule for a given base/mark pair,
+ * handling group expansions ($consonants) and specific overrides.
+ */
+export const resolveAttachmentRule = (
+    baseName: string,
+    markName: string,
+    markAttachmentRules: MarkAttachmentRules | null,
+    characterSets?: CharacterSet[],
+    groups?: Record<string, string[]>
+): any | null => {
+    if (!markAttachmentRules) return null;
+
+    // 1. Exact Match: Base Name -> Mark Name
+    let rule = markAttachmentRules[baseName]?.[markName];
+
+    // 2. Group/Class Match: Look for group keys like $consonants or @BaseClass
+    if (!rule && (characterSets || (groups && Object.keys(groups).length > 0))) {
+        // We iterate through all keys in markAttachmentRules to see if any of them are groups
+        // that contain our baseName.
+        for (const baseKey in markAttachmentRules) {
+            if (baseKey.startsWith('$') || baseKey.startsWith('@')) {
+                const groupName = baseKey.substring(1);
+                const safeGroups = groups || {};
+                
+                // Use expandMembers logic to check if baseName is in this group
+                // Note: To be efficient, we check inclusion.
+                const members = expandMembers([baseKey], safeGroups, characterSets);
+                
+                if (members.includes(baseName)) {
+                    // Found a matching base group!
+                    const categoryRules = markAttachmentRules[baseKey];
+                    
+                    // Now check if the mark exists in this category
+                    // 2a. Exact match for mark in this category
+                    rule = categoryRules?.[markName];
+                    
+                    if (rule) break;
+
+                    // 2b. Check mark group in this category
+                    for (const markKey in categoryRules) {
+                        if ((markKey.startsWith('$') || markKey.startsWith('@'))) {
+                            const markMembers = expandMembers([markKey], safeGroups, characterSets);
+                            if (markMembers.includes(markName)) {
+                                rule = categoryRules[markKey];
+                                break;
+                            }
+                        }
+                    }
+                    if (rule) break;
+                }
+            }
+        }
+    }
+    
+    return rule;
+};
+
 export const calculateDefaultMarkOffset = (
     baseChar: Character,
     markChar: Character,
@@ -390,72 +448,13 @@ export const calculateDefaultMarkOffset = (
     if (isAbsolute) {
         return { x: 0, y: 0 };
     }
-    // Priority 1: Check for a specific attachment rule for the exact base character name.
-    if (markAttachmentRules && baseBbox && markBbox) {
-        let rule = markAttachmentRules[baseChar.name]?.[markChar.name];
-
-        // Priority 1.5: If no specific rule, check for a category-based rule (e.g., "$consonants").
-        // NOW SUPPORTS RECURSIVE GROUP EXPANSION
-        if (!rule && (characterSets || Object.keys(groups).length > 0)) {
-            for (const key in markAttachmentRules) {
-                // If key is a group (starts with $)
-                if (key.startsWith('$') || key.startsWith('@')) {
-                    const setName = key.substring(1);
-                    
-                    // Check if baseChar is in this group
-                    let isInGroup = false;
-
-                    // 1. Check Character Sets (legacy/UI sets)
-                    if (characterSets) {
-                        const set = characterSets.find(s => s.nameKey === setName);
-                        if (set && set.characters.some(c => c.name === baseChar.name)) {
-                            isInGroup = true;
-                        }
-                    }
-
-                    // 2. Check Global Groups (defined in Rules)
-                    if (!isInGroup && groups && groups[setName]) {
-                        // Use helper to check recursively if baseChar is in this group
-                        if (expandMembers([key], groups, characterSets).includes(baseChar.name)) {
-                            isInGroup = true;
-                        }
-                    }
-
-                    if (isInGroup) {
-                        // Base matches group. Now check marks.
-                        // The rule might key off specific mark OR mark group
-                        const categoryRules = markAttachmentRules[key];
-                        
-                        // Direct match
-                        rule = categoryRules?.[markChar.name];
-                        
-                        // Mark Group match
-                        if (!rule) {
-                             for (const markKey in categoryRules) {
-                                 if ((markKey.startsWith('$') || markKey.startsWith('@'))) {
-                                     // Check if current mark is in this mark group
-                                     if (expandMembers([markKey], groups, characterSets).includes(markChar.name)) {
-                                         rule = categoryRules[markKey];
-                                         break;
-                                     }
-                                     // Also check character sets for mark
-                                     if (characterSets) {
-                                         const mSet = characterSets.find(s => s.nameKey === markKey.substring(1));
-                                         if (mSet && mSet.characters.some(c => c.name === markChar.name)) {
-                                             rule = categoryRules[markKey];
-                                             break;
-                                         }
-                                     }
-                                 }
-                             }
-                        }
-
-                        if (rule) {
-                            break; // Found a matching category rule, stop searching.
-                        }
-                    }
-                }
-            }
+    
+    if (baseBbox && markBbox) {
+        let rule = resolveAttachmentRule(baseChar.name, markChar.name, markAttachmentRules, characterSets, groups);
+        
+        // 3. FALLBACK: Geometric Defaults (if no rule found)
+        if (!rule) {
+            rule = ["topCenter", "bottomCenter"];
         }
 
         if (rule) {
@@ -476,25 +475,15 @@ export const calculateDefaultMarkOffset = (
         }
     }
 
-    // Priority 2: Fallback to side-by-side positioning based on bearings
+    // Priority 2: Absolute Fallback (Side-by-side) 
     if (baseBbox && markBbox) {
         const baseRsb = baseChar.rsb ?? metrics.defaultRSB;
         const markLsb = markChar.lsb ?? metrics.defaultLSB;
-
-        // The target x position for the mark's content is the base's right edge plus bearings.
         const targetX = baseBbox.x + baseBbox.width + baseRsb;
-        
-        // The offset is the difference between where the mark's left edge should be and where it currently is,
-        // also accounting for the mark's own LSB.
         const dx = (targetX + markLsb) - markBbox.x;
-
-        // No vertical change, maintain baseline alignment (assuming both are drawn relative to it)
-        const dy = 0;
-
-        return { x: dx, y: dy };
+        return { x: dx, y: 0 };
     }
 
-    // Default fallback if no bboxes
     return { x: 0, y: 0 };
 };
 

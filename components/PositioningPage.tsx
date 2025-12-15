@@ -489,7 +489,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         newBearings: { lsb?: number, rsb?: number },
         isAutosave: boolean = false
     ) => {
-        if (!characterSets) return;
+        if (!characterSets || !settings) return;
     
         const snapshot = {
             glyphDataMap: new Map(glyphDataMap.entries()),
@@ -502,7 +502,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             allChars, allLigaturesByKey: positioningData.allLigaturesByKey,
             markAttachmentClasses, baseAttachmentClasses,
             markPositioningMap, glyphDataMap, characterSets, positioningRules,
-            groups // Pass groups for JIT expansion inside cascade logic
+            markAttachmentRules, // Pass explicit rules here
+            groups, // Pass groups for JIT expansion inside cascade logic
+            strokeThickness: settings.strokeThickness // Pass actual stroke thickness for correct bbox calculations
         });
     
         const propagatedCount = result.updatedMarkPositioningMap.size - markPositioningMap.size - 1;
@@ -524,7 +526,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                     glyphDataMap: snapshot.glyphDataMap,
                     characterSets: snapshot.characterSets,
                     positioningRules,
-                    groups
+                    markAttachmentRules,
+                    groups,
+                    strokeThickness: settings.strokeThickness
                 });
     
                 positioningDispatch({ type: 'SET_MAP', payload: reapplyResult.updatedMarkPositioningMap });
@@ -561,7 +565,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     }, [
         characterSets, allChars, positioningData.allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses,
         markPositioningMap, glyphDataMap, positioningRules, positioningDispatch, glyphDataDispatch,
-        characterDispatch, showNotification, t, groups
+        characterDispatch, showNotification, t, groups, markAttachmentRules, settings
     ]);
 
     const handleSavePair = useCallback((targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => {
@@ -762,7 +766,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 glyphDataMap: tempGlyphDataMap,
                 characterSets: tempCharacterSets,
                 positioningRules,
-                groups
+                markAttachmentRules,
+                groups,
+                strokeThickness: settings.strokeThickness
             });
             
             tempMarkPositioningMap = result.updatedMarkPositioningMap;
@@ -1108,8 +1114,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                     onClose={() => setIsResetConfirmOpen(false)}
                     title={t('confirmResetTitle')}
                     footer={<>
-                        <button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors">{t('cancel')}</button>
-                        <button onClick={handleResetPositions} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">{t('reset')}</button>
+                        <button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button>
+                        <button onClick={handleResetPositions} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button>
                     </>}
                 >
                     <p>{t('confirmResetMessage', { name: activeItem ? activeItem.name : "Selected Items" })}</p>
