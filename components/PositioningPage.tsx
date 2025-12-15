@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon, RulesIcon, BackIcon, SaveIcon, FilterIcon } from '../constants';
