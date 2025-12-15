@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon, RulesIcon, BackIcon, SaveIcon, FilterIcon } from '../constants';
@@ -1052,7 +1051,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                 </div>
                             ) : (
                                 // Level 2: Drill-down Grid
-                                <div className="max-w-6xl mx-auto animate-fade-in-up">
+                                <div className="animate-fade-in-up">
                                     {/* Header with Back Button */}
                                     <div className="flex items-center justify-between mb-6 border-b dark:border-gray-700 pb-4">
                                         <div className="flex items-center gap-4">
