@@ -67,41 +67,50 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
         return { bases, marks };
     }, [rule, t]);
 
-    // 3. Hero Selection (First Pair)
+    // 3. Calculate Progress
+    const totalPairs = pairs.length;
+    const completedPairs = useMemo(() => {
+        return pairs.filter(p => 
+            markPositioningMap.has(`${p.base.unicode}-${p.mark.unicode}`)
+        ).length;
+    }, [pairs, markPositioningMap]);
+    
+    const percentage = totalPairs > 0 ? Math.round((completedPairs / totalPairs) * 100) : 0;
+    const isComplete = percentage === 100;
+
+    // 4. Hero Selection (First Pair)
     const heroPair = pairs[0];
     
     // Check if hero is positioned
     const isHeroPositioned = markPositioningMap.has(`${heroPair.base.unicode}-${heroPair.mark.unicode}`);
 
     return (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden flex flex-col">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
             {/* Header */}
             <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex justify-between items-start">
-                <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white capitalize">
+                <div className="flex-grow min-w-0 pr-4">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white capitalize truncate">
                         {anchorInfo.title}
                     </h3>
                     <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-2 items-center">
-                        <span className="font-mono bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 px-1.5 py-0.5 rounded">
+                        <span className="font-mono bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 px-1.5 py-0.5 rounded truncate max-w-[150px]" title={groupDisplay.bases}>
                             {groupDisplay.bases}
                         </span>
                         <span className="text-gray-300">+</span>
-                        <span className="font-mono bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 px-1.5 py-0.5 rounded">
+                        <span className="font-mono bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 px-1.5 py-0.5 rounded truncate max-w-[150px]" title={groupDisplay.marks}>
                             {groupDisplay.marks}
                         </span>
-                        <span className="text-gray-300">|</span>
-                        <span>{pairs.length} Pairs</span>
                     </div>
                 </div>
-                <div className="text-xs font-mono text-gray-400 bg-white dark:bg-gray-700 border dark:border-gray-600 px-2 py-1 rounded">
+                <div className="text-xs font-mono text-gray-400 bg-white dark:bg-gray-700 border dark:border-gray-600 px-2 py-1 rounded whitespace-nowrap">
                     {rule.gpos ? `GPOS: ${rule.gpos}` : (rule.gsub ? `GSUB: ${rule.gsub}` : 'Default')}
                 </div>
             </div>
 
             {/* Content Body */}
-            <div className="p-8 flex justify-center items-center bg-gray-50/30 dark:bg-gray-900/30">
+            <div className="p-6 flex justify-center items-center bg-gray-50/30 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-48 h-48 relative group">
+                    <div className="w-40 h-40 relative group cursor-pointer" onClick={() => onEditPair(heroPair)}>
                         <CombinationCard 
                             baseChar={heroPair.base}
                             markChar={heroPair.mark}
@@ -109,7 +118,7 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
                             isPositioned={isHeroPositioned}
                             canEdit={true}
                             onClick={() => onEditPair(heroPair)}
-                            // Pass dummy callback for inline confirm, though we mainly use modal
+                            // Pass dummy callback for inline confirm
                             onConfirmPosition={() => {}}
                             glyphDataMap={glyphDataMap}
                             strokeThickness={strokeThickness}
@@ -120,14 +129,31 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
                             groups={groups}
                         />
                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <span className="bg-black/75 text-white text-sm px-3 py-1 rounded-full shadow-lg font-medium">Edit Group</span>
+                            <span className="bg-black/75 text-white text-xs px-3 py-1 rounded-full shadow-lg font-medium backdrop-blur-sm">
+                                Edit Group
+                            </span>
                         </div>
                     </div>
-                    <div className="text-center">
-                        <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest block">Representative Pair</span>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block">Click to edit and navigate all members</span>
-                    </div>
                 </div>
+            </div>
+
+            {/* Footer: Progress */}
+            <div className="bg-white dark:bg-gray-800 p-4">
+                 <div className="flex items-center gap-3">
+                    <div className="flex-grow bg-gray-300 dark:bg-gray-700 rounded-full h-2 overflow-hidden" role="presentation">
+                        <div
+                        className={`${isComplete ? 'bg-green-500' : 'bg-indigo-600'} h-2 rounded-full transition-all duration-500`}
+                        style={{ width: `${percentage}%` }}
+                        role="progressbar"
+                        aria-valuenow={percentage}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        />
+                    </div>
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap flex-shrink-0">
+                        {completedPairs} / {totalPairs} ({percentage}%)
+                    </div>
+                 </div>
             </div>
         </div>
     );

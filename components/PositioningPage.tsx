@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { CopyIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, UndoIcon, RulesIcon, BackIcon, SaveIcon, FilterIcon } from '../constants';
@@ -325,6 +326,16 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         return `${baseKey}-${markKey}`;
     }, [baseAttachmentClasses, markAttachmentClasses, groups, characterSets]);
 
+    // --- Helper: Count pairs per Class Key to determine stack visualization ---
+    const classCounts = useMemo(() => {
+        if (!activeRuleGroup) return new Map<string, number>();
+        const counts = new Map<string, number>();
+        activeRuleGroup.pairs.forEach(pair => {
+             const key = getPairClassKey(pair);
+             counts.set(key, (counts.get(key) || 0) + 1);
+        });
+        return counts;
+    }, [activeRuleGroup, getPairClassKey]);
 
     // --- Filtered Pairs Logic (Consolidated by Class) ---
     const uniqueRepPairs = useMemo(() => {
@@ -1078,41 +1089,62 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                         {pagedRulePairs.map((pair, idx) => {
                                             const isPositioned = markPositioningMap.has(`${pair.base.unicode}-${pair.mark.unicode}`);
                                             const pairId = `${pair.base.unicode}-${pair.mark.unicode}`;
-                                            // Calculate global index for navigation context
                                             const globalIndex = ((rulePage - 1) * ITEMS_PER_PAGE) + idx;
                                             
+                                            // Determine stacking
+                                            const classKey = getPairClassKey(pair);
+                                            const siblingCount = classCounts.get(classKey) || 1;
+                                            const isStacked = siblingCount > 1;
+                                            
                                             return (
-                                                <CombinationCard
-                                                    key={pairId}
-                                                    baseChar={pair.base}
-                                                    markChar={pair.mark}
-                                                    ligature={pair.ligature}
-                                                    isPositioned={isPositioned}
-                                                    canEdit={true}
-                                                    onClick={() => {
-                                                        setEditingPair(pair);
-                                                        // Find actual index in the full context list to allow proper navigation
-                                                        const actualIndex = activeRuleGroup!.pairs.indexOf(pair);
-                                                        setEditingIndex(actualIndex);
-                                                        
-                                                        // IMPORTANT: Filter context list by class key
-                                                        const classKey = getPairClassKey(pair);
-                                                        const filteredContext = activeRuleGroup!.pairs.filter(p => getPairClassKey(p) === classKey);
-                                                        setEditingContextList(filteredContext);
-                                                        
-                                                        // Recalculate index in filtered list
-                                                        const filteredIndex = filteredContext.findIndex(p => p.base.unicode === pair.base.unicode && p.mark.unicode === pair.mark.unicode);
-                                                        setEditingIndex(filteredIndex);
-                                                    }}
-                                                    onConfirmPosition={() => handleConfirmPosition(pair.base, pair.mark, pair.ligature)}
-                                                    glyphDataMap={glyphDataMap}
-                                                    strokeThickness={settings.strokeThickness}
-                                                    markAttachmentRules={markAttachmentRules}
-                                                    markPositioningMap={markPositioningMap}
-                                                    characterSets={characterSets}
-                                                    glyphVersion={glyphVersion}
-                                                    groups={groups}
-                                                />
+                                                <div key={pairId} className={`relative group ${isStacked ? 'mb-1 mr-1' : ''}`}>
+                                                     {/* Stack Backgrounds */}
+                                                     {isStacked && (
+                                                        <>
+                                                            {siblingCount > 5 && <div className="absolute inset-0 translate-x-2 translate-y-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg -z-20" />}
+                                                            <div className="absolute inset-0 translate-x-1 translate-y-1 bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-600 rounded-lg -z-10" />
+                                                        </>
+                                                     )}
+                                                    
+                                                    <div className="relative z-0">
+                                                        <CombinationCard
+                                                            baseChar={pair.base}
+                                                            markChar={pair.mark}
+                                                            ligature={pair.ligature}
+                                                            isPositioned={isPositioned}
+                                                            canEdit={true}
+                                                            onClick={() => {
+                                                                setEditingPair(pair);
+                                                                // Find actual index in the full context list to allow proper navigation
+                                                                const actualIndex = activeRuleGroup!.pairs.indexOf(pair);
+                                                                setEditingIndex(actualIndex);
+                                                                
+                                                                // IMPORTANT: Filter context list by class key
+                                                                const classKey = getPairClassKey(pair);
+                                                                const filteredContext = activeRuleGroup!.pairs.filter(p => getPairClassKey(p) === classKey);
+                                                                setEditingContextList(filteredContext);
+                                                                
+                                                                // Recalculate index in filtered list
+                                                                const filteredIndex = filteredContext.findIndex(p => p.base.unicode === pair.base.unicode && p.mark.unicode === pair.mark.unicode);
+                                                                setEditingIndex(filteredIndex);
+                                                            }}
+                                                            onConfirmPosition={() => handleConfirmPosition(pair.base, pair.mark, pair.ligature)}
+                                                            glyphDataMap={glyphDataMap}
+                                                            strokeThickness={settings.strokeThickness}
+                                                            markAttachmentRules={markAttachmentRules}
+                                                            markPositioningMap={markPositioningMap}
+                                                            characterSets={characterSets}
+                                                            glyphVersion={glyphVersion}
+                                                            groups={groups}
+                                                        />
+                                                        {/* Stack count badge */}
+                                                        {isStacked && (
+                                                            <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-bold px-1.5 rounded-bl-lg rounded-tr-lg shadow-sm z-10">
+                                                                +{siblingCount - 1}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             );
                                         })}
                                     </div>

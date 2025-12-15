@@ -1,7 +1,9 @@
+
 import { useMemo } from 'react';
 import { CharacterSet, GlyphData, KerningMap, MarkPositioningMap, RecommendedKerning, Character, PositioningRules } from '../types';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useSettings } from '../contexts/SettingsContext';
+import { expandMembers } from '../services/groupExpansionService';
 
 interface UseProgressCalculatorsProps {
     characterSets: CharacterSet[] | null;
@@ -47,18 +49,37 @@ export const useProgressCalculators = ({
 
     const positioningProgress = useMemo(() => {
         if (!positioningRules) return { completed: 0, total: 0 };
-        const allPossiblePairs = new Set<string>();
+        
+        const groups = fontRules?.groups || {};
+        const allRequiredPairs = new Set<string>();
+        
         for (const rule of positioningRules) {
-            const ruleMarks = rule.mark || [];
-            for (const baseName of rule.base) {
+            const ruleBases = expandMembers(rule.base, groups, characterSets || []);
+            const ruleMarks = expandMembers(rule.mark || [], groups, characterSets || []);
+            
+            for (const baseName of ruleBases) {
                 for (const markName of ruleMarks) {
-                    allPossiblePairs.add(`${baseName}-${markName}`);
+                    const baseChar = allCharsByName.get(baseName);
+                    const markChar = allCharsByName.get(markName);
+                    
+                    // Only count pair if both characters exist in the font
+                    if (baseChar && markChar && baseChar.unicode !== undefined && markChar.unicode !== undefined) {
+                        const key = `${baseChar.unicode}-${markChar.unicode}`;
+                        allRequiredPairs.add(key);
+                    }
                 }
             }
         }
         
-        return { completed: markPositioningMap.size, total: allPossiblePairs.size };
-    }, [markPositioningMap.size, positioningRules]);
+        let completedCount = 0;
+        allRequiredPairs.forEach(key => {
+            if (markPositioningMap.has(key)) {
+                completedCount++;
+            }
+        });
+        
+        return { completed: completedCount, total: allRequiredPairs.size };
+    }, [markPositioningMap, positioningRules, fontRules, characterSets, allCharsByName]);
 
     const kerningProgress = useMemo(() => {
         if (!recommendedKerning) return { completed: 0, total: 0 };
