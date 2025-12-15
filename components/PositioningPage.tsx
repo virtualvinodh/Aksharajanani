@@ -539,12 +539,14 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             glyphDataDispatch({ type: 'SET_MAP', payload: result.updatedGlyphDataMap });
             characterDispatch({ type: 'SET_CHARACTER_SETS', payload: result.updatedCharacterSets });
     
-            // Show undoable notification
-            showNotification(
-                t('propagatedPositions', { count: propagatedCount }),
-                'success',
-                { onUndo: undoPropagation, duration: 7000 }
-            );
+            // Show undoable notification - ONLY if not autosave
+            if (!isAutosave) {
+                showNotification(
+                    t('propagatedPositions', { count: propagatedCount }),
+                    'success',
+                    { onUndo: undoPropagation, duration: 7000 }
+                );
+            }
     
         } else {
             // No propagation, just a simple save
