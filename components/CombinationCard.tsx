@@ -136,11 +136,6 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
       <div className="w-full flex-1 min-h-0 flex items-center justify-center">
         <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className="transition-transform duration-200 max-w-full max-h-full object-contain group-hover:scale-110"></canvas>
       </div>
-      <div className="text-center mt-1 sm:mt-2 flex-shrink-0">
-        <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
-          {ligature.name}
-        </p>
-      </div>
     </div>
   );
 });
