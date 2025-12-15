@@ -75,6 +75,11 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const [pendingNavigation, setPendingNavigation] = useState<'prev' | 'next' | 'back' | null>(null);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
+    // Manual Coordinate Inputs
+    const [manualX, setManualX] = useState<string>('0');
+    const [manualY, setManualY] = useState<string>('0');
+    const [isInputFocused, setIsInputFocused] = useState(false);
+
     const pairIdentifier = `${baseChar.unicode}-${markChar.unicode}`;
     const pairNameKey = `${baseChar.name}-${markChar.name}`;
     
@@ -311,6 +316,14 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
              setCurrentOffset({ x: dx, y: dy });
         }
     }, [markPaths, glyphDataMap, markChar, settings.strokeThickness]);
+    
+    // Sync manual inputs with currentOffset
+    useEffect(() => {
+        if (!isInputFocused) {
+            setManualX(Math.round(currentOffset.x).toString());
+            setManualY(Math.round(currentOffset.y).toString());
+        }
+    }, [currentOffset, isInputFocused]);
 
     useEffect(() => {
         return () => {
@@ -372,6 +385,65 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     // Show strip if linked OR if unlinked but has siblings (to show what *would* happen)
     // Actually, strip is mainly useful to visualize the cascade.
     const showStrip = classSiblings.length > 0;
+    
+    // --- Manual Coordinate Handlers ---
+    const handleManualChange = (axis: 'x' | 'y', value: string) => {
+        if (axis === 'x') setManualX(value);
+        else setManualY(value);
+    };
+
+    const commitManualChange = () => {
+        const targetX = parseFloat(manualX);
+        const targetY = parseFloat(manualY);
+
+        if (isNaN(targetX) || isNaN(targetY)) return;
+
+        const deltaX = targetX - currentOffset.x;
+        const deltaY = targetY - currentOffset.y;
+
+        if (Math.abs(deltaX) < 0.01 && Math.abs(deltaY) < 0.01) return;
+
+        const newPaths = markPaths.map(p => ({
+            ...p,
+            points: p.points.map(pt => ({ x: pt.x + deltaX, y: pt.y + deltaY })),
+            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({
+                ...seg,
+                point: { x: seg.point.x + deltaX, y: seg.point.y + deltaY }
+            }))) : undefined
+        }));
+
+        handlePathsChange(newPaths);
+    };
+
+    const coordinateControls = (
+        <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 mr-2 flex-shrink-0">
+             <div className="flex items-center gap-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase select-none">X</label>
+                <input
+                    type="text"
+                    value={manualX}
+                    onChange={(e) => handleManualChange('x', e.target.value)}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => { setIsInputFocused(false); commitManualChange(); }}
+                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    className="w-10 sm:w-12 p-1 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+            </div>
+            <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+            <div className="flex items-center gap-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase select-none">Y</label>
+                <input
+                    type="text"
+                    value={manualY}
+                    onChange={(e) => handleManualChange('y', e.target.value)}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => { setIsInputFocused(false); commitManualChange(); }}
+                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    className="w-10 sm:w-12 p-1 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+            </div>
+        </div>
+    );
 
     // --- RENDER ---
     return (
@@ -391,7 +463,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                      <button onClick={() => handleNavigationAttempt('next')} disabled={!nextPair} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"><RightArrowIcon /></button>
                 </div>
                 
-                 <div className="flex-1 flex justify-end items-center gap-2">
+                 <div className="flex-1 flex justify-end items-center gap-2 overflow-x-auto no-scrollbar">
+                    
+                    {isLargeScreen && coordinateControls}
                     
                     {/* Link Toggle - Only show if siblings exist */}
                     {classSiblings.length > 0 && (
@@ -416,20 +490,21 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                         )
                     )}
 
-                    <button onClick={() => setIsResetConfirmOpen(true)} disabled={!isPositioned} className="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50"><UndoIcon /></button>
+                    <button onClick={() => setIsResetConfirmOpen(true)} disabled={!isPositioned} className="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 flex-shrink-0"><UndoIcon /></button>
                     {isGsubPair && (
                         <div className="relative">
-                            <button id="pos-properties-button" onClick={() => setIsPropertiesPanelOpen(p => !p)} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg"><PropertiesIcon /></button>
+                            <button id="pos-properties-button" onClick={() => setIsPropertiesPanelOpen(p => !p)} className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg flex-shrink-0"><PropertiesIcon /></button>
                             {isPropertiesPanelOpen && <GlyphPropertiesPanel lsb={lsb} setLsb={setLsb} rsb={rsb} setRsb={setRsb} metrics={metrics} onClose={() => setIsPropertiesPanelOpen(false)} />}
                         </div>
                     )}
-                    {!settings.isAutosaveEnabled && <button onClick={() => handleSave(markPaths)} className="p-2 bg-indigo-600 text-white rounded-lg"><SaveIcon /></button>}
+                    {!settings.isAutosaveEnabled && <button onClick={() => handleSave(markPaths)} className="p-2 bg-indigo-600 text-white rounded-lg flex-shrink-0"><SaveIcon /></button>}
                 </div>
             </header>
             
             {/* Mobile Toolbar (Top) - Outside Main, under header */}
             {!isLargeScreen && (
-                <div className="flex-shrink-0 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-2 flex justify-center z-20">
+                <div className="flex-shrink-0 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-2 flex justify-center z-20 items-center gap-2 overflow-x-auto no-scrollbar">
+                     {coordinateControls}
                      <PositioningToolbar 
                         orientation="horizontal"
                         onReuseClick={() => setIsReusePanelOpen(p => !p)} 
