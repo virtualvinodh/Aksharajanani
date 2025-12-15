@@ -38,13 +38,15 @@ interface PositioningEditorPageProps {
     allPairs: { base: Character, mark: Character, ligature: Character }[];
     currentIndex: number | null;
     onNavigate: (newIndex: number) => void;
+    // New prop for direct pair setting from strip
+    setEditingPair?: (pair: { base: Character, mark: Character, ligature: Character }) => void;
     characterSets: CharacterSet[];
     glyphVersion: number;
 }
 
 const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     baseChar, markChar, targetLigature, glyphDataMap, markPositioningMap, onSave, onClose, onReset, settings, metrics, markAttachmentRules, positioningRules, allChars,
-    allPairs, currentIndex, onNavigate, characterSets, glyphVersion
+    allPairs, currentIndex, onNavigate, setEditingPair, characterSets, glyphVersion
 }) => {
     const { t } = useLocale();
     const { state: rulesState } = useRules();
@@ -298,6 +300,31 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         if (baseAttachmentClasses) {
             updateClassList(baseAttachmentClasses, setBaseAttachmentClasses, baseChar.name);
         }
+    };
+    
+    // Jump to sibling from Strip
+    const handleSelectSibling = (pair: { base: Character, mark: Character, ligature: Character }) => {
+        if (!setEditingPair) return; // Should always be available if passed correctly
+
+        if (hasUnsavedChanges) {
+             // Basic autosave before jump, similar to navigation attempt
+             handleSave(markPaths, true); 
+        }
+
+        // Try to maintain context navigation if possible by finding index in current list
+        if (allPairs && onNavigate) {
+            const index = allPairs.findIndex(p => 
+                p.base.unicode === pair.base.unicode && 
+                p.mark.unicode === pair.mark.unicode
+            );
+            if (index !== -1) {
+                onNavigate(index);
+                return;
+            }
+        }
+        
+        // Fallback: Direct set (loses Prev/Next context relative to original list until refreshed)
+        setEditingPair(pair);
     };
 
      useEffect(() => {
@@ -603,6 +630,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                 currentOffset={currentOffset}
                                 isLinked={true} // Always render strip content, opacity handles visual cue
                                 orientation="horizontal"
+                                onSelectPair={handleSelectSibling}
                             />
                         </div>
                     )}

@@ -23,6 +23,7 @@ interface CombinationCardProps {
   characterSets: CharacterSet[];
   glyphVersion: number;
   groups: Record<string, string[]>;
+  hideTick?: boolean;
 }
 
 
@@ -40,7 +41,8 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
   markPositioningMap,
   characterSets,
   glyphVersion,
-  groups
+  groups,
+  hideTick = false
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
@@ -122,7 +124,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
 
   return (
     <div ref={ref} onClick={canEdit ? onClick : undefined} className={`${baseContainerClasses} ${cursorClass} ${stateClasses}`}>
-      {!isPositioned && canEdit && (
+      {!isPositioned && canEdit && !hideTick && (
         <button
           onClick={handleConfirmClick}
           title="Mark as positioned"

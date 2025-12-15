@@ -125,6 +125,7 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
                             characterSets={characterSets}
                             glyphVersion={glyphVersion}
                             groups={groups}
+                            hideTick={true}
                         />
                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                             <span className="bg-black/75 text-white text-xs px-3 py-1 rounded-full shadow-lg font-medium backdrop-blur-sm">

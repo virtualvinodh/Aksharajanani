@@ -252,6 +252,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 onNavigate={handleNavigatePair}
                 characterSets={characterSets}
                 glyphVersion={glyphVersion}
+                setEditingPair={setEditingPair}
             />
         );
     }

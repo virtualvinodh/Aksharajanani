@@ -128,8 +128,8 @@ export const CompareIcon = () => (
     </svg>
 );
 
-export const FoldIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+export const FoldIcon: React.FC<{ className?: string }> = ({ className = 'h-5 w-5' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M3 7a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 13a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zm13.707-3.293a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L13.586 11H11a1 1 0 110-2h2.586l-1.293-1.293a1 1 0 011.414-1.414l3 3z" clipRule="evenodd" />
     </svg>
 );
