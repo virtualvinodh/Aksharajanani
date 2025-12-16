@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
@@ -361,7 +362,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
 
     const getBannerText = () => {
         if (isSearching) {
-            return `Searching: "${searchQuery}"`;
+            return t('searchingFor', { query: searchQuery });
         }
         switch(filterMode) {
             case 'completed': return t('filterCompleted');
@@ -413,7 +414,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     />
                 ) : (
                     <div className="flex items-center justify-center h-full text-gray-500">
-                        {isFiltered ? 'No matches found.' : 'No characters.'}
+                        {isFiltered ? t('noMatchesFound') : t('noCharacters')}
                     </div>
                 )}
             </div>

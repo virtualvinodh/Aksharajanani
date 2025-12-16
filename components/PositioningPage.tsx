@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, PositioningRules, AttachmentClass } from '../types';
@@ -281,7 +282,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
     const getBannerText = () => {
         if (isSearching) {
-            return `Searching: "${searchQuery}"`;
+            return t('searchingFor', { query: searchQuery });
         }
         switch(filterMode) {
             case 'completed': return t('filterCompleted');
@@ -416,7 +417,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                         <button onClick={() => handleResetPositions(displayedCombinations, activeItem?.name, () => setIsResetConfirmOpen(false))} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button>
                     </>}
                 >
-                    <p>{t('confirmResetMessage', { name: activeItem ? activeItem.name : "Selected Items" })}</p>
+                    <p>{t('confirmResetMessage', { name: activeItem ? activeItem.name : t('selectedItems') })}</p>
                 </Modal>
             )}
         </div>

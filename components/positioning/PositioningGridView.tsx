@@ -1,4 +1,5 @@
 
+
 import React, { forwardRef } from 'react';
 import CombinationCard from '../CombinationCard';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, CharacterSet, AttachmentClass } from '../../types';
@@ -226,7 +227,7 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                                  </div>
                                  
                                  {status === 'representative' && (
-                                     <div className="absolute -top-2 -left-2 bg-indigo-600 text-white p-1 rounded-full shadow-md z-20 border-2 border-white dark:border-gray-800" title="Class Representative">
+                                     <div className="absolute -top-2 -left-2 bg-indigo-600 text-white p-1 rounded-full shadow-md z-20 border-2 border-white dark:border-gray-800" title={t('classRepresentative')}>
                                         <CrownIcon className="w-3 h-3" />
                                      </div>
                                  )}

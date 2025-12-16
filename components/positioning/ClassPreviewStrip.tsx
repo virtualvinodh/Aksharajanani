@@ -1,5 +1,6 @@
 
-import React, { useRef, useEffect, useMemo } from 'react';
+
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet, AttachmentClass } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -7,6 +8,7 @@ import { renderPaths, calculateDefaultMarkOffset, getAccurateGlyphBBox } from '.
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 import { LeftArrowIcon, RightArrowIcon, FoldIcon, CloseIcon } from '../../constants';
 import { VEC } from '../../utils/vectorUtils';
+import { useLocale } from '../../contexts/LocaleContext';
 
 interface SiblingPair {
     base: Character;
@@ -65,6 +67,7 @@ const SiblingThumbnail: React.FC<{
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
 }> = React.memo(({ pair, isActive, isPivot, glyphDataMap, strokeThickness, anchorDelta, onClick, size = 80, metrics, markAttachmentRules, characterSets, groups }) => {
+    const { t } = useLocale();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
 
@@ -169,11 +172,11 @@ const SiblingThumbnail: React.FC<{
             onClick={onClick}
             style={{ width: size }}
             className={containerClasses}
-            title={isPivot ? "Class Representative (Edit here to sync)" : `Edit ${pair.base.name} + ${pair.mark.name}`}
+            title={isPivot ? t('classRepresentativeEdit') : t('editPair', { base: pair.base.name, mark: pair.mark.name })}
         >
             <canvas ref={canvasRef} width={size} height={size} />
             {isPivot && (
-                 <div className="absolute top-0.5 left-0.5 bg-yellow-400 text-yellow-900 rounded-full p-1 shadow-md z-20" title="Class Representative">
+                 <div className="absolute top-0.5 left-0.5 bg-yellow-400 text-yellow-900 rounded-full p-1 shadow-md z-20" title={t('classRepresentative')}>
                     <CrownIcon className="w-3 h-3" />
                  </div>
             )}
@@ -187,6 +190,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
     isExpanded, setIsExpanded, activeClass,
     hasDualContext, activeClassType, onToggleContext
 }) => {
+    const { t } = useLocale();
     const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
 
     useEffect(() => {
@@ -245,9 +249,9 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                         <FoldIcon className="w-6 h-6 text-indigo-600 dark:text-indigo-400 rotate-180" />
                      </div>
                      <div>
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Class Sync Preview</h2>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('classSyncPreview')}</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {siblings.length} items in class <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">{activeClass?.name || 'Group'}</span>
+                            {t('itemsInClass', { count: siblings.length })} <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">{activeClass?.name || t('group')}</span>
                         </p>
                      </div>
                  </div>
@@ -283,7 +287,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                                       : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 border-b-2 border-transparent'
                                   }`}
                               >
-                                  Sync via Mark Class
+                                  {t('syncViaMarkClass')}
                               </button>
                               <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
                               <button 
@@ -294,7 +298,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                                       : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 border-b-2 border-transparent'
                                   }`}
                               >
-                                  Sync via Base Class
+                                  {t('syncViaBaseClass')}
                               </button>
                           </div>
                      </div>

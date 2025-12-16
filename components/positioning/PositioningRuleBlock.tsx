@@ -1,4 +1,5 @@
 
+
 import React, { useMemo, useRef, useEffect } from 'react';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, PositioningRules, CharacterSet, FontMetrics } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -78,6 +79,7 @@ const GroupStack: React.FC<{
     strokeThickness: number;
     theme: 'light' | 'dark';
 }> = ({ title, items, glyphDataMap, strokeThickness, theme }) => {
+    const { t } = useLocale();
     const displayItems = items.slice(0, 3);
     const overflow = items.length - 3;
 
@@ -107,7 +109,7 @@ const GroupStack: React.FC<{
                 ))}
                 {items.length === 0 && (
                     <div className="w-12 h-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-300 text-xs">Empty</span>
+                        <span className="text-gray-300 text-xs">{t('empty')}</span>
                     </div>
                 )}
             </div>
@@ -146,11 +148,11 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
         // Heuristic labels
         const baseLabel = rule.base.length === 1 && rule.base[0].startsWith('$') 
             ? t(rule.base[0].substring(1)) 
-            : `${bases.size} Bases`;
+            : t('basesCount', { count: bases.size });
             
         const markLabel = (rule.mark && rule.mark.length === 1 && rule.mark[0].startsWith('$'))
             ? t(rule.mark[0].substring(1))
-            : `${marks.size} Marks`;
+            : t('marksCount', { count: marks.size });
 
         return {
             uniqueBases: Array.from(bases.values()),
@@ -226,7 +228,7 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
                                 : 'bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500'
                             }`}
                     >
-                        <span>{isComplete ? 'Review Positions' : 'Start Positioning'}</span>
+                        <span>{isComplete ? t('reviewPositions') : t('startPositioning')}</span>
                         <div className={`p-1 rounded-full ${isComplete ? 'bg-green-200 dark:bg-green-800' : 'bg-white/20'}`}>
                             {isComplete ? <EditIcon className="w-4 h-4"/> : <RightArrowIcon className="w-4 h-4" />}
                         </div>
@@ -235,8 +237,8 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
                     {/* Progress Bar & Text */}
                     <div className="space-y-1.5">
                         <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
-                            <span>Progress</span>
-                            <span>{completedPairs} / {totalPairs} pairs</span>
+                            <span>{t('progress')}</span>
+                            <span>{t('progressPairs', { completed: completedPairs, total: totalPairs })}</span>
                         </div>
                         <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
                             <div 
