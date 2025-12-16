@@ -1,5 +1,4 @@
 
-
 import React, { useMemo, useRef, useEffect } from 'react';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, PositioningRules, CharacterSet, FontMetrics } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -24,12 +23,15 @@ interface PositioningRuleBlockProps {
 
 const MINI_SIZE = 48; // Size of thumbnail
 
+declare var UnicodeProperties: any;
+
 // Internal component for a single mini glyph canvas
 const MiniGlyphCanvas: React.FC<{ 
     glyphData: GlyphData | undefined; 
     strokeThickness: number; 
-    theme: 'light' | 'dark' 
-}> = React.memo(({ glyphData, strokeThickness, theme }) => {
+    theme: 'light' | 'dark';
+    character: Character;
+}> = React.memo(({ glyphData, strokeThickness, theme, character }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -41,20 +43,60 @@ const MiniGlyphCanvas: React.FC<{
 
         if (isGlyphDrawn(glyphData)) {
             const bbox = getAccurateGlyphBBox(glyphData!, strokeThickness);
+            
+            // Standard scale (fit 1000 units into 48px)
             let scale = MINI_SIZE / DRAWING_CANVAS_SIZE;
             let tx = 0;
             let ty = 0;
 
             if (bbox) {
-                // Tighter fit for thumbnails
-                const padding = 50; 
-                const w = Math.max(bbox.width + padding * 2, 100);
-                const h = Math.max(bbox.height + padding * 2, 100);
-                scale = Math.min(MINI_SIZE / w, MINI_SIZE / h);
-                const cx = bbox.x + bbox.width / 2;
-                const cy = bbox.y + bbox.height / 2;
-                tx = (MINI_SIZE / 2) - (cx * scale);
-                ty = (MINI_SIZE / 2) - (cy * scale);
+                // Auto-fit logic to ensure wide glyphs don't spill
+                const PADDING = 6; // Small padding for the mini tile
+                const availableDim = MINI_SIZE - (PADDING * 2);
+                
+                // 1. Calculate Fit Scale
+                if (bbox.width > 0 && bbox.height > 0) {
+                    const fitScaleX = availableDim / bbox.width;
+                    const fitScaleY = availableDim / bbox.height;
+                    
+                    // Use the smaller scale to fit entirely
+                    const fitScale = Math.min(fitScaleX, fitScaleY);
+                    
+                    // If the glyph is huge (scale < standard), shrink it.
+                    // If it's small, keep standard scale to maintain relative size consistency in the list.
+                    if (fitScale < scale) {
+                        scale = fitScale;
+                    }
+                }
+
+                // 2. Horizontal Center: Always center content
+                const contentCenterX = bbox.x + bbox.width / 2;
+                const canvasCenter = MINI_SIZE / 2;
+                tx = canvasCenter - (contentCenterX * scale);
+
+                // 3. Vertical Center: Conditional based on type
+                let shouldVerticallyCenter = true;
+
+                if (character.glyphClass === 'mark') {
+                    shouldVerticallyCenter = false;
+                } else if (character.unicode && typeof UnicodeProperties !== 'undefined') {
+                    try {
+                        const cat = UnicodeProperties.getCategory(character.unicode);
+                        // Lm: Modifier Letter, Sk: Modifier Symbol, P*: Punctuation
+                        if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {
+                            shouldVerticallyCenter = false;
+                        }
+                    } catch (e) { }
+                }
+
+                if (shouldVerticallyCenter) {
+                    // Center the content bounding box
+                    const contentCenterY = bbox.y + bbox.height / 2;
+                    ty = canvasCenter - (contentCenterY * scale);
+                } else {
+                    // Center the drawing frame (preserve relative Y position for marks)
+                    ty = (MINI_SIZE - (DRAWING_CANVAS_SIZE * scale)) / 2;
+                }
             }
 
             ctx.save();
@@ -66,7 +108,7 @@ const MiniGlyphCanvas: React.FC<{
             });
             ctx.restore();
         }
-    }, [glyphData, strokeThickness, theme]);
+    }, [glyphData, strokeThickness, theme, character]);
 
     return <canvas ref={canvasRef} width={MINI_SIZE} height={MINI_SIZE} />;
 });
@@ -90,7 +132,7 @@ const GroupStack: React.FC<{
                 {displayItems.map((char, index) => (
                     <div 
                         key={char.unicode}
-                        className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm -ml-4 first:ml-0 transition-transform hover:-translate-y-1 z-0 hover:z-10 w-12 h-12 flex items-center justify-center"
+                        className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm -ml-4 first:ml-0 transition-transform hover:-translate-y-1 z-0 hover:z-10 w-12 h-12 flex items-center justify-center overflow-hidden"
                         style={{ zIndex: displayItems.length - index }}
                         title={char.name}
                     >
@@ -98,6 +140,7 @@ const GroupStack: React.FC<{
                             glyphData={glyphDataMap.get(char.unicode!)} 
                             strokeThickness={strokeThickness}
                             theme={theme}
+                            character={char}
                         />
                         {/* Overflow Badge on the last item if needed */}
                         {index === 2 && overflow > 0 && (
