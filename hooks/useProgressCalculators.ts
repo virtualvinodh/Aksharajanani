@@ -45,7 +45,7 @@ export const useProgressCalculators = ({
         }).length;
 
         return { completed: drawnGlyphCount, total: totalDrawableChars };
-    }, [glyphDataMap, characterSets, glyphVersion]);
+    }, [glyphDataMap, characterSets, glyphVersion, showHidden]);
 
     const positioningProgress = useMemo(() => {
         if (!positioningRules) return { completed: 0, total: 0 };
@@ -82,16 +82,40 @@ export const useProgressCalculators = ({
     }, [markPositioningMap, positioningRules, fontRules, characterSets, allCharsByName]);
 
     const kerningProgress = useMemo(() => {
-        if (!recommendedKerning) return { completed: 0, total: 0 };
-        const totalRecommended = recommendedKerning.length;
-        const kernedRecommendedCount = recommendedKerning.filter(([left, right]) => {
-            const leftChar = allCharsByName.get(left);
-            const rightChar = allCharsByName.get(right);
-            if (!leftChar || !rightChar) return false;
-            return kerningMap.has(`${leftChar.unicode}-${rightChar.unicode}`);
-        }).length;
-        return { completed: kernedRecommendedCount, total: totalRecommended };
-    }, [kerningMap, recommendedKerning, allCharsByName]);
+        if (!recommendedKerning || !characterSets) return { completed: 0, total: 0 };
+        
+        const groups = fontRules?.groups || {};
+        const allRecommendedPairs = new Set<string>();
+
+        for (const [leftRule, rightRule] of recommendedKerning) {
+            const lefts = expandMembers([leftRule], groups, characterSets);
+            const rights = expandMembers([rightRule], groups, characterSets);
+
+            for (const leftName of lefts) {
+                for (const rightName of rights) {
+                    const leftChar = allCharsByName.get(leftName);
+                    const rightChar = allCharsByName.get(rightName);
+                    
+                    if (leftChar && rightChar && leftChar.unicode !== undefined && rightChar.unicode !== undefined) {
+                        // Only count if characters are actually drawn/valid, 
+                        // matching the logic that we only show pairs for drawn glyphs.
+                        if (isGlyphDrawn(glyphDataMap.get(leftChar.unicode)) && isGlyphDrawn(glyphDataMap.get(rightChar.unicode))) {
+                            allRecommendedPairs.add(`${leftChar.unicode}-${rightChar.unicode}`);
+                        }
+                    }
+                }
+            }
+        }
+
+        let completedCount = 0;
+        allRecommendedPairs.forEach(key => {
+            if (kerningMap.has(key)) {
+                completedCount++;
+            }
+        });
+
+        return { completed: completedCount, total: allRecommendedPairs.size };
+    }, [kerningMap, recommendedKerning, allCharsByName, fontRules, characterSets, glyphDataMap, glyphVersion]);
 
     const rulesProgress = useMemo(() => {
         if (!fontRules || !allCharsByName) {

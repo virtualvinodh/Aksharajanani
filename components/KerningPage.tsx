@@ -19,6 +19,8 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import Modal from './Modal';
 import KerningEditorPage from './KerningEditorPage';
 import { parseSearchQuery, getCharacterMatchScore } from '../utils/searchUtils';
+import { useRules } from '../contexts/RulesContext';
+import { expandMembers } from '../services/groupExpansionService';
 
 interface KerningPageProps {
   recommendedKerning: RecommendedKerning[] | null;
@@ -34,6 +36,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
     const { settings, metrics } = useSettings();
+    const { state: rulesState } = useRules();
     
     // Changed: Track index in filtered list instead of object
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -71,33 +74,46 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             .sort((a: Character, b: Character) => (a.unicode || 0) - (b.unicode || 0));
     }, [allCharsByUnicode, isGlyphDrawn]);
     
+    const expandedRecommendedPairs = useMemo(() => {
+        if (!recommendedKerning || !characterSets) return [];
+        const pairs: { left: Character, right: Character }[] = [];
+        const seenPairs = new Set<string>();
+        const groups = rulesState.fontRules?.groups || {};
+        
+        recommendedKerning.forEach(([leftRule, rightRule]) => {
+            const lefts = expandMembers([leftRule], groups, characterSets);
+            const rights = expandMembers([rightRule], groups, characterSets);
+            
+            lefts.forEach(lName => {
+                rights.forEach(rName => {
+                    const lChar = allCharsByName.get(lName);
+                    const rChar = allCharsByName.get(rName);
+                    if (lChar && rChar && lChar.unicode !== undefined && rChar.unicode !== undefined) {
+                        const key = `${lChar.unicode}-${rChar.unicode}`;
+                        if (!seenPairs.has(key)) {
+                            // We include it in the list, drawn check happens next
+                            pairs.push({ left: lChar, right: rChar });
+                            seenPairs.add(key);
+                        }
+                    }
+                });
+            });
+        });
+        return pairs;
+    }, [recommendedKerning, rulesState.fontRules, characterSets, allCharsByName]);
+
     const areAllRecGlyphsDrawn = useMemo(() => {
-        if (!recommendedKerning) return true;
-        for (const [leftName, rightName] of recommendedKerning) {
-            const leftChar = allCharsByName.get(leftName);
-            const rightChar = allCharsByName.get(rightName);
-            if (!leftChar || !rightChar || !isGlyphDrawn(leftChar) || !isGlyphDrawn(rightChar)) {
-                return false; // Found a recommended pair with undrawn glyphs
-            }
-        }
-        return true; // All recommended pairs have drawn glyphs
-    }, [recommendedKerning, isGlyphDrawn, allCharsByName]);
+        // If any pair in the expanded list has an undrawn glyph, we return false
+        return expandedRecommendedPairs.every(pair => isGlyphDrawn(pair.left) && isGlyphDrawn(pair.right));
+    }, [expandedRecommendedPairs, isGlyphDrawn]);
     
     const drawnRecommendedKerning = useMemo(() => {
-        if (!recommendedKerning) return [];
-        return recommendedKerning.filter(([left, right]) => {
-            const leftChar = allCharsByName.get(left);
-            const rightChar = allCharsByName.get(right);
-            return !!(leftChar && rightChar && isGlyphDrawn(leftChar) && isGlyphDrawn(rightChar));
-        });
-    }, [recommendedKerning, isGlyphDrawn, allCharsByName]);
+        return expandedRecommendedPairs.filter(pair => isGlyphDrawn(pair.left) && isGlyphDrawn(pair.right));
+    }, [expandedRecommendedPairs, isGlyphDrawn]);
 
     const allPairsToDisplay = useMemo(() => {
         if (mode === 'recommended') {
-            let pairs = drawnRecommendedKerning.map(([left, right]) => ({
-                left: allCharsByName.get(left)!,
-                right: allCharsByName.get(right)!,
-            }));
+            let pairs = drawnRecommendedKerning;
             if (selectedLeftChars.size > 0 || selectedRightChars.size > 0) {
                 pairs = pairs.filter(pair => {
                     const leftMatch = selectedLeftChars.size === 0 || selectedLeftChars.has(pair.left.unicode!);
@@ -136,7 +152,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             }
             return combinedList.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
         }
-    }, [mode, drawnRecommendedKerning, allCharsByName, selectedLeftChars, selectedRightChars, allCharsByUnicode, isGlyphDrawn, kerningMap]);
+    }, [mode, drawnRecommendedKerning, selectedLeftChars, selectedRightChars, allCharsByUnicode, isGlyphDrawn, kerningMap]);
 
     const filteredPairsToDisplay = useMemo(() => {
         let result = allPairsToDisplay;
