@@ -320,6 +320,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                 handleOpenReuseModal={handleOpenReuseModal} handleAcceptAllDefaults={() => handleAcceptAllDefaults()}
                                 unpositionedCount={unpositionedCount} setIsResetConfirmOpen={setIsResetConfirmOpen} hasManuallyPositioned={hasManuallyPositioned}
                                 navItemsLength={navItems.length} t={t}
+                                markAttachmentClasses={markAttachmentClasses}
+                                baseAttachmentClasses={baseAttachmentClasses}
                             />
                         )}
                     </>
