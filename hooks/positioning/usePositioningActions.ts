@@ -145,9 +145,9 @@ export const usePositioningActions = ({
         const newGlyphData = { paths: combinedPaths };
         const newBearings = { lsb: ligature.lsb, rsb: ligature.rsb };
     
-        savePositioningUpdate(base, mark, ligature, newGlyphData, offset, newBearings);
-        showNotification(`${t('positioningUpdated')} ${ligature.name}`, 'success');
-    }, [glyphDataMap, markAttachmentRules, savePositioningUpdate, showNotification, t, metrics, characterSets, settings, groups]);
+        // We pass 'true' for isAutosave to suppress the notification, as visual feedback is sufficient here.
+        savePositioningUpdate(base, mark, ligature, newGlyphData, offset, newBearings, true);
+    }, [glyphDataMap, markAttachmentRules, savePositioningUpdate, t, metrics, characterSets, settings, groups]);
 
     const handleAcceptAllDefaults = useCallback((pairsToProcess?: { base: Character; mark: Character; ligature: Character }[]) => {
         if (!characterSets) return;
@@ -206,8 +206,8 @@ export const usePositioningActions = ({
         glyphDataDispatch({ type: 'SET_MAP', payload: tempGlyphDataMap });
         characterDispatch({ type: 'SET_CHARACTER_SETS', payload: tempCharacterSets });
 
-        showNotification(t('acceptedAllDefaults', { count: unpositionedPairs.length }), 'success');
-    }, [displayedCombinations, markPositioningMap, glyphDataMap, showNotification, t, metrics, settings, markAttachmentRules, characterSets, allChars, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses, positioningRules, positioningDispatch, glyphDataDispatch, characterDispatch, groups]);
+        // Notification suppressed as per user request (visual feedback via cards filling is sufficient)
+    }, [displayedCombinations, markPositioningMap, glyphDataMap, t, metrics, settings, markAttachmentRules, characterSets, allChars, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses, positioningRules, positioningDispatch, glyphDataDispatch, characterDispatch, groups]);
 
     const handleCopyPositions = useCallback((copyFromItem: Character, reuseSourceItem: Character, navItems: Character[]) => {
         // Reuse logic simplified: works on displayedCombinations (Grid View).

@@ -72,7 +72,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
     }
 
     // Level 2: Drill-down Grid
-    const unpositionedCount = activeRuleGroup?.pairs.filter((p: any) => !markPositioningMap.has(`${p.base.unicode}-${p.mark.unicode}`)).length || 0;
+    const unpositionedOnPageCount = pagedRulePairs.filter((p: any) => !markPositioningMap.has(`${p.base.unicode}-${p.mark.unicode}`)).length;
 
     return (
         <div className="animate-fade-in-up">
@@ -96,15 +96,15 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                     </div>
                 </div>
                 
-                {/* Accept All Button */}
+                {/* Accept Page Button */}
                 {activeRuleGroup && (
                     <button
-                        onClick={() => handleAcceptAllDefaults(activeRuleGroup.pairs)}
-                        disabled={unpositionedCount === 0}
+                        onClick={() => handleAcceptAllDefaults(pagedRulePairs)}
+                        disabled={unpositionedOnPageCount === 0}
                         className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
                         <CheckCircleIcon className="h-4 w-4" />
-                        <span>Accept All ({unpositionedCount})</span>
+                        <span>Accept Page</span>
                     </button>
                 )}
             </div>
