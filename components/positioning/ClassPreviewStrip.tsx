@@ -168,7 +168,7 @@ const SiblingThumbnail: React.FC<{
         >
             <canvas ref={canvasRef} width={size} height={size} />
             {isPivot && (
-                 <div className="absolute top-0.5 right-0.5 bg-yellow-400 text-yellow-900 rounded-full p-1 shadow-md z-20" title="Class Leader">
+                 <div className="absolute top-0.5 left-0.5 bg-yellow-400 text-yellow-900 rounded-full p-1 shadow-md z-20" title="Class Leader">
                     <CrownIcon className="w-3 h-3" />
                  </div>
             )}
