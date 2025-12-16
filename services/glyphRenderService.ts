@@ -1,5 +1,5 @@
 
-// FIX: Added AppSettings to types import and added new imports for isGlyphDrawn and DRAWING_CANVAS_SIZE
+// ... imports ... (keeping existing imports)
 import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings, ComponentTransform } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -454,7 +454,11 @@ export const calculateDefaultMarkOffset = (
         
         // 3. FALLBACK: Geometric Defaults (if no rule found)
         if (!rule) {
-            rule = ["topCenter", "bottomCenter"];
+            // Only use topCenter/bottomCenter default if the mark is explicitly non-spacing (advWidth: 0)
+            const isNonSpacing = markChar.advWidth === 0 || markChar.advWidth === '0';
+            if (isNonSpacing) {
+                rule = ["topCenter", "bottomCenter"];
+            }
         }
 
         if (rule) {
@@ -487,12 +491,7 @@ export const calculateDefaultMarkOffset = (
     return { x: 0, y: 0 };
 };
 
-/**
- * Renders a set of paths onto a canvas context.
- * @param ctx The 2D rendering context of the canvas.
- * @param paths The array of Path objects to draw.
- * @param options Rendering options like stroke thickness and color.
- */
+// ... (keep rest of file: renderPaths, generateCompositeGlyphData, updateComponentInPaths) ...
 export const renderPaths = (ctx: CanvasRenderingContext2D, paths: Path[], options: RenderOptions) => {
   ctx.strokeStyle = options.color;
   ctx.fillStyle = options.color;
@@ -683,19 +682,13 @@ export const generateCompositeGlyphData = ({
         }));
 
         // Apply Translation (X/Y)
-        // Note: Y is usually inverted in font space vs canvas space, but here we treat raw values.
-        // For 'absolute' mode, we might need different logic, but usually absolute refers to positioning relative to origin vs relative to previous component.
-        // Since this function just prepares the component shape before layout, we apply local transforms here.
-        
-        // Logic fix: The `y` in transform config is often a baseline shift.
-        // If we want to shift Y, we just add it.
         const xShift = x || 0;
         const yShift = y || 0;
 
         if (xShift !== 0 || yShift !== 0) {
             transformed = transformed.map((p: Path) => ({
                 ...p,
-                points: p.points.map((pt: Point) => ({ x: pt.x + xShift, y: pt.y + yShift })), // ADD Y because canvas Y grows down, and input is typically canvas-based offset or needs inversion if from font coords. Legacy files like [0.6, 200] for subscript implies moving down, which is +Y in canvas.
+                points: p.points.map((pt: Point) => ({ x: pt.x + xShift, y: pt.y + yShift })),
                 segmentGroups: p.segmentGroups ? p.segmentGroups.map((group: Segment[]) => group.map(seg => ({ ...seg, point: { x: seg.point.x + xShift, y: seg.point.y + yShift } }))) : undefined
             }));
         }
@@ -729,9 +722,6 @@ export const generateCompositeGlyphData = ({
         const { mode } = normalizeTransform(character.compositeTransform, i);
     
         if (mode === 'touching') {
-            const firstComponent = transformedComponents[0]; // Or previous? Usually previous in ligatures
-            // Actually 'touching' usually means attach to previous.
-            // Let's assume previous for general ligature building.
             const prevBbox = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
             
             if (prevBbox) {
@@ -743,8 +733,6 @@ export const generateCompositeGlyphData = ({
         } else if (mode === 'absolute') {
              // Absolute means we don't calculate relative offset.
              // The local transform (x/y) was already applied in transformComponentPaths.
-             // So we just place it at its natural position (which might be 0,0 or shifted).
-             // However, `calculateDefaultMarkOffset` returns {0,0} for isAbsolute=true.
              offset = { x: 0, y: 0 };
         } else {
             // Relative (Default)
