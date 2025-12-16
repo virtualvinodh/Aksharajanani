@@ -1,5 +1,4 @@
 
-
 import React, { forwardRef } from 'react';
 import CombinationCard from '../CombinationCard';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, CharacterSet, AttachmentClass } from '../../types';
@@ -59,7 +58,7 @@ const ListContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
     <div
       {...props}
       ref={ref}
-      className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4 pb-4"
+      className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4 px-6 pb-20 pt-10"
     />
 ));
 
