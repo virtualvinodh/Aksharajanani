@@ -546,6 +546,7 @@
 	"settingsTabGeneral": "General",
 	"settingsTabMetaData": "Font Meta Data",
 	"settingsTabMetrics": "Metrics",
+    "settingsTabTools": "Tools",
 	"settingsTabEditor": "Editor",
 	"showBackgroundHints": "Show Background Hints",
 	"showAll": "All",

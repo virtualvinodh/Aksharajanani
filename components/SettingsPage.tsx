@@ -1,10 +1,10 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { AppSettings, ToolRanges, FontMetrics, GuideFont } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon, LeftArrowIcon, RightArrowIcon } from '../constants';
 import Footer from './Footer';
-import GeneralSettings from './settings/GeneralSettings';
+import ToolsSettings from './settings/ToolsSettings';
 import EditorSettings from './settings/EditorSettings';
 import MetaDataSettings from './settings/MetaDataSettings';
 import MetricsSettings from './settings/MetricsSettings';
@@ -17,7 +17,7 @@ interface SettingsPageProps {
   toolRanges: ToolRanges;
 }
 
-type ActiveTab = 'general' | 'editor' | 'meta' | 'metrics';
+type ActiveTab = 'tools' | 'editor' | 'meta' | 'metrics';
 
 const TabButton: React.FC<{
     tabId: ActiveTab;
@@ -44,7 +44,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
   // Get GuideFont from ProjectContext
   const { guideFont, setGuideFont, script } = useProject();
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('general');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('tools');
   const [localSettings, setLocalSettings] = useState(settings!);
   const [localMetrics, setLocalMetrics] = useState(metrics!);
   // Initialize local guide font from project, fallback to script default, or empty
@@ -98,7 +98,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
                     className="overflow-x-auto overflow-y-hidden no-scrollbar flex flex-nowrap"
                 >
                     <nav className="-mb-px flex" aria-label="Tabs">
-                        <TabButton tabId="general" label={t('settingsTabGeneral')} activeTab={activeTab} onClick={setActiveTab} />
+                        <TabButton tabId="tools" label={t('settingsTabTools')} activeTab={activeTab} onClick={setActiveTab} />
                         <TabButton tabId="editor" label={t('editorSettings')} activeTab={activeTab} onClick={setActiveTab} />
                         <TabButton tabId="meta" label={t('settingsTabMetaData')} activeTab={activeTab} onClick={setActiveTab} />
                         <TabButton tabId="metrics" label={t('settingsTabMetrics')} activeTab={activeTab} onClick={setActiveTab} />
@@ -118,19 +118,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
             </div>
 
             <div className="bg-gray-100 dark:bg-gray-800 rounded-lg shadow-inner p-6 md:p-8">
-                {activeTab === 'general' && (
-                    <GeneralSettings 
+                {activeTab === 'tools' && (
+                    <ToolsSettings 
                         settings={localSettings} 
                         onSettingsChange={setLocalSettings} 
                         toolRanges={toolRanges}
-                        guideFont={localGuideFont}
-                        onGuideFontChange={setLocalGuideFont}
                     />
                 )}
                 {activeTab === 'editor' && (
                     <EditorSettings
                         settings={localSettings}
                         onSettingsChange={setLocalSettings}
+                        guideFont={localGuideFont}
+                        onGuideFontChange={setLocalGuideFont}
                     />
                 )}
                 {activeTab === 'meta' && (

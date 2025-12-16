@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AppSettings } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -19,33 +20,51 @@ const MetaDataSettings: React.FC<MetaDataSettingsProps> = ({ settings, onSetting
 
     return (
         <div className="space-y-6">
-            <div>
-                <label htmlFor="font-manufacturer" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaManufacturer')}</label>
-                <input type="text" id="font-manufacturer" value={settings.manufacturer || ''} onChange={handleSettingChange('manufacturer')} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
+             {/* Font Name moved from General */}
+             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+                <label htmlFor="font-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('fontName')} (For Export):
+                </label>
+                <input 
+                    type="text" 
+                    id="font-name"
+                    value={settings.fontName} 
+                    onChange={handleSettingChange('fontName')} 
+                    className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-900 dark:border-gray-600 text-lg font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">This name will be used inside the exported OTF file.</p>
             </div>
-            <div>
-                <label htmlFor="font-designer" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaDesigner')}</label>
-                <input type="text" id="font-designer" value={settings.designer || ''} onChange={handleSettingChange('designer')} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
-            </div>
-            <div>
-                <label htmlFor="font-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaDescription')}</label>
-                <textarea id="font-description" value={settings.description || ''} onChange={handleSettingChange('description')} rows={3} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm resize-y"/>
-            </div>
-            <div>
-                <label htmlFor="font-vendor-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaVendorURL')}</label>
-                <input type="url" id="font-vendor-url" value={settings.vendorURL || ''} onChange={handleSettingChange('vendorURL')} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
-            </div>
-            <div>
-                <label htmlFor="font-designer-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaDesignerURL')}</label>
-                <input type="url" id="font-designer-url" value={settings.designerURL || ''} onChange={handleSettingChange('designerURL')} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
-            </div>
-            <div>
-                <label htmlFor="font-license" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaLicenseDescription')}</label>
-                <textarea id="font-license" value={settings.licenseDescription || ''} onChange={handleSettingChange('licenseDescription')} rows={3} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm resize-y"/>
-            </div>
-             <div>
-                <label htmlFor="font-license-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaLicenseURL')}</label>
-                <input type="url" id="font-license-url" value={settings.licenseInfoURL || ''} onChange={handleSettingChange('licenseInfoURL')} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
+
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700 space-y-4">
+                <h4 className="font-bold text-gray-900 dark:text-white border-b dark:border-gray-700 pb-2">Authoring Information</h4>
+                <div>
+                    <label htmlFor="font-manufacturer" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaManufacturer')}</label>
+                    <input type="text" id="font-manufacturer" value={settings.manufacturer || ''} onChange={handleSettingChange('manufacturer')} className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
+                </div>
+                <div>
+                    <label htmlFor="font-designer" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaDesigner')}</label>
+                    <input type="text" id="font-designer" value={settings.designer || ''} onChange={handleSettingChange('designer')} className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
+                </div>
+                <div>
+                    <label htmlFor="font-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaDescription')}</label>
+                    <textarea id="font-description" value={settings.description || ''} onChange={handleSettingChange('description')} rows={3} className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm resize-y"/>
+                </div>
+                <div>
+                    <label htmlFor="font-vendor-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaVendorURL')}</label>
+                    <input type="url" id="font-vendor-url" value={settings.vendorURL || ''} onChange={handleSettingChange('vendorURL')} className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
+                </div>
+                <div>
+                    <label htmlFor="font-designer-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaDesignerURL')}</label>
+                    <input type="url" id="font-designer-url" value={settings.designerURL || ''} onChange={handleSettingChange('designerURL')} className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
+                </div>
+                <div>
+                    <label htmlFor="font-license" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaLicenseDescription')}</label>
+                    <textarea id="font-license" value={settings.licenseDescription || ''} onChange={handleSettingChange('licenseDescription')} rows={3} className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm resize-y"/>
+                </div>
+                <div>
+                    <label htmlFor="font-license-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('fontMetaLicenseURL')}</label>
+                    <input type="url" id="font-license-url" value={settings.licenseInfoURL || ''} onChange={handleSettingChange('licenseInfoURL')} className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
+                </div>
             </div>
         </div>
     );
