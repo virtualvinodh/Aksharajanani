@@ -1,8 +1,11 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, PositioningRules, CharacterSet, FontMetrics } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import CombinationCard from '../CombinationCard';
+import { useTheme } from '../../contexts/ThemeContext';
+import { renderPaths, getAccurateGlyphBBox } from '../../services/glyphRenderService';
+import { DRAWING_CANVAS_SIZE, RightArrowIcon, EditIcon } from '../../constants';
+import { isGlyphDrawn } from '../../utils/glyphUtils';
 
 interface PositioningRuleBlockProps {
     rule: PositioningRules;
@@ -18,6 +21,107 @@ interface PositioningRuleBlockProps {
     metrics: FontMetrics;
 }
 
+const MINI_SIZE = 48; // Size of thumbnail
+
+// Internal component for a single mini glyph canvas
+const MiniGlyphCanvas: React.FC<{ 
+    glyphData: GlyphData | undefined; 
+    strokeThickness: number; 
+    theme: 'light' | 'dark' 
+}> = React.memo(({ glyphData, strokeThickness, theme }) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (!ctx || !canvas) return;
+
+        ctx.clearRect(0, 0, MINI_SIZE, MINI_SIZE);
+
+        if (isGlyphDrawn(glyphData)) {
+            const bbox = getAccurateGlyphBBox(glyphData!, strokeThickness);
+            let scale = MINI_SIZE / DRAWING_CANVAS_SIZE;
+            let tx = 0;
+            let ty = 0;
+
+            if (bbox) {
+                // Tighter fit for thumbnails
+                const padding = 50; 
+                const w = Math.max(bbox.width + padding * 2, 100);
+                const h = Math.max(bbox.height + padding * 2, 100);
+                scale = Math.min(MINI_SIZE / w, MINI_SIZE / h);
+                const cx = bbox.x + bbox.width / 2;
+                const cy = bbox.y + bbox.height / 2;
+                tx = (MINI_SIZE / 2) - (cx * scale);
+                ty = (MINI_SIZE / 2) - (cy * scale);
+            }
+
+            ctx.save();
+            ctx.translate(tx, ty);
+            ctx.scale(scale, scale);
+            renderPaths(ctx, glyphData!.paths, {
+                strokeThickness,
+                color: theme === 'dark' ? '#E2E8F0' : '#374151'
+            });
+            ctx.restore();
+        }
+    }, [glyphData, strokeThickness, theme]);
+
+    return <canvas ref={canvasRef} width={MINI_SIZE} height={MINI_SIZE} />;
+});
+
+// Component to render a stack of glyphs
+const GroupStack: React.FC<{
+    title: string;
+    items: Character[];
+    glyphDataMap: Map<number, GlyphData>;
+    strokeThickness: number;
+    theme: 'light' | 'dark';
+}> = ({ title, items, glyphDataMap, strokeThickness, theme }) => {
+    const displayItems = items.slice(0, 3);
+    const overflow = items.length - 3;
+
+    return (
+        <div className="flex flex-col items-center">
+            {/* Stack Container */}
+            <div className="flex items-center justify-center h-16 pl-4"> 
+                {displayItems.map((char, index) => (
+                    <div 
+                        key={char.unicode}
+                        className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm -ml-4 first:ml-0 transition-transform hover:-translate-y-1 z-0 hover:z-10 w-12 h-12 flex items-center justify-center"
+                        style={{ zIndex: displayItems.length - index }}
+                        title={char.name}
+                    >
+                        <MiniGlyphCanvas 
+                            glyphData={glyphDataMap.get(char.unicode!)} 
+                            strokeThickness={strokeThickness}
+                            theme={theme}
+                        />
+                        {/* Overflow Badge on the last item if needed */}
+                        {index === 2 && overflow > 0 && (
+                            <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center backdrop-blur-[1px]">
+                                <span className="text-white text-xs font-bold">+{overflow}</span>
+                            </div>
+                        )}
+                    </div>
+                ))}
+                {items.length === 0 && (
+                    <div className="w-12 h-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center">
+                        <span className="text-gray-300 text-xs">Empty</span>
+                    </div>
+                )}
+            </div>
+            {/* Label */}
+            <div className="mt-2 text-center">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                    {title}
+                </span>
+            </div>
+        </div>
+    );
+};
+
+
 const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
     rule,
     pairs,
@@ -25,20 +129,36 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
     glyphDataMap,
     markPositioningMap,
     strokeThickness,
-    markAttachmentRules,
-    characterSets,
-    groups,
-    glyphVersion,
-    metrics
 }) => {
     const { t } = useLocale();
+    const { theme } = useTheme();
 
-    // 1. Identify Groups for Display
-    const groupDisplay = useMemo(() => {
-        const bases = rule.base.map(b => b.startsWith('$') ? t(b.substring(1)) : (b.startsWith('@') ? b : b)).join(', ');
-        const marks = (rule.mark || []).map(m => m.startsWith('$') ? t(m.substring(1)) : (m.startsWith('@') ? m : m)).join(', ');
-        return { bases, marks };
-    }, [rule, t]);
+    // 1. Organize Data for Visual Equation
+    const { uniqueBases, uniqueMarks, groupLabelBase, groupLabelMark } = useMemo(() => {
+        const bases = new Map<number, Character>();
+        const marks = new Map<number, Character>();
+        
+        pairs.forEach(p => {
+            if (p.base.unicode) bases.set(p.base.unicode, p.base);
+            if (p.mark.unicode) marks.set(p.mark.unicode, p.mark);
+        });
+
+        // Heuristic labels
+        const baseLabel = rule.base.length === 1 && rule.base[0].startsWith('$') 
+            ? t(rule.base[0].substring(1)) 
+            : `${bases.size} Bases`;
+            
+        const markLabel = (rule.mark && rule.mark.length === 1 && rule.mark[0].startsWith('$'))
+            ? t(rule.mark[0].substring(1))
+            : `${marks.size} Marks`;
+
+        return {
+            uniqueBases: Array.from(bases.values()),
+            uniqueMarks: Array.from(marks.values()),
+            groupLabelBase: baseLabel,
+            groupLabelMark: markLabel
+        };
+    }, [pairs, rule, t]);
 
     // 2. Calculate Progress
     const totalPairs = pairs.length;
@@ -51,75 +171,82 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
     const percentage = totalPairs > 0 ? Math.round((completedPairs / totalPairs) * 100) : 0;
     const isComplete = percentage === 100;
 
-    // 3. Hero Selection (First Pair)
-    const heroPair = pairs[0];
+    // Use the first pair as the entry point if clicked (essentially opening the group)
+    const handleBlockClick = () => {
+        if (pairs.length > 0) {
+            onEditPair(pairs[0]);
+        }
+    };
 
     return (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
-            {/* Header */}
-            <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex justify-between items-center">
-                <div className="flex-grow min-w-0">
-                    <div className="flex flex-wrap gap-2 items-center text-lg font-bold text-gray-900 dark:text-white">
-                        <span className="truncate" title={groupDisplay.bases}>
-                            {groupDisplay.bases}
-                        </span>
-                        <span className="text-gray-400 font-light">+</span>
-                        <span className="truncate" title={groupDisplay.marks}>
-                            {groupDisplay.marks}
-                        </span>
-                    </div>
-                </div>
-            </div>
+        <div 
+            className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer"
+            onClick={handleBlockClick}
+        >
+            <div className="flex flex-col sm:flex-row items-center p-6 gap-6 sm:gap-4">
+                
+                {/* Visual Equation Area */}
+                <div className="flex-grow flex items-center justify-center sm:justify-start gap-4 sm:gap-8 w-full sm:w-auto">
+                    
+                    {/* Left Operand (Base) */}
+                    <GroupStack 
+                        title={groupLabelBase} 
+                        items={uniqueBases} 
+                        glyphDataMap={glyphDataMap} 
+                        strokeThickness={strokeThickness}
+                        theme={theme}
+                    />
 
-            {/* Content Body */}
-            <div className="p-6 flex justify-center items-center bg-gray-50/30 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-700">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-40 h-40 relative group cursor-pointer" onClick={() => onEditPair(heroPair)}>
-                        <CombinationCard 
-                            baseChar={heroPair.base}
-                            markChar={heroPair.mark}
-                            ligature={heroPair.ligature}
-                            // Always force false to keep the hero plain
-                            isPositioned={false}
-                            canEdit={true}
-                            onClick={() => onEditPair(heroPair)}
-                            // Pass dummy callback for inline confirm
-                            onConfirmPosition={() => {}}
-                            glyphDataMap={glyphDataMap}
-                            strokeThickness={strokeThickness}
-                            markAttachmentRules={markAttachmentRules}
-                            markPositioningMap={markPositioningMap}
-                            characterSets={characterSets}
-                            glyphVersion={glyphVersion}
-                            groups={groups}
-                            hideTick={true}
-                        />
-                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <span className="bg-black/75 text-white text-xs px-3 py-1 rounded-full shadow-lg font-medium backdrop-blur-sm">
-                                Edit Group
-                            </span>
+                    {/* Operator */}
+                    <div className="flex flex-col items-center justify-center pb-6">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 font-bold text-xl">
+                            +
+                        </div>
+                    </div>
+
+                    {/* Right Operand (Mark) */}
+                    <GroupStack 
+                        title={groupLabelMark} 
+                        items={uniqueMarks} 
+                        glyphDataMap={glyphDataMap} 
+                        strokeThickness={strokeThickness}
+                        theme={theme}
+                    />
+                </div>
+
+                {/* Divider (Mobile Only) */}
+                <div className="w-full h-px bg-gray-100 dark:bg-gray-700 sm:hidden"></div>
+
+                {/* Action Area */}
+                <div className="flex-shrink-0 w-full sm:w-64 flex flex-col gap-3">
+                    <button 
+                        className={`w-full py-3 px-4 rounded-lg font-bold text-sm shadow-sm flex items-center justify-between transition-colors
+                            ${isComplete 
+                                ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' 
+                                : 'bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500'
+                            }`}
+                    >
+                        <span>{isComplete ? 'Review Positions' : 'Start Positioning'}</span>
+                        <div className={`p-1 rounded-full ${isComplete ? 'bg-green-200 dark:bg-green-800' : 'bg-white/20'}`}>
+                            {isComplete ? <EditIcon className="w-4 h-4"/> : <RightArrowIcon className="w-4 h-4" />}
+                        </div>
+                    </button>
+
+                    {/* Progress Bar & Text */}
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
+                            <span>Progress</span>
+                            <span>{completedPairs} / {totalPairs} pairs</span>
+                        </div>
+                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                                className={`h-full rounded-full transition-all duration-500 ${isComplete ? 'bg-green-500' : 'bg-indigo-500'}`}
+                                style={{ width: `${percentage}%` }}
+                            />
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Footer: Progress */}
-            <div className="bg-white dark:bg-gray-800 p-4">
-                 <div className="flex items-center gap-3">
-                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap flex-shrink-0">
-                        {completedPairs} / {totalPairs} ({percentage}%)
-                    </div>
-                    <div className="flex-grow bg-gray-300 dark:bg-gray-700 rounded-full h-2 overflow-hidden" role="presentation">
-                        <div
-                        className={`${isComplete ? 'bg-green-500' : 'bg-indigo-600'} h-2 rounded-full transition-all duration-500`}
-                        style={{ width: `${percentage}%` }}
-                        role="progressbar"
-                        aria-valuenow={percentage}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        />
-                    </div>
-                 </div>
             </div>
         </div>
     );
