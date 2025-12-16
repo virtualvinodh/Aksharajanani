@@ -220,8 +220,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     </button>
                     
                     {/* Creator Button */}
-                    <button onClick={onCreatorClick} title="Creator Studio" className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base">
-                        <CreatorIcon />
+                    <button 
+                        onClick={onCreatorClick} 
+                        disabled={isExporting} 
+                        title="Creator Studio" 
+                        className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base disabled:bg-purple-400 disabled:cursor-wait"
+                    >
+                        {isExporting ? <SpinnerIcon /> : <CreatorIcon />}
                         <span className="hidden md:inline">Create</span>
                     </button>
                     

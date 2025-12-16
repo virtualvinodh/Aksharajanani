@@ -241,13 +241,18 @@ export const useExportActions = ({
     // New handler moved from useAppActions
     const handleCreatorClick = useCallback(() => {
         const proceedToCreator = async () => {
+            setIsExporting(true);
             layout.showNotification(t('exportingNotice'), 'info');
-            const result = await getCachedOrGeneratedFont();
-            if (result) {
-                setCreatorFont(result);
-                layout.setCurrentView('creator');
-            } else {
-                layout.showNotification('Failed to prepare font for Creator.', 'error');
+            try {
+                const result = await getCachedOrGeneratedFont();
+                if (result) {
+                    setCreatorFont(result);
+                    layout.setCurrentView('creator');
+                } else {
+                    layout.showNotification('Failed to prepare font for Creator.', 'error');
+                }
+            } finally {
+                setIsExporting(false);
             }
         };
 
