@@ -229,6 +229,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                                      type: 'positioning',
                                      title: `${baseName} + ${markName}`,
                                      subtitle: t('positioning'),
+                                     aliases: [baseName + markName],
                                      icon: <span className="flex gap-0.5"><span className="opacity-50">{baseName}</span><span>{markName}</span></span>,
                                      onExecute: () => {
                                          onSetWorkspace('positioning');
@@ -279,6 +280,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                                     type: 'kerning-pair',
                                     title: `${left.name} + ${right.name}`,
                                     subtitle: `${kerningLabel}: ${value}`,
+                                    aliases: [left.name + right.name],
                                     icon: <span className="flex gap-1"><span>{left.name}</span><span>{right.name}</span></span>,
                                     onExecute: () => {
                                         onSetWorkspace('kerning');
@@ -329,6 +331,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                                              type: 'kerning-pair',
                                              title: `${l} + ${r}`,
                                              subtitle: t('recommendedKerning'), // Using translated key for "Recommended"
+                                             aliases: [l + r],
                                              icon: <span className="flex gap-1"><span>{l}</span><span>{r}</span></span>,
                                              onExecute: () => {
                                                  onSetWorkspace('kerning');
