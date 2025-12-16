@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, PositioningRules, AttachmentClass } from '../types';
 import PositioningEditorPage from './PositioningEditorPage';
@@ -16,6 +16,7 @@ import PositioningRulesView from './positioning/PositioningRulesView';
 import PositioningGridView from './positioning/PositioningGridView';
 import PositioningRulesModal from './PositioningRulesModal';
 import { usePositioning } from '../contexts/PositioningContext';
+import { expandMembers } from '../services/groupExpansionService';
 
 // Main Positioning Page Component
 interface PositioningPageProps {
@@ -204,13 +205,59 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         }
     };
     
+    // Helper to check eligibility (duplicated from hook for UI consistency)
+    const isPairEligibleForAutoPos = useCallback((base: Character, mark: Character) => {
+        if (!characterSets) return false;
+        const pairKey = `${base.name}-${mark.name}`;
+
+        // Check Mark Classes
+        if (markAttachmentClasses) {
+            const mClass = markAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(mark.name));
+            if (mClass) {
+                let applies = true;
+                if (mClass.applies && !expandMembers(mClass.applies, groups, characterSets).includes(base.name)) applies = false;
+                if (mClass.exceptions && expandMembers(mClass.exceptions, groups, characterSets).includes(base.name)) applies = false;
+                
+                if (applies) {
+                    if (mClass.exceptPairs?.includes(pairKey)) return true; // Exception = Independent = Eligible
+                    
+                    const members = expandMembers(mClass.members, groups, characterSets);
+                    // Leader is first member
+                    if (members[0] !== mark.name) return false; // Is Sibling = Not Eligible
+                }
+            }
+        }
+
+        // Check Base Classes
+        if (baseAttachmentClasses) {
+            const bClass = baseAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(base.name));
+            if (bClass) {
+                let applies = true;
+                if (bClass.applies && !expandMembers(bClass.applies, groups, characterSets).includes(mark.name)) applies = false;
+                if (bClass.exceptions && expandMembers(bClass.exceptions, groups, characterSets).includes(mark.name)) applies = false;
+                
+                if (applies) {
+                    if (bClass.exceptPairs?.includes(pairKey)) return true; // Exception = Independent = Eligible
+                    
+                    const members = expandMembers(bClass.members, groups, characterSets);
+                    // Leader is first member
+                    if (members[0] !== base.name) return false; // Is Sibling = Not Eligible
+                }
+            }
+        }
+        return true;
+    }, [markAttachmentClasses, baseAttachmentClasses, groups, characterSets]);
+
     const unpositionedCount = useMemo(() => {
         const listToCheck = viewMode === 'rules' ? [] : displayedCombinations;
         return listToCheck.filter(combo => {
             const isPositioned = markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`);
-            return !isPositioned;
+            if (isPositioned) return false;
+            
+            // Only count if eligible for auto-positioning (not a follower)
+            return isPairEligibleForAutoPos(combo.base, combo.mark);
         }).length;
-    }, [displayedCombinations, markPositioningMap, viewMode]);
+    }, [displayedCombinations, markPositioningMap, viewMode, isPairEligibleForAutoPos]);
 
     const hasManuallyPositioned = useMemo(() => {
         if (viewMode === 'rules') return false;
@@ -309,6 +356,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                 glyphDataMap={glyphDataMap} strokeThickness={settings.strokeThickness} markAttachmentRules={markAttachmentRules}
                                 characterSets={characterSets} groups={groups} glyphVersion={glyphVersion} metrics={metrics} ITEMS_PER_PAGE={ITEMS_PER_PAGE}
                                 handleAcceptAllDefaults={handleAcceptAllDefaults}
+                                isPairEligible={isPairEligibleForAutoPos}
                             />
                         ) : (
                             <PositioningGridView 

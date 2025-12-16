@@ -10,6 +10,7 @@ import { updatePositioningAndCascade } from '../../services/positioningService';
 import { getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../../services/glyphRenderService';
 import { Character, GlyphData, Point, Path, PositioningRules, AttachmentClass, MarkAttachmentRules, CharacterSet, FontMetrics, MarkPositioningMap } from '../../types';
 import { deepClone } from '../../utils/cloneUtils';
+import { expandMembers } from '../../services/groupExpansionService';
 
 interface UsePositioningActionsProps {
     glyphDataMap: Map<number, GlyphData>;
@@ -27,6 +28,55 @@ interface UsePositioningActionsProps {
     displayedCombinations: { base: Character; mark: Character; ligature: Character }[];
     viewMode: 'base' | 'mark' | 'rules';
 }
+
+// Helper to check if a pair is eligible for auto-positioning (Representative or Independent)
+const isPairEligible = (
+    base: Character, 
+    mark: Character, 
+    markAttachmentClasses: AttachmentClass[] | null, 
+    baseAttachmentClasses: AttachmentClass[] | null, 
+    groups: Record<string, string[]>, 
+    characterSets: CharacterSet[]
+) => {
+    const pairKey = `${base.name}-${mark.name}`;
+
+    // Check Mark Classes
+    if (markAttachmentClasses) {
+        const mClass = markAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(mark.name));
+        if (mClass) {
+            let applies = true;
+            if (mClass.applies && !expandMembers(mClass.applies, groups, characterSets).includes(base.name)) applies = false;
+            if (mClass.exceptions && expandMembers(mClass.exceptions, groups, characterSets).includes(base.name)) applies = false;
+            
+            if (applies) {
+                if (mClass.exceptPairs?.includes(pairKey)) return true; // Exception = Independent = Eligible
+                
+                const members = expandMembers(mClass.members, groups, characterSets);
+                // Leader is first member. If current mark is NOT leader, it's a sibling.
+                if (members[0] !== mark.name) return false; 
+            }
+        }
+    }
+
+    // Check Base Classes
+    if (baseAttachmentClasses) {
+        const bClass = baseAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(base.name));
+        if (bClass) {
+            let applies = true;
+            if (bClass.applies && !expandMembers(bClass.applies, groups, characterSets).includes(mark.name)) applies = false;
+            if (bClass.exceptions && expandMembers(bClass.exceptions, groups, characterSets).includes(mark.name)) applies = false;
+            
+            if (applies) {
+                if (bClass.exceptPairs?.includes(pairKey)) return true; // Exception = Independent = Eligible
+                
+                const members = expandMembers(bClass.members, groups, characterSets);
+                // Leader is first member. If current base is NOT leader, it's a sibling.
+                if (members[0] !== base.name) return false;
+            }
+        }
+    }
+    return true; // Default to eligible if not a sibling in any class
+};
 
 export const usePositioningActions = ({
     glyphDataMap,
@@ -132,9 +182,16 @@ export const usePositioningActions = ({
         const markGlyph = glyphDataMap.get(mark.unicode);
         if (!baseGlyph || !markGlyph || !metrics || !characterSets || !settings) return;
 
+        // Find the rule to determine constraint
+        const rule = positioningRules?.find(r => 
+            expandMembers(r.base, groups, characterSets).includes(base.name) && 
+            expandMembers(r.mark, groups, characterSets).includes(mark.name)
+        );
+        const constraint = (rule && (rule.movement === 'horizontal' || rule.movement === 'vertical')) ? rule.movement : 'none';
+
         const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, settings.strokeThickness);
         const markBbox = getAccurateGlyphBBox(markGlyph.paths, settings.strokeThickness);
-        const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
+        const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups, constraint);
     
         const transformedMarkPaths = deepClone(markGlyph.paths).map((p: Path) => ({
             ...p,
@@ -147,17 +204,20 @@ export const usePositioningActions = ({
     
         // We pass 'true' for isAutosave to suppress the notification, as visual feedback is sufficient here.
         savePositioningUpdate(base, mark, ligature, newGlyphData, offset, newBearings, true);
-    }, [glyphDataMap, markAttachmentRules, savePositioningUpdate, t, metrics, characterSets, settings, groups]);
+    }, [glyphDataMap, markAttachmentRules, savePositioningUpdate, t, metrics, characterSets, settings, groups, positioningRules]);
 
     const handleAcceptAllDefaults = useCallback((pairsToProcess?: { base: Character; mark: Character; ligature: Character }[]) => {
         if (!characterSets) return;
         
         const targetList = pairsToProcess || displayedCombinations;
 
-        // Apply only to unpositioned pairs in the list
+        // Apply to unpositioned pairs that are ELIGIBLE (Representatives or Independent)
         const unpositionedPairs = targetList.filter(combo => {
             const isPositioned = markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`);
-            return !isPositioned;
+            if (isPositioned) return false;
+            
+            // Check Class Eligibility (skip siblings)
+            return isPairEligible(combo.base, combo.mark, markAttachmentClasses, baseAttachmentClasses, groups, characterSets);
         });
 
         if (unpositionedPairs.length === 0) return;
@@ -171,9 +231,16 @@ export const usePositioningActions = ({
             const markGlyph = tempGlyphDataMap.get(mark.unicode);
             if (!baseGlyph || !markGlyph || !metrics || !settings) continue;
 
+            // Resolve rule for constraint
+            const rule = positioningRules?.find(r => 
+                expandMembers(r.base, groups, characterSets).includes(base.name) && 
+                expandMembers(r.mark, groups, characterSets).includes(mark.name)
+            );
+            const constraint = (rule && (rule.movement === 'horizontal' || rule.movement === 'vertical')) ? rule.movement : 'none';
+
             const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, settings.strokeThickness);
             const markBbox = getAccurateGlyphBBox(markGlyph.paths, settings.strokeThickness);
-            const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, tempCharacterSets, false, groups);
+            const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, tempCharacterSets, false, groups, constraint);
 
             const transformedMarkPaths = deepClone(markGlyph.paths).map((p: Path) => ({
                 ...p,
@@ -206,8 +273,8 @@ export const usePositioningActions = ({
         glyphDataDispatch({ type: 'SET_MAP', payload: tempGlyphDataMap });
         characterDispatch({ type: 'SET_CHARACTER_SETS', payload: tempCharacterSets });
 
-        // Notification suppressed as per user request (visual feedback via cards filling is sufficient)
-    }, [displayedCombinations, markPositioningMap, glyphDataMap, t, metrics, settings, markAttachmentRules, characterSets, allChars, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses, positioningRules, positioningDispatch, glyphDataDispatch, characterDispatch, groups]);
+        showNotification(t('acceptedAllDefaults', { count: unpositionedPairs.length }), 'success');
+    }, [displayedCombinations, markPositioningMap, glyphDataMap, t, metrics, settings, markAttachmentRules, characterSets, allChars, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses, positioningRules, positioningDispatch, glyphDataDispatch, characterDispatch, groups, showNotification]);
 
     const handleCopyPositions = useCallback((copyFromItem: Character, reuseSourceItem: Character, navItems: Character[]) => {
         // Reuse logic simplified: works on displayedCombinations (Grid View).

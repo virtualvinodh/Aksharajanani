@@ -34,8 +34,7 @@ const GlyphThumbnail: React.FC<{
     strokeThickness: number;
     onClick: () => void;
     size?: number; 
-    showName?: boolean;
-}> = React.memo(({ character, glyphData, strokeThickness, onClick, size = 60, showName = false }) => {
+}> = React.memo(({ character, glyphData, strokeThickness, onClick, size = 60 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
 
@@ -84,19 +83,17 @@ const GlyphThumbnail: React.FC<{
     return (
         <div 
             onClick={onClick}
-            style={{ width: size + 8, height: showName ? size + 24 : size + 8 }}
+            style={{ width: size, height: size + 20 }}
             className="flex-shrink-0 flex flex-col items-center justify-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all p-1 group"
             title={character.name}
         >
             <canvas ref={canvasRef} width={size} height={size} />
-            {showName && (
-                <span 
-                    className="text-[10px] font-bold text-gray-600 dark:text-gray-400 truncate max-w-full mt-1"
-                    style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}
-                >
-                    {character.name}
-                </span>
-            )}
+            <span 
+                className="text-[10px] font-bold text-gray-600 dark:text-gray-400 truncate max-w-full mt-1"
+                style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}
+            >
+                {character.name}
+            </span>
         </div>
     );
 });
@@ -117,7 +114,8 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
     const isSource = variant === 'sources';
 
     // Helper to generate the correct GlyphData (including live preview logic)
-    const renderThumb = (char: Character, size: number, showName: boolean) => {
+    // This allows us to reuse the logic for both the strip and the expanded grid
+    const renderThumb = (char: Character, size: number) => {
         let displayData = char.unicode !== undefined ? glyphDataMap.get(char.unicode) : undefined;
         
         // LIVE PREVIEW LOGIC
@@ -188,7 +186,6 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                     onSelect(char);
                 }}
                 size={size}
-                showName={showName}
             />
         );
     };
@@ -216,7 +213,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
             </div>
             <div className="flex-grow overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900/50">
                  <div className="flex flex-wrap justify-center gap-4">
-                    {items.map(char => renderThumb(char, 100, true))}
+                    {items.map(char => renderThumb(char, 100))}
                  </div>
             </div>
         </div>
@@ -259,7 +256,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                     )}
 
                     <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center scroll-smooth px-1 w-full">
-                        {items.map((char) => renderThumb(char, 60, false))}
+                        {items.map((char) => renderThumb(char, 60))}
                     </div>
 
                     {visibility.right && (

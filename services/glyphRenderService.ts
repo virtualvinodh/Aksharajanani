@@ -1,5 +1,4 @@
 
-// ... imports ... (keeping existing imports)
 import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings, ComponentTransform } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -443,11 +442,14 @@ export const calculateDefaultMarkOffset = (
     metrics: FontMetrics,
     characterSets?: CharacterSet[],
     isAbsolute: boolean = false,
-    groups: Record<string, string[]> = {}
+    groups: Record<string, string[]> = {},
+    movementConstraint: 'horizontal' | 'vertical' | 'none' = 'none'
 ): Point => {
     if (isAbsolute) {
         return { x: 0, y: 0 };
     }
+    
+    let offset = { x: 0, y: 0 };
     
     if (baseBbox && markBbox) {
         let rule = resolveAttachmentRule(baseChar.name, markChar.name, markAttachmentRules, characterSets, groups);
@@ -475,20 +477,25 @@ export const calculateDefaultMarkOffset = (
             }
 
             const markAttachPoint = getAttachmentPointCoords(markBbox, markAttachName as AttachmentPoint);
-            return VEC.sub(baseAttachPoint, markAttachPoint);
+            offset = VEC.sub(baseAttachPoint, markAttachPoint);
+        } else {
+             // Priority 2: Absolute Fallback (Side-by-side) 
+             const baseRsb = baseChar.rsb ?? metrics.defaultRSB;
+             const markLsb = markChar.lsb ?? metrics.defaultLSB;
+             const targetX = baseBbox.x + baseBbox.width + baseRsb;
+             const dx = (targetX + markLsb) - markBbox.x;
+             offset = { x: dx, y: 0 };
         }
     }
-
-    // Priority 2: Absolute Fallback (Side-by-side) 
-    if (baseBbox && markBbox) {
-        const baseRsb = baseChar.rsb ?? metrics.defaultRSB;
-        const markLsb = markChar.lsb ?? metrics.defaultLSB;
-        const targetX = baseBbox.x + baseBbox.width + baseRsb;
-        const dx = (targetX + markLsb) - markBbox.x;
-        return { x: dx, y: 0 };
+    
+    // Apply constraints
+    if (movementConstraint === 'horizontal') {
+        offset.y = 0;
+    } else if (movementConstraint === 'vertical') {
+        offset.x = 0;
     }
 
-    return { x: 0, y: 0 };
+    return offset;
 };
 
 // ... (keep rest of file: renderPaths, generateCompositeGlyphData, updateComponentInPaths) ...

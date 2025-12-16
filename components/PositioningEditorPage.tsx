@@ -251,9 +251,15 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         const baseAnchor = getAttachmentPointCoords(baseBbox, basePointName);
         const markAnchor = getAttachmentPointCoords(markBbox, markPointName);
         
-        return VEC.sub(baseAnchor, markAnchor);
+        const calculatedOffset = VEC.sub(baseAnchor, markAnchor);
 
-    }, [baseChar, markChar, baseBbox, markAttachmentRules, characterSets, groups, settings.strokeThickness, glyphDataMap]);
+        // Apply constraints to geometric calculation to match default placement behavior
+        if (movementConstraint === 'horizontal') calculatedOffset.y = 0;
+        if (movementConstraint === 'vertical') calculatedOffset.x = 0;
+
+        return calculatedOffset;
+
+    }, [baseChar, markChar, baseBbox, markAttachmentRules, characterSets, groups, settings.strokeThickness, glyphDataMap, movementConstraint]);
 
 
     // Initial Load Logic
@@ -265,7 +271,19 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         if (!offset && baseBbox) {
             const markGlyph = glyphDataMap.get(markChar.unicode);
             const markBbox = getAccurateGlyphBBox(markGlyph?.paths ?? [], settings.strokeThickness);
-            offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
+            
+            offset = calculateDefaultMarkOffset(
+                baseChar, 
+                markChar, 
+                baseBbox, 
+                markBbox, 
+                markAttachmentRules, 
+                metrics, 
+                characterSets, 
+                false, 
+                groups,
+                movementConstraint
+            );
         }
         
         // Set initial offset state for strip
@@ -352,7 +370,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             lastPairIdentifierRef.current = pairIdentifier;
         }
 
-    }, [baseChar, markChar, targetLigature, markPositioningMap, glyphDataMap, markAttachmentRules, baseBbox, metrics, baseGlyph, settings.strokeThickness, characterSets, pairIdentifier, groups, activeAttachmentClass, pairNameKey]);
+    }, [baseChar, markChar, targetLigature, markPositioningMap, glyphDataMap, markAttachmentRules, baseBbox, metrics, baseGlyph, settings.strokeThickness, characterSets, pairIdentifier, groups, activeAttachmentClass, pairNameKey, movementConstraint]);
     
     // Internal Helper: Get Anchor Point
     const getAnchor = (glyph: GlyphData, pointName: string, offX: number, offY: number) => {
@@ -454,7 +472,19 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                  const markGlyph = glyphDataMap.get(markChar.unicode);
                  const bBbox = getAccurateGlyphBBox(baseGlyph?.paths || [], settings.strokeThickness);
                  const mBbox = getAccurateGlyphBBox(markGlyph?.paths || [], settings.strokeThickness);
-                 newOffset = calculateDefaultMarkOffset(baseChar, markChar, bBbox, mBbox, markAttachmentRules, metrics, characterSets, false, groups);
+                 
+                 newOffset = calculateDefaultMarkOffset(
+                     baseChar, 
+                     markChar, 
+                     bBbox, 
+                     mBbox, 
+                     markAttachmentRules, 
+                     metrics, 
+                     characterSets, 
+                     false, 
+                     groups,
+                     movementConstraint
+                 );
              }
              
              // Apply and Save

@@ -30,6 +30,7 @@ interface PositioningRulesViewProps {
     metrics: FontMetrics;
     ITEMS_PER_PAGE: number;
     handleAcceptAllDefaults: (pairs: any[]) => void;
+    isPairEligible: (base: Character, mark: Character) => boolean;
 }
 
 const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
@@ -37,7 +38,8 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
     pagedRulePairs, rulePage, setRulePage, ruleTotalPages, markPositioningMap,
     getPairClassKey, classCounts, setEditingPair, setEditingIndex, setEditingContextList,
     handleConfirmPosition, glyphDataMap, strokeThickness, markAttachmentRules, characterSets,
-    groups, glyphVersion, metrics, ITEMS_PER_PAGE, handleAcceptAllDefaults
+    groups, glyphVersion, metrics, ITEMS_PER_PAGE, handleAcceptAllDefaults,
+    isPairEligible
 }) => {
     if (selectedRuleGroupId === null) {
         // Level 1: List of Blocks
@@ -72,7 +74,12 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
     }
 
     // Level 2: Drill-down Grid
-    const unpositionedOnPageCount = pagedRulePairs.filter((p: any) => !markPositioningMap.has(`${p.base.unicode}-${p.mark.unicode}`)).length;
+    // Filter eligible unpositioned items
+    const unpositionedOnPageCount = pagedRulePairs.filter((p: any) => {
+        const isPositioned = markPositioningMap.has(`${p.base.unicode}-${p.mark.unicode}`);
+        if (isPositioned) return false;
+        return isPairEligible(p.base, p.mark);
+    }).length;
 
     return (
         <div className="animate-fade-in-up">
