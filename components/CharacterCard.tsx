@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
-import { renderPaths } from '../services/glyphRenderService';
+import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderService';
 import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon, LinkIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -19,6 +19,7 @@ interface CharacterCardProps {
 }
 
 declare var unicodeName: any;
+declare var UnicodeProperties: any;
 
 const CharacterCard: React.FC<CharacterCardProps> = ({ 
     character, glyphData, onSelect, 
@@ -103,8 +104,71 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
     ctx.clearRect(0, 0, PREVIEW_CANVAS_SIZE, PREVIEW_CANVAS_SIZE);
 
     if (isDrawn) {
-        const scale = PREVIEW_CANVAS_SIZE / DRAWING_CANVAS_SIZE;
+        // Auto-fit logic to ensure wide glyphs (like 'au') don't spill or clip awkwardly
+        const bbox = getAccurateGlyphBBox(glyphData!.paths, settings.strokeThickness);
+        
+        let scale = PREVIEW_CANVAS_SIZE / DRAWING_CANVAS_SIZE;
+        let tx = 0;
+        let ty = 0;
+
+        if (bbox) {
+            const PADDING = 10;
+            const availableWidth = PREVIEW_CANVAS_SIZE - (PADDING * 2);
+            const availableHeight = PREVIEW_CANVAS_SIZE - (PADDING * 2);
+            
+            // Only adjust scale if the content is actually valid
+            if (bbox.width > 0 && bbox.height > 0) {
+                const fitScaleX = availableWidth / bbox.width;
+                const fitScaleY = availableHeight / bbox.height;
+                
+                // Use the smaller scale to fit entirely, but don't blow up tiny glyphs too much
+                const fitScale = Math.min(fitScaleX, fitScaleY);
+                
+                // If the glyph is huge, we shrink it (fitScale < standardScale).
+                // If it's small, we keep standard scale to avoid inconsistent sizes in the grid.
+                if (fitScale < scale) {
+                    scale = fitScale;
+                }
+            }
+
+            // Horizontal Centering: Always center content to prevent spillover
+            const contentCenterX = bbox.x + bbox.width / 2;
+            const canvasCenter = PREVIEW_CANVAS_SIZE / 2;
+            tx = canvasCenter - (contentCenterX * scale);
+
+            // Vertical Centering Logic:
+            // We want to center most characters (bases, ligatures) to fill the card nicely.
+            // HOWEVER, we must NOT center marks, modifiers, or punctuation, as their 
+            // relative vertical position (high/low) is semantic (e.g. dot vs period).
+            let shouldVerticallyCenter = true;
+
+            if (character.glyphClass === 'mark') {
+                shouldVerticallyCenter = false;
+            } 
+            else if (character.unicode && typeof UnicodeProperties !== 'undefined') {
+                try {
+                    const cat = UnicodeProperties.getCategory(character.unicode);
+                    // Lm: Modifier Letter (e.g. ʰ, ʲ)
+                    // Sk: Modifier Symbol (e.g. ˔)
+                    // P*: Punctuation (e.g. . , - _)
+                    if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {
+                        shouldVerticallyCenter = false;
+                    }
+                } catch (e) { }
+            }
+
+            if (shouldVerticallyCenter) {
+                // Center the content bounding box (visually balanced)
+                const contentCenterY = bbox.y + bbox.height / 2;
+                ty = canvasCenter - (contentCenterY * scale);
+            } else {
+                // Center the drawing frame (preserve relative Y position)
+                ty = (PREVIEW_CANVAS_SIZE - (DRAWING_CANVAS_SIZE * scale)) / 2;
+            }
+        }
+
         ctx.save();
+        ctx.translate(tx, ty);
         ctx.scale(scale, scale);
         renderPaths(ctx, glyphData!.paths, {
             strokeThickness: settings.strokeThickness,
@@ -119,7 +183,8 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
 
   const isCompact = variant === 'compact';
   const paddingClass = isCompact ? 'p-2' : 'p-2 sm:p-4';
-  const baseContainerClasses = `relative rounded-lg ${paddingClass} flex flex-col items-center justify-between cursor-pointer transition-all duration-200 aspect-square h-full group select-none`;
+  // Added overflow-hidden to prevent spillover of wide characters
+  const baseContainerClasses = `relative rounded-lg ${paddingClass} flex flex-col items-center justify-between cursor-pointer transition-all duration-200 aspect-square h-full group select-none overflow-hidden`;
   
   let stateClasses = "";
   if (isSelected) {
@@ -138,6 +203,12 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   // Note: settings.showGlyphNames might be undefined for older projects.
   const showName = !!settings.showGlyphNames;
   const shouldShowNameBlock = !isDrawn || showName || settings.showUnicodeValues;
+
+  // Dynamic font size for ghost text
+  const nameLength = character.name.length;
+  let ghostFontSizeClass = "text-4xl sm:text-6xl";
+  if (nameLength > 2) ghostFontSizeClass = "text-xl sm:text-3xl";
+  else if (nameLength > 1) ghostFontSizeClass = "text-3xl sm:text-5xl";
 
   return (
     <div
@@ -201,7 +272,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       ) : (
         <div className="w-full h-full flex items-center justify-center flex-col">
             <span 
-                className="text-4xl sm:text-6xl text-gray-200 dark:text-gray-700 font-bold select-none transition-colors group-hover:text-gray-300 dark:group-hover:text-gray-600"
+                className={`${ghostFontSizeClass} text-gray-200 dark:text-gray-700 font-bold select-none transition-colors group-hover:text-gray-300 dark:group-hover:text-gray-600`}
                 style={{
                   fontFamily: 'var(--guide-font-family)',
                   fontFeatureSettings: 'var(--guide-font-feature-settings)'
