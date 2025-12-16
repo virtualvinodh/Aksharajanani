@@ -164,11 +164,11 @@ const SiblingThumbnail: React.FC<{
             onClick={onClick}
             style={{ width: size }}
             className={containerClasses}
-            title={isPivot ? "Class Leader (Edit here to sync)" : `Edit ${pair.base.name} + ${pair.mark.name}`}
+            title={isPivot ? "Class Representative (Edit here to sync)" : `Edit ${pair.base.name} + ${pair.mark.name}`}
         >
             <canvas ref={canvasRef} width={size} height={size} />
             {isPivot && (
-                 <div className="absolute top-0.5 left-0.5 bg-yellow-400 text-yellow-900 rounded-full p-1 shadow-md z-20" title="Class Leader">
+                 <div className="absolute top-0.5 left-0.5 bg-yellow-400 text-yellow-900 rounded-full p-1 shadow-md z-20" title="Class Representative">
                     <CrownIcon className="w-3 h-3" />
                  </div>
             )}

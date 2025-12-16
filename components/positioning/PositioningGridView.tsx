@@ -48,8 +48,8 @@ const CrownIcon = ({ className }: { className?: string }) => (
 );
 
 interface ClassStatus {
-    status: 'leader' | 'sibling' | 'unlinked' | 'none';
-    leaderLabel?: string;
+    status: 'representative' | 'sibling' | 'unlinked' | 'none';
+    representativeLabel?: string;
     classType?: 'mark' | 'base';
 }
 
@@ -81,12 +81,12 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                      // For Mark Class, the leader is the first MARK in the group attached to the CURRENT base
                      const leaderMark = members[0];
                      
-                     if (leaderMark === mark.name) return { status: 'leader', classType: 'mark' };
+                     if (leaderMark === mark.name) return { status: 'representative', classType: 'mark' };
                      
                      return { 
                          status: 'sibling', 
                          classType: 'mark',
-                         leaderLabel: `${base.name} + ${leaderMark}`
+                         representativeLabel: `${base.name} + ${leaderMark}`
                      };
                 }
             }
@@ -107,12 +107,12 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                     // For Base Class, the leader is the first BASE in the group attached to the CURRENT mark
                     const leaderBase = members[0];
                     
-                    if (leaderBase === base.name) return { status: 'leader', classType: 'base' };
+                    if (leaderBase === base.name) return { status: 'representative', classType: 'base' };
                     
                     return {
                         status: 'sibling',
                         classType: 'base',
-                        leaderLabel: `${leaderBase} + ${mark.name}`
+                        representativeLabel: `${leaderBase} + ${mark.name}`
                     };
                 }
             }
@@ -170,13 +170,13 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                 {displayedCombinations.map(({ base, mark, ligature }, index) => {
                     const isPositioned = markPositioningMap.has(`${base.unicode}-${mark.unicode}`);
                     const pairId = `${base.unicode}-${mark.unicode}`;
-                    const { status, leaderLabel, classType } = getClassStatus(base, mark);
+                    const { status, representativeLabel, classType } = getClassStatus(base, mark);
                     
                     return (
-                        <div key={ligature.unicode} className={`relative ${status === 'leader' ? 'z-10' : ''}`}>
+                        <div key={ligature.unicode} className={`relative ${status === 'representative' ? 'z-10' : ''}`}>
                              <div className={`
                                 rounded-lg transition-all duration-200 h-full
-                                ${status === 'leader' ? 'ring-4 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900 shadow-xl' : ''}
+                                ${status === 'representative' ? 'ring-4 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900 shadow-xl' : ''}
                                 ${status === 'sibling' ? 'opacity-70 grayscale hover:grayscale-0 hover:opacity-100' : ''}
                              `}>
                                 <CombinationCard
@@ -203,8 +203,8 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                                 />
                              </div>
                              
-                             {status === 'leader' && (
-                                 <div className="absolute -top-2 -left-2 bg-indigo-600 text-white p-1 rounded-full shadow-md z-20 border-2 border-white dark:border-gray-800" title="Class Leader">
+                             {status === 'representative' && (
+                                 <div className="absolute -top-2 -left-2 bg-indigo-600 text-white p-1 rounded-full shadow-md z-20 border-2 border-white dark:border-gray-800" title="Class Representative">
                                     <CrownIcon className="w-3 h-3" />
                                  </div>
                              )}
@@ -214,7 +214,7 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                                     className={`absolute -top-1 -left-1 text-white p-1 rounded-full shadow-sm z-20 border border-white dark:border-gray-800
                                         ${classType === 'mark' ? 'bg-purple-500' : 'bg-blue-500'}
                                     `} 
-                                    title={`Synced with ${leaderLabel}`}
+                                    title={`Synced with ${representativeLabel}`}
                                 >
                                     <LinkIcon className="w-3 h-3" />
                                  </div>

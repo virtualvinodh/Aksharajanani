@@ -591,7 +591,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const hasUnsavedChanges = hasPathChanges || hasBearingChanges;
     
     // Logic for Locked Message
-    const lockedMessage = !canEdit ? t('This pair is synced to {pivot}. Unlink to edit this specific pair, or edit {pivot} to update the whole class.', { pivot: pivotName || 'Class Leader' }) : undefined;
+    const lockedMessage = !canEdit ? t('This pair is synced to {pivot}. Unlink to edit this specific pair, or edit {pivot} to update the whole class.', { pivot: pivotName || 'Class Representative' }) : undefined;
 
     const handlePathsChange = useCallback((newPaths: Path[]) => {
         // If not editable, we should block, although DrawingCanvas might prevent drag via disableTransformations now.
@@ -735,7 +735,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                              {activeAttachmentClass ? (
                                  isLinked ? (
                                      isPivot ? 
-                                        <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full dark:bg-purple-900/30 dark:text-purple-300">Class Leader</span> : 
+                                        <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full dark:bg-purple-900/30 dark:text-purple-300">Class Representative</span> : 
                                         <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full dark:bg-blue-900/20 dark:text-blue-300">Synced</span>
                                  ) : (
                                      <span className="text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full dark:bg-orange-900/20 dark:text-orange-300">Unlinked</span>
