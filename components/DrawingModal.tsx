@@ -515,6 +515,13 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                         settings={settings}
                         onSelect={handleNavigationAttempt}
                         variant="dependents"
+                        liveSourcePaths={currentPaths}
+                        sourceCharacter={character}
+                        allCharsByName={allCharsByName}
+                        metrics={metrics}
+                        markAttachmentRules={markAttachmentRules}
+                        characterSets={allCharacterSets}
+                        groups={groups}
                     />
                 )}
             </div>

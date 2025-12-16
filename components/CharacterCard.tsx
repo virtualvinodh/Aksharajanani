@@ -1,13 +1,9 @@
 
-
-
-
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths } from '../services/glyphRenderService';
-import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon } from '../constants';
+import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon, LinkIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 
@@ -160,6 +156,13 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
         </div>
       )}
       
+      {/* Linked Glyph Badge */}
+      {character.link && (
+          <div className="absolute top-1 left-1 p-1 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full shadow-sm z-10" title="Linked Glyph">
+             <LinkIcon className="w-3 h-3" />
+          </div>
+      )}
+
       {/* Selection Indicator Overlay */}
       {isSelectionMode && (
           <div className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all z-10 ${isSelected ? 'bg-indigo-600 border-indigo-600 scale-110' : 'bg-white/80 dark:bg-gray-800/80 border-gray-400'}`}>
@@ -168,7 +171,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       )}
 
       {character.hidden && (
-          <span className="absolute top-1 left-1 text-[10px] font-bold text-gray-400 border border-gray-300 rounded px-1 bg-white dark:bg-gray-800">HIDDEN</span>
+          <span className={`absolute top-1 ${character.link ? 'left-8' : 'left-1'} text-[10px] font-bold text-gray-400 border border-gray-300 rounded px-1 bg-white dark:bg-gray-800`}>HIDDEN</span>
       )}
 
       {isDrawn ? (
@@ -187,7 +190,6 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                     }}
                     >
                     {character.name}
-                    {character.link && <span className="ml-1 opacity-60" aria-label="Linked Glyph">🔗</span>}
                     </p>
                 )}
                 {settings.showUnicodeValues && character.unicode !== undefined && (

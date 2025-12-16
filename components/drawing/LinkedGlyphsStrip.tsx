@@ -1,8 +1,8 @@
 
-import React, { useRef, useEffect } from 'react';
-import { Character, GlyphData, AppSettings } from '../../types';
+import React, { useRef, useEffect, useMemo } from 'react';
+import { Character, GlyphData, AppSettings, CharacterSet, MarkAttachmentRules, Path } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
-import { renderPaths, getAccurateGlyphBBox } from '../../services/glyphRenderService';
+import { renderPaths, getAccurateGlyphBBox, generateCompositeGlyphData, updateComponentInPaths } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 import { LeftArrowIcon, RightArrowIcon, LinkIcon, BrokenLinkIcon } from '../../constants';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
@@ -14,6 +14,15 @@ interface LinkedGlyphsStripProps {
     settings: AppSettings;
     onSelect: (char: Character) => void;
     variant: 'sources' | 'dependents';
+    
+    // Props for Live Preview
+    liveSourcePaths?: Path[]; 
+    sourceCharacter?: Character;
+    allCharsByName?: Map<string, Character>;
+    metrics?: any;
+    markAttachmentRules?: MarkAttachmentRules | null;
+    characterSets?: CharacterSet[];
+    groups?: Record<string, string[]>;
 }
 
 const PREVIEW_SIZE = 60;
@@ -88,7 +97,8 @@ const GlyphThumbnail: React.FC<{
 });
 
 const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({ 
-    title, items, glyphDataMap, settings, onSelect, variant
+    title, items, glyphDataMap, settings, onSelect, variant,
+    liveSourcePaths, sourceCharacter, allCharsByName, metrics, markAttachmentRules, characterSets, groups
 }) => {
     const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
     
@@ -127,15 +137,79 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                 )}
 
                 <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center scroll-smooth px-1 w-full">
-                    {items.map((char) => (
-                        <GlyphThumbnail 
-                            key={char.unicode || char.name}
-                            character={char}
-                            glyphData={char.unicode !== undefined ? glyphDataMap.get(char.unicode) : undefined}
-                            strokeThickness={settings.strokeThickness}
-                            onClick={() => onSelect(char)}
-                        />
-                    ))}
+                    {items.map((char) => {
+                        let displayData = char.unicode !== undefined ? glyphDataMap.get(char.unicode) : undefined;
+                        
+                        // LIVE PREVIEW LOGIC
+                        if (variant === 'dependents' && liveSourcePaths && sourceCharacter && displayData) {
+                            const components = char.link || char.composite || [];
+                            let currentPaths = [...displayData.paths];
+                            let pathsModified = false;
+
+                            // 1. Surgical Update: 
+                            // If the glyph already has paths (meaning manual positioning might exist),
+                            // we update ONLY the component matching the source, preserving others.
+                            if (currentPaths.length > 0) {
+                                components.forEach((compName, index) => {
+                                    if (compName === sourceCharacter.name) {
+                                        const updated = updateComponentInPaths(
+                                            currentPaths,
+                                            index,
+                                            liveSourcePaths,
+                                            settings.strokeThickness,
+                                            char.compositeTransform
+                                        );
+                                        if (updated) {
+                                            currentPaths = updated;
+                                            pathsModified = true;
+                                        }
+                                    }
+                                });
+                                if (pathsModified) {
+                                    displayData = { paths: currentPaths };
+                                }
+                            } 
+                            // 2. Fallback: Full Generation
+                            // If the dependent is empty or structurally broken, regenerate it fresh.
+                            else if (allCharsByName && metrics && characterSets) {
+                                const tempMap = new Proxy(glyphDataMap, {
+                                    get(target, prop, receiver) {
+                                        if (prop === 'get') {
+                                            return (key: number) => {
+                                                if (key === sourceCharacter.unicode) return { paths: liveSourcePaths };
+                                                return target.get(key);
+                                            };
+                                        }
+                                        return Reflect.get(target, prop, receiver);
+                                    }
+                                });
+
+                                const liveComposite = generateCompositeGlyphData({
+                                    character: char,
+                                    allCharsByName: allCharsByName,
+                                    allGlyphData: tempMap,
+                                    settings: settings,
+                                    metrics: metrics,
+                                    markAttachmentRules: markAttachmentRules || null,
+                                    allCharacterSets: characterSets,
+                                    groups: groups || {}
+                                });
+                                if (liveComposite) {
+                                    displayData = liveComposite;
+                                }
+                            }
+                        }
+
+                        return (
+                            <GlyphThumbnail 
+                                key={char.unicode || char.name}
+                                character={char}
+                                glyphData={displayData}
+                                strokeThickness={settings.strokeThickness}
+                                onClick={() => onSelect(char)}
+                            />
+                        );
+                    })}
                 </div>
 
                 {visibility.right && (
