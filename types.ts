@@ -140,6 +140,7 @@ export interface AppSettings {
   isPrefillEnabled?: boolean;
   showHiddenGlyphs: boolean;
   showUnicodeValues: boolean;
+  showGlyphNames?: boolean;
   preferKerningTerm?: boolean;
   // Font Meta Data
   manufacturer?: string;
@@ -228,6 +229,7 @@ export interface ScriptDefaults {
     isPrefillEnabled: boolean;
     showHiddenGlyphs?: boolean;
     showUnicodeValues?: boolean;
+    showGlyphNames?: boolean;
     preferKerningTerm?: boolean;
 }
 

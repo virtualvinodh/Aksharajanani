@@ -96,10 +96,42 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
 
     if (pathsToDraw.length === 0) return;
 
-    const scale = PREVIEW_CANVAS_SIZE / DRAWING_CANVAS_SIZE;
+    // Calculate BBox for auto-fitting
+    const bbox = getAccurateGlyphBBox(pathsToDraw, strokeThickness);
     
-    ctx.save();
-    ctx.scale(scale, scale);
+    // Default standard scale
+    const standardScale = PREVIEW_CANVAS_SIZE / DRAWING_CANVAS_SIZE;
+    let scale = standardScale;
+
+    if (bbox) {
+        const PADDING = 10;
+        const availableWidth = PREVIEW_CANVAS_SIZE - (PADDING * 2);
+        const availableHeight = PREVIEW_CANVAS_SIZE - (PADDING * 2);
+
+        // Determine if we need to shrink to fit
+        if (bbox.width > 0 && bbox.height > 0) {
+            const fitScaleX = availableWidth / bbox.width;
+            const fitScaleY = availableHeight / bbox.height;
+            const fitScale = Math.min(fitScaleX, fitScaleY);
+            
+            // Cap at standard scale (don't zoom in for tiny glyphs), but allow shrinking for large ones
+            scale = Math.min(standardScale, fitScale);
+        }
+        
+        // Center alignment: Move canvas center to (0,0), scale, then move glyph center to (0,0)
+        const glyphCenterX = bbox.x + bbox.width / 2;
+        const glyphCenterY = bbox.y + bbox.height / 2;
+        const canvasCenter = PREVIEW_CANVAS_SIZE / 2;
+        
+        ctx.save();
+        ctx.translate(canvasCenter, canvasCenter);
+        ctx.scale(scale, scale);
+        ctx.translate(-glyphCenterX, -glyphCenterY);
+    } else {
+        ctx.save();
+        ctx.scale(scale, scale);
+    }
+
     renderPaths(ctx, pathsToDraw, {
         strokeThickness,
         color: theme === 'dark' ? '#E2E8F0' : '#1F2937'

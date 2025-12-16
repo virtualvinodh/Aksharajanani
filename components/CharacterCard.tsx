@@ -1,4 +1,8 @@
 
+
+
+
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -134,6 +138,11 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       stateClasses = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500";
   }
 
+  // Show name logic: Default false (hidden), show only if setting is explicitly true.
+  // Note: settings.showGlyphNames might be undefined for older projects.
+  const showName = !!settings.showGlyphNames;
+  const shouldShowNameBlock = !isDrawn || showName || settings.showUnicodeValues;
+
   return (
     <div
       ref={cardRef}
@@ -167,21 +176,25 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
           <div className="w-full flex-1 min-h-0 flex items-center justify-center">
             <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className={`transition-transform duration-200 max-w-full max-h-full object-contain ${!isSelectionMode ? 'group-hover:scale-110' : ''}`}></canvas>
           </div>
-          <div className="text-center mt-1 sm:mt-2 flex-shrink-0">
-            <p 
-              className={`${isCompact ? 'text-sm' : 'text-lg sm:text-2xl'} font-bold text-gray-900 dark:text-white`}
-              style={{
-                fontFamily: 'var(--guide-font-family)',
-                fontFeatureSettings: 'var(--guide-font-feature-settings)'
-              }}
-            >
-              {character.name}
-              {character.link && <span className="ml-1 opacity-60" aria-label="Linked Glyph">🔗</span>}
-            </p>
-            {settings.showUnicodeValues && character.unicode !== undefined && (
-                <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
-            )}
-          </div>
+          {shouldShowNameBlock && (
+              <div className="text-center mt-1 sm:mt-2 flex-shrink-0">
+                {showName && (
+                    <p 
+                    className={`${isCompact ? 'text-sm' : 'text-lg sm:text-2xl'} font-bold text-gray-900 dark:text-white`}
+                    style={{
+                        fontFamily: 'var(--guide-font-family)',
+                        fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                    }}
+                    >
+                    {character.name}
+                    {character.link && <span className="ml-1 opacity-60" aria-label="Linked Glyph">🔗</span>}
+                    </p>
+                )}
+                {settings.showUnicodeValues && character.unicode !== undefined && (
+                    <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
+                )}
+              </div>
+          )}
         </>
       ) : (
         <div className="w-full h-full flex items-center justify-center flex-col">
