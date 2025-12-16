@@ -188,6 +188,22 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         }
     };
     
+    // Explicit handler to change pair from within the editor (e.g. via strip)
+    const handleSetEditingPair = (pair: { base: Character, mark: Character, ligature: Character }) => {
+        setEditingPair(pair);
+        // We attempt to find the index in the current context list.
+        // If the context list (e.g. filtered class members) contains it, we update the index.
+        const index = editingContextList.findIndex(p => p.base.unicode === pair.base.unicode && p.mark.unicode === pair.mark.unicode);
+        if (index !== -1) {
+            setEditingIndex(index);
+        } else {
+             // If navigating to a sibling that wasn't in the original filtered view (edge case),
+             // we might lose next/prev button functionality until we close/reopen, 
+             // but editing will work.
+             setEditingIndex(null); 
+        }
+    };
+    
     const unpositionedCount = useMemo(() => {
         const listToCheck = viewMode === 'rules' ? [] : displayedCombinations;
         return listToCheck.filter(combo => {
@@ -231,7 +247,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     // --- RENDER ---
     if (!settings || !metrics || !characterSets) return null;
 
-    if (editingPair && editingIndex !== null) {
+    if (editingPair) {
         return (
             <PositioningEditorPage
                 baseChar={editingPair.base}
@@ -252,7 +268,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 onNavigate={handleNavigatePair}
                 characterSets={characterSets}
                 glyphVersion={glyphVersion}
-                setEditingPair={setEditingPair}
+                setEditingPair={handleSetEditingPair}
             />
         );
     }

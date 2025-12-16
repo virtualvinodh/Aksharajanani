@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet } from '../../types';
+import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet, AttachmentClass } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths, calculateDefaultMarkOffset, getAccurateGlyphBBox } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
@@ -16,6 +16,8 @@ interface SiblingPair {
 
 interface ClassPreviewStripProps {
     siblings: SiblingPair[];
+    activePair: SiblingPair;
+    pivotChar?: Character | null; // The character that drives the class (usually first member)
     glyphDataMap: Map<number, GlyphData>;
     strokeThickness: number;
     anchorDelta: Point; // The manual deviation from the default anchor snap (calculated in Editor)
@@ -32,12 +34,22 @@ interface ClassPreviewStripProps {
     // Lifted State
     isExpanded: boolean;
     setIsExpanded: (expanded: boolean) => void;
+    
+    activeClass?: AttachmentClass;
 }
 
 const DRAWING_CANVAS_SIZE = 1000;
 
+const CrownIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+    </svg>
+);
+
 const SiblingThumbnail: React.FC<{
     pair: SiblingPair;
+    isActive: boolean;
+    isPivot: boolean;
     glyphDataMap: Map<number, GlyphData>;
     strokeThickness: number;
     anchorDelta: Point;
@@ -47,7 +59,7 @@ const SiblingThumbnail: React.FC<{
     markAttachmentRules: MarkAttachmentRules | null;
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
-}> = React.memo(({ pair, glyphDataMap, strokeThickness, anchorDelta, onClick, size = 80, metrics, markAttachmentRules, characterSets, groups }) => {
+}> = React.memo(({ pair, isActive, isPivot, glyphDataMap, strokeThickness, anchorDelta, onClick, size = 80, metrics, markAttachmentRules, characterSets, groups }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
 
@@ -141,22 +153,33 @@ const SiblingThumbnail: React.FC<{
 
     }, [pair, glyphDataMap, strokeThickness, defaultAnchorOffset, anchorDelta, theme, size, baseGlyph, markGlyph]);
 
+    // Dynamic Classes
+    const containerClasses = `flex-shrink-0 flex flex-col items-center justify-center bg-white dark:bg-gray-800 border rounded shadow-sm cursor-pointer transition-all duration-200 aspect-square relative
+        ${isActive 
+            ? 'ring-2 ring-indigo-500 border-transparent opacity-100 z-10' 
+            : 'border-gray-200 dark:border-gray-600 opacity-60 hover:opacity-100 hover:scale-105'}`;
+
     return (
         <div 
             onClick={onClick}
             style={{ width: size }}
-            className="flex-shrink-0 flex flex-col items-center justify-center bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all hover:-translate-y-0.5 aspect-square"
-            title={`Edit ${pair.base.name} + ${pair.mark.name}`}
+            className={containerClasses}
+            title={isPivot ? "Class Leader (Edit here to sync)" : `Edit ${pair.base.name} + ${pair.mark.name}`}
         >
-            <canvas ref={canvasRef} width={size} height={size} className="opacity-90" />
+            <canvas ref={canvasRef} width={size} height={size} />
+            {isPivot && (
+                 <div className="absolute top-0.5 right-0.5 bg-yellow-400 text-yellow-900 rounded-full p-1 shadow-md z-20" title="Class Leader">
+                    <CrownIcon className="w-3 h-3" />
+                 </div>
+            )}
         </div>
     );
 });
 
 const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ 
-    siblings, glyphDataMap, strokeThickness, anchorDelta, isLinked, onSelectPair,
+    siblings, activePair, pivotChar, glyphDataMap, strokeThickness, anchorDelta, isLinked, onSelectPair,
     metrics, markAttachmentRules, characterSets, groups,
-    isExpanded, setIsExpanded
+    isExpanded, setIsExpanded, activeClass
 }) => {
     const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
 
@@ -168,7 +191,8 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
         }
     }, [siblings, checkVisibility, isExpanded]);
 
-    if (!isLinked || siblings.length === 0) return null;
+    // If Unlinked AND no active class context, hide strip (pure manual mode)
+    if (!activeClass && siblings.length === 0) return null;
     
     // Shared props for thumbnails
     const thumbProps = {
@@ -181,8 +205,32 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
         groups
     };
     
-    // Render the expanded view into a Portal to ensure it sits on top of everything
-    // Increased z-index to 200 and made background fully opaque to hide underlying controls
+    // Check if a pair is the Pivot
+    // Logic: Identify if the Base or Mark in the pair matches the pivot character provided
+    const isPairPivot = (pair: SiblingPair) => {
+        if (!pivotChar) return false;
+        return pair.base.unicode === pivotChar.unicode || pair.mark.unicode === pivotChar.unicode;
+    };
+    
+    const isPairActive = (pair: SiblingPair) => {
+        return pair.base.unicode === activePair.base.unicode && pair.mark.unicode === activePair.mark.unicode;
+    };
+    
+    const renderThumb = (pair: SiblingPair, size: number) => (
+         <SiblingThumbnail 
+            key={`${pair.base.unicode}-${pair.mark.unicode}`} 
+            pair={pair} 
+            isActive={isPairActive(pair)}
+            isPivot={isPairPivot(pair)}
+            {...thumbProps}
+            onClick={() => {
+                if (isExpanded) setIsExpanded(false);
+                onSelectPair(pair);
+            }}
+            size={size}
+        />
+    );
+    
     const expandedView = isExpanded ? (
          <div className="fixed inset-0 z-[200] bg-white dark:bg-gray-900 flex flex-col animate-fade-in-up">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md flex-shrink-0">
@@ -193,7 +241,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                      <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Class Sync Preview</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {siblings.length} items syncing with current position
+                            {siblings.length} items in class <span className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">{activeClass?.name || 'Group'}</span>
                         </p>
                      </div>
                  </div>
@@ -204,20 +252,9 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                     <CloseIcon className="w-8 h-8" />
                 </button>
             </div>
-            <div className="flex-grow overflow-y-auto p-4">
-                 <div className="flex flex-wrap justify-center gap-3">
-                    {siblings.map((pair) => (
-                        <SiblingThumbnail 
-                            key={`expanded-${pair.base.unicode}-${pair.mark.unicode}`} 
-                            pair={pair} 
-                            {...thumbProps}
-                            onClick={() => {
-                                setIsExpanded(false);
-                                onSelectPair(pair);
-                            }}
-                            size={160}
-                        />
-                    ))}
+            <div className="flex-grow overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900/50">
+                 <div className="flex flex-wrap justify-center gap-4">
+                    {siblings.map((pair) => renderThumb(pair, 140))}
                  </div>
             </div>
          </div>
@@ -227,12 +264,12 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
         <>
             {expandedView && createPortal(expandedView, document.body)}
 
-            <div className="w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center transition-all duration-300">
+            <div className={`w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center transition-all duration-300 ${!isLinked ? 'grayscale opacity-75' : ''}`}>
                  
                  {/* Control Column */}
                  <div className="flex flex-col items-center justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 self-stretch">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide text-center leading-tight">
-                        Syncing<br/>
+                        Class<br/>
                         <span className="text-indigo-600 dark:text-indigo-400 text-xs">{siblings.length}</span>
                     </span>
                     <button 
@@ -258,15 +295,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                     )}
 
                     <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center scroll-smooth px-1 w-full">
-                        {siblings.map((pair) => (
-                            <SiblingThumbnail 
-                                key={`${pair.base.unicode}-${pair.mark.unicode}`} 
-                                pair={pair} 
-                                {...thumbProps}
-                                onClick={() => onSelectPair(pair)}
-                                size={80}
-                            />
-                        ))}
+                        {siblings.map((pair) => renderThumb(pair, 80))}
                     </div>
 
                     {visibility.right && (
