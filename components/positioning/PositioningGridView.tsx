@@ -175,6 +175,7 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                                     characterSets={characterSets!}
                                     glyphVersion={glyphVersion}
                                     groups={groups}
+                                    hideTick={status === 'sibling'}
                                 />
                              </div>
                              

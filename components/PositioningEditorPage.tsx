@@ -43,11 +43,19 @@ interface PositioningEditorPageProps {
     setEditingPair?: (pair: { base: Character, mark: Character, ligature: Character }) => void;
     characterSets: CharacterSet[];
     glyphVersion: number;
+    // Added for global sibling lookup
+    allLigaturesByKey: Map<string, Character>;
+}
+
+interface SiblingPair {
+    base: Character;
+    mark: Character;
+    ligature: Character; 
 }
 
 const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     baseChar, markChar, targetLigature, glyphDataMap, markPositioningMap, onSave, onClose, onReset, settings, metrics, markAttachmentRules, positioningRules, allChars,
-    allPairs, currentIndex, onNavigate, setEditingPair, characterSets, glyphVersion
+    allPairs, currentIndex, onNavigate, setEditingPair, characterSets, glyphVersion, allLigaturesByKey
 }) => {
     const { t } = useLocale();
     const { showNotification } = useLayout();
@@ -144,31 +152,70 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     }, [markAttachmentClasses, baseAttachmentClasses, markChar.name, baseChar.name, groups, characterSets]);
 
     // Find siblings for the strip
-    // Updated Logic: Prioritize Active Class to ensure correct grouping
+    // Updated Logic: Use global lookup to find all class members, even if not in current grid view
     const classSiblings = useMemo(() => {
-        if (!allPairs) return [];
-
-        // 1. If we are in a defined Class, show class members from the current context list
         if (activeAttachmentClass && activeClassType) {
-            const members = new Set(expandMembers(activeAttachmentClass.members, groups, characterSets));
-            
-            return allPairs.filter(p => {
-                if (activeClassType === 'mark') {
-                     // For Mark Class, we want pairs with SAME BASE and MARK IN CLASS
-                     return p.base.unicode === baseChar.unicode && members.has(p.mark.name);
-                } else {
-                     // For Base Class, we want pairs with SAME MARK and BASE IN CLASS
-                     return p.mark.unicode === markChar.unicode && members.has(p.base.name);
-                }
-            });
+             const members = expandMembers(activeAttachmentClass.members, groups, characterSets);
+             const siblings: SiblingPair[] = [];
+             
+             members.forEach(memberName => {
+                 let sBase = baseChar;
+                 let sMark = markChar;
+                 
+                 if (activeClassType === 'mark') {
+                     // Varying Mark: Same Base
+                     const c = allChars.get(memberName);
+                     if (c) sMark = c;
+                 } else {
+                     // Varying Base: Same Mark
+                     const c = allChars.get(memberName);
+                     if (c) sBase = c;
+                 }
+                 
+                 // Validate existence and drawn status
+                 if (sBase.unicode === undefined || sMark.unicode === undefined) return;
+                 const bData = glyphDataMap.get(sBase.unicode);
+                 const mData = glyphDataMap.get(sMark.unicode);
+                 
+                 if (isGlyphDrawn(bData) && isGlyphDrawn(mData)) {
+                      // Get Ligature
+                      const key = `${sBase.unicode}-${sMark.unicode}`;
+                      const lig = allLigaturesByKey.get(key);
+                      if (lig) {
+                          siblings.push({ base: sBase, mark: sMark, ligature: lig });
+                      }
+                 }
+             });
+             
+             return siblings;
         }
 
         // 2. Fallback to Rule-based siblings (Manual Mode / No Class)
-        if (!parentRule) return [];
-        const basesInRule = new Set(expandMembers(parentRule.base, groups, characterSets));
-        const marksInRule = new Set(expandMembers(parentRule.mark, groups, characterSets));
-        return allPairs.filter(p => basesInRule.has(p.base.name) && marksInRule.has(p.mark.name));
-    }, [allPairs, activeAttachmentClass, activeClassType, parentRule, baseChar, markChar, groups, characterSets]);
+        // If not in a class, we use the rule context to find siblings (e.g. all pairs in a manual group rule)
+        if (parentRule) {
+             const ruleBases = expandMembers(parentRule.base, groups, characterSets);
+             const ruleMarks = expandMembers(parentRule.mark, groups, characterSets);
+             const siblings: SiblingPair[] = [];
+             
+             ruleBases.forEach(bName => {
+                 ruleMarks.forEach(mName => {
+                     const b = allChars.get(bName);
+                     const m = allChars.get(mName);
+                     
+                     if (b && m && isGlyphDrawn(glyphDataMap.get(b.unicode)) && isGlyphDrawn(glyphDataMap.get(m.unicode))) {
+                         const key = `${b.unicode}-${m.unicode}`;
+                         const lig = allLigaturesByKey.get(key);
+                         if (lig) {
+                             siblings.push({ base: b, mark: m, ligature: lig });
+                         }
+                     }
+                 });
+             });
+             return siblings;
+        }
+
+        return [];
+    }, [activeAttachmentClass, activeClassType, parentRule, baseChar, markChar, groups, characterSets, allChars, glyphDataMap, allLigaturesByKey]);
 
 
     // Editing Permission

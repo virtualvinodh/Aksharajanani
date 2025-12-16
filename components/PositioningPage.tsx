@@ -269,6 +269,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 characterSets={characterSets}
                 glyphVersion={glyphVersion}
                 setEditingPair={handleSetEditingPair}
+                allLigaturesByKey={positioningData.allLigaturesByKey}
             />
         );
     }
