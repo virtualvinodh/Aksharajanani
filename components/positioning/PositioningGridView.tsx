@@ -2,7 +2,7 @@
 import React, { forwardRef } from 'react';
 import CombinationCard from '../CombinationCard';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, CharacterSet, AttachmentClass } from '../../types';
-import { CopyIcon, CheckCircleIcon, UndoIcon, LinkIcon } from '../../constants';
+import { PasteIcon, CheckCircleIcon, UndoIcon, LinkIcon } from '../../constants';
 import { useLocale } from '../../contexts/LocaleContext';
 import { expandMembers } from '../../services/groupExpansionService';
 import { VirtuosoGrid } from 'react-virtuoso';
@@ -156,10 +156,10 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                 {!isFiltered && activeItem && (
                     <button
                         onClick={() => handleOpenReuseModal(activeItem)}
-                        title={t('copyPositionFrom')}
+                        title={t('bulkCopyFrom')}
                         className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     >
-                        <CopyIcon />
+                        <PasteIcon />
                     </button>
                 )}
                 <button

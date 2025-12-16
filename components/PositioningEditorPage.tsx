@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { BackIcon, SaveIcon, PropertiesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, LinkIcon, BrokenLinkIcon } from '../constants';
+import { BackIcon, SaveIcon, PropertiesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, LinkIcon, BrokenLinkIcon, CloseIcon } from '../constants';
 import DrawingCanvas from './DrawingCanvas';
 import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, CharacterSet, AttachmentClass, AttachmentPoint } from '../types';
 import { calculateDefaultMarkOffset, getAccurateGlyphBBox, resolveAttachmentRule, getAttachmentPointCoords } from '../services/glyphRenderService';
@@ -677,6 +677,64 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
 
     // Show strip only if linked and class siblings exist
     const showStrip = isLinked && classSiblings.length > 0;
+
+    // --- Reuse Logic ---
+    // 1. Calculate available sources for "Reuse"
+    const reuseSources = useMemo(() => {
+        if (!characterSets) return [];
+        const sources: Character[] = [];
+        const seen = new Set<number>();
+        
+        characterSets.forEach(set => {
+            set.characters.forEach(c => {
+                // Find potential base characters
+                if (c.unicode !== undefined && c.glyphClass !== 'mark' && c.unicode !== baseChar.unicode) {
+                    const key = `${c.unicode}-${markChar.unicode}`;
+                    // If this other base + current mark pair is positioned...
+                    if (markPositioningMap.has(key) && !seen.has(c.unicode)) {
+                        // AND the source base is actually drawn (to avoid empty cards)
+                        const glyph = glyphDataMap.get(c.unicode);
+                        if (glyph && isGlyphDrawn(glyph)) {
+                             sources.push(c);
+                             seen.add(c.unicode);
+                        }
+                    }
+                }
+            });
+        });
+        
+        return sources;
+    }, [characterSets, markPositioningMap, baseChar, markChar, glyphDataMap]);
+
+    const handleReuse = (sourceBase: Character) => {
+        const sourceKey = `${sourceBase.unicode}-${markChar.unicode}`;
+        const sourceOffset = markPositioningMap.get(sourceKey);
+        if (!sourceOffset) return;
+        
+        // Calculate Delta needed to move from Current to Source
+        const moveX = sourceOffset.x - currentOffset.x;
+        const moveY = sourceOffset.y - currentOffset.y;
+        
+        // Apply to paths
+        const newPaths = markPaths.map(p => ({
+            ...p,
+            points: p.points.map(pt => ({ x: pt.x + moveX, y: pt.y + moveY })),
+            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({
+                ...seg,
+                point: { x: seg.point.x + moveX, y: seg.point.y + moveY }
+            }))) : undefined
+        }));
+
+        handlePathsChange(newPaths);
+        setCurrentOffset(sourceOffset); 
+        setIsReusePanelOpen(false);
+        showNotification(t('positionsCopied'), 'success');
+        
+        // Trigger save to commit the reuse
+        if (settings.isAutosaveEnabled) {
+            handleSave(newPaths);
+        }
+    };
     
     // --- Manual Coordinate Handlers ---
     const handleManualChange = (axis: 'x' | 'y', value: string) => {
@@ -825,6 +883,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                         pageTool={pageTool} 
                         onToggleTool={() => setPageTool(t => t === 'select' ? 'pan' : 'select')} 
                         onZoom={handleZoom} 
+                        reuseDisabled={!canEdit}
                     />
                 </div>
             )}
@@ -841,6 +900,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                     pageTool={pageTool} 
                                     onToggleTool={() => setPageTool(t => t === 'select' ? 'pan' : 'select')} 
                                     onZoom={handleZoom} 
+                                    reuseDisabled={!canEdit}
                                 />
                             </div>
                         )}
@@ -889,9 +949,35 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             </main>
 
             {isReusePanelOpen && (
-                 <div className="absolute top-20 left-4 z-30 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-64 max-h-96 overflow-y-auto">
-                    <h4 className="font-bold mb-2">{t('copyPositionFrom')}</h4>
-                    <button onClick={() => setIsReusePanelOpen(false)} className="text-sm text-blue-500">Close</button>
+                 <div className="absolute top-20 left-4 z-30 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-80 max-h-[500px] flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-bold text-gray-900 dark:text-white">{t('copyPositionFrom')}</h4>
+                        <button onClick={() => setIsReusePanelOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                            <CloseIcon className="w-5 h-5"/>
+                        </button>
+                    </div>
+                    
+                    <div className="flex-grow overflow-y-auto pr-1 grid grid-cols-2 gap-3">
+                        {reuseSources.length > 0 ? (
+                            reuseSources.map(sourceBase => (
+                                <ReusePreviewCard
+                                    key={sourceBase.unicode}
+                                    baseChar={sourceBase}
+                                    markChar={markChar}
+                                    onClick={() => handleReuse(sourceBase)}
+                                    glyphDataMap={glyphDataMap}
+                                    strokeThickness={settings.strokeThickness}
+                                    markPositioningMap={markPositioningMap}
+                                    glyphVersion={glyphVersion}
+                                    displayLabel={sourceBase.name}
+                                />
+                            ))
+                        ) : (
+                            <div className="col-span-2 text-center text-gray-500 italic py-4">
+                                {t('noCompleteSources')}
+                            </div>
+                        )}
+                    </div>
                  </div>
             )}
             

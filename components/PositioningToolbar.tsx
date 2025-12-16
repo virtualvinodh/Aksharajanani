@@ -9,6 +9,7 @@ interface PositioningToolbarProps {
   onToggleTool: () => void;
   onZoom: (factor: number) => void;
   orientation?: 'vertical' | 'horizontal';
+  reuseDisabled?: boolean;
 }
 
 const ToolButton: React.FC<{ isActive: boolean, label: string, onClick: () => void, children: React.ReactNode }> = React.memo(({ isActive, label, onClick, children }) => (
@@ -25,23 +26,24 @@ const ToolButton: React.FC<{ isActive: boolean, label: string, onClick: () => vo
     </button>
 ));
 
-const ActionButton: React.FC<{ onClick: () => void, title: string, children: React.ReactNode }> = React.memo(({ onClick, title, children }) => (
+const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: boolean, children: React.ReactNode }> = React.memo(({ onClick, title, disabled, children }) => (
   <button
     onClick={onClick}
     title={title}
-    className="p-2 rounded-lg transition-all bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 shadow-sm"
+    disabled={disabled}
+    className="p-2 rounded-lg transition-all bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
   >
     {children}
   </button>
 ));
 
-const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ onReuseClick, pageTool, onToggleTool, onZoom, orientation = 'vertical' }) => {
+const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ onReuseClick, pageTool, onToggleTool, onZoom, orientation = 'vertical', reuseDisabled = false }) => {
   const { t } = useLocale();
   const isVertical = orientation === 'vertical';
 
   return (
     <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2 p-1.5 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg`}>
-      <ActionButton onClick={onReuseClick} title={t('copyPositionFrom')}>
+      <ActionButton onClick={onReuseClick} title={t('copyPositionFrom')} disabled={reuseDisabled}>
         <PasteIcon />
       </ActionButton>
       

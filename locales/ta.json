@@ -77,6 +77,7 @@
 	"basicLatinLetters": "லத்தீன் எழுத்துக்கள்",
 	"batch": "தொகுப்பு",
 	"batchOperations": "தொகுப்பு செயல்பாடுகள்",
+	"bulkCopyFrom": "மொத்தமாக நகலெடு...",
 	"cancel": "ரத்துசெய்",
 	"changeLanguage": "மொழியை மாற்றுக",
 	"changeScript": "புதிய எழுத்துரு",
@@ -113,7 +114,7 @@
 	"contextualRules": "சூழல்சார் விதிகள்",
 	"copy": "நகலெடுக",
 	"copyFrom": "{consonantName} இலிருந்து நகலெடு",
-	"copyPositionFrom": "இருந்து படியெடு",
+	"copyPositionFrom": "இதிலிருந்து நகலெடு...",
 	"copiedGlyph": "முழு கிளிஃபும் கிளிப்போர்டுக்கு நகலெடுக்கப்பட்டது.",
 	"copiedSelection": "தேர்வு கிளிப்போர்டுக்கு நகலெடுக்கப்பட்டது.",
 	"cornerSmoothing": "மூலை மென்மையாக்கம்",
@@ -322,7 +323,7 @@
 	"kerningPairs": "கெர்னிங் ஜோடிகள்",
 	"kerningProgress": "{total} பரிந்துரைக்கப்பட்ட ஜோடிகளில் {completed} கெர்ன் செய்யப்பட்டன ({percentage}%)",
 	"kerningProgressLabel": "கெர்னிங்: {percentage}%",
-	"kerningRecommended": "பரிந்துரைக்கப்பட்டவை",
+	"kerningRecommended": "பரிந்துரைக்கப்பட்டது",
 	"kerningResetSuccess": "{count} ஜோடிகளுக்கான கெர்னிங் மீட்டமைக்கப்பட்டது.",
 	"kerningShowOnlyComplete": "பரிந்துரைக்கப்பட்ட கெர்னிங்கிற்குத் தேவையான சில கிளிஃப்கள் வரையப்படவில்லை. வரையப்பட்ட ஜோடிகள் மட்டுமே காட்டப்படும்.",
 	"kerningShowUnkernedOnly": "கெர்ன் செய்யப்படாதவற்றை மட்டும் காட்டு",
@@ -722,5 +723,7 @@
     "confirmDeleteGroup": "'{name}' குழுவையும் அதன் அனைத்து எழுத்துக்களையும் நீக்க விரும்புகிறீர்களா என்பது உறுதியா? இதைச் செயல்தவிர்க்க முடியாது.",
     "cannotDeleteLastGroup": "கடைசி குழுவை நீக்க முடியாது.",
     "manageRules": "விதிகளை நிர்வகி",
-    "selectVisible": "தெரிவதைத் தேர்ந்தெடு"
+    "selectVisible": "தெரிவதைத் தேர்ந்தெடு",
+    "copyPositionFrom": "இதிலிருந்து நகலெடு...",
+    "bulkCopyFrom": "மொத்தமாக நகலெடு..."
 }
