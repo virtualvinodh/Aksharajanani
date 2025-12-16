@@ -11,8 +11,8 @@ declare var paper: any;
 export const useSelectTool = ({
     isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange,
     zoom, settings, imageTransform, onImageTransformChange, selectedPathIds, onSelectionChange,
-    isImageSelected, onImageSelectionChange, disableTransformations, transformMode = 'all', movementConstraint = 'none',
-    findPathAtPoint
+    isImageSelected, onImageSelectionChange, disableTransformations, lockedMessage, transformMode = 'all', movementConstraint = 'none',
+    findPathAtPoint, showNotification
 }: ToolHookProps) => {
     const { theme } = useTheme();
     const [selectionBox, setSelectionBox] = useState<BoundingBox | null>(null);
@@ -187,6 +187,13 @@ export const useSelectTool = ({
             }
 
             if (isInside) {
+                if (disableTransformations) {
+                    if (lockedMessage) {
+                        showNotification(lockedMessage, 'info');
+                    }
+                    return;
+                }
+                
                 // Click is inside the current selection. Start a move operation on the whole selection.
                 setIsDrawing(true);
                 setTransformAction({
@@ -256,15 +263,18 @@ export const useSelectTool = ({
                 onSelectionChange(newSelection);
                 onImageSelectionChange(false);
                 
-                const newSelectedPaths = currentPaths.filter(p => newSelection.has(p.id));
-                const box = getAccurateGlyphBBox(newSelectedPaths, settings.strokeThickness);
-                if (box) {
-                     setIsDrawing(true);
-                     setTransformAction({
-                         type: 'move', target: 'paths', startPoint: point,
-                         initialPaths: currentPaths.map(p => ({...p, points: [...p.points]})), // deep enough copy
-                         initialBox: box,
-                     });
+                // Only start move if transformations are enabled
+                if (!disableTransformations) {
+                    const newSelectedPaths = currentPaths.filter(p => newSelection.has(p.id));
+                    const box = getAccurateGlyphBBox(newSelectedPaths, settings.strokeThickness);
+                    if (box) {
+                         setIsDrawing(true);
+                         setTransformAction({
+                             type: 'move', target: 'paths', startPoint: point,
+                             initialPaths: currentPaths.map(p => ({...p, points: [...p.points]})), // deep enough copy
+                             initialBox: box,
+                         });
+                    }
                 }
 
             } else { // Clicked on empty space

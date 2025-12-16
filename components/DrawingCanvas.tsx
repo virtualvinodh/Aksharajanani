@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -44,6 +40,7 @@ interface DrawingCanvasProps {
   backgroundPathsColor?: string;
   showBearingGuides?: boolean;
   disableTransformations?: boolean;
+  lockedMessage?: string;
   calligraphyAngle?: 45 | 30 | 15;
   transformMode?: 'all' | 'move-only';
   movementConstraint?: 'horizontal' | 'vertical' | 'none';
@@ -55,7 +52,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     width, height, paths: initialPaths, onPathsChange, metrics, tool, onToolChange, zoom, setZoom, viewOffset, setViewOffset, 
     settings, currentCharacter, gridConfig, backgroundImage, backgroundImageOpacity, imageTransform, 
     onImageTransformChange, selectedPathIds, onSelectionChange, isImageSelected, onImageSelectionChange, 
-    lsb, rsb, onMetricsChange, backgroundPaths, backgroundPathsColor, showBearingGuides = true, disableTransformations = false, 
+    lsb, rsb, onMetricsChange, backgroundPaths, backgroundPathsColor, showBearingGuides = true, disableTransformations = false, lockedMessage,
     calligraphyAngle = 45, transformMode = 'all', movementConstraint = 'none', isInitiallyDrawn = false,
     previewTransform = null
 }) => {
@@ -76,6 +73,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     isImageSelected, onImageSelectionChange, 
     calligraphyAngle: calligraphyAngle as 45 | 30 | 15,
     disableTransformations, 
+    lockedMessage,
     transformMode: transformMode as 'all' | 'move-only',
     movementConstraint: movementConstraint as 'horizontal' | 'vertical' | 'none',
     // Pass metrics related props to hook

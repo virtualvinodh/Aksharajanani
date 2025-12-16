@@ -2,7 +2,7 @@
 import React from 'react';
 import CombinationCard from '../CombinationCard';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, CharacterSet, AttachmentClass } from '../../types';
-import { CopyIcon, CheckCircleIcon, UndoIcon } from '../../constants';
+import { CopyIcon, CheckCircleIcon, UndoIcon, LinkIcon } from '../../constants';
 import { useLocale } from '../../contexts/LocaleContext';
 import { expandMembers } from '../../services/groupExpansionService';
 
@@ -47,6 +47,12 @@ const CrownIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
+interface ClassStatus {
+    status: 'leader' | 'sibling' | 'unlinked' | 'none';
+    leaderLabel?: string;
+    classType?: 'mark' | 'base';
+}
+
 const PositioningGridView: React.FC<PositioningGridViewProps> = ({
     displayedCombinations, markPositioningMap, glyphDataMap, strokeThickness,
     markAttachmentRules, characterSets, glyphVersion, groups,
@@ -56,7 +62,7 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
     markAttachmentClasses, baseAttachmentClasses
 }) => {
 
-    const getClassStatus = (base: Character, mark: Character): 'leader' | 'sibling' | 'unlinked' | 'none' => {
+    const getClassStatus = (base: Character, mark: Character): ClassStatus => {
          const pairKey = `${base.name}-${mark.name}`;
 
          // Check Mark Classes
@@ -69,10 +75,19 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                 if (mClass.exceptions && expandMembers(mClass.exceptions, groups, characterSets).includes(base.name)) applies = false;
                 
                 if (applies) {
-                     if (mClass.exceptPairs?.includes(pairKey)) return 'unlinked';
+                     if (mClass.exceptPairs?.includes(pairKey)) return { status: 'unlinked' };
+                     
                      const members = expandMembers(mClass.members, groups, characterSets);
-                     // For Mark Class, the leader is the first MARK in the group
-                     return members[0] === mark.name ? 'leader' : 'sibling';
+                     // For Mark Class, the leader is the first MARK in the group attached to the CURRENT base
+                     const leaderMark = members[0];
+                     
+                     if (leaderMark === mark.name) return { status: 'leader', classType: 'mark' };
+                     
+                     return { 
+                         status: 'sibling', 
+                         classType: 'mark',
+                         leaderLabel: `${base.name} + ${leaderMark}`
+                     };
                 }
             }
          }
@@ -86,14 +101,23 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                 if (bClass.exceptions && expandMembers(bClass.exceptions, groups, characterSets).includes(mark.name)) applies = false;
                 
                 if (applies) {
-                    if (bClass.exceptPairs?.includes(pairKey)) return 'unlinked';
+                    if (bClass.exceptPairs?.includes(pairKey)) return { status: 'unlinked' };
+                    
                     const members = expandMembers(bClass.members, groups, characterSets);
-                    // For Base Class, the leader is the first BASE in the group
-                    return members[0] === base.name ? 'leader' : 'sibling';
+                    // For Base Class, the leader is the first BASE in the group attached to the CURRENT mark
+                    const leaderBase = members[0];
+                    
+                    if (leaderBase === base.name) return { status: 'leader', classType: 'base' };
+                    
+                    return {
+                        status: 'sibling',
+                        classType: 'base',
+                        leaderLabel: `${leaderBase} + ${mark.name}`
+                    };
                 }
             }
          }
-         return 'none';
+         return { status: 'none' };
     };
 
     if ((!isFiltered && navItemsLength === 0) || (isFiltered && displayedCombinations.length === 0)) {
@@ -146,14 +170,14 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                 {displayedCombinations.map(({ base, mark, ligature }, index) => {
                     const isPositioned = markPositioningMap.has(`${base.unicode}-${mark.unicode}`);
                     const pairId = `${base.unicode}-${mark.unicode}`;
-                    const status = getClassStatus(base, mark);
+                    const { status, leaderLabel, classType } = getClassStatus(base, mark);
                     
                     return (
                         <div key={ligature.unicode} className={`relative ${status === 'leader' ? 'z-10' : ''}`}>
                              <div className={`
                                 rounded-lg transition-all duration-200 h-full
                                 ${status === 'leader' ? 'ring-4 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900 shadow-xl' : ''}
-                                ${status === 'sibling' ? 'opacity-60 grayscale hover:grayscale-0 hover:opacity-100' : ''}
+                                ${status === 'sibling' ? 'opacity-70 grayscale hover:grayscale-0 hover:opacity-100' : ''}
                              `}>
                                 <CombinationCard
                                     ref={(el) => { if (el) cardRefs.current.set(pairId, el); else cardRefs.current.delete(pairId); }}
@@ -182,6 +206,17 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                              {status === 'leader' && (
                                  <div className="absolute -top-2 -right-2 bg-indigo-600 text-white p-1 rounded-full shadow-md z-20 border-2 border-white dark:border-gray-800" title="Class Leader">
                                     <CrownIcon className="w-3 h-3" />
+                                 </div>
+                             )}
+
+                             {status === 'sibling' && (
+                                 <div 
+                                    className={`absolute -top-1 -left-1 text-white p-1 rounded-full shadow-sm z-20 border border-white dark:border-gray-800
+                                        ${classType === 'mark' ? 'bg-purple-500' : 'bg-blue-500'}
+                                    `} 
+                                    title={`Synced with ${leaderLabel}`}
+                                >
+                                    <LinkIcon className="w-3 h-3" />
                                  </div>
                              )}
                         </div>

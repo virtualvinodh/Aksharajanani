@@ -272,9 +272,16 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         if (offset) setCurrentOffset(offset);
         
         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
+        
+        // Fix: Force all mark paths to have the same groupId so they are selected as one unit
+        const MARK_GROUP_ID = "positioning-mark-group";
+
         const newMarkPaths = deepClone(originalMarkPaths);
         if (offset) {
             newMarkPaths.forEach((p: Path) => {
+                // Apply temporary grouping for the editor
+                p.groupId = MARK_GROUP_ID;
+
                 p.points = p.points.map(pt => ({ x: pt.x + offset!.x, y: pt.y + offset!.y }));
                 if (p.segmentGroups) {
                     p.segmentGroups = p.segmentGroups.map(group =>
@@ -452,8 +459,11 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
              
              // Apply and Save
              const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
+             const MARK_GROUP_ID = "positioning-mark-group";
+
              const newPaths = deepClone(originalMarkPaths).map((p: Path) => ({
                 ...p,
+                groupId: MARK_GROUP_ID,
                 points: p.points.map(pt => ({ x: pt.x + newOffset.x, y: pt.y + newOffset.y })),
                 segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({
                     ...seg,
@@ -579,10 +589,14 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const hasPathChanges = JSON.stringify(markPaths) !== JSON.stringify(initialMarkPaths);
     const hasBearingChanges = lsb !== targetLigature.lsb || rsb !== targetLigature.rsb;
     const hasUnsavedChanges = hasPathChanges || hasBearingChanges;
+    
+    // Logic for Locked Message
+    const lockedMessage = !canEdit ? t('This pair is synced to {pivot}. Unlink to edit this specific pair, or edit {pivot} to update the whole class.', { pivot: pivotName || 'Class Leader' }) : undefined;
 
     const handlePathsChange = useCallback((newPaths: Path[]) => {
+        // If not editable, we should block, although DrawingCanvas might prevent drag via disableTransformations now.
+        // This is a safety check.
         if (!canEdit) {
-            showNotification(t('This pair is synced to {pivot}. Unlink to edit this specific pair, or edit {pivot} to update the whole class.', { pivot: pivotName || 'Class Leader' }), 'info');
             return;
         }
 
@@ -594,7 +608,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                 handleSave(newPaths, true);
             }, 500);
         }
-    }, [settings.isAutosaveEnabled, handleSave, canEdit, pivotName, t, showNotification]);
+    }, [settings.isAutosaveEnabled, handleSave, canEdit]);
 
     const handleZoom = (factor: number) => {
         const newZoom = Math.max(0.1, Math.min(10, zoom * factor));
@@ -810,7 +824,10 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                     settings={settings} allGlyphData={new Map()} allCharacterSets={[]} currentCharacter={targetLigature}
                                     gridConfig={{ characterNameSize: 450 }} backgroundImage={null} backgroundImageOpacity={1} imageTransform={null} onImageTransformChange={() => {}}
                                     selectedPathIds={selectedPathIds} onSelectionChange={handleSelectionChange} isImageSelected={false} onImageSelectionChange={() => {}}
-                                    lsb={lsb} rsb={rsb} showBearingGuides={false} disableTransformations={false} transformMode="move-only" movementConstraint={movementConstraint} isInitiallyDrawn={true}
+                                    lsb={lsb} rsb={rsb} showBearingGuides={false} 
+                                    disableTransformations={!canEdit} 
+                                    lockedMessage={lockedMessage}
+                                    transformMode="move-only" movementConstraint={movementConstraint} isInitiallyDrawn={true}
                                 />
                             </div>
                         </div>

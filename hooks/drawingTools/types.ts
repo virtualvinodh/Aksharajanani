@@ -57,6 +57,7 @@ export interface UseDrawingCanvasProps {
     onImageSelectionChange: (isSelected: boolean) => void;
     calligraphyAngle?: 45 | 30 | 15;
     disableTransformations?: boolean;
+    lockedMessage?: string;
     transformMode?: 'all' | 'move-only';
     movementConstraint?: 'horizontal' | 'vertical' | 'none';
     // New props for live preview
