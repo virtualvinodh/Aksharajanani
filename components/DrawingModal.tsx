@@ -25,6 +25,7 @@ import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 import { useRules } from '../contexts/RulesContext';
+import LinkedGlyphsStrip from './drawing/LinkedGlyphsStrip';
 
 declare var paper: any;
 
@@ -93,6 +94,27 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const currentIndex = visibleCharactersForNav.findIndex(c => c.unicode === character.unicode);
   const prevCharacter = currentIndex > 0 ? visibleCharactersForNav[currentIndex - 1] : null;
   const nextCharacter = currentIndex < visibleCharactersForNav.length - 1 ? visibleCharactersForNav[currentIndex + 1] : null;
+
+  // --- Calculate Linked Glyph Relations ---
+  const sourceGlyphs = useMemo(() => {
+      // Only show sources for live LINKED glyphs, ignoring static composites
+      const componentNames = character.link; 
+      if (!componentNames) return [];
+      return componentNames.map(name => allCharsByName.get(name)).filter((c): c is Character => !!c);
+  }, [character, allCharsByName]);
+
+  const dependentGlyphs = useMemo(() => {
+      // Find all characters that use THIS character as a live LINKED component
+      // and are currently drawn/valid in the project
+      return allCharacterSets.flatMap(set => set.characters)
+          .filter(c => {
+              if (c.hidden || c.unicode === undefined) return false;
+              // Must be a live link
+              if (!c.link?.includes(character.name)) return false;
+              // Must be completely drawn/exist in glyphData
+              return isGlyphDrawn(allGlyphData.get(c.unicode));
+          });
+  }, [character, allCharacterSets, allGlyphData]);
 
   const triggerClose = useCallback((postAnimationCallback: () => void) => {
     if (modalOriginRect) {
@@ -452,10 +474,10 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
          </div>
         
         <div 
-            className={`min-w-0 min-h-0 flex justify-center items-center relative ${isLargeScreen ? 'h-full aspect-square' : 'flex-1 w-full'}`} 
+            className={`min-w-0 min-h-0 flex flex-col justify-center items-center relative ${isLargeScreen ? 'h-full w-auto' : 'flex-1 w-full'}`} 
             ref={canvasContainerRef}
         >
-            <div className={`rounded-md overflow-hidden shadow-lg aspect-square relative ${isLargeScreen ? 'w-full h-full' : 'max-w-full max-h-full'}`} ref={canvasWrapperRef}>
+            <div className={`rounded-md overflow-hidden shadow-lg aspect-square relative flex-shrink-0 ${isLargeScreen ? 'h-auto max-h-[calc(100%-80px)]' : 'w-full h-auto max-h-full'}`} style={{ width: isLargeScreen ? 'auto' : '100%', maxWidth: '100%' }} ref={canvasWrapperRef}>
                 {activeSelectionBBox && (
                     <ContextualToolbar 
                         selectionBox={activeSelectionBBox}
@@ -471,6 +493,30 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                     />
                 )}
                 {canvasComponent}
+            </div>
+            
+            {/* LINKED GLYPHS STRIPS (Sources / Dependents) */}
+            <div className="w-full max-w-5xl flex flex-col gap-2 mt-2 z-10 flex-shrink-0">
+                {sourceGlyphs.length > 0 && (
+                    <LinkedGlyphsStrip 
+                        title="Sources" 
+                        items={sourceGlyphs} 
+                        glyphDataMap={allGlyphData} 
+                        settings={settings}
+                        onSelect={handleNavigationAttempt}
+                        variant="sources"
+                    />
+                )}
+                {dependentGlyphs.length > 0 && (
+                     <LinkedGlyphsStrip 
+                        title="Used In" 
+                        items={dependentGlyphs} 
+                        glyphDataMap={allGlyphData} 
+                        settings={settings}
+                        onSelect={handleNavigationAttempt}
+                        variant="dependents"
+                    />
+                )}
             </div>
         </div>
       </main>
