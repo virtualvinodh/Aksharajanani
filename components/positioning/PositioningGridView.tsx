@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { forwardRef } from 'react';
 import CombinationCard from '../CombinationCard';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, CharacterSet, AttachmentClass } from '../../types';
 import { CopyIcon, CheckCircleIcon, UndoIcon, LinkIcon } from '../../constants';
 import { useLocale } from '../../contexts/LocaleContext';
 import { expandMembers } from '../../services/groupExpansionService';
+import { VirtuosoGrid } from 'react-virtuoso';
 
 interface PositioningGridViewProps {
     displayedCombinations: { base: Character, mark: Character, ligature: Character }[];
@@ -52,6 +53,18 @@ interface ClassStatus {
     representativeLabel?: string;
     classType?: 'mark' | 'base';
 }
+
+const ListContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => (
+    <div
+      {...props}
+      ref={ref}
+      className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4 pb-4"
+    />
+));
+
+const ItemContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => (
+    <div {...props} ref={ref} className="min-w-0 w-full" />
+));
 
 const PositioningGridView: React.FC<PositioningGridViewProps> = ({
     displayedCombinations, markPositioningMap, glyphDataMap, strokeThickness,
@@ -133,8 +146,8 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
     if (!activeItem && !isFiltered && displayedCombinations.length === 0) return null;
 
     return (
-        <div key={activeItem?.unicode || 'flat-list'}>
-            <div className="flex items-center gap-4 mb-4 flex-wrap">
+        <div className="flex flex-col h-full" key={activeItem?.unicode || 'flat-list'}>
+            <div className="flex-shrink-0 flex items-center gap-4 mb-4 flex-wrap">
                 {!isFiltered && activeItem && (
                     <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
                         {t('combinationsFor', { item: activeItem.name })}
@@ -166,62 +179,72 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                     {t('resetPositions')}
                 </button>
             </div>
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4">
-                {displayedCombinations.map(({ base, mark, ligature }, index) => {
-                    const isPositioned = markPositioningMap.has(`${base.unicode}-${mark.unicode}`);
-                    const pairId = `${base.unicode}-${mark.unicode}`;
-                    const { status, representativeLabel, classType } = getClassStatus(base, mark);
-                    
-                    return (
-                        <div key={ligature.unicode} className={`relative ${status === 'representative' ? 'z-10' : ''}`}>
-                             <div className={`
-                                rounded-lg transition-all duration-200 h-full
-                                ${status === 'representative' ? 'ring-4 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900 shadow-xl' : ''}
-                                ${status === 'sibling' ? 'opacity-70 grayscale hover:grayscale-0 hover:opacity-100' : ''}
-                             `}>
-                                <CombinationCard
-                                    ref={(el) => { if (el) cardRefs.current.set(pairId, el); else cardRefs.current.delete(pairId); }}
-                                    baseChar={base}
-                                    markChar={mark}
-                                    ligature={ligature}
-                                    glyphDataMap={glyphDataMap}
-                                    strokeThickness={strokeThickness}
-                                    isPositioned={isPositioned}
-                                    canEdit={true}
-                                    onClick={() => {
-                                        setEditingPair({ base, mark, ligature });
-                                        setEditingIndex(index);
-                                        setEditingContextList(displayedCombinations);
-                                    }}
-                                    onConfirmPosition={() => handleConfirmPosition(base, mark, ligature)}
-                                    markAttachmentRules={markAttachmentRules}
-                                    markPositioningMap={markPositioningMap}
-                                    characterSets={characterSets!}
-                                    glyphVersion={glyphVersion}
-                                    groups={groups}
-                                    hideTick={status === 'sibling'}
-                                />
-                             </div>
-                             
-                             {status === 'representative' && (
-                                 <div className="absolute -top-2 -left-2 bg-indigo-600 text-white p-1 rounded-full shadow-md z-20 border-2 border-white dark:border-gray-800" title="Class Representative">
-                                    <CrownIcon className="w-3 h-3" />
-                                 </div>
-                             )}
 
-                             {status === 'sibling' && (
-                                 <div 
-                                    className={`absolute -top-1 -left-1 text-white p-1 rounded-full shadow-sm z-20 border border-white dark:border-gray-800
-                                        ${classType === 'mark' ? 'bg-purple-500' : 'bg-blue-500'}
-                                    `} 
-                                    title={`Synced with ${representativeLabel}`}
-                                >
-                                    <LinkIcon className="w-3 h-3" />
+            <div className="flex-grow min-h-0">
+                <VirtuosoGrid
+                    style={{ height: '100%' }}
+                    totalCount={displayedCombinations.length}
+                    components={{
+                        List: ListContainer,
+                        Item: ItemContainer
+                    }}
+                    itemContent={(index) => {
+                        const { base, mark, ligature } = displayedCombinations[index];
+                        const isPositioned = markPositioningMap.has(`${base.unicode}-${mark.unicode}`);
+                        const pairId = `${base.unicode}-${mark.unicode}`;
+                        const { status, representativeLabel, classType } = getClassStatus(base, mark);
+                        
+                        return (
+                            <div key={ligature.unicode} className={`relative ${status === 'representative' ? 'z-10' : ''}`}>
+                                 <div className={`
+                                    rounded-lg transition-all duration-200 h-full
+                                    ${status === 'representative' ? 'ring-4 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900 shadow-xl' : ''}
+                                    ${status === 'sibling' ? 'opacity-70 grayscale hover:grayscale-0 hover:opacity-100' : ''}
+                                 `}>
+                                    <CombinationCard
+                                        ref={(el) => { if (el) cardRefs.current.set(pairId, el); else cardRefs.current.delete(pairId); }}
+                                        baseChar={base}
+                                        markChar={mark}
+                                        ligature={ligature}
+                                        glyphDataMap={glyphDataMap}
+                                        strokeThickness={strokeThickness}
+                                        isPositioned={isPositioned}
+                                        canEdit={true}
+                                        onClick={() => {
+                                            setEditingPair({ base, mark, ligature });
+                                            setEditingIndex(index);
+                                            setEditingContextList(displayedCombinations);
+                                        }}
+                                        onConfirmPosition={() => handleConfirmPosition(base, mark, ligature)}
+                                        markAttachmentRules={markAttachmentRules}
+                                        markPositioningMap={markPositioningMap}
+                                        characterSets={characterSets!}
+                                        glyphVersion={glyphVersion}
+                                        groups={groups}
+                                        hideTick={status === 'sibling'}
+                                    />
                                  </div>
-                             )}
-                        </div>
-                    );
-                })}
+                                 
+                                 {status === 'representative' && (
+                                     <div className="absolute -top-2 -left-2 bg-indigo-600 text-white p-1 rounded-full shadow-md z-20 border-2 border-white dark:border-gray-800" title="Class Representative">
+                                        <CrownIcon className="w-3 h-3" />
+                                     </div>
+                                 )}
+
+                                 {status === 'sibling' && (
+                                     <div 
+                                        className={`absolute -top-1 -left-1 text-white p-1 rounded-full shadow-sm z-20 border border-white dark:border-gray-800
+                                            ${classType === 'mark' ? 'bg-purple-500' : 'bg-blue-500'}
+                                        `} 
+                                        title={`Synced with ${representativeLabel}`}
+                                    >
+                                        <LinkIcon className="w-3 h-3" />
+                                     </div>
+                                 )}
+                            </div>
+                        );
+                    }}
+                />
             </div>
         </div>
     );
