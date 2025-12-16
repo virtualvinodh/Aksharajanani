@@ -3,7 +3,6 @@ import React, { useMemo } from 'react';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, PositioningRules, CharacterSet, FontMetrics } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import CombinationCard from '../CombinationCard';
-import { resolveAttachmentRule } from '../../services/glyphRenderService';
 
 interface PositioningRuleBlockProps {
     rule: PositioningRules;
@@ -34,40 +33,14 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
 }) => {
     const { t } = useLocale();
 
-    // 1. Determine Title based on Anchors
-    const anchorInfo = useMemo(() => {
-        if (pairs.length === 0) return { title: "Unknown Rule", subtitle: "" };
-        
-        const sample = pairs[0];
-        // Resolve the rule used for this sample pair
-        const ruleDef = resolveAttachmentRule(
-            sample.base.name, 
-            sample.mark.name, 
-            markAttachmentRules, 
-            characterSets, 
-            groups
-        );
-
-        if (ruleDef) {
-            const basePoint = ruleDef[0]?.replace(/([A-Z])/g, ' $1').trim() || 'Origin';
-            const markPoint = ruleDef[1]?.replace(/([A-Z])/g, ' $1').trim() || 'Origin';
-            return {
-                title: `${basePoint} → ${markPoint}`,
-                subtitle: `Offsets: X: ${ruleDef[2] || 0}, Y: ${ruleDef[3] || 0}`
-            };
-        }
-        
-        return { title: "Automatic Positioning", subtitle: "Geometric Center" };
-    }, [pairs, markAttachmentRules, characterSets, groups]);
-
-    // 2. Identify Groups for Display
+    // 1. Identify Groups for Display
     const groupDisplay = useMemo(() => {
         const bases = rule.base.map(b => b.startsWith('$') ? t(b.substring(1)) : (b.startsWith('@') ? b : b)).join(', ');
         const marks = (rule.mark || []).map(m => m.startsWith('$') ? t(m.substring(1)) : (m.startsWith('@') ? m : m)).join(', ');
         return { bases, marks };
     }, [rule, t]);
 
-    // 3. Calculate Progress
+    // 2. Calculate Progress
     const totalPairs = pairs.length;
     const completedPairs = useMemo(() => {
         return pairs.filter(p => 
@@ -78,29 +51,23 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
     const percentage = totalPairs > 0 ? Math.round((completedPairs / totalPairs) * 100) : 0;
     const isComplete = percentage === 100;
 
-    // 4. Hero Selection (First Pair)
+    // 3. Hero Selection (First Pair)
     const heroPair = pairs[0];
 
     return (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
             {/* Header */}
-            <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex justify-between items-start">
-                <div className="flex-grow min-w-0 pr-4">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white capitalize truncate">
-                        {anchorInfo.title}
-                    </h3>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-2 items-center">
-                        <span className="font-mono bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 px-1.5 py-0.5 rounded truncate max-w-[150px]" title={groupDisplay.bases}>
+            <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex justify-between items-center">
+                <div className="flex-grow min-w-0">
+                    <div className="flex flex-wrap gap-2 items-center text-lg font-bold text-gray-900 dark:text-white">
+                        <span className="truncate" title={groupDisplay.bases}>
                             {groupDisplay.bases}
                         </span>
-                        <span className="text-gray-300">+</span>
-                        <span className="font-mono bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 px-1.5 py-0.5 rounded truncate max-w-[150px]" title={groupDisplay.marks}>
+                        <span className="text-gray-400 font-light">+</span>
+                        <span className="truncate" title={groupDisplay.marks}>
                             {groupDisplay.marks}
                         </span>
                     </div>
-                </div>
-                <div className="text-xs font-mono text-gray-400 bg-white dark:bg-gray-700 border dark:border-gray-600 px-2 py-1 rounded whitespace-nowrap">
-                    {rule.gpos ? `GPOS: ${rule.gpos}` : (rule.gsub ? `GSUB: ${rule.gsub}` : 'Default')}
                 </div>
             </div>
 
