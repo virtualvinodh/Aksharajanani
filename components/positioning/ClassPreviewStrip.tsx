@@ -36,6 +36,11 @@ interface ClassPreviewStripProps {
     setIsExpanded: (expanded: boolean) => void;
     
     activeClass?: AttachmentClass;
+    
+    // Context Switcher Props
+    hasDualContext?: boolean;
+    activeClassType?: 'mark' | 'base' | null;
+    onToggleContext?: (type: 'mark' | 'base') => void;
 }
 
 const DRAWING_CANVAS_SIZE = 1000;
@@ -179,7 +184,8 @@ const SiblingThumbnail: React.FC<{
 const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ 
     siblings, activePair, pivotChar, glyphDataMap, strokeThickness, anchorDelta, isLinked, onSelectPair,
     metrics, markAttachmentRules, characterSets, groups,
-    isExpanded, setIsExpanded, activeClass
+    isExpanded, setIsExpanded, activeClass,
+    hasDualContext, activeClassType, onToggleContext
 }) => {
     const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
 
@@ -264,51 +270,81 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
         <>
             {expandedView && createPortal(expandedView, document.body)}
 
-            <div className={`w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center transition-all duration-300 ${!isLinked ? 'grayscale opacity-75' : ''}`}>
-                 
-                 {/* Control Column */}
-                 <div className="flex flex-col items-center justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 self-stretch">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide text-center leading-tight">
-                        Class<br/>
-                        <span className="text-indigo-600 dark:text-indigo-400 text-xs">{siblings.length}</span>
-                    </span>
-                    <button 
-                        onClick={() => setIsExpanded(true)}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"
-                        title="Expand to Fullscreen"
-                    >
-                        <FoldIcon className="w-4 h-4 rotate-180" />
-                    </button>
-                 </div>
+            <div className="flex flex-col w-full max-w-5xl mx-auto items-center">
+                 {/* Context Switcher (Dual Context Toggle) */}
+                 {hasDualContext && onToggleContext && (
+                     <div className="flex justify-center -mb-px z-10">
+                          <div className="flex rounded-t-lg overflow-hidden border-t border-x border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+                              <button 
+                                  onClick={() => onToggleContext('mark')}
+                                  className={`px-4 py-1.5 text-xs font-bold uppercase transition-colors ${
+                                      activeClassType === 'mark' 
+                                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border-b-2 border-purple-500' 
+                                      : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 border-b-2 border-transparent'
+                                  }`}
+                              >
+                                  Sync via Mark Class
+                              </button>
+                              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
+                              <button 
+                                  onClick={() => onToggleContext('base')}
+                                  className={`px-4 py-1.5 text-xs font-bold uppercase transition-colors ${
+                                      activeClassType === 'base' 
+                                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-b-2 border-blue-500' 
+                                      : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 border-b-2 border-transparent'
+                                  }`}
+                              >
+                                  Sync via Base Class
+                              </button>
+                          </div>
+                     </div>
+                 )}
 
-                 {/* Collapsed Scroll View */}
-                 <div className="relative flex-grow overflow-hidden flex items-center">
-                     {visibility.left && (
-                        <button
-                            onClick={() => handleScroll('left')}
-                            className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-8 bg-gradient-to-r from-gray-50 via-gray-50/90 to-transparent dark:from-gray-800 dark:via-gray-800/90"
+                 <div className={`w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center transition-all duration-300 rounded-b-lg ${!isLinked ? 'grayscale opacity-75' : ''}`}>
+                     {/* Control Column */}
+                     <div className="flex flex-col items-center justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 self-stretch">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide text-center leading-tight">
+                            Class<br/>
+                            <span className="text-indigo-600 dark:text-indigo-400 text-xs">{siblings.length}</span>
+                        </span>
+                        <button 
+                            onClick={() => setIsExpanded(true)}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"
+                            title="Expand to Fullscreen"
                         >
-                            <div className="p-0.5 bg-white dark:bg-gray-700 rounded-full shadow-sm border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                <LeftArrowIcon className="h-3 w-3 text-gray-500 dark:text-gray-300" />
-                            </div>
+                            <FoldIcon className="w-4 h-4 rotate-180" />
                         </button>
-                    )}
-
-                    <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center scroll-smooth px-1 w-full">
-                        {siblings.map((pair) => renderThumb(pair, 80))}
-                    </div>
-
-                    {visibility.right && (
-                        <button
-                            onClick={() => handleScroll('right')}
-                            className="absolute right-0 top-0 bottom-0 z-20 flex items-center justify-center w-8 bg-gradient-to-l from-gray-50 via-gray-50/90 to-transparent dark:from-gray-800 dark:via-gray-800/90"
-                        >
-                            <div className="p-0.5 bg-white dark:bg-gray-700 rounded-full shadow-sm border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                <RightArrowIcon className="h-3 w-3 text-gray-500 dark:text-gray-300" />
-                            </div>
-                        </button>
-                    )}
-                 </div>
+                     </div>
+    
+                     {/* Collapsed Scroll View */}
+                     <div className="relative flex-grow overflow-hidden flex items-center">
+                         {visibility.left && (
+                            <button
+                                onClick={() => handleScroll('left')}
+                                className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-8 bg-gradient-to-r from-gray-50 via-gray-50/90 to-transparent dark:from-gray-800 dark:via-gray-800/90"
+                            >
+                                <div className="p-0.5 bg-white dark:bg-gray-700 rounded-full shadow-sm border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <LeftArrowIcon className="h-3 w-3 text-gray-500 dark:text-gray-300" />
+                                </div>
+                            </button>
+                        )}
+    
+                        <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center scroll-smooth px-1 w-full">
+                            {siblings.map((pair) => renderThumb(pair, 80))}
+                        </div>
+    
+                        {visibility.right && (
+                            <button
+                                onClick={() => handleScroll('right')}
+                                className="absolute right-0 top-0 bottom-0 z-20 flex items-center justify-center w-8 bg-gradient-to-l from-gray-50 via-gray-50/90 to-transparent dark:from-gray-800 dark:via-gray-800/90"
+                            >
+                                <div className="p-0.5 bg-white dark:bg-gray-700 rounded-full shadow-sm border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <RightArrowIcon className="h-3 w-3 text-gray-500 dark:text-gray-300" />
+                                </div>
+                            </button>
+                        )}
+                     </div>
+                </div>
             </div>
         </>
     );

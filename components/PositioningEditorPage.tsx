@@ -79,6 +79,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     // Class Linking State
     const [isLinked, setIsLinked] = useState(true);
     const [currentOffset, setCurrentOffset] = useState<Point>({ x: 0, y: 0 }); // Visual offset from origin
+    const [overrideClassType, setOverrideClassType] = useState<'mark' | 'base' | null>(null);
     
     // Strip Expansion State
     const [isStripExpanded, setIsStripExpanded] = useState(false);
@@ -118,38 +119,56 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const isGsubPair = !!parentRule?.gsub;
 
     // --- PIVOT Identification Logic ---
-    const { pivotName, isPivot, activeAttachmentClass, activeClassType } = useMemo(() => {
-        let activeClass: AttachmentClass | undefined;
-        let pName: string | undefined;
-        let isP = false;
-        let type: 'mark' | 'base' | null = null;
+    const { pivotName, isPivot, activeAttachmentClass, activeClassType, hasDualContext } = useMemo(() => {
+        let mClass: AttachmentClass | undefined;
+        let bClass: AttachmentClass | undefined;
 
         // Check Mark Classes
         if (markAttachmentClasses) {
-            const mClass = markAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(markChar.name));
-            if (mClass) {
-                 activeClass = mClass;
-                 type = 'mark';
-                 const expanded = expandMembers(mClass.members, groups, characterSets);
-                 if (expanded.length > 0) pName = expanded[0];
+            mClass = markAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(markChar.name));
+        }
+        
+        // Check Base Classes
+        if (baseAttachmentClasses) {
+            bClass = baseAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(baseChar.name));
+        }
+
+        const hasDual = !!(mClass && bClass);
+        
+        // Determine Active Class based on priority or override
+        let targetType: 'mark' | 'base' | null = null;
+        let activeClass: AttachmentClass | undefined;
+        
+        if (overrideClassType) {
+             if (overrideClassType === 'mark' && mClass) {
+                 targetType = 'mark'; activeClass = mClass;
+             } else if (overrideClassType === 'base' && bClass) {
+                 targetType = 'base'; activeClass = bClass;
+             }
+        }
+        
+        // Default Fallback: Priority 1 (Mark), Priority 2 (Base)
+        if (!activeClass) {
+             if (mClass) { targetType = 'mark'; activeClass = mClass; }
+             else if (bClass) { targetType = 'base'; activeClass = bClass; }
+        }
+
+        let pName: string | undefined;
+        let isP = false;
+
+        if (activeClass && targetType) {
+             const members = expandMembers(activeClass.members, groups, characterSets);
+             if (members.length > 0) pName = members[0];
+             
+             if (targetType === 'mark') {
                  isP = markChar.name === pName;
-            }
+             } else {
+                 isP = baseChar.name === pName;
+             }
         }
         
-        // Check Base Classes (if not found in mark)
-        if (!activeClass && baseAttachmentClasses) {
-            const bClass = baseAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(baseChar.name));
-            if (bClass) {
-                activeClass = bClass;
-                type = 'base';
-                const expanded = expandMembers(bClass.members, groups, characterSets);
-                if (expanded.length > 0) pName = expanded[0];
-                isP = baseChar.name === pName;
-            }
-        }
-        
-        return { pivotName: pName, isPivot: isP, activeAttachmentClass: activeClass, activeClassType: type };
-    }, [markAttachmentClasses, baseAttachmentClasses, markChar.name, baseChar.name, groups, characterSets]);
+        return { pivotName: pName, isPivot: isP, activeAttachmentClass: activeClass, activeClassType: targetType, hasDualContext: hasDual };
+    }, [markAttachmentClasses, baseAttachmentClasses, markChar.name, baseChar.name, groups, characterSets, overrideClassType]);
 
     // Find siblings for the strip
     // Updated Logic: Use global lookup to find all class members, even if not in current grid view
@@ -386,6 +405,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         setIsLinked(newIsLinked);
         
         // 1. Update Class Definition (Context)
+        // IMPORTANT: Only update the class definition corresponding to the ACTIVE context.
         const updateClassList = (classes: AttachmentClass[], setter: (c: AttachmentClass[]) => void, targetName: string) => {
              if (!classes) return;
              const newClasses = deepClone(classes);
@@ -408,8 +428,12 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
              }
         };
 
-        if (markAttachmentClasses) updateClassList(markAttachmentClasses, setMarkAttachmentClasses, markChar.name);
-        if (baseAttachmentClasses) updateClassList(baseAttachmentClasses, setBaseAttachmentClasses, baseChar.name);
+        if (activeClassType === 'mark' && markAttachmentClasses) {
+            updateClassList(markAttachmentClasses, setMarkAttachmentClasses, markChar.name);
+        }
+        if (activeClassType === 'base' && baseAttachmentClasses) {
+             updateClassList(baseAttachmentClasses, setBaseAttachmentClasses, baseChar.name);
+        }
         
         // 2. If Relinking, Reset Position to Match Leader
         if (newIsLinked && activeAttachmentClass) {
@@ -942,6 +966,11 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                 isExpanded={isStripExpanded}
                                 setIsExpanded={setIsStripExpanded}
                                 activeClass={activeAttachmentClass}
+                                
+                                // New props for context switching
+                                hasDualContext={hasDualContext}
+                                activeClassType={activeClassType}
+                                onToggleContext={setOverrideClassType}
                             />
                         </div>
                     )}
