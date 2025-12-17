@@ -143,10 +143,12 @@ export const usePositioningData = ({
 
     }, [characterSets, allChars, positioningRules, fontRules, groups]);
 
-    const ruleGroups = useMemo(() => {
-        if (!positioningRules || !characterSets) return [];
+    const { groups: ruleGroups, hasIncomplete: rulesHaveIncomplete } = useMemo(() => {
+        if (!positioningRules || !characterSets) return { groups: [], hasIncomplete: false };
         
-        return positioningRules.map((rule, index) => {
+        let incompleteFound = false;
+
+        const groupsList = positioningRules.map((rule, index) => {
             const ruleBases = expandMembers(rule.base, groups, characterSets);
             const ruleMarks = expandMembers(rule.mark || [], groups, characterSets);
             
@@ -156,16 +158,23 @@ export const usePositioningData = ({
                 for (const markName of ruleMarks) {
                     const baseChar = allChars.get(baseName);
                     const markChar = allChars.get(markName);
-                    if (baseChar && markChar && isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
-                        const ligature = positioningData.allLigaturesByKey.get(`${baseChar.unicode}-${markChar.unicode}`);
-                        if (ligature) {
-                            pairs.push({ base: baseChar, mark: markChar, ligature });
+                    
+                    if (baseChar && markChar) {
+                        if(isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
+                            const ligature = positioningData.allLigaturesByKey.get(`${baseChar.unicode}-${markChar.unicode}`);
+                            if (ligature) {
+                                pairs.push({ base: baseChar, mark: markChar, ligature });
+                            }
+                        } else {
+                            incompleteFound = true;
                         }
                     }
                 }
             }
             return { rule, pairs, id: index };
         }).filter(group => group.pairs.length > 0);
+
+        return { groups: groupsList, hasIncomplete: incompleteFound };
 
     }, [positioningRules, groups, characterSets, allChars, glyphDataMap, positioningData.allLigaturesByKey]);
     
@@ -262,11 +271,12 @@ export const usePositioningData = ({
 
     const activeItem = navItems[activeTab];
 
-    const displayedCombinations = useMemo(() => {
-        if (!positioningRules || !characterSets || viewMode === 'rules') return [];
+    const { combinations: displayedCombinations, hasIncomplete: gridHasIncomplete } = useMemo(() => {
+        if (!positioningRules || !characterSets || viewMode === 'rules') return { combinations: [], hasIncomplete: false };
         
         const allCombinations: { base: Character; mark: Character; ligature: Character }[] = [];
         const addedLigatures = new Set<number>();
+        let incompleteFound = false;
     
         const rulesToProcess = positioningRules;
         
@@ -278,7 +288,7 @@ export const usePositioningData = ({
             let marksToCheck = ruleMarks;
             
             if (!isFiltered) {
-                if (!activeItem) return []; 
+                if (!activeItem) return { combinations: [], hasIncomplete: false }; 
                 if (viewMode === 'base') {
                      if (!ruleBases.includes(activeItem.name)) continue;
                      basesToCheck = [activeItem.name];
@@ -304,7 +314,11 @@ export const usePositioningData = ({
         }
 
         let result = allCombinations.filter(
-            ({ base, mark }) => isGlyphDrawn(glyphDataMap.get(base.unicode)) && isGlyphDrawn(glyphDataMap.get(mark.unicode))
+            ({ base, mark }) => {
+                const drawn = isGlyphDrawn(glyphDataMap.get(base.unicode)) && isGlyphDrawn(glyphDataMap.get(mark.unicode));
+                if (!drawn) incompleteFound = true;
+                return drawn;
+            }
         );
         
         if (isFiltered) {
@@ -343,8 +357,10 @@ export const usePositioningData = ({
                 result.sort((a,b) => (a.base.unicode || 0) - (b.base.unicode || 0) || (a.mark.unicode || 0) - (b.mark.unicode || 0));
             }
         }
-        return result;
+        return { combinations: result, hasIncomplete: incompleteFound };
     }, [activeItem, positioningRules, viewMode, allChars, positioningData.allLigaturesByKey, glyphDataMap, isFiltered, filterMode, markPositioningMap, searchQuery, isSearching, groups, characterSets]);
+
+    const hasIncompleteData = viewMode === 'rules' ? rulesHaveIncomplete : gridHasIncomplete;
 
     return { 
         positioningData, 
@@ -357,6 +373,7 @@ export const usePositioningData = ({
         ruleTotalPages, 
         navItems, 
         activeItem, 
-        displayedCombinations 
+        displayedCombinations,
+        hasIncompleteData // Export the flag
     };
 };

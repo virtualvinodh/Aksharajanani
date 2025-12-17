@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, PositioningRules, AttachmentClass } from '../types';
@@ -61,7 +60,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
     const [isReuseModalOpen, setIsReuseModalOpen] = useState(false);
     const [reuseSourceItem, setReuseSourceItem] = useState<Character | null>(null);
-    const [showIncompleteNotice] = useState(false);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
     
     // Inline Rules Manager State
@@ -85,7 +83,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         ruleTotalPages, 
         navItems, 
         activeItem, 
-        displayedCombinations 
+        displayedCombinations,
+        hasIncompleteData 
     } = usePositioningData({
         positioningRules,
         fontRules,
@@ -292,6 +291,13 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         }
     };
     
+    // Check content validity for banner display
+    const hasVisibleContent = viewMode === 'rules' 
+        ? ruleGroups.length > 0 
+        : displayedCombinations.length > 0;
+    
+    const showIncompleteBanner = hasIncompleteData && !isFiltered && hasVisibleContent;
+
     // --- RENDER ---
     if (!settings || !metrics || !characterSets) return null;
 
@@ -341,7 +347,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 
                 {!isRulesManagerOpen && (
                     <>
-                        {showIncompleteNotice && !isFiltered && (
+                        {showIncompleteBanner && (
                             <div className="flex-shrink-0 m-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">
                                 {t('positioningShowOnlyComplete')}
                             </div>
