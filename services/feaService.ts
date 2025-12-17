@@ -1,4 +1,3 @@
-
 import { Character, KerningMap, MarkPositioningMap, PositioningRules, GlyphData, FontMetrics, Path, CharacterSet } from '../types';
 import { getAccurateGlyphBBox, BoundingBox } from './glyphRenderService';
 import { DRAWING_CANVAS_SIZE } from '../constants';
@@ -49,7 +48,7 @@ export const generateFea = (
     
     // Helper function to check if a glyph has been drawn
     const isGlyphDrawn = (char: Character | undefined): boolean => {
-        if (!char) return false;
+        if (!char || char.unicode === undefined) return false;
         // ZWJ and ZWNJ are special zero-width characters that should always be considered 'drawn' for rule generation.
         if (char.unicode === 8205 || char.unicode === 8204) {
             return true;
@@ -99,7 +98,7 @@ export const generateFea = (
 
     // --- Group Definitions from rules.json ---
     if (groups) {
-        feaContent += '## Glyph Groups\n\n';
+        feaContent += '## Custom Glyph Groups\n\n';
         for (const groupName in groups) {
             if (Object.prototype.hasOwnProperty.call(groups, groupName)) {
                 const memberNames = groups[groupName] as string[];
@@ -113,6 +112,21 @@ export const generateFea = (
                 feaContent += `@${groupName} = [${drawnMembers.join(' ')}];\n`;
             }
         }
+        feaContent += '\n';
+    }
+
+    // --- Automatic Character Set Groups ---
+    if (characterSets && characterSets.length > 0) {
+        feaContent += '## Automatic Character Set Groups\n\n';
+        characterSets.forEach(set => {
+            const drawnMembers = set.characters
+                .filter(char => isGlyphDrawn(char))
+                .map(char => getGlyphName(char))
+                .filter((name): name is string => name !== null);
+
+            // Generate FEA class definition using the nameKey (e.g. @vowels)
+            feaContent += `@${set.nameKey} = [${drawnMembers.join(' ')}];\n`;
+        });
         feaContent += '\n';
     }
 
