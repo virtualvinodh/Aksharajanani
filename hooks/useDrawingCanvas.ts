@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Point, Path, Tool, AppSettings, ImageTransform, Segment } from '../types';
 import { VEC } from '../utils/vectorUtils';
