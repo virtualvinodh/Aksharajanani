@@ -121,9 +121,12 @@ export const useProgressCalculators = ({
         if (!fontRules || !allCharsByName) {
             return { completed: 0, total: 0 };
         }
-        const requiredGlyphNames = new Set<string>();
+        
+        const groups = fontRules.groups || {};
+        const requiredRawNames = new Set<string>();
+        
         const parseRuleValue = (value: any) => {
-            if (typeof value === 'string') value.split(',').forEach(name => requiredGlyphNames.add(name.trim()));
+            if (typeof value === 'string') value.split(',').forEach(name => requiredRawNames.add(name.trim()));
             else if (Array.isArray(value)) value.forEach(parseRuleValue);
         };
         const parseContextualRule = (ruleValue: any) => {
@@ -136,22 +139,27 @@ export const useProgressCalculators = ({
         const scriptRules = fontRules[scriptTag];
         for (const featureTag in scriptRules) {
             const feature = scriptRules[featureTag];
-            if (feature.liga) for (const ligName in feature.liga) { requiredGlyphNames.add(ligName); parseRuleValue(feature.liga[ligName]); }
-            if (feature.single) for (const outputName in feature.single) { requiredGlyphNames.add(outputName); parseRuleValue(feature.single[outputName]); }
+            if (feature.liga) for (const ligName in feature.liga) { requiredRawNames.add(ligName); parseRuleValue(feature.liga[ligName]); }
+            if (feature.single) for (const outputName in feature.single) { requiredRawNames.add(outputName); parseRuleValue(feature.single[outputName]); }
             if (feature.multi) for (const outputString in feature.multi) { parseRuleValue(outputString); parseRuleValue(feature.multi[outputString]); }
-            if (feature.context) for (const replacementName in feature.context) { requiredGlyphNames.add(replacementName); parseContextualRule(feature.context[replacementName]); }
-            if (feature.dist?.simple) for (const charName in feature.dist.simple) requiredGlyphNames.add(charName);
-            if (feature.dist?.contextual) (feature.dist.contextual as any[]).forEach(rule => { if (rule.target) requiredGlyphNames.add(rule.target); if (rule.left) parseRuleValue(rule.left); if (rule.right) parseRuleValue(rule.right); });
+            if (feature.context) for (const replacementName in feature.context) { requiredRawNames.add(replacementName); parseContextualRule(feature.context[replacementName]); }
+            if (feature.dist?.simple) for (const charName in feature.dist.simple) requiredRawNames.add(charName);
+            if (feature.dist?.contextual) (feature.dist.contextual as any[]).forEach(rule => { if (rule.target) requiredRawNames.add(rule.target); if (rule.left) parseRuleValue(rule.left); if (rule.right) parseRuleValue(rule.right); });
         }
         
-        const total = requiredGlyphNames.size;
+        // Expand any groups found in the rules
+        const expandedGlyphNames = expandMembers(Array.from(requiredRawNames), groups, characterSets || []);
+        
+        const total = expandedGlyphNames.length;
         let completed = 0;
-        requiredGlyphNames.forEach(name => {
+        
+        expandedGlyphNames.forEach(name => {
             const char = allCharsByName.get(name);
             if (char && isGlyphDrawn(glyphDataMap.get(char.unicode))) completed++;
         });
+        
         return { completed, total };
-    }, [fontRules, allCharsByName, glyphDataMap, glyphVersion]);
+    }, [fontRules, allCharsByName, glyphDataMap, glyphVersion, characterSets]);
 
     return {
         drawingProgress,
