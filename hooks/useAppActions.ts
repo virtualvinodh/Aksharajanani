@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
@@ -80,7 +81,7 @@ export const useAppActions = ({
 
     // 5. Export Actions Hook
     const {
-        isExporting, feaErrorState, testPageFont, creatorFont,
+        exportingType, feaErrorState, testPageFont, creatorFont,
         startExportProcess, handleSaveProject, handleSaveTemplate, handleTestClick, handleCreatorClick, downloadFontBlob,
         getCachedOrGeneratedFont
     } = useExportActions({
@@ -218,7 +219,7 @@ export const useAppActions = ({
         isScriptDataLoading,
         scriptDataError,
         hasUnsavedChanges,
-        isExporting,
+        exportingType,
         isFeaOnlyMode,
         feaErrorState,
         testPageFont,

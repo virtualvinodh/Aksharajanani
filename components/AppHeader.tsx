@@ -8,6 +8,7 @@ import { useProject } from '../contexts/ProjectContext';
 import { SaveIcon, LoadIcon, ExportIcon, SettingsIcon, CompareIcon, SwitchScriptIcon, AboutIcon, PenIcon, MoreIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, PropertiesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, CopyIcon, WrenchIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, AddIcon, FilterIcon, CreatorIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import CommandPalette from './CommandPalette';
+import { ExportingType } from '../hooks/actions/useExportActions';
 
 interface Progress {
     completed: number;
@@ -17,7 +18,7 @@ interface Progress {
 interface AppHeaderProps {
     script: ScriptConfig;
     settings: AppSettings;
-    isExporting: boolean;
+    exportingType: ExportingType;
     onSaveProject: () => void;
     onSaveToDB: () => void;
     onLoadProject: () => void;
@@ -89,7 +90,7 @@ const WorkspaceTab: React.FC<{
 
 
 const AppHeader: React.FC<AppHeaderProps> = ({
-    script, settings, isExporting, onSaveProject, onSaveToDB, onLoadProject, onImportGlyphsClick, onAddGlyphClick, onExportClick,
+    script, settings, exportingType, onSaveProject, onSaveToDB, onLoadProject, onImportGlyphsClick, onAddGlyphClick, onExportClick,
     onTestClick, onCompareClick, onSettingsClick, onChangeScriptClick, onShowAbout,
     onShowHelp, onShowTestCases, onEditorModeChange, onWorkspaceChange, activeWorkspace, hasUnsavedChanges, hasUnsavedRules,
     hasPositioning, hasKerning, drawingProgress, positioningProgress, kerningProgress, rulesProgress, positioningRules,
@@ -182,6 +183,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     }, [isFilterMenuOpen]);
 
     const isFilteredOrSearched = filterMode !== 'none' || searchQuery !== '';
+    const isAnyExporting = exportingType !== null;
 
     return (
         <>
@@ -214,23 +216,27 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                          {hasUnsavedRules && <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white dark:ring-gray-800" title="Unsaved changes"></span>}
                     </button>
 
-                    <button onClick={onExportClick} disabled={isExporting} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:cursor-wait text-sm sm:text-base">
-                        {isExporting ? <SpinnerIcon /> : <ExportIcon />}
-                        <span className="hidden md:inline">{isExporting ? t('exporting') : t('exportOtf')}</span>
+                    <button onClick={onExportClick} disabled={isAnyExporting} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:cursor-wait text-sm sm:text-base">
+                        {exportingType === 'export' ? <SpinnerIcon /> : <ExportIcon />}
+                        <span className="hidden md:inline">{exportingType === 'export' ? t('exporting') : t('exportOtf')}</span>
                     </button>
                     
                     {/* Creator Button */}
                     <button 
                         onClick={onCreatorClick} 
-                        disabled={isExporting} 
+                        disabled={isAnyExporting} 
                         title="Creator Studio" 
                         className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base disabled:bg-purple-400 disabled:cursor-wait"
                     >
-                        {isExporting ? <SpinnerIcon /> : <CreatorIcon />}
+                        {exportingType === 'create' ? <SpinnerIcon /> : <CreatorIcon />}
                         <span className="hidden md:inline">Create</span>
                     </button>
                     
-                    <button onClick={onTestClick} title={t('testFont')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><TestIcon /><span className="hidden md:inline">{t('testFont')}</span></button>
+                    <button onClick={onTestClick} disabled={isAnyExporting} title={t('testFont')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-wait">
+                        {exportingType === 'test' ? <SpinnerIcon /> : <TestIcon />}
+                        <span className="hidden md:inline">{t('testFont')}</span>
+                    </button>
+                    
                     <button onClick={onSettingsClick} title={t('settings')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><SettingsIcon /><span className="hidden md:inline">{t('settings')}</span></button>
 
                     <div className="relative">

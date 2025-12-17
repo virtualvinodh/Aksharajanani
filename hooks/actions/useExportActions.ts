@@ -14,6 +14,8 @@ import { ProjectData } from '../../types';
 import { useProgressCalculators } from '../useProgressCalculators';
 import { simpleHash } from '../../utils/stringUtils';
 
+export type ExportingType = 'export' | 'test' | 'create' | null;
+
 interface UseExportActionsProps {
     getProjectState: () => Omit<ProjectData, 'projectId' | 'savedAt'> | null;
     projectId: number | undefined;
@@ -37,7 +39,7 @@ export const useExportActions = ({
     const { fontRules, isFeaEditMode, manualFeaCode } = rulesState;
     const { positioningRules, markAttachmentRules, recommendedKerning, guideFont } = useProject();
 
-    const [isExporting, setIsExporting] = useState(false);
+    const [exportingType, setExportingType] = useState<ExportingType>(null);
     const [feaErrorState, setFeaErrorState] = useState<{ error: string, blob: Blob } | null>(null);
     const [testPageFont, setTestPageFont] = useState<{ blob: Blob | null, feaError: string | null }>({ blob: null, feaError: null });
     
@@ -164,7 +166,7 @@ export const useExportActions = ({
     }, [getProjectState, projectId, settings, metrics, characterSets, glyphDataMap, t, fontRules, kerningMap, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification]);
 
     const performExportAfterAnimation = useCallback(async () => {
-        setIsExporting(true);
+        setExportingType('export');
         layout.showNotification(t('exportingNotice'), 'info');
         setFeaErrorState(null);
         
@@ -182,7 +184,7 @@ export const useExportActions = ({
         } else {
             layout.showNotification(t('errorFontGeneration', { error: 'Failed to generate font.' }), 'error');
         }
-        setIsExporting(false);
+        setExportingType(null);
     }, [getCachedOrGeneratedFont, downloadFontBlob, layout, t, projectName]);
 
     // Shared logic to check for completeness and warn if necessary
@@ -226,10 +228,10 @@ export const useExportActions = ({
     }, [checkAndExecute, downloadTriggerRef, performExportAfterAnimation, setIsAnimatingExport]);
 
     const handleTestClick = useCallback(async () => {
-        setIsExporting(true);
+        setExportingType('test');
         layout.showNotification(t('exportingNotice'), 'info');
         const result = await getCachedOrGeneratedFont();
-        setIsExporting(false);
+        setExportingType(null);
         if (result) {
             setTestPageFont(result);
             layout.openModal('testPage');
@@ -241,7 +243,7 @@ export const useExportActions = ({
     // New handler moved from useAppActions
     const handleCreatorClick = useCallback(() => {
         const proceedToCreator = async () => {
-            setIsExporting(true);
+            setExportingType('create');
             layout.showNotification(t('exportingNotice'), 'info');
             try {
                 const result = await getCachedOrGeneratedFont();
@@ -252,7 +254,7 @@ export const useExportActions = ({
                     layout.showNotification('Failed to prepare font for Creator.', 'error');
                 }
             } finally {
-                setIsExporting(false);
+                setExportingType(null);
             }
         };
 
@@ -261,7 +263,7 @@ export const useExportActions = ({
     }, [getCachedOrGeneratedFont, layout, t, checkAndExecute]);
 
     return {
-        isExporting,
+        exportingType,
         feaErrorState,
         testPageFont,
         creatorFont, // Exposed

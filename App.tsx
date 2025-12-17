@@ -82,7 +82,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       isFeaOnlyMode,
       testText, 
       setTestText,
-      isExporting,
+      exportingType,
       feaErrorState,
       fileInputRef,
       isScriptDataLoading,
@@ -234,7 +234,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                <AppHeader
                 script={script}
                 settings={settings}
-                isExporting={isExporting}
+                exportingType={exportingType}
                 onSaveProject={handleSaveProject}
                 onSaveToDB={handleSaveToDB}
                 onLoadProject={handleLoadProject}
