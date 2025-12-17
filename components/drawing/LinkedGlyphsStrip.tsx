@@ -83,17 +83,11 @@ const GlyphThumbnail: React.FC<{
     return (
         <div 
             onClick={onClick}
-            style={{ width: size, height: size + 20 }}
+            style={{ width: size, height: size }}
             className="flex-shrink-0 flex flex-col items-center justify-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all p-1 group"
             title={character.name}
         >
             <canvas ref={canvasRef} width={size} height={size} />
-            <span 
-                className="text-[10px] font-bold text-gray-600 dark:text-gray-400 truncate max-w-full mt-1"
-                style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}
-            >
-                {character.name}
-            </span>
         </div>
     );
 });
@@ -249,7 +243,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                             onClick={() => handleScroll('left')}
                             className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-6 bg-gradient-to-r from-gray-50 via-gray-50/90 to-transparent dark:from-gray-800 dark:via-gray-800/90"
                         >
-                            <div className="p-0.5 bg-white dark:bg-gray-700 rounded-full shadow-sm border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                            <div className="p-0.5 bg-white dark:bg-gray-700 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                                 <LeftArrowIcon className="h-3 w-3 text-gray-500 dark:text-gray-300" />
                             </div>
                         </button>
