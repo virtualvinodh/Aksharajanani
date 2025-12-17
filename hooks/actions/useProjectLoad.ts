@@ -277,7 +277,7 @@ export const useProjectLoad = ({
             if (!sampleText && processedCharSets) {
                 const allChars = processedCharSets.flatMap(cs => cs.characters);
                 const basesAndLigs = allChars.filter(c => c.unicode !== undefined && (c.glyphClass === 'base' || c.glyphClass === 'ligature')).filter(c => c.name !== '◌');
-                const withSpaces = basesAndLigs.map(c => c.name).join(' ');
+                const withSpaces = allChars.map(c => c.name).join(' ');
                 const withoutSpaces = basesAndLigs.map(c => c.name).join('');
                 sampleText = `${withSpaces}\n\n${withoutSpaces}`;
             }
