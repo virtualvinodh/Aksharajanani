@@ -108,6 +108,41 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         animationFrameRef.current = requestAnimationFrame(animate);
     }, [setZoom, setViewOffset]);
 
+    // --- Auto-Fit on Load ---
+    const didInitialFit = useRef(false);
+    useEffect(() => {
+        if (!didInitialFit.current && initialPaths.length > 0) {
+            const bbox = getAccurateGlyphBBox(initialPaths, settings.strokeThickness);
+            if (bbox) {
+                // Determine if content is "beyond" standard 1000x1000 bounds
+                const isBeyond = bbox.x < 0 || bbox.y < 0 || (bbox.x + bbox.width) > 1000 || (bbox.y + bbox.height) > 1000;
+                
+                if (isBeyond) {
+                    const PADDING = 100;
+                    const availableDim = 1000 - (PADDING * 2);
+                    
+                    // Calculate best scale to fit entire bbox into 1000x1000 area with padding
+                    const fitScale = Math.min(availableDim / bbox.width, availableDim / bbox.height, 1);
+                    
+                    // Target center of canvas (500, 500)
+                    const contentCenterX = bbox.x + bbox.width / 2;
+                    const contentCenterY = bbox.y + bbox.height / 2;
+                    
+                    const newTargetZoom = fitScale;
+                    const newTargetOffset = {
+                        x: 500 - (contentCenterX * newTargetZoom),
+                        y: 500 - (contentCenterY * newTargetZoom)
+                    };
+
+                    targetZoomRef.current = newTargetZoom;
+                    targetViewOffsetRef.current = newTargetOffset;
+                    startAnimation();
+                }
+            }
+            didInitialFit.current = true;
+        }
+    }, [initialPaths, settings.strokeThickness, startAnimation]);
+
     useEffect(() => {
         return () => {
             if (animationFrameRef.current) {
