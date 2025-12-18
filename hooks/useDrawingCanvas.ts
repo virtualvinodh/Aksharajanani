@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Point, Path, Tool, AppSettings, ImageTransform, Segment } from '../types';
 import { VEC } from '../utils/vectorUtils';
@@ -24,7 +25,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const {
         canvasRef, initialPaths, onPathsChange, tool, onToolChange, zoom, setZoom, viewOffset,
         setViewOffset, settings, onSelectionChange, transformMode = 'all', 
-        lsb, rsb, onMetricsChange, metrics
+        lsb, rsb, onMetricsChange, metrics, disableAutoFit = false
     } = props;
     
     const [isDrawing, setIsDrawing] = useState(false);
@@ -111,6 +112,11 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     // --- Auto-Fit on Load ---
     const didInitialFit = useRef(false);
     useEffect(() => {
+        if (disableAutoFit) {
+            didInitialFit.current = true;
+            return;
+        }
+        
         if (!didInitialFit.current && initialPaths.length > 0) {
             const bbox = getAccurateGlyphBBox(initialPaths, settings.strokeThickness);
             if (bbox) {
@@ -141,7 +147,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             }
             didInitialFit.current = true;
         }
-    }, [initialPaths, settings.strokeThickness, startAnimation]);
+    }, [initialPaths, settings.strokeThickness, startAnimation, disableAutoFit]);
 
     useEffect(() => {
         return () => {
@@ -519,6 +525,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         
         const newViewOffset = { 
             x: viewportPoint.x - pointInCanvas.x * newZoom, 
+            // FIX: Corrected typo 'findPathAtPointCanvas' to 'pointInCanvas' to fix TypeScript error.
             y: viewportPoint.y - pointInCanvas.y * newZoom 
         };
 

@@ -1,7 +1,8 @@
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { BackIcon, SaveIcon, PropertiesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, LinkIcon, BrokenLinkIcon, CloseIcon } from '../constants';
+import { BackIcon, SaveIcon, PropertiesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, LinkIcon, BrokenLinkIcon, CloseIcon, DRAWING_CANVAS_SIZE } from '../constants';
 import DrawingCanvas from './DrawingCanvas';
 import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, CharacterSet, AttachmentClass, AttachmentPoint } from '../types';
 import { calculateDefaultMarkOffset, getAccurateGlyphBBox, resolveAttachmentRule, getAttachmentPointCoords } from '../services/glyphRenderService';
@@ -38,11 +39,9 @@ interface PositioningEditorPageProps {
     allPairs: { base: Character, mark: Character, ligature: Character }[];
     currentIndex: number | null;
     onNavigate: (newIndex: number) => void;
-    // New prop for direct pair setting from strip
     setEditingPair?: (pair: { base: Character, mark: Character, ligature: Character }) => void;
     characterSets: CharacterSet[];
     glyphVersion: number;
-    // Added for global sibling lookup
     allLigaturesByKey: Map<string, Character>;
 }
 
@@ -61,7 +60,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const { state: rulesState } = useRules();
     const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
     
-    // Access context setters for class modifications
     const { 
         markAttachmentClasses, setMarkAttachmentClasses,
         baseAttachmentClasses, setBaseAttachmentClasses 
@@ -75,12 +73,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const [viewOffset, setViewOffset] = useState<Point>({ x: 0, y: 0 });
     const [pageTool, setPageTool] = useState<'select' | 'pan'>('select');
     
-    // Class Linking State
     const [isLinked, setIsLinked] = useState(true);
-    const [currentOffset, setCurrentOffset] = useState<Point>({ x: 0, y: 0 }); // Visual offset from origin
+    const [currentOffset, setCurrentOffset] = useState<Point>({ x: 0, y: 0 });
     const [overrideClassType, setOverrideClassType] = useState<'mark' | 'base' | null>(null);
-    
-    // Strip Expansion State
     const [isStripExpanded, setIsStripExpanded] = useState(false);
     
     const [lsb, setLsb] = useState<number | undefined>(targetLigature.lsb);
@@ -92,7 +87,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const [pendingNavigation, setPendingNavigation] = useState<'prev' | 'next' | 'back' | null>(null);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
-    // Manual Coordinate Inputs (Anchor Delta)
     const [manualX, setManualX] = useState<string>('0');
     const [manualY, setManualY] = useState<string>('0');
     const [isInputFocused, setIsInputFocused] = useState(false);
@@ -101,12 +95,10 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const pairNameKey = `${baseChar.name}-${markChar.name}`;
     
     const lastPairIdentifierRef = useRef<string | null>(null);
-    
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
     const isPositioned = useMemo(() => markPositioningMap.has(pairIdentifier), [markPositioningMap, pairIdentifier]);
     
-    // Identify the specific rule that generated this pair to find siblings (Fallback)
     const parentRule = useMemo(() => {
         if (!positioningRules) return null;
         return positioningRules.find(rule => 
@@ -117,24 +109,20 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
 
     const isGsubPair = !!parentRule?.gsub;
 
-    // --- PIVOT Identification Logic ---
     const { pivotName, isPivot, activeAttachmentClass, activeClassType, hasDualContext } = useMemo(() => {
         let mClass: AttachmentClass | undefined;
         let bClass: AttachmentClass | undefined;
 
-        // Check Mark Classes
         if (markAttachmentClasses) {
             mClass = markAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(markChar.name));
         }
         
-        // Check Base Classes
         if (baseAttachmentClasses) {
             bClass = baseAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(baseChar.name));
         }
 
         const hasDual = !!(mClass && bClass);
         
-        // Determine Active Class based on priority or override
         let targetType: 'mark' | 'base' | null = null;
         let activeClass: AttachmentClass | undefined;
         
@@ -146,7 +134,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
              }
         }
         
-        // Default Fallback: Priority 1 (Mark), Priority 2 (Base)
         if (!activeClass) {
              if (mClass) { targetType = 'mark'; activeClass = mClass; }
              else if (bClass) { targetType = 'base'; activeClass = bClass; }
@@ -169,8 +156,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         return { pivotName: pName, isPivot: isP, activeAttachmentClass: activeClass, activeClassType: targetType, hasDualContext: hasDual };
     }, [markAttachmentClasses, baseAttachmentClasses, markChar.name, baseChar.name, groups, characterSets, overrideClassType]);
 
-    // Find siblings for the strip
-    // Updated Logic: Use global lookup to find all class members, even if not in current grid view
     const classSiblings = useMemo(() => {
         if (activeAttachmentClass && activeClassType) {
              const members = expandMembers(activeAttachmentClass.members, groups, characterSets);
@@ -181,11 +166,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                  let sMark = markChar;
                  
                  if (activeClassType === 'mark') {
-                     // Varying Mark: Same Base
                      const c = allChars.get(memberName);
                      if (c) sMark = c;
                  } else {
-                     // Varying Base: Same Mark
                      const c = allChars.get(memberName);
                      if (c) sBase = c;
                  }
@@ -195,7 +178,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                  const mData = glyphDataMap.get(sMark.unicode);
                  
                  if (isGlyphDrawn(bData) && isGlyphDrawn(mData)) {
-                      // Get Ligature
                       const key = `${sBase.unicode}-${sMark.unicode}`;
                       const lig = allLigaturesByKey.get(key);
                       if (lig) {
@@ -233,7 +215,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     }, [activeAttachmentClass, activeClassType, parentRule, baseChar, markChar, groups, characterSets, allChars, glyphDataMap, allLigaturesByKey]);
 
 
-    // Editing Permission
     const canEdit = !activeAttachmentClass || !isLinked || isPivot;
 
 
@@ -247,7 +228,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const baseGlyph = glyphDataMap.get(baseChar.unicode);
     const baseBbox = useMemo(() => getAccurateGlyphBBox(baseGlyph?.paths ?? [], settings.strokeThickness), [baseGlyph, settings.strokeThickness]);
     
-    // Geometric Alignment Offset
     const alignmentOffset = useMemo(() => {
         const markGlyph = glyphDataMap.get(markChar.unicode);
         const markBbox = getAccurateGlyphBBox(markGlyph?.paths ?? [], settings.strokeThickness);
@@ -256,7 +236,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
 
         let rule = resolveAttachmentRule(baseChar.name, markChar.name, markAttachmentRules, characterSets, groups);
         if (!rule) {
-            rule = ["topCenter", "bottomCenter"]; // Default
+            rule = ["topCenter", "bottomCenter"];
         }
         
         const basePointName = rule[0] as AttachmentPoint;
@@ -267,7 +247,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         
         const calculatedOffset = VEC.sub(baseAnchor, markAnchor);
 
-        // Apply constraints to geometric calculation to match default placement behavior
         if (movementConstraint === 'horizontal') calculatedOffset.y = 0;
         if (movementConstraint === 'vertical') calculatedOffset.x = 0;
 
@@ -276,16 +255,14 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     }, [baseChar, markChar, baseBbox, markAttachmentRules, characterSets, groups, settings.strokeThickness, glyphDataMap, movementConstraint]);
 
 
-    // Initial Load Logic
     useEffect(() => {
         const key = `${baseChar.unicode}-${markChar.unicode}`;
         let offset = markPositioningMap.get(key);
         
-        // If not manually positioned, calculate default
+        const markGlyph = glyphDataMap.get(markChar.unicode);
+        const markBbox = getAccurateGlyphBBox(markGlyph?.paths ?? [], settings.strokeThickness);
+
         if (!offset && baseBbox) {
-            const markGlyph = glyphDataMap.get(markChar.unicode);
-            const markBbox = getAccurateGlyphBBox(markGlyph?.paths ?? [], settings.strokeThickness);
-            
             offset = calculateDefaultMarkOffset(
                 baseChar, 
                 markChar, 
@@ -300,11 +277,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             );
         }
         
-        // Set initial offset state for strip
         if (offset) setCurrentOffset(offset);
         
         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
-        
         const MARK_GROUP_ID = "positioning-mark-group";
 
         const newMarkPaths = deepClone(originalMarkPaths);
@@ -337,6 +312,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         
         setIsLinked(!foundException);
 
+        // --- Optimized Auto-Fit Logic (Aligned to 1000x1000 Space) ---
         if (lastPairIdentifierRef.current !== pairIdentifier) {
             const allPaths = [...(baseGlyph?.paths || []), ...newMarkPaths];
             const hasDrawableContent = allPaths.some(p => (p.points?.length || 0) > 0 || (p.segmentGroups?.length || 0) > 0);
@@ -348,34 +324,32 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                 return;
             }
         
-            const CANVAS_DIM = 700; 
-            const PADDING = 100;
+            const CANVAS_DIM = DRAWING_CANVAS_SIZE; 
+            const PADDING = 200; // Increased padding for better visibility
         
-            const bbox = getAccurateGlyphBBox(allPaths, settings.strokeThickness);
-            if (!bbox) {
-                lastPairIdentifierRef.current = pairIdentifier;
-                return;
+            const combinedBbox = getAccurateGlyphBBox(allPaths, settings.strokeThickness);
+            
+            if (combinedBbox) {
+                // Focus on centering the actual visual bounds
+                const requiredWidth = combinedBbox.width + PADDING * 2;
+                const requiredHeight = combinedBbox.height + PADDING * 2;
+                
+                // Calculate scale to fit everything comfortably in the 1000px design frame
+                // We cap zoom at 2.0 to avoid small glyphs becoming pixelated or oversized
+                const newZoom = Math.min(CANVAS_DIM / requiredWidth, CANVAS_DIM / requiredHeight, 2.0);
+                
+                const contentCenterX = combinedBbox.x + combinedBbox.width / 2;
+                const contentCenterY = combinedBbox.y + combinedBbox.height / 2;
+                
+                // Position offset to center the content center at the canvas visual center
+                const newViewOffset = {
+                    x: (CANVAS_DIM / 2) - (contentCenterX * newZoom),
+                    y: (CANVAS_DIM / 2) - (contentCenterY * newZoom)
+                };
+            
+                setZoom(newZoom);
+                setViewOffset(newViewOffset);
             }
-        
-            const requiredWidth = bbox.width + PADDING * 2;
-            const requiredHeight = bbox.height + PADDING * 2;
-        
-            if (requiredWidth <= 0 || requiredHeight <= 0) {
-                lastPairIdentifierRef.current = pairIdentifier;
-                return;
-            }
-        
-            const newZoom = Math.min(CANVAS_DIM / requiredWidth, CANVAS_DIM / requiredHeight);
-            const centerX = bbox.x + bbox.width / 2;
-            const centerY = bbox.y + bbox.height / 2;
-        
-            const newViewOffset = {
-                x: (CANVAS_DIM / 2) - (centerX * newZoom),
-                y: (CANVAS_DIM / 2) - (centerY * newZoom)
-            };
-        
-            setZoom(newZoom);
-            setViewOffset(newViewOffset);
             lastPairIdentifierRef.current = pairIdentifier;
         }
 
@@ -624,7 +598,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
 
     const handleZoom = (factor: number) => {
         const newZoom = Math.max(0.1, Math.min(10, zoom * factor));
-        const center = { x: 700 / 2, y: 700 / 2 };
+        const center = { x: DRAWING_CANVAS_SIZE / 2, y: DRAWING_CANVAS_SIZE / 2 };
         const newOffset = {
             x: center.x - (center.x - viewOffset.x) * (newZoom / zoom),
             y: center.y - (center.y - viewOffset.y) * (newZoom / zoom)
@@ -657,7 +631,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const prevPair = currentIndex !== null && currentIndex > 0 ? allPairs[currentIndex - 1] : null;
     const nextPair = currentIndex !== null && currentIndex < allPairs.length - 1 ? allPairs[currentIndex + 1] : null;
 
-    // FIX: Restrict strip visibility to members of an active class.
     const showStrip = !!activeAttachmentClass && isLinked && classSiblings.length > 0;
 
     const reuseSources = useMemo(() => {
@@ -876,7 +849,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                         <div className="aspect-square h-full max-h-full w-auto max-w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700 relative">
                             <div className="absolute inset-0">
                                 <DrawingCanvas
-                                    width={700} height={700}
+                                    width={DRAWING_CANVAS_SIZE} height={DRAWING_CANVAS_SIZE}
                                     paths={markPaths} onPathsChange={handlePathsChange} backgroundPaths={baseGlyph?.paths ?? []}
                                     metrics={metrics} tool={pageTool} zoom={zoom} setZoom={setZoom} viewOffset={viewOffset} setViewOffset={setViewOffset}
                                     settings={settings} allGlyphData={new Map()} allCharacterSets={[]} currentCharacter={targetLigature}
@@ -886,6 +859,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                     disableTransformations={!canEdit} 
                                     lockedMessage={lockedMessage}
                                     transformMode="move-only" movementConstraint={movementConstraint} isInitiallyDrawn={true}
+                                    disableAutoFit={true}
                                 />
                             </div>
                         </div>
@@ -896,7 +870,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                             <ClassPreviewStrip 
                                 siblings={classSiblings}
                                 activePair={{ base: baseChar, mark: markChar, ligature: targetLigature }}
-                                pivotChar={isPivot ? (activeAttachmentClass?.name ? null : markChar) : (pivotName ? allChars.get(pivotName) : null)} // Logic to identify current pivot visually
+                                pivotChar={isPivot ? (activeAttachmentClass?.name ? null : markChar) : (pivotName ? allChars.get(pivotName) : null)} 
                                 glyphDataMap={glyphDataMap}
                                 strokeThickness={settings.strokeThickness}
                                 anchorDelta={anchorDelta}

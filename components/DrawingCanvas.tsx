@@ -46,6 +46,7 @@ interface DrawingCanvasProps {
   movementConstraint?: 'horizontal' | 'vertical' | 'none';
   isInitiallyDrawn?: boolean;
   previewTransform?: TransformState | null;
+  disableAutoFit?: boolean;
 }
 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 
@@ -54,7 +55,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     onImageTransformChange, selectedPathIds, onSelectionChange, isImageSelected, onImageSelectionChange, 
     lsb, rsb, onMetricsChange, backgroundPaths, backgroundPathsColor, showBearingGuides = true, disableTransformations = false, lockedMessage,
     calligraphyAngle = 45, transformMode = 'all', movementConstraint = 'none', isInitiallyDrawn = false,
-    previewTransform = null
+    previewTransform = null, disableAutoFit = false
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
@@ -77,7 +78,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     transformMode: transformMode as 'all' | 'move-only',
     movementConstraint: movementConstraint as 'horizontal' | 'vertical' | 'none',
     // Pass metrics related props to hook
-    lsb, rsb, onMetricsChange, metrics
+    lsb, rsb, onMetricsChange, metrics,
+    disableAutoFit
   });
 
   const drawControlPoints = useCallback((ctx: CanvasRenderingContext2D, pathsToDraw: Path[], focusedId: string | null, selectedPoint: DraggedPointInfo | null) => {

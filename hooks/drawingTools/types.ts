@@ -68,6 +68,7 @@ export interface UseDrawingCanvasProps {
     rsb?: number;
     onMetricsChange?: (lsb: number, rsb: number) => void;
     metrics?: any; // FontMetrics
+    disableAutoFit?: boolean;
 }
 
 export interface ToolHookProps extends UseDrawingCanvasProps {

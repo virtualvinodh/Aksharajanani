@@ -31,6 +31,7 @@ interface PositioningRulesViewProps {
     metrics: FontMetrics;
     ITEMS_PER_PAGE: number;
     handleAcceptAllDefaults: (pairs: any[]) => void;
+    uniqueRepPairs: any[]; // List of unique items displayed in the grid
     isPairEligible: (base: Character, mark: Character) => boolean;
 }
 
@@ -40,6 +41,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
     getPairClassKey, classCounts, setEditingPair, setEditingIndex, setEditingContextList,
     handleConfirmPosition, glyphDataMap, strokeThickness, markAttachmentRules, positioningRules, characterSets,
     groups, glyphVersion, metrics, ITEMS_PER_PAGE, handleAcceptAllDefaults,
+    uniqueRepPairs,
     isPairEligible
 }) => {
     if (selectedRuleGroupId === null) {
@@ -156,18 +158,19 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                                     isPositioned={isPositioned}
                                     canEdit={true}
                                     onClick={() => {
+                                        // Set the editing pair to the one clicked
                                         setEditingPair(pair);
-                                        // Find actual index in the full context list to allow proper navigation
-                                        const actualIndex = activeRuleGroup!.pairs.indexOf(pair);
-                                        setEditingIndex(actualIndex);
                                         
-                                        // IMPORTANT: Filter context list by class key
-                                        const filteredContext = activeRuleGroup!.pairs.filter((p: any) => getPairClassKey(p) === classKey);
-                                        setEditingContextList(filteredContext);
+                                        // NEW LOGIC: Use uniqueRepPairs as the navigation list
+                                        // This allows horizontal navigation between the items shown in the grid
+                                        setEditingContextList(uniqueRepPairs);
                                         
-                                        // Recalculate index in filtered list
-                                        const filteredIndex = filteredContext.findIndex((p: any) => p.base.unicode === pair.base.unicode && p.mark.unicode === pair.mark.unicode);
-                                        setEditingIndex(filteredIndex);
+                                        // Find index within the unique reps list
+                                        const gridIdx = uniqueRepPairs.findIndex(p => 
+                                            p.base.unicode === pair.base.unicode && 
+                                            p.mark.unicode === pair.mark.unicode
+                                        );
+                                        setEditingIndex(gridIdx !== -1 ? gridIdx : 0);
                                     }}
                                     onConfirmPosition={() => handleConfirmPosition(pair.base, pair.mark, pair.ligature)}
                                     glyphDataMap={glyphDataMap}
