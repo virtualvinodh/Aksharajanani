@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { AddIcon, EditIcon, TrashIcon, CloseIcon, SaveIcon } from '../../constants';
@@ -120,7 +119,7 @@ const EditorPanel: React.FC<{
     const { t } = useLocale();
 
     return (
-        <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6 animate-fade-in-up col-span-full">
+        <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6 animate-fade-in-up col-span-full relative z-30">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-gray-900 dark:text-white">{title}</h3>
                 <button onClick={onCancel} className="text-gray-400 hover:text-gray-600"><CloseIcon /></button>
