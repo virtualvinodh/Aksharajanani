@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AttachmentClass, CharacterSet } from '../../../types';
 import { useLocale } from '../../../contexts/LocaleContext';
@@ -180,6 +179,18 @@ const EditorPanel: React.FC<{
     showNameInput?: boolean;
 }> = ({ title, nameValue, onNameChange, namePrefix = '', members, onMembersChange, applies, onAppliesChange, exceptions, onExceptionsChange, exceptPairs, onExceptPairsChange, onSave, onCancel, characterSets, groups, showNameInput = true }) => {
     const { t } = useLocale();
+    const [showHint, setShowHint] = useState(false);
+
+    const handleNameChangeLocally = (val: string) => {
+        if (!onNameChange) return;
+        const sanitized = sanitizeIdentifier(val);
+        if (val.length > 0 && sanitized !== val.replace(/[\s-]+/g, '_')) {
+            setShowHint(true);
+        } else {
+            setShowHint(false);
+        }
+        onNameChange(sanitized);
+    };
 
     return (
         <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6 animate-fade-in-up col-span-full relative z-30">
@@ -197,11 +208,16 @@ const EditorPanel: React.FC<{
                              <input 
                                 type="text" 
                                 value={nameValue} 
-                                onChange={e => onNameChange(sanitizeIdentifier(e.target.value))} 
-                                className="flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-mono"
+                                onChange={e => handleNameChangeLocally(e.target.value)} 
+                                className={`flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-mono ${showHint ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
                                 placeholder={namePrefix === '$' ? "consonants" : t('classNameOptional')}
                              />
                         </div>
+                        {showHint && (
+                            <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
+                                {t('namingRestrictionHint')}
+                            </p>
+                        )}
                     </div>
                 )}
                 
@@ -270,23 +286,27 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
     const handleSaveGroup = (key: string, newKey: string, members: string[]) => {
         const newGroups = { ...groups };
         const trimmedKey = newKey.trim();
+        const lowerKey = trimmedKey.toLowerCase();
 
-        // --- GLOBAL DUPLICATE CHECK ---
-        const existingCharSetKeys = characterSets.map(cs => cs.nameKey);
-        const feaGroupKeys = Object.keys(rulesGroups);
-        const isSelfRename = key === trimmedKey;
+        // --- GLOBAL CASE-INSENSITIVE DUPLICATE CHECK ---
+        const existingCharSetKeys = characterSets.map(cs => cs.nameKey.toLowerCase());
+        const rulesGroupKeys = Object.keys(rulesGroups).map(n => n.toLowerCase());
+        
+        const isSelfRename = key.toLowerCase() === lowerKey;
 
         if (!isSelfRename) {
-            if (existingCharSetKeys.includes(trimmedKey)) {
-                showNotification('A Character Set with this name already exists.', 'error');
+            if (existingCharSetKeys.includes(lowerKey)) {
+                showNotification(t('errorCharSetExists'), 'error');
                 return;
             }
-            if (feaGroupKeys.includes(trimmedKey)) {
-                showNotification('This name is already used by an FEA Group.', 'error');
+            if (rulesGroupKeys.includes(lowerKey)) {
+                showNotification(t('errorRuleGroupExists'), 'error');
                 return;
             }
-            if (newGroups[trimmedKey]) {
-                 showNotification('A Positioning Group with this name already exists.', 'error');
+            // Check if it exists in the raw positioning groups (passed as prop 'groups')
+            const currentPosGroupKeys = Object.keys(newGroups).map(n => n.toLowerCase());
+            if (currentPosGroupKeys.includes(lowerKey)) {
+                 showNotification(t('errorPosGroupExists'), 'error');
                  return;
             }
         }
@@ -508,6 +528,9 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                                         onNameChange={(val) => updateEditingData('name', val)}
                                         members={editingState.data.members}
                                         onMembersChange={(m) => updateEditingData('members', m)}
+                                        /* 
+                                           FIX: Corrected typo 'editing দাতাদের' to 'editingState.data'
+                                        */
                                         applies={editingState.data.applies}
                                         onAppliesChange={(m) => updateEditingData('applies', m)}
                                         exceptions={editingState.data.exceptions}

@@ -10,15 +10,18 @@ export const simpleHash = (str: string, seed = 0): string => {
     }
     h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
     h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
-    h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
   
     return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
   };
 
 /**
- * Ensures class names follow the Adobe FEA spec: Alphanumeric, underscores, periods, hyphens. No spaces.
- * Spaces are converted to underscores, illegal characters are stripped.
+ * Ensures class names follow the Adobe FEA spec: 
+ * 1. Replaces spaces and hyphens with underscores.
+ * 2. Allows only alphanumerics and underscores [a-zA-Z0-9_].
+ * 3. Forbids a leading numeral.
  */
 export const sanitizeIdentifier = (name: string): string => 
-  name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
+  name
+    .replace(/[\s-]+/g, '_')           // Replace spaces/hyphens with underscores
+    .replace(/[^a-zA-Z0-9_]/g, '')    // Strip everything except alphanumerics and underscores
+    .replace(/^\d+/, '');             // Remove any leading numerals

@@ -25,7 +25,8 @@ const PositioningRulesModal: React.FC<PositioningRulesModalProps> = ({ isOpen, o
         markAttachmentClasses, setMarkAttachmentClasses,
         baseAttachmentClasses, setBaseAttachmentClasses,
         recommendedKerning, setRecommendedKerning,
-        characterSets
+        characterSets,
+        setPositioningGroupNames
     } = useProject();
 
     const { state: rulesState, dispatch: rulesDispatch } = useRules();
@@ -80,6 +81,12 @@ const PositioningRulesModal: React.FC<PositioningRulesModalProps> = ({ isOpen, o
         setMarkAttachmentClasses(localMarkClasses);
         setBaseAttachmentClasses(localBaseClasses);
         setRecommendedKerning(localKerning);
+        
+        // --- FIX STALE STATE REGRESSION ---
+        // Any group existing in the Positioning workspace manager is considered a Positioning group.
+        // This Set is used by the Rules tab to filter out Positioning groups from the general list,
+        // and by the Drawing tab to provide specific collision error messages.
+        setPositioningGroupNames(new Set(Object.keys(localGroups)));
         
         // Save Global Groups back to Rules Context
         if (rulesState.fontRules) {

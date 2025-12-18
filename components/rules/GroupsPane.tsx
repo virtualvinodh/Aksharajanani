@@ -120,6 +120,17 @@ const EditorPanel: React.FC<{
     groups: Record<string, string[]>;
 }> = ({ title, nameValue, onNameChange, members, onMembersChange, onSave, onCancel, characterSets, groups }) => {
     const { t } = useLocale();
+    const [showHint, setShowHint] = useState(false);
+
+    const handleNameInput = (val: string) => {
+        const sanitized = sanitizeIdentifier(val);
+        if (val.length > 0 && sanitized !== val.replace(/[\s-]+/g, '_')) {
+            setShowHint(true);
+        } else {
+            setShowHint(false);
+        }
+        onNameChange(sanitized);
+    };
 
     return (
         <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6 animate-fade-in-up col-span-full relative z-30">
@@ -134,14 +145,19 @@ const EditorPanel: React.FC<{
                     <div className="flex items-center gap-2">
                             <span className="text-gray-400 font-mono text-lg">@</span>
                             <input 
-                            type="text" 
-                            value={nameValue} 
-                            onChange={e => onNameChange(sanitizeIdentifier(e.target.value))} 
-                            className="flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-mono"
-                            placeholder="group_name"
-                            autoFocus
+                                type="text" 
+                                value={nameValue} 
+                                onChange={e => handleNameInput(e.target.value)} 
+                                className={`flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-mono ${showHint ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
+                                placeholder="group_name"
+                                autoFocus
                             />
                     </div>
+                    {showHint && (
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
+                            {t('namingRestrictionHint')}
+                        </p>
+                    )}
                 </div>
                 
                 <ChipInput 
@@ -155,7 +171,7 @@ const EditorPanel: React.FC<{
                 
                 <div className="flex justify-end gap-2 pt-2">
                     <button onClick={onCancel} className="px-4 py-2 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 rounded">{t('cancel')}</button>
-                    <button onClick={onSave} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"><SaveIcon className="w-4 h-4"/> {t('save')}</button>
+                    <button onClick={onSave} disabled={!nameValue.trim()} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2 disabled:bg-green-400"><SaveIcon className="w-4 h-4"/> {t('save')}</button>
                 </div>
             </div>
         </div>
@@ -172,22 +188,26 @@ const GroupsPane: React.FC<GroupsPaneProps> = ({ groups, onSave, onDelete, chara
         if (!editingState) return;
         const newKey = editingState.key.trim();
         if (!newKey) return;
+        const lowerKey = newKey.toLowerCase();
         
-        // --- GLOBAL DUPLICATE CHECK ---
-        const existingCharSetKeys = characterSets.map(cs => cs.nameKey);
-        const isSelfRename = editingState.id === newKey;
+        // --- GLOBAL CASE-INSENSITIVE DUPLICATE CHECK ---
+        const existingCharSetKeys = characterSets.map(cs => cs.nameKey.toLowerCase());
+        const positioningGroupKeys = Array.from(positioningGroupNames).map(n => n.toLowerCase());
+        const rulesGroupKeys = Object.keys(groups).map(n => n.toLowerCase());
+        
+        const isSelfRename = editingState.id.toLowerCase() === lowerKey;
         
         if (!isSelfRename) {
-            if (existingCharSetKeys.includes(newKey)) {
-                showNotification('A Character Set with this name already exists.', 'error');
+            if (existingCharSetKeys.includes(lowerKey)) {
+                showNotification(t('errorCharSetExists'), 'error');
                 return;
             }
-            if (positioningGroupNames.has(newKey)) {
-                showNotification('This name is already used by a Positioning Group.', 'error');
+            if (positioningGroupKeys.includes(lowerKey)) {
+                showNotification(t('errorPosGroupExists'), 'error');
                 return;
             }
-            if (groups[newKey]) {
-                 showNotification('A Rule Group with this name already exists.', 'error');
+            if (rulesGroupKeys.includes(lowerKey)) {
+                 showNotification(t('errorRuleGroupExists'), 'error');
                  return;
             }
         }

@@ -6,6 +6,7 @@ import TagInput from '../scriptcreator/TagInput';
 import { CharacterSet } from '../../types';
 import { useProject } from '../../contexts/ProjectContext';
 import { useRules } from '../../contexts/RulesContext';
+import { sanitizeIdentifier } from '../../utils/stringUtils';
 
 interface GroupEditorProps {
     onSave: (data: { originalKey?: string, newKey: string, members: string[] }) => void;
@@ -25,34 +26,50 @@ const GroupEditor: React.FC<GroupEditorProps> = ({ onSave, onCancel, initialData
 
     const [key, setKey] = useState(initialData?.key || '');
     const [members, setMembers] = useState(initialData?.members || []);
+    const [showHint, setShowHint] = useState(false);
     const availableSets = characterSets.map(cs => `$${cs.nameKey}`);
+
+    const handleNameChange = (val: string) => {
+        const sanitized = sanitizeIdentifier(val);
+        if (val.length > 0 && sanitized !== val.replace(/[\s-]+/g, '_')) {
+            setShowHint(true);
+        } else {
+            setShowHint(false);
+        }
+        setKey(sanitized);
+    };
 
     const handleSave = () => {
         const newKey = key.trim();
+        const lowerKey = newKey.toLowerCase();
+        
         if (!newKey) {
-            showNotification('Group name cannot be empty.', 'error');
+            showNotification(t('errorGroupNameRequired'), 'error');
             return;
         }
         if (newKey.startsWith('$')) {
-             showNotification('Group name should not start with $.', 'error');
+             showNotification(t('errorGroupNoDollar'), 'error');
              return;
         }
 
-        // --- GLOBAL DUPLICATE CHECK ---
-        const existingCharSetKeys = characterSets.map(cs => cs.nameKey);
-        const isSelfRename = !isNew && newKey === initialData?.key;
+        // --- GLOBAL CASE-INSENSITIVE DUPLICATE CHECK ---
+        const existingCharSetKeys = characterSets.map(cs => cs.nameKey.toLowerCase());
+        const positioningGroupKeys = Array.from(positioningGroupNames).map(n => n.toLowerCase());
+        const rulesGroupKeys = Object.keys(rulesGroups).map(n => n.toLowerCase());
+        
+        const isSelfRename = !isNew && initialData?.key.toLowerCase() === lowerKey;
         
         if (!isSelfRename) {
-            if (existingCharSetKeys.includes(newKey)) {
-                showNotification('A Character Set with this name already exists.', 'error');
+            if (existingCharSetKeys.includes(lowerKey)) {
+                showNotification(t('errorCharSetExists'), 'error');
                 return;
             }
-            if (positioningGroupNames.has(newKey)) {
-                showNotification('This name is already used by a Positioning Group.', 'error');
+            if (positioningGroupKeys.includes(lowerKey)) {
+                showNotification(t('errorPosGroupExists'), 'error');
                 return;
             }
-            if (rulesGroups[newKey]) {
-                showNotification('This name is already used by a Rule Group.', 'error');
+            if (rulesGroupKeys.includes(lowerKey)) {
+                showNotification(t('errorRuleGroupExists'), 'error');
                 return;
             }
         }
@@ -67,10 +84,15 @@ const GroupEditor: React.FC<GroupEditorProps> = ({ onSave, onCancel, initialData
                 <input
                     type="text"
                     value={key}
-                    onChange={e => setKey(e.target.value.replace(/\s+/g, '_'))}
+                    onChange={e => handleNameChange(e.target.value)}
                     placeholder="e.g., virama"
-                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mt-1"
+                    className={`w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mt-1 ${showHint ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
                 />
+                {showHint && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
+                        {t('namingRestrictionHint')}
+                    </p>
+                )}
             </div>
             <div>
                 <label className="font-semibold text-sm">{t('members')}</label>
@@ -78,7 +100,7 @@ const GroupEditor: React.FC<GroupEditorProps> = ({ onSave, onCancel, initialData
             </div>
             <div className="flex justify-end gap-2">
                 <button onClick={onCancel} className="px-3 py-1 bg-gray-500 text-white rounded">{t('cancel')}</button>
-                <button onClick={handleSave} className="px-3 py-1 bg-indigo-600 text-white rounded">{t('save')}</button>
+                <button onClick={handleSave} disabled={!key.trim()} className="px-3 py-1 bg-indigo-600 text-white rounded disabled:opacity-50">{t('save')}</button>
             </div>
         </div>
     );

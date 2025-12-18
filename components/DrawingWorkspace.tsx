@@ -149,6 +149,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     // Group Management Modal State
     const [modalState, setModalState] = useState<{ type: 'create' | 'rename', index?: number, isOpen: boolean }>({ type: 'create', isOpen: false });
     const [modalInputValue, setModalInputValue] = useState('');
+    const [showNamingHint, setShowNamingHint] = useState(false);
 
     // Batch Operation States
     const { handleBulkTransform, handleSaveMetrics, handleBulkDelete } = useBatchOperations();
@@ -285,13 +286,32 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     }, [contextMenu.isOpen]);
 
     // Group Management Handlers...
-    const openCreateModal = () => { setModalInputValue(''); setModalState({ type: 'create', isOpen: true }); };
+    const openCreateModal = () => { 
+        setModalInputValue(''); 
+        setShowNamingHint(false);
+        setModalState({ type: 'create', isOpen: true }); 
+    };
+
     const openRenameModal = () => {
         const currentName = visibleCharacterSets[contextMenu.index].nameKey;
         setModalInputValue(t(currentName) === currentName ? currentName : t(currentName));
+        setShowNamingHint(false);
         setModalState({ type: 'rename', index: contextMenu.index, isOpen: true });
         closeContextMenu();
     };
+
+    const handleNameChange = (val: string) => {
+        const sanitized = sanitizeIdentifier(val);
+        // If normalization (space->underscore) happens, we don't necessarily show a rejection hint
+        // but if illegal chars or numbers are stripped, we do.
+        if (val.length > 0 && sanitized !== val.replace(/[\s-]+/g, '_')) {
+            setShowNamingHint(true);
+        } else {
+            setShowNamingHint(false);
+        }
+        setModalInputValue(sanitized);
+    };
+
     const handleDeleteGroupHandler = () => {
         if (visibleCharacterSets.length <= 1) { showNotification(t('cannotDeleteLastGroup'), 'error'); closeContextMenu(); return; }
         const targetSet = visibleCharacterSets[contextMenu.index];
@@ -301,26 +321,31 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         }
         closeContextMenu();
     };
+
     const handleModalSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const name = sanitizeIdentifier(modalInputValue.trim()); 
         if (!name) return;
 
-        // --- GLOBAL DUPLICATE CHECK ---
-        const existingCharSetKeys = characterSets.map(cs => cs.nameKey);
-        const isSelfRename = modalState.type === 'rename' && modalState.index !== undefined && visibleCharacterSets[modalState.index].nameKey === name;
+        // --- GLOBAL CASE-INSENSITIVE DUPLICATE CHECK ---
+        const lowerName = name.toLowerCase();
+        const existingCharSetKeys = characterSets.map(cs => cs.nameKey.toLowerCase());
+        const positioningGroupKeys = Array.from(positioningGroupNames).map(n => n.toLowerCase());
+        const rulesGroupKeys = Object.keys(rulesGroups).map(n => n.toLowerCase());
+        
+        const isSelfRename = modalState.type === 'rename' && modalState.index !== undefined && visibleCharacterSets[modalState.index].nameKey.toLowerCase() === lowerName;
         
         if (!isSelfRename) {
-            if (existingCharSetKeys.includes(name)) {
-                showNotification('A Character Set with this name already exists.', 'error');
+            if (existingCharSetKeys.includes(lowerName)) {
+                showNotification(t('errorCharSetExists'), 'error');
                 return;
             }
-            if (positioningGroupNames.has(name)) {
-                showNotification('This name is already used by a Positioning Group.', 'error');
+            if (positioningGroupKeys.includes(lowerName)) {
+                showNotification(t('errorPosGroupExists'), 'error');
                 return;
             }
-            if (Object.keys(rulesGroups).includes(name)) {
-                showNotification('This name is already used by an FEA Group.', 'error');
+            if (rulesGroupKeys.includes(lowerName)) {
+                showNotification(t('errorRuleGroupExists'), 'error');
                 return;
             }
         }
@@ -336,7 +361,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         setModalState(prev => ({ ...prev, isOpen: false }));
     };
 
-    // Batch Operations Helpers
+    // Batch Operations Helpers...
     const handleBatchComplete = () => {
         setMetricsSelection(new Set());
         setIsMetricsSelectionMode(false);
@@ -476,7 +501,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                             <button onClick={() => setIsPropertiesModalOpen(true)} disabled={metricsSelection.size === 0} title={t('editProperties')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
                                 <SettingsIcon /> <span className="hidden xl:inline">{t('editProperties')}</span>
                             </button>
-                             <button onClick={handleCompareSelected} disabled={metricsSelection.size === 0} title={t('compare')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
+                             <button onClick={handleCompareSelected} disabled={metricsSelection.size === 0} title={t('compare')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm text-white">
                                 <CompareIcon /> <span className="hidden xl:inline">{t('compare')}</span>
                             </button>
                             <button onClick={() => setIsDeleteConfirmOpen(true)} disabled={metricsSelection.size === 0} title={t('delete')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
@@ -503,7 +528,21 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
 
             {/* Modals */}
             <Modal isOpen={modalState.isOpen} onClose={() => setModalState(prev => ({ ...prev, isOpen: false }))} title={modalState.type === 'create' ? t('newGroup') : t('renameGroup')} size="sm" footer={<><button onClick={() => setModalState(prev => ({ ...prev, isOpen: false }))} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">{t('cancel')}</button><button onClick={handleModalSubmit} disabled={!modalInputValue.trim()} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-indigo-400">{t('save')}</button></>}>
-                <form onSubmit={handleModalSubmit}><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('groupName')}</label><input type="text" value={modalInputValue} onChange={e => setModalInputValue(e.target.value)} autoFocus className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"/></form>
+                <form onSubmit={handleModalSubmit}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('groupName')}</label>
+                    <input 
+                        type="text" 
+                        value={modalInputValue} 
+                        onChange={e => handleNameChange(e.target.value)} 
+                        autoFocus 
+                        className={`w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none ${showNamingHint ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
+                    />
+                    {showNamingHint && (
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
+                            {t('namingRestrictionHint')}
+                        </p>
+                    )}
+                </form>
             </Modal>
             
             <BulkPropertiesModal isOpen={isPropertiesModalOpen} onClose={() => setIsPropertiesModalOpen(false)} onSave={(l, r, w) => handleSaveMetrics(metricsSelection, l, r, handleBatchComplete)} count={metricsSelection.size} />
