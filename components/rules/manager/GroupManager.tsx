@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AttachmentClass, CharacterSet } from '../../../types';
 import { useLocale } from '../../../contexts/LocaleContext';
@@ -7,6 +8,7 @@ import { expandMembers } from '../../../services/groupExpansionService';
 import { useLayout } from '../../../contexts/LayoutContext';
 import { sanitizeIdentifier } from '../../../utils/stringUtils';
 import { useRules } from '../../../contexts/RulesContext';
+import { useProject } from '../../../contexts/ProjectContext';
 
 interface GroupManagerProps {
     groups: Record<string, string[]>;
@@ -278,6 +280,7 @@ const EditorPanel: React.FC<{
 const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClasses, setMarkClasses, baseClasses, setBaseClasses, characterSets }) => {
     const { t } = useLocale();
     const { showNotification } = useLayout();
+    const { positioningGroupNames } = useProject();
     const [editingState, setEditingState] = useState<{ type: 'group' | 'markClass' | 'baseClass', id: string | number, data: any } | null>(null);
 
     const { state: rulesState } = useRules();
@@ -290,8 +293,6 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
 
         // --- GLOBAL CASE-INSENSITIVE DUPLICATE CHECK ---
         const existingCharSetKeys = characterSets.map(cs => cs.nameKey.toLowerCase());
-        const rulesGroupKeys = Object.keys(rulesGroups).map(n => n.toLowerCase());
-        
         const isSelfRename = key.toLowerCase() === lowerKey;
 
         if (!isSelfRename) {
@@ -299,15 +300,25 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                 showNotification(t('errorCharSetExists'), 'error');
                 return;
             }
-            if (rulesGroupKeys.includes(lowerKey)) {
-                showNotification(t('errorRuleGroupExists'), 'error');
+
+            // Consolidate all group keys from both context and local state
+            const allGroupKeys = new Set([
+                ...Object.keys(rulesGroups).map(n => n.toLowerCase()),
+                ...Object.keys(newGroups).map(n => n.toLowerCase())
+            ]);
+
+            if (allGroupKeys.has(lowerKey)) {
+                // Determine if this key belongs to the Positioning workspace specifically
+                const isPosGroup = Array.from(positioningGroupNames)
+                    .map(n => n.toLowerCase())
+                    .includes(lowerKey);
+
+                if (isPosGroup) {
+                    showNotification(t('errorPosGroupExists'), 'error');
+                } else {
+                    showNotification(t('errorRuleGroupExists'), 'error');
+                }
                 return;
-            }
-            // Check if it exists in the raw positioning groups (passed as prop 'groups')
-            const currentPosGroupKeys = Object.keys(newGroups).map(n => n.toLowerCase());
-            if (currentPosGroupKeys.includes(lowerKey)) {
-                 showNotification(t('errorPosGroupExists'), 'error');
-                 return;
             }
         }
 
@@ -528,9 +539,6 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
                                         onNameChange={(val) => updateEditingData('name', val)}
                                         members={editingState.data.members}
                                         onMembersChange={(m) => updateEditingData('members', m)}
-                                        /* 
-                                           FIX: Corrected typo 'editing দাতাদের' to 'editingState.data'
-                                        */
                                         applies={editingState.data.applies}
                                         onAppliesChange={(m) => updateEditingData('applies', m)}
                                         exceptions={editingState.data.exceptions}
