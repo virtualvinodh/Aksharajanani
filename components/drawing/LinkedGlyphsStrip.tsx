@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Character, GlyphData, AppSettings, CharacterSet, MarkAttachmentRules, Path } from '../../types';
@@ -27,6 +26,7 @@ interface LinkedGlyphsStripProps {
 }
 
 const DRAWING_CANVAS_SIZE = 1000;
+declare var UnicodeProperties: any;
 
 const GlyphThumbnail: React.FC<{
     character: Character;
@@ -48,24 +48,55 @@ const GlyphThumbnail: React.FC<{
         if (isGlyphDrawn(glyphData)) {
             const bbox = getAccurateGlyphBBox(glyphData!, strokeThickness);
             
-            // Auto-fit logic
-            let scale = size / DRAWING_CANVAS_SIZE;
+            // Standard scale: How much of the 1000px design space fits in our 'size' px box
+            const standardScale = size / DRAWING_CANVAS_SIZE;
+            let scale = standardScale;
             let tx = 0;
             let ty = 0;
 
             if (bbox) {
-                 const padding = 100;
-                 const w = Math.max(bbox.width + padding * 2, 100);
-                 const h = Math.max(bbox.height + padding * 2, 100);
-                 
-                 scale = Math.min(size / w, size / h);
-                 
-                 // Center
-                 const cx = bbox.x + bbox.width / 2;
-                 const cy = bbox.y + bbox.height / 2;
-                 
-                 tx = (size / 2) - (cx * scale);
-                 ty = (size / 2) - (cy * scale);
+                const PADDING = size * 0.1; // 10% padding
+                const availableDim = size - (PADDING * 2);
+                
+                // 1. Calculate Fit Scale (only shrink if too large, don't blow up small marks)
+                if (bbox.width > 0 && bbox.height > 0) {
+                    const fitScaleX = availableDim / bbox.width;
+                    const fitScaleY = availableDim / bbox.height;
+                    const fitScale = Math.min(fitScaleX, fitScaleY);
+                    
+                    if (fitScale < standardScale) {
+                        scale = fitScale;
+                    }
+                }
+
+                // 2. Horizontal Centering (Always center content horizontally)
+                const contentCenterX = bbox.x + bbox.width / 2;
+                const canvasCenter = size / 2;
+                tx = canvasCenter - (contentCenterX * scale);
+
+                // 3. Vertical Centering Logic (Sync'd with CharacterCard)
+                let shouldVerticallyCenter = true;
+
+                if (character.glyphClass === 'mark') {
+                    shouldVerticallyCenter = false;
+                } else if (character.unicode && typeof UnicodeProperties !== 'undefined') {
+                    try {
+                        const cat = UnicodeProperties.getCategory(character.unicode);
+                        // Lm: Modifier, Sk: Symbol, P*: Punctuation
+                        if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {
+                            shouldVerticallyCenter = false;
+                        }
+                    } catch (e) { }
+                }
+
+                if (shouldVerticallyCenter) {
+                    // Center the specific content (visual balance)
+                    const contentCenterY = bbox.y + bbox.height / 2;
+                    ty = canvasCenter - (contentCenterY * scale);
+                } else {
+                    // Center the frame (preserves semantic vertical offset relative to baseline)
+                    ty = (size - (DRAWING_CANVAS_SIZE * scale)) / 2;
+                }
             }
 
             ctx.save();
@@ -78,7 +109,7 @@ const GlyphThumbnail: React.FC<{
             });
             ctx.restore();
         }
-    }, [glyphData, strokeThickness, theme, size]);
+    }, [glyphData, strokeThickness, theme, size, character]);
 
     return (
         <div 
@@ -108,7 +139,6 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
     const isSource = variant === 'sources';
 
     // Helper to generate the correct GlyphData (including live preview logic)
-    // This allows us to reuse the logic for both the strip and the expanded grid
     const renderThumb = (char: Character, size: number) => {
         let displayData = char.unicode !== undefined ? glyphDataMap.get(char.unicode) : undefined;
         
@@ -118,7 +148,6 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
             let currentPaths = [...displayData.paths];
             let pathsModified = false;
 
-            // 1. Surgical Update: 
             if (currentPaths.length > 0) {
                 components.forEach((compName, index) => {
                     if (compName === sourceCharacter.name) {
@@ -139,7 +168,6 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                     displayData = { paths: currentPaths };
                 }
             } 
-            // 2. Fallback: Full Generation
             else if (allCharsByName && metrics && characterSets) {
                 const tempMap = new Proxy(glyphDataMap, {
                     get(target, prop, receiver) {
@@ -217,7 +245,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
         <>
             {expandedView && createPortal(expandedView, document.body)}
 
-            <div className="w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center max-w-5xl rounded-b-xl mx-auto">
+            <div className="w-full max-w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center overflow-hidden rounded-b-xl mx-auto">
                  {/* Label Column */}
                  <div className="flex flex-col items-center justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 w-20">
                     <span className={`p-1.5 rounded-full ${isSource ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300'}`}>

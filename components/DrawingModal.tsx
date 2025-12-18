@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment, TransformState, ComponentTransform } from '../types';
 import DrawingCanvas from './DrawingCanvas';
@@ -97,21 +96,16 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
 
   // --- Calculate Linked Glyph Relations ---
   const sourceGlyphs = useMemo(() => {
-      // Only show sources for live LINKED glyphs, ignoring static composites
       const componentNames = character.link; 
       if (!componentNames) return [];
       return componentNames.map(name => allCharsByName.get(name)).filter((c): c is Character => !!c);
   }, [character, allCharsByName]);
 
   const dependentGlyphs = useMemo(() => {
-      // Find all characters that use THIS character as a live LINKED component
-      // and are currently drawn/valid in the project
       return allCharacterSets.flatMap(set => set.characters)
           .filter(c => {
               if (c.hidden || c.unicode === undefined) return false;
-              // Must be a live link
               if (!c.link?.includes(character.name)) return false;
-              // Must be completely drawn/exist in glyphData
               return isGlyphDrawn(allGlyphData.get(c.unicode));
           });
   }, [character, allCharacterSets, allGlyphData]);
@@ -267,26 +261,25 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
           const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
           px = rx * sx;
           py = ry * sy;
-          return { x: px + center.x, y: ry + center.y };
+          return { x: rx + center.x, y: ry + center.y };
       };
 
       const newPaths = currentPaths.map(p => {
           if (!selectedPathIds.has(p.id)) return p;
           const newP = { ...p, points: p.points.map(transformPoint) };
           if (p.segmentGroups) {
-              newP.segmentGroups = p.segmentGroups.map(g => g.map(s => ({
-                  ...s,
-                  point: transformPoint(s.point),
-                  handleIn: VEC.scale(VEC.rotate(s.handleIn, angleRad), sx),
-                  handleOut: VEC.scale(VEC.rotate(s.handleOut, angleRad), sx)
-              })));
-               if (transform.flipX || transform.flipY) {
-                  newP.segmentGroups = newP.segmentGroups.map(g => g.map(s => ({
+              newP.segmentGroups = p.segmentGroups.map(g => g.map(s => {
+                  const hInRot = VEC.rotate(s.handleIn, angleRad);
+                  const hOutRot = VEC.rotate(s.handleOut, angleRad);
+                  const hInTransformed = { x: hInRot.x * sx, y: hInRot.y * sy };
+                  const hOutTransformed = { x: hOutRot.x * sx, y: hOutRot.y * sy };
+                  return {
                       ...s,
-                      handleIn: { x: s.handleIn.x * (transform.flipX ? -1 : 1), y: s.handleIn.y * (transform.flipY ? -1 : 1) },
-                      handleOut: { x: s.handleOut.x * (transform.flipX ? -1 : 1), y: s.handleOut.y * (transform.flipY ? -1 : 1) }
-                  })));
-               }
+                      point: transformPoint(s.point),
+                      handleIn: hInTransformed,
+                      handleOut: hOutTransformed
+                  };
+              }));
           }
           return newP;
       });
@@ -345,11 +338,12 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const handleZoom = (factor: number) => {
       const newZoom = Math.max(0.1, Math.min(10, zoom * factor));
       const center = { x: DRAWING_CANVAS_SIZE / 2, y: DRAWING_CANVAS_SIZE / 2 };
-      setZoom(newZoom);
-      setViewOffset({
+      const newOffset = {
           x: center.x - (center.x - viewOffset.x) * (newZoom / zoom),
           y: center.y - (center.y - viewOffset.y) * (newZoom / zoom)
-      });
+      };
+      setZoom(newZoom);
+      setViewOffset(newOffset);
   };
 
   const handleConfirmUnlock = () => { onUnlockGlyph(character.unicode!); setIsUnlockConfirmOpen(false); showNotification(t('glyphUnlockedSuccess'), 'success'); };
@@ -429,10 +423,10 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
     />
   );
   
-  const mainContentClasses = `flex-grow overflow-hidden bg-gray-100 dark:bg-black/20 transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`;
+  const mainContentClasses = `flex-grow transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`;
   const layoutClasses = isLargeScreen 
-      ? `${mainContentClasses} flex flex-row justify-center items-center p-4 gap-4` 
-      : `${mainContentClasses} flex flex-col-reverse items-center p-4 gap-4`;
+      ? `${mainContentClasses} flex flex-row justify-center items-center p-4 gap-4 bg-gray-100 dark:bg-black/20 overflow-hidden` 
+      : `${mainContentClasses} flex flex-col items-center bg-gray-50 dark:bg-gray-900/40 overflow-hidden`;
 
   return (
     <div ref={modalRef} className={`fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col ${animationClass}`}>
@@ -451,52 +445,37 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
         onSaveConstruction={handleSaveConstruction}
         onUnlock={() => setIsUnlockConfirmOpen(true)}
         onRelink={() => setIsRelinkConfirmOpen(true)}
-        // Pass lifted metadata state to Header
         glyphClass={glyphClass} setGlyphClass={setGlyphClass}
         advWidth={advWidth} setAdvWidth={setAdvWidth}
       />
 
       <main className={layoutClasses}>
-         <div className={isLargeScreen ? "flex flex-col overflow-y-auto max-h-full no-scrollbar" : ""}>
-             <div className={isLargeScreen ? "my-auto" : ""}>
-                 <DrawingToolbar
-                    character={character} currentTool={currentTool} setCurrentTool={setCurrentTool} settings={settings} isLargeScreen={isLargeScreen}
-                    onUndo={undo} canUndo={canUndo} onRedo={redo} canRedo={canRedo}
-                    onCut={handleCut} selectedPathIds={selectedPathIds} onCopy={handleCopy} onPaste={handlePaste} clipboard={clipboard}
-                    onGroup={handleGroup} canGroup={canGroup} onUngroup={handleUngroup} canUngroup={canUngroup}
-                    onZoom={handleZoom} onImageImportClick={() => imageImportRef.current?.click()} onSvgImportClick={() => svgImportRef.current?.click()}
-                    onImageTraceClick={() => imageTraceRef.current?.click()} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
-                    onApplyTransform={handleApplyTransform}
-                    previewTransform={previewTransform}
-                    setPreviewTransform={setPreviewTransform}
-                 />
-             </div>
-         </div>
-        
-        <div 
-            className={`min-w-0 min-h-0 flex flex-col justify-center items-center relative ${isLargeScreen ? 'h-full w-auto' : 'flex-1 w-full'}`} 
-            ref={canvasContainerRef}
-        >
-            <div className={`rounded-md overflow-hidden shadow-lg aspect-square relative flex-shrink-0 flex items-center justify-center ${isLargeScreen ? 'h-auto max-h-[calc(100%-80px)]' : 'h-auto max-w-full max-h-full'}`} style={{ width: 'auto', maxWidth: '100%' }} ref={canvasWrapperRef}>
-                {activeSelectionBBox && (
-                    <ContextualToolbar 
-                        selectionBox={activeSelectionBBox}
-                        zoom={zoom}
-                        viewOffset={viewOffset}
-                        onApplyTransform={handleApplyTransform}
-                        previewTransform={previewTransform}
-                        setPreviewTransform={setPreviewTransform}
-                        containerWidth={containerSize.width}
-                        containerHeight={containerSize.height}
-                        internalCanvasSize={DRAWING_CANVAS_SIZE}
-                        onEditMode={() => setCurrentTool('edit')}
-                    />
-                )}
-                {canvasComponent}
+        {/* Central Drawing Area (Canvas + Strips) */}
+        <div className={`flex flex-col items-center relative ${isLargeScreen ? 'h-full flex-1 overflow-hidden justify-center' : 'flex-1 w-full min-h-0'}`}>
+            
+            {/* Canvas Wrapper - Shrink to fit available space */}
+            <div className={`w-full flex-1 min-h-0 flex items-center justify-center ${!isLargeScreen ? 'p-1' : ''}`}>
+                <div className={`rounded-md overflow-hidden shadow-lg aspect-square relative flex items-center justify-center max-h-full max-w-full ${isLargeScreen ? 'h-auto' : ''}`} style={{ width: 'auto' }} ref={canvasWrapperRef}>
+                    {activeSelectionBBox && (
+                        <ContextualToolbar 
+                            selectionBox={activeSelectionBBox}
+                            zoom={zoom}
+                            viewOffset={viewOffset}
+                            onApplyTransform={handleApplyTransform}
+                            previewTransform={previewTransform}
+                            setPreviewTransform={setPreviewTransform}
+                            containerWidth={containerSize.width}
+                            containerHeight={containerSize.height}
+                            internalCanvasSize={DRAWING_CANVAS_SIZE}
+                            onEditMode={() => setCurrentTool('edit')}
+                        />
+                    )}
+                    {canvasComponent}
+                </div>
             </div>
             
-            {/* LINKED GLYPHS STRIPS (Sources / Dependents) */}
-            <div className="w-full max-w-5xl flex flex-col gap-2 mt-2 z-10 flex-shrink-0">
+            {/* LINKED GLYPHS STRIPS - Positioned directly below canvas */}
+            <div className="w-full max-w-full lg:max-w-5xl flex flex-col gap-0.5 flex-shrink-0">
                 {sourceGlyphs.length > 0 && (
                     <LinkedGlyphsStrip 
                         title="Sources" 
@@ -526,6 +505,23 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                 )}
             </div>
         </div>
+
+        {/* Toolbar - Sticky at bottom on mobile, side on desktop */}
+        <div className={isLargeScreen ? "flex-shrink-0 flex flex-col overflow-y-auto max-h-full no-scrollbar" : "flex-shrink-0 w-full z-20 p-1 bg-white dark:bg-gray-900 border-t dark:border-gray-700"}>
+             <div className={isLargeScreen ? "my-auto" : ""}>
+                 <DrawingToolbar
+                    character={character} currentTool={currentTool} setCurrentTool={setCurrentTool} settings={settings} isLargeScreen={isLargeScreen}
+                    onUndo={undo} canUndo={canUndo} onRedo={redo} canRedo={canRedo}
+                    onCut={handleCut} selectedPathIds={selectedPathIds} onCopy={handleCopy} onPaste={handlePaste} clipboard={clipboard}
+                    onGroup={handleGroup} canGroup={canGroup} onUngroup={handleUngroup} canUngroup={canUngroup}
+                    onZoom={handleZoom} onImageImportClick={() => imageImportRef.current?.click()} onSvgImportClick={() => svgImportRef.current?.click()}
+                    onImageTraceClick={() => imageTraceRef.current?.click()} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
+                    onApplyTransform={handleApplyTransform}
+                    previewTransform={previewTransform}
+                    setPreviewTransform={setPreviewTransform}
+                 />
+             </div>
+         </div>
       </main>
 
       <ImageControlPanel backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity} setBackgroundImageOpacity={setBackgroundImageOpacity} onClearImage={() => { setBackgroundImage(null); setImageTransform(null); }} />
