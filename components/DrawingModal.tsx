@@ -432,7 +432,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const mainContentClasses = `flex-grow overflow-hidden bg-gray-100 dark:bg-black/20 transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`;
   const layoutClasses = isLargeScreen 
       ? `${mainContentClasses} flex flex-row justify-center items-center p-4 gap-4` 
-      : `${mainContentClasses} flex flex-col-reverse p-4 gap-4`;
+      : `${mainContentClasses} flex flex-col-reverse items-center p-4 gap-4`;
 
   return (
     <div ref={modalRef} className={`fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col ${animationClass}`}>
@@ -477,7 +477,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
             className={`min-w-0 min-h-0 flex flex-col justify-center items-center relative ${isLargeScreen ? 'h-full w-auto' : 'flex-1 w-full'}`} 
             ref={canvasContainerRef}
         >
-            <div className={`rounded-md overflow-hidden shadow-lg aspect-square relative flex-shrink-0 ${isLargeScreen ? 'h-auto max-h-[calc(100%-80px)]' : 'w-full h-auto max-h-full'}`} style={{ width: isLargeScreen ? 'auto' : '100%', maxWidth: '100%' }} ref={canvasWrapperRef}>
+            <div className={`rounded-md overflow-hidden shadow-lg aspect-square relative flex-shrink-0 flex items-center justify-center ${isLargeScreen ? 'h-auto max-h-[calc(100%-80px)]' : 'h-auto max-w-full max-h-full'}`} style={{ width: 'auto', maxWidth: '100%' }} ref={canvasWrapperRef}>
                 {activeSelectionBBox && (
                     <ContextualToolbar 
                         selectionBox={activeSelectionBBox}
