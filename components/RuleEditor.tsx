@@ -65,16 +65,18 @@ const GlyphSlot: React.FC<GlyphSlotProps> = React.memo(({ onClick, char, glyphDa
 const GroupSlot: React.FC<{ 
     value: string; 
     groups: Record<string, string[]>; 
+    characterSets: CharacterSet[];
     onChange: (newValue: string) => void; 
     onRemove: () => void; 
-}> = ({ value, groups, onChange, onRemove }) => {
+}> = ({ value, groups, characterSets, onChange, onRemove }) => {
+    const { t } = useLocale();
     const groupNames = Object.keys(groups);
     const prefix = value.charAt(0); // '$' or '@'
 
     return (
         <div className="relative group z-10">
             <div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50 cursor-pointer border-purple-200 dark:border-purple-800 group-hover:border-purple-400">
-                <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{value.replace('$', '@')}</span>
+                <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{value}</span>
             </div>
             <button 
                 onClick={(e) => { e.stopPropagation(); onRemove(); }} 
@@ -84,27 +86,46 @@ const GroupSlot: React.FC<{
                 <ClearIcon />
             </button>
             
-            {groupNames.length > 0 && (
-                <div className="absolute hidden group-hover:block top-full pt-1 left-1/2 -translate-x-1/2 z-30">
-                    <div className="bg-white dark:bg-gray-700 rounded-md shadow-xl border dark:border-gray-600 p-1 min-w-[120px] max-h-48 overflow-y-auto">
-                        {groupNames.map(name => (
-                            <button
-                                key={name}
-                                type="button"
-                                onClick={() => onChange(`${prefix}${name}`)}
-                                className={`w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-purple-50 dark:hover:bg-gray-600 font-mono block ${value === prefix + name ? 'bg-purple-100 dark:bg-gray-600 font-bold' : ''}`}
-                            >
-                                @{name}
-                            </button>
-                        ))}
-                    </div>
+            <div className="absolute hidden group-hover:block top-full pt-1 left-1/2 -translate-x-1/2 z-30">
+                <div className="bg-white dark:bg-gray-700 rounded-md shadow-xl border dark:border-gray-600 p-1 min-w-[140px] max-h-48 overflow-y-auto">
+                    {characterSets.length > 0 && (
+                        <div className="px-2 py-1 text-[10px] uppercase font-bold text-gray-400 border-b dark:border-gray-600">Sets</div>
+                    )}
+                    {characterSets.map(set => (
+                        <button
+                            key={`set-${set.nameKey}`}
+                            type="button"
+                            onClick={() => onChange(`$${set.nameKey}`)}
+                            className={`w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-purple-50 dark:hover:bg-gray-600 font-mono block ${value === `$${set.nameKey}` ? 'bg-purple-100 dark:bg-gray-600 font-bold' : ''}`}
+                        >
+                            ${t(set.nameKey)}
+                        </button>
+                    ))}
+                    {groupNames.length > 0 && (
+                        <div className="px-2 py-1 text-[10px] uppercase font-bold text-gray-400 border-b border-t mt-1 dark:border-gray-600">Groups</div>
+                    )}
+                    {groupNames.map(name => (
+                        <button
+                            key={name}
+                            type="button"
+                            onClick={() => onChange(`@${name}`)}
+                            className={`w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-purple-50 dark:hover:bg-gray-600 font-mono block ${value === `@${name}` ? 'bg-purple-100 dark:bg-gray-600 font-bold' : ''}`}
+                        >
+                            @{name}
+                        </button>
+                    ))}
                 </div>
-            )}
+            </div>
         </div>
     );
 };
 
-const GroupSelector: React.FC<{ groups: Record<string, string[]>, onSelect: (groupName: string) => void, verticalPosition?: 'top' | 'bottom' }> = ({ groups, onSelect, verticalPosition = 'bottom' }) => {
+const GroupSelector: React.FC<{ 
+    groups: Record<string, string[]>, 
+    characterSets: CharacterSet[],
+    onSelect: (groupName: string) => void, 
+    verticalPosition?: 'top' | 'bottom' 
+}> = ({ groups, characterSets, onSelect, verticalPosition = 'bottom' }) => {
     const { t } = useLocale();
     const groupNames = Object.keys(groups);
 
@@ -113,22 +134,36 @@ const GroupSelector: React.FC<{ groups: Record<string, string[]>, onSelect: (gro
             <button type="button" className="w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors text-xs text-gray-500 hover:border-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border-gray-400 dark:border-gray-500">
                 {t('addGroup')}
             </button>
-            {groupNames.length > 0 && (
-                <div className={`absolute hidden group-hover:block z-20 ${verticalPosition === 'bottom' ? 'top-full pt-2' : 'bottom-full pb-2'} left-1/2 -translate-x-1/2`}>
-                    <div className="bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 min-w-[120px]">
-                        {groupNames.map(name => (
-                            <button
-                                key={name}
-                                type="button"
-                                onClick={() => onSelect(`$${name}`)}
-                                className="w-full text-left px-3 py-1 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-mono"
-                            >
-                                @{name}
-                            </button>
-                        ))}
-                    </div>
+            <div className={`absolute hidden group-hover:block z-20 ${verticalPosition === 'bottom' ? 'top-full pt-2' : 'bottom-full pb-2'} left-1/2 -translate-x-1/2`}>
+                <div className="bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 min-w-[140px] max-h-48 overflow-y-auto">
+                    {characterSets.length > 0 && (
+                        <div className="px-2 py-1 text-[10px] uppercase font-bold text-gray-400 border-b dark:border-gray-600">Sets</div>
+                    )}
+                    {characterSets.map(set => (
+                        <button
+                            key={`set-${set.nameKey}`}
+                            type="button"
+                            onClick={() => onSelect(`$${set.nameKey}`)}
+                            className="w-full text-left px-3 py-1 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-mono"
+                        >
+                            ${t(set.nameKey)}
+                        </button>
+                    ))}
+                    {groupNames.length > 0 && (
+                        <div className="px-2 py-1 text-[10px] uppercase font-bold text-gray-400 border-b border-t mt-1 dark:border-gray-600">Groups</div>
+                    )}
+                    {groupNames.map(name => (
+                        <button
+                            key={name}
+                            type="button"
+                            onClick={() => onSelect(`@${name}`)}
+                            className="w-full text-left px-3 py-1 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-mono"
+                        >
+                            @{name}
+                        </button>
+                    ))}
                 </div>
-            )}
+            </div>
         </div>
     );
 };
@@ -273,7 +308,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                             <div className="flex items-center flex-wrap gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[60px]">
                                 {components.map((name, index) => (
                                     <div key={index} className="flex items-center gap-1">
-                                        <GlyphSelect characterSets={allCharacterSets} value={name} onChange={val => setComponents(c => c.map((n, i) => i === index ? val : n))} label={t('inputComponents')} groups={groups} />
+                                        <GlyphSelect characterSets={allCharacterSets} value={name} onChange={val => setComponents(c => c.map((n, i) => i === index ? val : n))} label={t('inputComponents')} groups={groups} showCharacterSets={true} />
                                         <button type="button" onClick={() => setComponents(c => c.filter((_, i) => i !== index))} className="p-1 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><TrashIcon/></button>
                                     </div>
                                 ))}
@@ -296,21 +331,21 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                         <div>
                             <h4 className="font-semibold mb-2 text-gray-700 dark:text-gray-300">{t('leftContext')}</h4>
                              <div className="flex flex-col items-center gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[60px]">
-                                {leftContext.map((name, index) => <div key={index} className="flex items-center gap-1"><GlyphSelect characterSets={allCharacterSets} value={name} onChange={val => setLeftContext(c => c.map((n, i) => i === index ? val : n))} label={t('leftContext')} groups={groups} /><button onClick={() => setLeftContext(c => c.filter((_, i) => i !== index))} className="p-1 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><TrashIcon/></button></div>)}
+                                {leftContext.map((name, index) => <div key={index} className="flex items-center gap-1"><GlyphSelect characterSets={allCharacterSets} value={name} onChange={val => setLeftContext(c => c.map((n, i) => i === index ? val : n))} label={t('leftContext')} groups={groups} showCharacterSets={true} /><button onClick={() => setLeftContext(c => c.filter((_, i) => i !== index))} className="p-1 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><TrashIcon/></button></div>)}
                                 <button onClick={() => setLeftContext(prev => [...prev, ''])} className="p-2 bg-gray-200 dark:bg-gray-600 rounded-full"><AddIcon className="w-4 h-4"/></button>
                             </div>
                         </div>
                         <div>
                             <h4 className="font-semibold mb-2 text-gray-700 dark:text-gray-300">{t('targetGlyph')}</h4>
                             <div className="flex flex-col items-center gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[60px]">
-                                {target.map((name, index) => <div key={index} className="flex items-center gap-1"><GlyphSelect characterSets={allCharacterSets} value={name} onChange={val => setTarget(c => c.map((n, i) => i === index ? val : n))} label={`${t('targetGlyph')} ${index+1}`} groups={groups} /><button onClick={() => setTarget(c => c.filter((_, i) => i !== index))} className="p-1 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><TrashIcon/></button></div>)}
+                                {target.map((name, index) => <div key={index} className="flex items-center gap-1"><GlyphSelect characterSets={allCharacterSets} value={name} onChange={val => setTarget(c => c.map((n, i) => i === index ? val : n))} label={`${t('targetGlyph')} ${index+1}`} groups={groups} showCharacterSets={true} /><button onClick={() => setTarget(c => c.filter((_, i) => i !== index))} className="p-1 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><TrashIcon/></button></div>)}
                                 <button onClick={() => setTarget(prev => [...prev, ''])} className="p-2 bg-gray-200 dark:bg-gray-600 rounded-full"><AddIcon className="w-4 h-4"/></button>
                             </div>
                         </div>
                         <div>
                             <h4 className="font-semibold mb-2 text-gray-700 dark:text-gray-300">{t('rightContext')}</h4>
                              <div className="flex flex-col items-center gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[60px]">
-                                {rightContext.map((name, index) => <div key={index} className="flex items-center gap-1"><GlyphSelect characterSets={allCharacterSets} value={name} onChange={val => setRightContext(c => c.map((n, i) => i === index ? val : n))} label={t('rightContext')} groups={groups} /><button onClick={() => setRightContext(c => c.filter((_, i) => i !== index))} className="p-1 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><TrashIcon/></button></div>)}
+                                {rightContext.map((name, index) => <div key={index} className="flex items-center gap-1"><GlyphSelect characterSets={allCharacterSets} value={name} onChange={val => setRightContext(c => c.map((n, i) => i === index ? val : n))} label={t('rightContext')} groups={groups} showCharacterSets={true} /><button onClick={() => setRightContext(c => c.filter((_, i) => i !== index))} className="p-1 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><TrashIcon/></button></div>)}
                                 <button onClick={() => setRightContext(prev => [...prev, ''])} className="p-2 bg-gray-200 dark:bg-gray-600 rounded-full"><AddIcon className="w-4 h-4"/></button>
                             </div>
                         </div>
@@ -326,14 +361,14 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                     <div className="flex flex-col md:flex-row items-center md:items-center gap-4">
                         <div>
                             <h4 className="font-semibold mb-2 text-gray-700 dark:text-gray-300">{t('inputGlyph')}</h4>
-                            <GlyphSelect characterSets={allCharacterSets} value={multiInputGlyph || ''} onChange={setMultiInputGlyph} label={t('inputGlyph')} groups={groups} />
+                            <GlyphSelect characterSets={allCharacterSets} value={multiInputGlyph || ''} onChange={setMultiInputGlyph} label={t('inputGlyph')} groups={groups} showCharacterSets={true} />
                         </div>
                         <div className="self-center text-3xl font-bold mx-4 text-indigo-500 dark:text-indigo-400 transform md:rotate-0 rotate-90 pt-0">→</div>
                         <div className="w-full md:w-auto">
                             <h4 className="font-semibold mb-2 text-gray-700 dark:text-gray-300">{t('outputSequence')}</h4>
                             <div className="flex items-center flex-wrap gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[60px]">
-                                {outputSequence.map((name, index) => <div key={index} className="flex items-center gap-1"><GlyphSelect characterSets={allCharacterSets} value={name} onChange={val => setOutputSequence(c => c.map((n, i) => i === index ? val : n))} label={t('outputSequence')} groups={groups} /><button onClick={() => setOutputSequence(c => c.filter((_, i) => i !== index))} className="p-1 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><TrashIcon/></button></div>)}
-                                <button onClick={() => setOutputSequence(prev => [...prev, ''])} className="p-2 bg-gray-200 dark:bg-gray-600 rounded-full"><AddIcon className="w-4 h-4" /></button>
+                                {outputSequence.map((name, index) => <div key={index} className="flex items-center gap-1"><GlyphSelect characterSets={allCharacterSets} value={name} onChange={val => setOutputSequence(c => c.map((n, i) => i === index ? val : n))} label={t('outputSequence')} groups={groups} showCharacterSets={true} /><button onClick={() => setOutputSequence(c => c.filter((_, i) => i !== index))} className="p-1 text-red-500 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"><TrashIcon/></button></div>)}
+                                <button type="button" onClick={() => setOutputSequence(prev => [...prev, ''])} className="p-2 bg-gray-200 dark:bg-gray-600 rounded-full"><AddIcon className="w-4 h-4" /></button>
                             </div>
                         </div>
                     </div>
@@ -353,6 +388,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                         <GroupSlot
                                             value={singleInput}
                                             groups={groups}
+                                            characterSets={allCharacterSets}
                                             onChange={(val) => setSingleInput(val)}
                                             onRemove={() => setSingleInput(null)}
                                         />
@@ -369,7 +405,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                 ) : (
                                     <>
                                         <GlyphSlot onClick={() => openGlyphModal('single-input')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('select')} />
-                                        <GroupSelector groups={groups || {}} onSelect={groupName => setSingleInput(groupName)} />
+                                        <GroupSelector groups={groups || {}} characterSets={allCharacterSets} onSelect={groupName => setSingleInput(groupName)} />
                                     </>
                                 )}
                             </div>
@@ -386,6 +422,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                         <GroupSlot
                                             value={singleOutput}
                                             groups={groups}
+                                            characterSets={allCharacterSets}
                                             onChange={(val) => setSingleOutput(val)}
                                             onRemove={() => setSingleOutput(null)}
                                         />
@@ -402,7 +439,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                 ) : (
                                     <>
                                         <GlyphSlot onClick={() => openGlyphModal('single-output')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('select')} />
-                                        <GroupSelector groups={groups || {}} onSelect={groupName => setSingleOutput(groupName)} />
+                                        <GroupSelector groups={groups || {}} characterSets={allCharacterSets} onSelect={groupName => setSingleOutput(groupName)} />
                                     </>
                                 )}
                             </div>
@@ -429,6 +466,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                                 key={`group-${index}`}
                                                 value={name}
                                                 groups={groups}
+                                                characterSets={allCharacterSets}
                                                 onChange={(val) => setComponents(p => p.map((v, i) => i === index ? val : v))}
                                                 onRemove={() => setComponents(p => p.filter((_, i) => i !== index))}
                                             />
@@ -448,7 +486,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                     );
                                 })}
                                 <GlyphSlot onClick={() => openGlyphModal('component-add')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('add')} />
-                                <GroupSelector groups={groups || {}} onSelect={groupName => setComponents(p => [...p, groupName])} />
+                                <GroupSelector groups={groups || {}} characterSets={allCharacterSets} onSelect={groupName => setComponents(p => [...p, groupName])} />
                             </div>
                         </div>
                         <div className="self-center text-3xl font-bold mx-4 text-indigo-500 dark:text-indigo-400 transform md:rotate-0 rotate-90 pt-0">→</div>
@@ -480,12 +518,13 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                         key={index}
                                         value={name}
                                         groups={groups}
+                                        characterSets={allCharacterSets}
                                         onChange={(val) => setLeftContext(p => p.map((v, i) => i === index ? val : v))}
                                         onRemove={() => setLeftContext(p => p.filter((_, i) => i !== index))}
                                     /> :
                                     <GlyphSlot key={index} onClick={() => openGlyphModal('context-left-replace', index)} onClear={() => setLeftContext(p => p.filter((_, i) => i !== index))} char={allCharsByName.get(name) || null} glyphData={allCharsByName.get(name) ? glyphDataMap?.get(allCharsByName.get(name)!.unicode) : undefined} strokeThickness={strokeThickness} prompt='' />)}
                                 <GlyphSlot onClick={() => openGlyphModal('context-left-add')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('add')} />
-                                <GroupSelector groups={groups || {}} onSelect={groupName => setLeftContext(p => [...p, groupName])} />
+                                <GroupSelector groups={groups || {}} characterSets={allCharacterSets} onSelect={groupName => setLeftContext(p => [...p, groupName])} />
                             </div>
                         </div>
                         {/* Target */}
@@ -520,12 +559,13 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                         key={index}
                                         value={name}
                                         groups={groups}
+                                        characterSets={allCharacterSets}
                                         onChange={(val) => setRightContext(p => p.map((v, i) => i === index ? val : v))}
                                         onRemove={() => setRightContext(p => p.filter((_, i) => i !== index))}
                                     /> :
                                     <GlyphSlot key={index} onClick={() => openGlyphModal('context-right-replace', index)} onClear={() => setRightContext(p => p.filter((_, i) => i !== index))} char={allCharsByName.get(name) || null} glyphData={allCharsByName.get(name) ? glyphDataMap?.get(allCharsByName.get(name)!.unicode) : undefined} strokeThickness={strokeThickness} prompt='' />)}
                                 <GlyphSlot onClick={() => openGlyphModal('context-right-add')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('add')} />
-                                <GroupSelector groups={groups || {}} onSelect={groupName => setRightContext(p => [...p, groupName])} />
+                                <GroupSelector groups={groups || {}} characterSets={allCharacterSets} onSelect={groupName => setRightContext(p => [...p, groupName])} />
                             </div>
                         </div>
 
@@ -567,6 +607,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                                 key={`group-${index}`}
                                                 value={name}
                                                 groups={groups}
+                                                characterSets={allCharacterSets}
                                                 onChange={(val) => setOutputSequence(p => p.map((v, i) => i === index ? val : v))}
                                                 onRemove={() => setOutputSequence(p => p.filter((_, i) => i !== index))}
                                             />
@@ -576,7 +617,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                     return <GlyphSlot key={index} onClick={() => openGlyphModal('multi-output-replace', index)} onClear={() => setOutputSequence(p => p.filter((_, i) => i !== index))} char={char || null} glyphData={char ? glyphDataMap?.get(char.unicode) : undefined} strokeThickness={strokeThickness} prompt="" />
                                 })}
                                 <GlyphSlot onClick={() => openGlyphModal('multi-output-add')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('add')} />
-                                <GroupSelector groups={groups || {}} onSelect={groupName => setOutputSequence(p => [...p, groupName])} />
+                                <GroupSelector groups={groups || {}} characterSets={allCharacterSets} onSelect={groupName => setOutputSequence(p => [...p, groupName])} />
                             </div>
                         </div>
                     </div>
@@ -596,6 +637,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                         <GroupSlot
                                             value={singleInput}
                                             groups={groups}
+                                            characterSets={allCharacterSets}
                                             onChange={(val) => setSingleInput(val)}
                                             onRemove={() => setSingleInput(null)}
                                         />
@@ -612,7 +654,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                 ) : (
                                     <>
                                         <GlyphSlot onClick={() => openGlyphModal('single-input')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('select')} />
-                                        <GroupSelector groups={groups || {}} onSelect={groupName => setSingleInput(groupName)} />
+                                        <GroupSelector groups={groups || {}} characterSets={allCharacterSets} onSelect={groupName => setSingleInput(groupName)} />
                                     </>
                                 )}
                             </div>
@@ -629,6 +671,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                         <GroupSlot
                                             value={singleOutput}
                                             groups={groups}
+                                            characterSets={allCharacterSets}
                                             onChange={(val) => setSingleOutput(val)}
                                             onRemove={() => setSingleOutput(null)}
                                         />
@@ -645,7 +688,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                                 ) : (
                                     <>
                                         <GlyphSlot onClick={() => openGlyphModal('single-output')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('select')} />
-                                        <GroupSelector groups={groups || {}} onSelect={groupName => setSingleOutput(groupName)} />
+                                        <GroupSelector groups={groups || {}} characterSets={allCharacterSets} onSelect={groupName => setSingleOutput(groupName)} />
                                     </>
                                 )}
                             </div>

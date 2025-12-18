@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
@@ -30,6 +31,14 @@ const GroupEditor: React.FC<GroupEditorProps> = ({ onSave, onCancel, initialData
              showNotification('Group name should not start with $.', 'error');
              return;
         }
+
+        // --- Reserved Name Check ---
+        const reservedNames = characterSets.map(cs => cs.nameKey);
+        if (reservedNames.includes(newKey)) {
+            showNotification(t('errorReservedGroupName', { name: newKey }), 'error');
+            return;
+        }
+
         if ((isNew || newKey !== initialData?.key) && existingKeys.includes(newKey)) {
             showNotification('A group with this name already exists.', 'error');
             return;

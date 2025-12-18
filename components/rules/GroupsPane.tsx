@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { AddIcon, EditIcon, TrashIcon, CloseIcon, SaveIcon } from '../../constants';
 import { CharacterSet } from '../../types';
 import SmartGlyphInput from './manager/SmartGlyphInput';
+import { useLayout } from '../../contexts/LayoutContext';
 
 interface GroupsPaneProps {
     groups: Record<string, string[]>;
@@ -160,6 +162,7 @@ const EditorPanel: React.FC<{
 
 const GroupsPane: React.FC<GroupsPaneProps> = ({ groups, onSave, onDelete, characterSets, hiddenGroups }) => {
     const { t } = useLocale();
+    const { showNotification } = useLayout();
     const [editingState, setEditingState] = useState<{ id: string, key: string, members: string[] } | null>(null);
 
     const handleSaveGroup = () => {
@@ -167,6 +170,13 @@ const GroupsPane: React.FC<GroupsPaneProps> = ({ groups, onSave, onDelete, chara
         const newKey = editingState.key.trim();
         if (!newKey) return;
         
+        // --- Reserved Name Check ---
+        const reservedNames = characterSets.map(cs => cs.nameKey);
+        if (reservedNames.includes(newKey)) {
+            showNotification(t('errorReservedGroupName', { name: newKey }), 'error');
+            return;
+        }
+
         onSave({ 
             originalKey: editingState.id === '__new__' ? undefined : editingState.id, 
             newKey: newKey, 

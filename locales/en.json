@@ -1,3 +1,4 @@
+
 {
 	"about": "About",
 	"aboutAdvancedContent": "While designed for simplicity, the tool does not sacrifice capability. For experts who require granular control, Aksharajanani offers a full suite of advanced features, including a precise Bézier curve editor, detailed kerning workspaces, and a manual OpenType feature code editor.",
@@ -7,7 +8,6 @@
 	"aboutHowItWorksTitle": "The Smart Engine",
 	"aboutNameOriginContent": "'Aksharajanani' (अक्षरजननी) is Sanskrit for 'Mother of Letters'. It combines 'Akshara' (अक्षर), meaning letter or syllable, with 'Janani' (जननी), meaning mother. The name reflects the creative process of giving birth to new letterforms and, by extension, entire fonts.",
 	"aboutNameOriginTitle": "The Name 'Aksharajanani'",
-	"aboutTitle": "About Aksharajanani",
 	"aboutYourRoleContent": "Your process is streamlined to two essential steps: **1. Draw your characters** using the intuitive editor. **2. Perform basic visual positioning** of any associated marks. From these inputs, Aksharajanani compiles a high-quality, fully functional OpenType font file (.otf) that can be installed and used in any application.",
 	"aboutYourRoleTitle": "Your Creative Role",
 	"aboutQuote": "The Tathāgata’s teachings are necessarily conveyed through Aksharas",
@@ -198,6 +198,7 @@
 	"errorParsingFile": "Error parsing {fileName}: {error}",
 	"errorPythonPatch": "Error during Python patching. Exporting unpatched font.",
 	"errorReadingFile": "Error reading {fileName}: {error}",
+	"errorReservedGroupName": "The name '{name}' is reserved by the project structure. Please use a different name.",
 	"errorScriptIdExists": "A script with this ID already exists.",
 	"errorScriptNameExists": "A script with this name already exists.",
 	"errorScriptTagInvalid": "Script tag must be 4 lowercase letters or numbers.",
@@ -279,7 +280,6 @@
 	"glyphProperties": "Properties",
 	"glyphRefreshedSuccess": "Glyph has been refreshed.",
 	"glyphRelinkedSuccess": "Glyph relinked successfully. Manual edits have been discarded.",
-	"glyphSetHint": "Enter glyph names or character set names (e.g., $vowels) separated by commas.",
 	"glyphUnlockedSuccess": "Glyph unlinked and is now fully editable.",
 	"glyphUpdateReverted": "Glyph update reverted.",
 	"glyphsAddedFromBlock": "{count} glyphs added from block.",

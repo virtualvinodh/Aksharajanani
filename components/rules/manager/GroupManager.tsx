@@ -5,6 +5,7 @@ import { useLocale } from '../../../contexts/LocaleContext';
 import { AddIcon, TrashIcon, EditIcon, SaveIcon, CloseIcon } from '../../../constants';
 import SmartGlyphInput from './SmartGlyphInput';
 import { expandMembers } from '../../../services/groupExpansionService';
+import { useLayout } from '../../../contexts/LayoutContext';
 
 interface GroupManagerProps {
     groups: Record<string, string[]>;
@@ -258,12 +259,22 @@ const EditorPanel: React.FC<{
 
 const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClasses, setMarkClasses, baseClasses, setBaseClasses, characterSets }) => {
     const { t } = useLocale();
+    const { showNotification } = useLayout();
     const [editingState, setEditingState] = useState<{ type: 'group' | 'markClass' | 'baseClass', id: string | number, data: any } | null>(null);
 
     const handleSaveGroup = (key: string, newKey: string, members: string[]) => {
         const newGroups = { ...groups };
-        if (key !== newKey) delete newGroups[key];
-        newGroups[newKey] = members;
+        const trimmedKey = newKey.trim();
+
+        // --- Reserved Name Check ---
+        const reservedNames = characterSets.map(cs => cs.nameKey);
+        if (reservedNames.includes(trimmedKey)) {
+            showNotification(t('errorReservedGroupName', { name: trimmedKey }), 'error');
+            return;
+        }
+
+        if (key !== trimmedKey) delete newGroups[key];
+        newGroups[trimmedKey] = members;
         setGroups(newGroups);
         setEditingState(null);
     };
