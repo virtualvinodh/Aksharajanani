@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon } from '../constants';
@@ -139,6 +138,9 @@ const HelpPage: React.FC<HelpPageProps> = ({ onClose, scripts }) => {
             <AccordionItem title={hT('helpDrawingTitle')}>
                 {renderFormattedText(hT('helpDrawingContent'))}
             </AccordionItem>
+            <AccordionItem title={hT('helpGeometryTitle')}>
+                {renderFormattedText(hT('helpGeometryContent'))}
+            </AccordionItem>
             <AccordionItem title={hT('helpPositioningTitle')}>
                 {renderFormattedText(hT('helpPositioningContent'))}
             </AccordionItem>
@@ -148,14 +150,11 @@ const HelpPage: React.FC<HelpPageProps> = ({ onClose, scripts }) => {
             <AccordionItem title={hT('helpRulesTitle')}>
                 {renderFormattedText(hT('helpRulesContent'))}
             </AccordionItem>
-            <AccordionItem title={hT('helpExportingTitle')}>
-                {renderFormattedText(hT('helpExportingContent'))}
+            <AccordionItem title={hT('helpCreatorTitle')}>
+                {renderFormattedText(hT('helpCreatorContent'))}
             </AccordionItem>
-            <AccordionItem title={hT('helpCustomScriptTitle')}>
-                {renderFormattedText(hT('helpCustomScriptContent'))}
-            </AccordionItem>
-            <AccordionItem title={hT('helpCompareTitle')}>
-                {renderFormattedText(hT('helpCompareContent'))}
+            <AccordionItem title={hT('helpProjectManagementTitle')}>
+                {renderFormattedText(hT('helpProjectManagementContent'))}
             </AccordionItem>
             <AccordionItem title={hT('helpSettingsTitle')}>
                 {renderFormattedText(hT('helpSettingsContent'))}
