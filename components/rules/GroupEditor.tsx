@@ -4,6 +4,8 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import TagInput from '../scriptcreator/TagInput';
 import { CharacterSet } from '../../types';
+import { useProject } from '../../contexts/ProjectContext';
+import { useRules } from '../../contexts/RulesContext';
 
 interface GroupEditorProps {
     onSave: (data: { originalKey?: string, newKey: string, members: string[] }) => void;
@@ -17,6 +19,10 @@ interface GroupEditorProps {
 const GroupEditor: React.FC<GroupEditorProps> = ({ onSave, onCancel, initialData, isNew, existingKeys, characterSets }) => {
     const { t } = useLocale();
     const { showNotification } = useLayout();
+    const { positioningGroupNames } = useProject();
+    const { state: rulesState } = useRules();
+    const rulesGroups = rulesState.fontRules?.groups || {};
+
     const [key, setKey] = useState(initialData?.key || '');
     const [members, setMembers] = useState(initialData?.members || []);
     const availableSets = characterSets.map(cs => `$${cs.nameKey}`);
@@ -32,17 +38,25 @@ const GroupEditor: React.FC<GroupEditorProps> = ({ onSave, onCancel, initialData
              return;
         }
 
-        // --- Reserved Name Check ---
-        const reservedNames = characterSets.map(cs => cs.nameKey);
-        if (reservedNames.includes(newKey)) {
-            showNotification(t('errorReservedGroupName', { name: newKey }), 'error');
-            return;
+        // --- GLOBAL DUPLICATE CHECK ---
+        const existingCharSetKeys = characterSets.map(cs => cs.nameKey);
+        const isSelfRename = !isNew && newKey === initialData?.key;
+        
+        if (!isSelfRename) {
+            if (existingCharSetKeys.includes(newKey)) {
+                showNotification('A Character Set with this name already exists.', 'error');
+                return;
+            }
+            if (positioningGroupNames.has(newKey)) {
+                showNotification('This name is already used by a Positioning Group.', 'error');
+                return;
+            }
+            if (rulesGroups[newKey]) {
+                showNotification('This name is already used by a Rule Group.', 'error');
+                return;
+            }
         }
 
-        if ((isNew || newKey !== initialData?.key) && existingKeys.includes(newKey)) {
-            showNotification('A group with this name already exists.', 'error');
-            return;
-        }
         onSave({ originalKey: initialData?.key, newKey, members });
     };
 

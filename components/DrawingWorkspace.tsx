@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
@@ -13,6 +14,7 @@ import Modal from './Modal';
 import { useBatchOperations } from '../hooks/useBatchOperations';
 import { filterAndSortCharacters } from '../utils/searchUtils';
 import { sanitizeIdentifier } from '../utils/stringUtils';
+import { useRules } from '../contexts/RulesContext';
 
 // Reusing modals from BulkEditWorkspace logic but integrated here
 const BulkPropertiesModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (l: string, r: string, w: string) => void, count: number }> = ({ isOpen, onClose, onSave, count }) => {
@@ -133,7 +135,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         filterMode, setComparisonCharacters, setCurrentView,
         searchQuery
     } = useLayout();
-    const { dispatch: characterDispatch } = useProject();
+    const { dispatch: characterDispatch, positioningGroupNames } = useProject();
     const { settings, metrics } = useSettings();
     const navContainerRef = useRef<HTMLDivElement>(null);
     const [showNavArrows, setShowNavArrows] = useState({ left: false, right: false });
@@ -153,6 +155,9 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const [isTransformModalOpen, setIsTransformModalOpen] = useState(false);
     const [isPropertiesModalOpen, setIsPropertiesModalOpen] = useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+    const { state: rulesState } = useRules();
+    const rulesGroups = rulesState.fontRules?.groups || {};
 
     const showHidden = settings?.showHiddenGlyphs ?? false;
 
@@ -300,6 +305,25 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         e.preventDefault();
         const name = sanitizeIdentifier(modalInputValue.trim()); 
         if (!name) return;
+
+        // --- GLOBAL DUPLICATE CHECK ---
+        const existingCharSetKeys = characterSets.map(cs => cs.nameKey);
+        const isSelfRename = modalState.type === 'rename' && modalState.index !== undefined && visibleCharacterSets[modalState.index].nameKey === name;
+        
+        if (!isSelfRename) {
+            if (existingCharSetKeys.includes(name)) {
+                showNotification('A Character Set with this name already exists.', 'error');
+                return;
+            }
+            if (positioningGroupNames.has(name)) {
+                showNotification('This name is already used by a Positioning Group.', 'error');
+                return;
+            }
+            if (Object.keys(rulesGroups).includes(name)) {
+                showNotification('This name is already used by an FEA Group.', 'error');
+                return;
+            }
+        }
         
         if (modalState.type === 'create') {
              characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prev) => prev ? [...prev, { nameKey: name, characters: [] }] : [{ nameKey: name, characters: [] }] });
@@ -390,7 +414,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                             <button onClick={openCreateModal} title={t('newGroup')} className="flex-shrink-0 flex items-center justify-center p-1.5 ml-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors"><AddIcon className="h-5 w-5" /></button>
                         </div>
 
-                        {showNavArrows.right && <button onClick={() => handleNavScroll('right')} className="absolute right-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-l dark:border-gray-700"><RightArrowIcon className="h-5 w-5" /></button>}
+                        {showNavArrows.right && <button onClick={() => handleNavScroll('right')} className="absolute right-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-l dark:border-gray-700 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><RightArrowIcon className="h-5 w-5" /></button>}
                     </div>
                 ) : (
                     <div className="flex-grow p-3 px-4 font-bold text-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20">

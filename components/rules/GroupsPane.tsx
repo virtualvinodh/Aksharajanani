@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { AddIcon, EditIcon, TrashIcon, CloseIcon, SaveIcon } from '../../constants';
@@ -5,6 +6,7 @@ import { CharacterSet } from '../../types';
 import SmartGlyphInput from './manager/SmartGlyphInput';
 import { useLayout } from '../../contexts/LayoutContext';
 import { sanitizeIdentifier } from '../../utils/stringUtils';
+import { useProject } from '../../contexts/ProjectContext';
 
 interface GroupsPaneProps {
     groups: Record<string, string[]>;
@@ -163,6 +165,7 @@ const EditorPanel: React.FC<{
 const GroupsPane: React.FC<GroupsPaneProps> = ({ groups, onSave, onDelete, characterSets, hiddenGroups }) => {
     const { t } = useLocale();
     const { showNotification } = useLayout();
+    const { positioningGroupNames } = useProject();
     const [editingState, setEditingState] = useState<{ id: string, key: string, members: string[] } | null>(null);
 
     const handleSaveGroup = () => {
@@ -170,11 +173,23 @@ const GroupsPane: React.FC<GroupsPaneProps> = ({ groups, onSave, onDelete, chara
         const newKey = editingState.key.trim();
         if (!newKey) return;
         
-        // --- Reserved Name Check ---
-        const reservedNames = characterSets.map(cs => cs.nameKey);
-        if (reservedNames.includes(newKey)) {
-            showNotification(t('errorReservedGroupName', { name: newKey }), 'error');
-            return;
+        // --- GLOBAL DUPLICATE CHECK ---
+        const existingCharSetKeys = characterSets.map(cs => cs.nameKey);
+        const isSelfRename = editingState.id === newKey;
+        
+        if (!isSelfRename) {
+            if (existingCharSetKeys.includes(newKey)) {
+                showNotification('A Character Set with this name already exists.', 'error');
+                return;
+            }
+            if (positioningGroupNames.has(newKey)) {
+                showNotification('This name is already used by a Positioning Group.', 'error');
+                return;
+            }
+            if (groups[newKey]) {
+                 showNotification('A Rule Group with this name already exists.', 'error');
+                 return;
+            }
         }
 
         onSave({ 

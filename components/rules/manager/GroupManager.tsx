@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AttachmentClass, CharacterSet } from '../../../types';
 import { useLocale } from '../../../contexts/LocaleContext';
@@ -6,6 +7,7 @@ import SmartGlyphInput from './SmartGlyphInput';
 import { expandMembers } from '../../../services/groupExpansionService';
 import { useLayout } from '../../../contexts/LayoutContext';
 import { sanitizeIdentifier } from '../../../utils/stringUtils';
+import { useRules } from '../../../contexts/RulesContext';
 
 interface GroupManagerProps {
     groups: Record<string, string[]>;
@@ -262,15 +264,31 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
     const { showNotification } = useLayout();
     const [editingState, setEditingState] = useState<{ type: 'group' | 'markClass' | 'baseClass', id: string | number, data: any } | null>(null);
 
+    const { state: rulesState } = useRules();
+    const rulesGroups = rulesState.fontRules?.groups || {};
+
     const handleSaveGroup = (key: string, newKey: string, members: string[]) => {
         const newGroups = { ...groups };
         const trimmedKey = newKey.trim();
 
-        // --- Reserved Name Check ---
-        const reservedNames = characterSets.map(cs => cs.nameKey);
-        if (reservedNames.includes(trimmedKey)) {
-            showNotification(t('errorReservedGroupName', { name: trimmedKey }), 'error');
-            return;
+        // --- GLOBAL DUPLICATE CHECK ---
+        const existingCharSetKeys = characterSets.map(cs => cs.nameKey);
+        const feaGroupKeys = Object.keys(rulesGroups);
+        const isSelfRename = key === trimmedKey;
+
+        if (!isSelfRename) {
+            if (existingCharSetKeys.includes(trimmedKey)) {
+                showNotification('A Character Set with this name already exists.', 'error');
+                return;
+            }
+            if (feaGroupKeys.includes(trimmedKey)) {
+                showNotification('This name is already used by an FEA Group.', 'error');
+                return;
+            }
+            if (newGroups[trimmedKey]) {
+                 showNotification('A Positioning Group with this name already exists.', 'error');
+                 return;
+            }
         }
 
         if (key !== trimmedKey) delete newGroups[key];
