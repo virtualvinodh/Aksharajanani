@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -658,7 +657,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const prevPair = currentIndex !== null && currentIndex > 0 ? allPairs[currentIndex - 1] : null;
     const nextPair = currentIndex !== null && currentIndex < allPairs.length - 1 ? allPairs[currentIndex + 1] : null;
 
-    const showStrip = isLinked && classSiblings.length > 0;
+    // FIX: Restrict strip visibility to members of an active class.
+    const showStrip = !!activeAttachmentClass && isLinked && classSiblings.length > 0;
 
     const reuseSources = useMemo(() => {
         if (!characterSets) return [];
@@ -791,7 +791,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                      <div className="text-center">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--guide-font-family)' }}>{targetLigature.name}</h2>
                         <div className="flex justify-center mt-1">
-                             {activeAttachmentClass ? (
+                             {activeAttachmentClass && (
                                  isLinked ? (
                                      isPivot ? 
                                         <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full dark:bg-purple-900/30 dark:text-purple-300">Class Representative</span> : 
@@ -799,8 +799,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                  ) : (
                                      <span className="text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full dark:bg-orange-900/20 dark:text-orange-300">Unlinked</span>
                                  )
-                             ) : (
-                                 <span className="text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full dark:bg-gray-700 dark:text-gray-300">Manual</span>
                              )}
                         </div>
                     </div>
