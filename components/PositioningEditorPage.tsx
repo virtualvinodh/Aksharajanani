@@ -191,7 +191,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                      if (c) sBase = c;
                  }
                  
-                 // Validate existence and drawn status
                  if (sBase.unicode === undefined || sMark.unicode === undefined) return;
                  const bData = glyphDataMap.get(sBase.unicode);
                  const mData = glyphDataMap.get(sMark.unicode);
@@ -209,8 +208,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
              return siblings;
         }
 
-        // 2. Fallback to Rule-based siblings (Manual Mode / No Class)
-        // If not in a class, we use the rule context to find siblings (e.g. all pairs in a manual group rule)
         if (parentRule) {
              const ruleBases = expandMembers(parentRule.base, groups, characterSets);
              const ruleMarks = expandMembers(parentRule.mark, groups, characterSets);
@@ -238,7 +235,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
 
 
     // Editing Permission
-    // You can edit if: No Class exists OR Not Linked OR You are the Pivot
     const canEdit = !activeAttachmentClass || !isLinked || isPivot;
 
 
@@ -310,13 +306,11 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         
         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
         
-        // Fix: Force all mark paths to have the same groupId so they are selected as one unit
         const MARK_GROUP_ID = "positioning-mark-group";
 
         const newMarkPaths = deepClone(originalMarkPaths);
         if (offset) {
             newMarkPaths.forEach((p: Path) => {
-                // Apply temporary grouping for the editor
                 p.groupId = MARK_GROUP_ID;
 
                 p.points = p.points.map(pt => ({ x: pt.x + offset!.x, y: pt.y + offset!.y }));
@@ -336,10 +330,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         setRsb(targetLigature.rsb);
         setIsPropertiesPanelOpen(false);
         
-        // Determine Linked Status based on Class Definition Exceptions
         let foundException = false;
         
-        // Check if pair is in exceptPairs of the active class
         if (activeAttachmentClass && activeAttachmentClass.exceptPairs && activeAttachmentClass.exceptPairs.includes(pairNameKey)) {
              foundException = true;
         }
@@ -347,7 +339,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         setIsLinked(!foundException);
 
         if (lastPairIdentifierRef.current !== pairIdentifier) {
-            // Auto-scale view logic...
             const allPaths = [...(baseGlyph?.paths || []), ...newMarkPaths];
             const hasDrawableContent = allPaths.some(p => (p.points?.length || 0) > 0 || (p.segmentGroups?.length || 0) > 0);
 
@@ -391,7 +382,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
 
     }, [baseChar, markChar, targetLigature, markPositioningMap, glyphDataMap, markAttachmentRules, baseBbox, metrics, baseGlyph, settings.strokeThickness, characterSets, pairIdentifier, groups, activeAttachmentClass, pairNameKey, movementConstraint]);
     
-    // Internal Helper: Get Anchor Point
     const getAnchor = (glyph: GlyphData, pointName: string, offX: number, offY: number) => {
         const bbox = getAccurateGlyphBBox(glyph.paths, settings.strokeThickness);
         if (!bbox) return null;
@@ -399,27 +389,21 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         return { x: p.x + offX, y: p.y + offY };
     };
 
-    // Toggle Link Handler
     const handleToggleLink = () => {
         const newIsLinked = !isLinked;
         setIsLinked(newIsLinked);
         
-        // 1. Update Class Definition (Context)
-        // IMPORTANT: Only update the class definition corresponding to the ACTIVE context.
         const updateClassList = (classes: AttachmentClass[], setter: (c: AttachmentClass[]) => void, targetName: string) => {
              if (!classes) return;
              const newClasses = deepClone(classes);
-             // Find class containing this member
              const cls = newClasses.find(c => expandMembers(c.members, groups, characterSets).includes(targetName));
              
              if (cls) {
                  if (!cls.exceptPairs) cls.exceptPairs = [];
                  
                  if (newIsLinked) {
-                     // Remove from exceptions (Re-link)
                      cls.exceptPairs = cls.exceptPairs.filter(p => p !== pairNameKey);
                  } else {
-                     // Add to exceptions (Unlink)
                      if (!cls.exceptPairs.includes(pairNameKey)) {
                          cls.exceptPairs.push(pairNameKey);
                      }
@@ -435,20 +419,15 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
              updateClassList(baseAttachmentClasses, setBaseAttachmentClasses, baseChar.name);
         }
         
-        // 2. If Relinking, Reset Position to Match Leader
         if (newIsLinked && activeAttachmentClass) {
              const members = expandMembers(activeAttachmentClass.members, groups, characterSets);
              if (members.length === 0) return;
              
-             // Determine Leader and Role
-             // If MarkClass, Leader is the first mark in the list.
-             // If BaseClass, Leader is the first base in the list.
              const leaderName = members[0];
              const leaderChar = allChars.get(leaderName);
              
              if (!leaderChar) return;
              
-             // Determine Reference Pair based on what is varying (Class Type)
              const refBase = activeClassType === 'base' ? leaderChar : baseChar;
              const refMark = activeClassType === 'mark' ? leaderChar : markChar;
              
@@ -458,16 +437,13 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
              let newOffset = { x: 0, y: 0 };
              
              if (refOffset) {
-                 // SYNC FROM LEADER
                  const refBaseGlyph = glyphDataMap.get(refBase.unicode);
                  const refMarkGlyph = glyphDataMap.get(refMark.unicode);
                  
-                 // Need base/mark glyphs for Current Pair to calculate target offset
                  const curBaseGlyph = glyphDataMap.get(baseChar.unicode);
                  const curMarkGlyph = glyphDataMap.get(markChar.unicode);
                  
                  if (refBaseGlyph && refMarkGlyph && curBaseGlyph && curMarkGlyph) {
-                      // Calculate Reference Anchor Delta
                       const refRule = resolveAttachmentRule(refBase.name, refMark.name, markAttachmentRules, characterSets, groups);
                       let rbPt="topCenter", rmPt="bottomCenter", rbx=0, rby=0;
                       if(refRule) { rbPt=refRule[0]; rmPt=refRule[1]; rbx=parseFloat(refRule[2]||'0'); rby=parseFloat(refRule[3]||'0'); }
@@ -478,7 +454,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                       if (rbAnc && rmAnc) {
                           const anchorDelta = VEC.sub(VEC.add(refOffset, rmAnc), rbAnc);
                           
-                          // Apply Delta to Current Pair
                           const curRule = resolveAttachmentRule(baseChar.name, markChar.name, markAttachmentRules, characterSets, groups);
                           let cbPt="topCenter", cmPt="bottomCenter", cbx=0, cby=0;
                           if(curRule) { cbPt=curRule[0]; cmPt=curRule[1]; cbx=parseFloat(curRule[2]||'0'); cby=parseFloat(curRule[3]||'0'); }
@@ -492,7 +467,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                       }
                  }
              } else {
-                 // RESET TO DEFAULT (Geometric)
                  const markGlyph = glyphDataMap.get(markChar.unicode);
                  const bBbox = getAccurateGlyphBBox(baseGlyph?.paths || [], settings.strokeThickness);
                  const mBbox = getAccurateGlyphBBox(markGlyph?.paths || [], settings.strokeThickness);
@@ -511,7 +485,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                  );
              }
              
-             // Apply and Save
              const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
              const MARK_GROUP_ID = "positioning-mark-group";
 
@@ -528,14 +501,12 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             setMarkPaths(newPaths);
             setCurrentOffset(newOffset);
             
-            // Construct args for onSave
             const combinedPaths = [...(baseGlyph?.paths || []), ...newPaths];
             const newGlyphData = { paths: combinedPaths };
              
-            // Perform explicit save to overwrite previous manual position
             const saveOptions = { 
                  isDraft: false, 
-                 propagateToRule: true, // Re-establish link so it updates if leader changes later
+                 propagateToRule: true, 
                  ruleContext: parentRule 
             };
              
@@ -546,19 +517,14 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         }
     };
     
-    // Jump to sibling from Strip
     const handleSelectSibling = (pair: { base: Character, mark: Character, ligature: Character }) => {
         if (hasUnsavedChanges) {
-             // Basic autosave before jump
              handleSave(markPaths, true); 
         }
 
         if (setEditingPair) {
-             // If function provided, simply call it. The parent PositioningPage will update state,
-             // which will cause this component to remount with new props.
              setEditingPair(pair);
         } else if (allPairs && onNavigate) {
-            // Fallback to index based navigation if setEditingPair not available
             const index = allPairs.findIndex(p => 
                 p.base.unicode === pair.base.unicode && 
                 p.mark.unicode === pair.mark.unicode
@@ -582,7 +548,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
       }, [isPropertiesPanelOpen]);
     
-    // Updated Save Logic to handle Linked Propagation
     const handleSave = useCallback((pathsToSave: Path[], isAutosave: boolean = false) => {
         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
         const originalBbox = getAccurateGlyphBBox(originalMarkPaths, settings.strokeThickness);
@@ -596,8 +561,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             };
         }
         
-        // Only propagate if we are linked AND a class exists.
-        // If no class exists (manual mode), we just save the single pair.
         const shouldPropagate = isLinked && !!activeAttachmentClass;
         
         const saveOptions = { isDraft: isAutosave, propagateToRule: shouldPropagate, ruleContext: parentRule };
@@ -607,7 +570,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         setInitialMarkPaths(deepClone(pathsToSave));
     }, [glyphDataMap, markChar.unicode, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, settings.strokeThickness, isLinked, activeAttachmentClass, parentRule, groups, characterSets]);
 
-    // Recalculate current offset whenever markPaths change (dragging)
     useEffect(() => {
         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
         const originalBbox = getAccurateGlyphBBox(originalMarkPaths, settings.strokeThickness);
@@ -644,12 +606,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const hasBearingChanges = lsb !== targetLigature.lsb || rsb !== targetLigature.rsb;
     const hasUnsavedChanges = hasPathChanges || hasBearingChanges;
     
-    // Logic for Locked Message
     const lockedMessage = !canEdit ? t('This pair is synced to {pivot}. Unlink to edit this specific pair, or edit {pivot} to update the whole class.', { pivot: pivotName || 'Class Representative' }) : undefined;
 
     const handlePathsChange = useCallback((newPaths: Path[]) => {
-        // If not editable, we should block, although DrawingCanvas might prevent drag via disableTransformations now.
-        // This is a safety check.
         if (!canEdit) {
             return;
         }
@@ -699,11 +658,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const prevPair = currentIndex !== null && currentIndex > 0 ? allPairs[currentIndex - 1] : null;
     const nextPair = currentIndex !== null && currentIndex < allPairs.length - 1 ? allPairs[currentIndex + 1] : null;
 
-    // Show strip only if linked and class siblings exist
     const showStrip = isLinked && classSiblings.length > 0;
 
-    // --- Reuse Logic ---
-    // 1. Calculate available sources for "Reuse"
     const reuseSources = useMemo(() => {
         if (!characterSets) return [];
         const sources: Character[] = [];
@@ -711,12 +667,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         
         characterSets.forEach(set => {
             set.characters.forEach(c => {
-                // Find potential base characters
                 if (c.unicode !== undefined && c.glyphClass !== 'mark' && c.unicode !== baseChar.unicode) {
                     const key = `${c.unicode}-${markChar.unicode}`;
-                    // If this other base + current mark pair is positioned...
                     if (markPositioningMap.has(key) && !seen.has(c.unicode)) {
-                        // AND the source base is actually drawn (to avoid empty cards)
                         const glyph = glyphDataMap.get(c.unicode);
                         if (glyph && isGlyphDrawn(glyph)) {
                              sources.push(c);
@@ -735,11 +688,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         const sourceOffset = markPositioningMap.get(sourceKey);
         if (!sourceOffset) return;
         
-        // Calculate Delta needed to move from Current to Source
         const moveX = sourceOffset.x - currentOffset.x;
         const moveY = sourceOffset.y - currentOffset.y;
         
-        // Apply to paths
         const newPaths = markPaths.map(p => ({
             ...p,
             points: p.points.map(pt => ({ x: pt.x + moveX, y: pt.y + moveY })),
@@ -754,13 +705,11 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         setIsReusePanelOpen(false);
         showNotification(t('positionsCopied'), 'success');
         
-        // Trigger save to commit the reuse
         if (settings.isAutosaveEnabled) {
             handleSave(newPaths);
         }
     };
     
-    // --- Manual Coordinate Handlers ---
     const handleManualChange = (axis: 'x' | 'y', value: string) => {
         if (!canEdit) return;
         if (axis === 'x') setManualX(value);
@@ -828,7 +777,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         </div>
     );
 
-    // --- RENDER ---
     return (
         <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-800 animate-fade-in-up">
             <header className="p-4 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0 bg-white dark:bg-gray-800 z-10">
@@ -842,7 +790,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                      <button onClick={() => handleNavigationAttempt('prev')} disabled={!prevPair} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"><LeftArrowIcon /></button>
                      <div className="text-center">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--guide-font-family)' }}>{targetLigature.name}</h2>
-                        {/* Status Badge */}
                         <div className="flex justify-center mt-1">
                              {activeAttachmentClass ? (
                                  isLinked ? (
@@ -864,7 +811,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                     
                     {isLargeScreen && coordinateControls}
                     
-                    {/* Link Toggle - Only show if class attachment exists */}
                     {(markAttachmentClasses || baseAttachmentClasses) && activeAttachmentClass && (
                         isLinked ? (
                             <button
@@ -961,13 +907,13 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                 onSelectPair={handleSelectSibling}
                                 metrics={metrics}
                                 markAttachmentRules={markAttachmentRules}
+                                positioningRules={positioningRules}
                                 characterSets={characterSets}
                                 groups={groups}
                                 isExpanded={isStripExpanded}
                                 setIsExpanded={setIsStripExpanded}
                                 activeClass={activeAttachmentClass}
                                 
-                                // New props for context switching
                                 hasDualContext={hasDualContext}
                                 activeClassType={activeClassType}
                                 onToggleContext={setOverrideClassType}

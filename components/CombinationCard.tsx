@@ -1,12 +1,13 @@
 
-import React, { useRef, useEffect, forwardRef } from 'react';
-import { Character, GlyphData, Path, Point, MarkAttachmentRules, MarkPositioningMap, FontMetrics, CharacterSet } from '../types';
+import React, { useRef, useEffect, forwardRef, useMemo } from 'react';
+import { Character, GlyphData, Path, Point, MarkAttachmentRules, MarkPositioningMap, FontMetrics, CharacterSet, PositioningRules } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths, getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../services/glyphRenderService';
 import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon } from '../constants';
 import { VEC } from '../utils/vectorUtils';
 import { useSettings } from '../contexts/SettingsContext';
 import { deepClone } from '../utils/cloneUtils';
+import { expandMembers } from '../services/groupExpansionService';
 
 interface CombinationCardProps {
   baseChar: Character;
@@ -19,6 +20,7 @@ interface CombinationCardProps {
   glyphDataMap: Map<number, GlyphData>;
   strokeThickness: number;
   markAttachmentRules: MarkAttachmentRules | null;
+  positioningRules: PositioningRules[] | null;
   markPositioningMap?: MarkPositioningMap;
   characterSets: CharacterSet[];
   glyphVersion: number;
@@ -38,6 +40,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
   glyphDataMap,
   strokeThickness,
   markAttachmentRules,
+  positioningRules,
   markPositioningMap,
   characterSets,
   glyphVersion,
@@ -47,6 +50,15 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
   const { metrics } = useSettings();
+
+  const movementConstraint = useMemo(() => {
+    if (!positioningRules) return 'none';
+    const rule = positioningRules.find(r => 
+        expandMembers(r.base, groups, characterSets).includes(baseChar.name) && 
+        expandMembers(r.mark, groups, characterSets).includes(markChar.name)
+    );
+    return (rule && (rule.movement === 'horizontal' || rule.movement === 'vertical')) ? rule.movement : 'none';
+  }, [positioningRules, baseChar.name, markChar.name, groups, characterSets]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -75,7 +87,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
             if (!offset) {
                 const baseBbox = getAccurateGlyphBBox(baseGlyph?.paths ?? [], strokeThickness);
                 const markBbox = getAccurateGlyphBBox(markGlyph.paths, strokeThickness);
-                offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
+                offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups, movementConstraint);
             }
             
             const transformedMarkPaths = deepClone(markGlyph.paths);
@@ -137,7 +149,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
         color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
     });
     ctx.restore();
-  }, [baseChar, markChar, ligature, glyphDataMap, strokeThickness, theme, isPositioned, markAttachmentRules, markPositioningMap, metrics, characterSets, glyphVersion, groups]);
+  }, [baseChar, markChar, ligature, glyphDataMap, strokeThickness, theme, isPositioned, markAttachmentRules, markPositioningMap, metrics, characterSets, glyphVersion, groups, movementConstraint]);
   
   const handleConfirmClick = (e: React.MouseEvent) => {
     e.stopPropagation();

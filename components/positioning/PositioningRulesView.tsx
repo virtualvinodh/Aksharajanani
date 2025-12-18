@@ -24,6 +24,7 @@ interface PositioningRulesViewProps {
     glyphDataMap: Map<number, GlyphData>;
     strokeThickness: number;
     markAttachmentRules: MarkAttachmentRules | null;
+    positioningRules: PositioningRules[] | null;
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
     glyphVersion: number;
@@ -37,7 +38,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
     ruleGroups, selectedRuleGroupId, setSelectedRuleGroupId, activeRuleGroup,
     pagedRulePairs, rulePage, setRulePage, ruleTotalPages, markPositioningMap,
     getPairClassKey, classCounts, setEditingPair, setEditingIndex, setEditingContextList,
-    handleConfirmPosition, glyphDataMap, strokeThickness, markAttachmentRules, characterSets,
+    handleConfirmPosition, glyphDataMap, strokeThickness, markAttachmentRules, positioningRules, characterSets,
     groups, glyphVersion, metrics, ITEMS_PER_PAGE, handleAcceptAllDefaults,
     isPairEligible
 }) => {
@@ -172,6 +173,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                                     glyphDataMap={glyphDataMap}
                                     strokeThickness={strokeThickness}
                                     markAttachmentRules={markAttachmentRules}
+                                    positioningRules={positioningRules}
                                     markPositioningMap={markPositioningMap}
                                     characterSets={characterSets}
                                     glyphVersion={glyphVersion}

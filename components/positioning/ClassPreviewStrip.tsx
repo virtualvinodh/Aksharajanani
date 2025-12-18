@@ -1,14 +1,14 @@
 
-
 import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet, AttachmentClass } from '../../types';
+import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet, AttachmentClass, PositioningRules } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths, calculateDefaultMarkOffset, getAccurateGlyphBBox } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 import { LeftArrowIcon, RightArrowIcon, FoldIcon, CloseIcon } from '../../constants';
 import { VEC } from '../../utils/vectorUtils';
 import { useLocale } from '../../contexts/LocaleContext';
+import { expandMembers } from '../../services/groupExpansionService';
 
 interface SiblingPair {
     base: Character;
@@ -30,6 +30,7 @@ interface ClassPreviewStripProps {
     // Dependencies for anchor calculation
     metrics: FontMetrics;
     markAttachmentRules: MarkAttachmentRules | null;
+    positioningRules: PositioningRules[] | null;
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
     
@@ -64,15 +65,25 @@ const SiblingThumbnail: React.FC<{
     size?: number;
     metrics: FontMetrics;
     markAttachmentRules: MarkAttachmentRules | null;
+    positioningRules: PositioningRules[] | null;
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
-}> = React.memo(({ pair, isActive, isPivot, glyphDataMap, strokeThickness, anchorDelta, onClick, size = 80, metrics, markAttachmentRules, characterSets, groups }) => {
+}> = React.memo(({ pair, isActive, isPivot, glyphDataMap, strokeThickness, anchorDelta, onClick, size = 80, metrics, markAttachmentRules, positioningRules, characterSets, groups }) => {
     const { t } = useLocale();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
 
     const baseGlyph = glyphDataMap.get(pair.base.unicode);
     const markGlyph = glyphDataMap.get(pair.mark.unicode);
+
+    const movementConstraint = useMemo(() => {
+        if (!positioningRules) return 'none';
+        const rule = positioningRules.find(r => 
+            expandMembers(r.base, groups, characterSets).includes(pair.base.name) && 
+            expandMembers(r.mark, groups, characterSets).includes(pair.mark.name)
+        );
+        return (rule && (rule.movement === 'horizontal' || rule.movement === 'vertical')) ? rule.movement : 'none';
+    }, [positioningRules, pair, groups, characterSets]);
 
     // Memoize the default anchor offset for this specific sibling pair.
     const defaultAnchorOffset = useMemo(() => {
@@ -90,9 +101,10 @@ const SiblingThumbnail: React.FC<{
             metrics, 
             characterSets, 
             false, 
-            groups
+            groups,
+            movementConstraint
         );
-    }, [pair, baseGlyph, markGlyph, strokeThickness, markAttachmentRules, metrics, characterSets, groups]);
+    }, [pair, baseGlyph, markGlyph, strokeThickness, markAttachmentRules, metrics, characterSets, groups, movementConstraint]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -186,7 +198,7 @@ const SiblingThumbnail: React.FC<{
 
 const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ 
     siblings, activePair, pivotChar, glyphDataMap, strokeThickness, anchorDelta, isLinked, onSelectPair,
-    metrics, markAttachmentRules, characterSets, groups,
+    metrics, markAttachmentRules, positioningRules, characterSets, groups,
     isExpanded, setIsExpanded, activeClass,
     hasDualContext, activeClassType, onToggleContext
 }) => {
@@ -211,6 +223,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
         anchorDelta, 
         metrics,
         markAttachmentRules,
+        positioningRules,
         characterSets,
         groups
     };

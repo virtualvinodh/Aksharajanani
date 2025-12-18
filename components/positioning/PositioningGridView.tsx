@@ -1,7 +1,7 @@
 
 import React, { forwardRef } from 'react';
 import CombinationCard from '../CombinationCard';
-import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, CharacterSet, AttachmentClass } from '../../types';
+import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, CharacterSet, AttachmentClass, PositioningRules } from '../../types';
 import { PasteIcon, CheckCircleIcon, UndoIcon, LinkIcon } from '../../constants';
 import { useLocale } from '../../contexts/LocaleContext';
 import { expandMembers } from '../../services/groupExpansionService';
@@ -13,6 +13,7 @@ interface PositioningGridViewProps {
     glyphDataMap: Map<number, GlyphData>;
     strokeThickness: number;
     markAttachmentRules: MarkAttachmentRules | null;
+    positioningRules: PositioningRules[] | null;
     characterSets: CharacterSet[];
     glyphVersion: number;
     groups: Record<string, string[]>;
@@ -68,7 +69,7 @@ const ItemContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
 
 const PositioningGridView: React.FC<PositioningGridViewProps> = ({
     displayedCombinations, markPositioningMap, glyphDataMap, strokeThickness,
-    markAttachmentRules, characterSets, glyphVersion, groups,
+    markAttachmentRules, positioningRules, characterSets, glyphVersion, groups,
     setEditingPair, setEditingIndex, setEditingContextList, handleConfirmPosition, cardRefs,
     activeItem, isFiltered, viewMode, handleOpenReuseModal, handleAcceptAllDefaults,
     unpositionedCount, setIsResetConfirmOpen, hasManuallyPositioned, navItemsLength, t,
@@ -217,6 +218,7 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                                         }}
                                         onConfirmPosition={() => handleConfirmPosition(base, mark, ligature)}
                                         markAttachmentRules={markAttachmentRules}
+                                        positioningRules={positioningRules}
                                         markPositioningMap={markPositioningMap}
                                         characterSets={characterSets!}
                                         glyphVersion={glyphVersion}

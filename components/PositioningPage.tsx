@@ -362,6 +362,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                     classCounts={classCounts} setEditingPair={setEditingPair} setEditingIndex={setEditingIndex}
                                     setEditingContextList={setEditingContextList} handleConfirmPosition={handleConfirmPosition}
                                     glyphDataMap={glyphDataMap} strokeThickness={settings.strokeThickness} markAttachmentRules={markAttachmentRules}
+                                    positioningRules={positioningRules}
                                     characterSets={characterSets} groups={groups} glyphVersion={glyphVersion} metrics={metrics} ITEMS_PER_PAGE={ITEMS_PER_PAGE}
                                     handleAcceptAllDefaults={handleAcceptAllDefaults}
                                     isPairEligible={isPairEligibleForAutoPos}
@@ -372,6 +373,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                                 <PositioningGridView 
                                     displayedCombinations={displayedCombinations} markPositioningMap={markPositioningMap}
                                     glyphDataMap={glyphDataMap} strokeThickness={settings.strokeThickness} markAttachmentRules={markAttachmentRules}
+                                    positioningRules={positioningRules}
                                     characterSets={characterSets} glyphVersion={glyphVersion} groups={groups}
                                     setEditingPair={setEditingPair} setEditingIndex={setEditingIndex} setEditingContextList={setEditingContextList}
                                     handleConfirmPosition={handleConfirmPosition} cardRefs={cardRefs} activeItem={activeItem} isFiltered={isFiltered}
