@@ -5,6 +5,7 @@ import { AddIcon, TrashIcon, EditIcon, SaveIcon, CloseIcon } from '../../../cons
 import SmartGlyphInput from './SmartGlyphInput';
 import { expandMembers } from '../../../services/groupExpansionService';
 import { useLayout } from '../../../contexts/LayoutContext';
+import { sanitizeIdentifier } from '../../../utils/stringUtils';
 
 interface GroupManagerProps {
     groups: Record<string, string[]>;
@@ -194,7 +195,7 @@ const EditorPanel: React.FC<{
                              <input 
                                 type="text" 
                                 value={nameValue} 
-                                onChange={e => onNameChange(e.target.value)} 
+                                onChange={e => onNameChange(sanitizeIdentifier(e.target.value))} 
                                 className="flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-mono"
                                 placeholder={namePrefix === '$' ? "consonants" : t('classNameOptional')}
                              />

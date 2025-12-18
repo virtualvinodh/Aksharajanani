@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
@@ -241,7 +240,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
     if (newCharactersToAdd.length > 0) {
         dispatchCharacterAction({ 
             type: 'ADD_CHARACTERS', 
-            payload: { characters: newCharactersToAdd, activeTabNameKey: 'Custom Glyphs' } 
+            payload: { characters: newCharactersToAdd, activeTabNameKey: 'Custom_Glyphs' } 
         });
     }
 

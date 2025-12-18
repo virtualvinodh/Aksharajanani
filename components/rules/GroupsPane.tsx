@@ -4,6 +4,7 @@ import { AddIcon, EditIcon, TrashIcon, CloseIcon, SaveIcon } from '../../constan
 import { CharacterSet } from '../../types';
 import SmartGlyphInput from './manager/SmartGlyphInput';
 import { useLayout } from '../../contexts/LayoutContext';
+import { sanitizeIdentifier } from '../../utils/stringUtils';
 
 interface GroupsPaneProps {
     groups: Record<string, string[]>;
@@ -133,7 +134,7 @@ const EditorPanel: React.FC<{
                             <input 
                             type="text" 
                             value={nameValue} 
-                            onChange={e => onNameChange(e.target.value)} 
+                            onChange={e => onNameChange(sanitizeIdentifier(e.target.value))} 
                             className="flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-mono"
                             placeholder="group_name"
                             autoFocus

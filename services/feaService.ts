@@ -4,6 +4,10 @@ import { DRAWING_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn as isGlyphDrawnUtil, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
 import { expandMembers } from './groupExpansionService';
 
+// --- Layer 2 Safeguard: Sanitize FEA Identifiers ---
+// Ensures class names follow the Adobe FEA spec: Alphanumeric, underscores, periods, hyphens. No spaces.
+const sanitizeIdentifier = (name: string) => name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
+
 // Use ASCII-safe uniXXXX names, which fontService will also use.
 const getGlyphName = (char: Character | undefined): string | null => {
     if (!char || char.unicode === undefined) return null;
@@ -87,10 +91,10 @@ export const generateFea = (
 
     const toFeaName = (name: string): string | null => {
         if (name.startsWith('$')) {
-            return `@${name.substring(1)}`;
+            return `@${sanitizeIdentifier(name.substring(1))}`;
         }
         if (name.startsWith('@')) {
-            return name; // Already in FEA format
+            return `@${sanitizeIdentifier(name.substring(1))}`;
         }
         return nameToGlyphName(name);
     };
@@ -109,7 +113,8 @@ export const generateFea = (
                     .filter((name): name is string => name !== null);
 
                 // FIX: Always generate the group definition, even if empty, to prevent compilation errors.
-                feaContent += `@${groupName} = [${drawnMembers.join(' ')}];\n`;
+                // Apply Layer 2 Sanitization here
+                feaContent += `@${sanitizeIdentifier(groupName)} = [${drawnMembers.join(' ')}];\n`;
             }
         }
         feaContent += '\n';
@@ -125,7 +130,8 @@ export const generateFea = (
                 .filter((name): name is string => name !== null);
 
             // Generate FEA class definition using the nameKey (e.g. @vowels)
-            feaContent += `@${set.nameKey} = [${drawnMembers.join(' ')}];\n`;
+            // Apply Layer 2 Sanitization here
+            feaContent += `@${sanitizeIdentifier(set.nameKey)} = [${drawnMembers.join(' ')}];\n`;
         });
         feaContent += '\n';
     }
@@ -339,7 +345,9 @@ export const generateFea = (
                     }
                 }
                 if (namedLookupContent) {
-                    allLookupDefinitions += `lookup ${lookupName} {\n${namedLookupContent}} ${lookupName};\n\n`;
+                    // Apply Layer 2 Sanitization here for lookup name
+                    const safeLookupName = sanitizeIdentifier(lookupName);
+                    allLookupDefinitions += `lookup ${safeLookupName} {\n${namedLookupContent}} ${safeLookupName};\n\n`;
                     generatedLookupNames.add(lookupName);
                 }
             }
@@ -450,7 +458,8 @@ export const generateFea = (
                     }
                 }
                 validLookups.forEach(name => {
-                    featureBlock += `  lookup ${name};\n`;
+                    // Apply Layer 2 Sanitization here for lookup reference
+                    featureBlock += `  lookup ${sanitizeIdentifier(name)};\n`;
                 });
                 featureBlock += `} ${featureTag};\n\n`;
                 feaContent += featureBlock;
@@ -652,7 +661,8 @@ export const exportFeaFile = (
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${fontName.replace(/\s+/g, '_')}.fea`;
+    // Apply Layer 2 Sanitization here for filename as a courtesy
+    a.download = `${sanitizeIdentifier(fontName)}.fea`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -665,7 +675,8 @@ export const exportJsonRules = (rules: any, fontName: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${fontName.replace(/\s+/g, '_')}_rules.json`;
+    // Apply Layer 2 Sanitization here for filename
+    a.download = `${sanitizeIdentifier(fontName)}_rules.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

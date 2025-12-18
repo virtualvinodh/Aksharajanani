@@ -1,5 +1,3 @@
-
-
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
@@ -14,6 +12,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import Modal from './Modal';
 import { useBatchOperations } from '../hooks/useBatchOperations';
 import { filterAndSortCharacters } from '../utils/searchUtils';
+import { sanitizeIdentifier } from '../utils/stringUtils';
 
 // Reusing modals from BulkEditWorkspace logic but integrated here
 const BulkPropertiesModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (l: string, r: string, w: string) => void, count: number }> = ({ isOpen, onClose, onSave, count }) => {
@@ -298,7 +297,10 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         closeContextMenu();
     };
     const handleModalSubmit = (e: React.FormEvent) => {
-        e.preventDefault(); const name = modalInputValue.trim(); if (!name) return;
+        e.preventDefault();
+        const name = sanitizeIdentifier(modalInputValue.trim()); 
+        if (!name) return;
+        
         if (modalState.type === 'create') {
              characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prev) => prev ? [...prev, { nameKey: name, characters: [] }] : [{ nameKey: name, characters: [] }] });
              setTimeout(() => setActiveTab(visibleCharacterSets.length), 50);

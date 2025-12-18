@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -495,7 +494,7 @@ export const useGlyphActions = (
     }, [characterDispatch, layout, t, allCharsByUnicode, getNextAtomicPua]);
     
     // New function for direct quick add without modal
-    const handleQuickAddGlyph = useCallback((input: string, targetSetName: string = 'Custom Glyphs') => {
+    const handleQuickAddGlyph = useCallback((input: string, targetSetName: string = 'Custom_Glyphs') => {
         const trimmedInput = input.trim();
         if (!trimmedInput) return;
 

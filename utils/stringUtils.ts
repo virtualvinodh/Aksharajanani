@@ -15,3 +15,10 @@ export const simpleHash = (str: string, seed = 0): string => {
   
     return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
   };
+
+/**
+ * Ensures class names follow the Adobe FEA spec: Alphanumeric, underscores, periods, hyphens. No spaces.
+ * Spaces are converted to underscores, illegal characters are stripped.
+ */
+export const sanitizeIdentifier = (name: string): string => 
+  name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
