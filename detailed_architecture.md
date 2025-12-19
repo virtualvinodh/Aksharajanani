@@ -19,17 +19,23 @@ The Slice Tool injects vertices every **4px** along the cut edge. This "anchors"
 
 ---
 
-## 2. Advanced Algorithms
+## 2. Logic & Sanitization
 
-### A. Inversion-Subtraction Tracing
-To handle internal counters (holes) in raster images:
-1.  **Trace**: Generate raw paths via `ImageTracer.js`.
-2.  **Unite**: Geometric union of all paths in an isolated `paper.PaperScope`.
-3.  **Invert**: Subtract the unified shape from the viewport bounding box rectangle.
-4.  **Extract**: Discard the outermost path (frame); remaining paths form the manifold outline.
+### A. Identifier Sanitization (Adobe Spec)
+All user-defined names (Groups, Classes, Lookups) are processed by `sanitizeIdentifier`:
+1.  Spaces and hyphens are replaced with underscores (`_`).
+2.  All characters outside `[a-zA-Z0-9_]` are removed.
+3.  Leading numerals are stripped (e.g., `1_Consonant` becomes `_Consonant`).
 
-### B. Kerning Binary Search
-Finds the most negative value that maintains the `targetDistance` specifically in the **X-Height Zone** ($baseline < y \le xHeight$), while checking for hard collisions in the Ascender and Descender zones.
+### B. Cache Invalidation (cyrb53 Hashing)
+The generator uses a non-cryptographic `cyrb53` hash to identify project states. The hash is calculated from the serialized JSON string of the project. If the hash is found in IndexedDB, the current font binary is considered "Fresh" and no recompilation occurs.
+
+### C. Semantic Vertical Centering (UX)
+Character previews are vertically centered **unless** they belong to specific Unicode categories:
+- **Non-Spacing/Combining Marks** (`Mn`, `Mc`, `Me`)
+- **Modifiers** (`Lm`, `Sk`)
+- **Punctuation** (`P*`)
+These categories remain baseline-relative to preserve their semantic position.
 
 ---
 
@@ -41,8 +47,10 @@ To avoid collisions with CJK Compatibility and OS-reserved blocks:
 2.  **Jump**: If Range 1 is exhausted, the cursor jumps to **Plane 15** (`U+F0000`).
 3.  **Format 12 Patching**: The Python worker injects Segmented Coverage subtables to support Plane 15 glyphs in standard OS environments.
 
-### B. Cache Hashing
-Font binaries are cached in IndexedDB using a **53-bit cyrb53 hash** of the `ProjectData`. Any modification to glyphs, metrics, or rules invalidates the hash.
+### B. Position Propagation Math
+When syncing an `AttachmentClass`, the engine calculates a **joint delta**:
+$$\Delta_{joint} = (Offset_{source} + Anchor_{mark}) - Anchor_{base}$$
+This delta is then reapplied to siblings to account for varying base character widths.
 
 ---
 
