@@ -1,4 +1,4 @@
-# Aksharajanani: Data Structure Spec (V26.0)
+# Aksharajanani: Data Structure Spec (V26.2)
 
 This document defines the absolute schema for project persistence, template blueprints, session state, and geometric models, including internal logic layers, sub-folder components, and service-level protocols.
 
@@ -49,7 +49,15 @@ Basic 2D coordinate unit.
 - `x`: `number`
 - `y`: `number`
 
-### B. Path Structure (`Path`)
+### B. Glyph Data Container (`GlyphData`)
+The primary data object for any character's visual representation.
+- `paths`: `Path[]` (Array of drawing paths).
+- `_cache`: `object` (Optional performance cache).
+    - `bbox`: `object` (Cached bounding box).
+        - `data`: `BoundingBox | null`.
+        - `strokeThickness`: `number`.
+
+### C. Path Structure (`Path`)
 - `id`: `string` (Unique UUID).
 - `type`: `PathType` (`pen | line | circle | dot | curve | ellipse | calligraphy | outline`).
 - `points`: `Point[]` (Control points for the renderer).
@@ -57,13 +65,13 @@ Basic 2D coordinate unit.
 - `segmentGroups`: `Segment[][]` (Used specifically by `outline` type for nested loops/holes).
 - `groupId`: `string` (Optional, links multiple paths for selection/transformation).
 
-### C. Path Segment (`Segment`)
+### D. Path Segment (`Segment`)
 Used for cubic Bezier outlines (primarily from SVG imports).
 - `point`: `Point` (Anchor).
 - `handleIn`: `Point` (Relative coordinate of incoming control handle).
 - `handleOut`: `Point` (Relative coordinate of outgoing control handle).
 
-### D. Bounding Boxes
+### E. Bounding Boxes
 **Standard Bounding Box (`BoundingBox`):**
 - `x`: `number` (Left).
 - `y`: `number` (Top).
@@ -81,14 +89,32 @@ Used in kerning and collision detection algorithms.
 ### A. Character Definition (`Character`)
 - `unicode`: `number` (Primary ID).
 - `name`: `string` (Friendly export name).
-- `lsb/rsb`: `number` (Manual side bearing overrides).
-- `glyphClass`: `base | ligature | mark | dottedCircle`.
-- `composite`: `string[]` (List of component names for templates).
+- `lsb`: `number` (Manual Left Side Bearing override).
+- `rsb`: `number` (Manual Right Side Bearing override).
+- `glyphClass`: `base | ligature | mark`.
+- `composite`: `string[]` (List of component names for templates/copies).
 - `link`: `string[]` (List of component names for live linked glyphs).
-- `sourceLink`: `string[]` (Original link cache for relinking).
+- `sourceLink`: `string[]` (Original link cache for relinking logic).
 - `compositeTransform`: `ComponentTransform[]` (Positional overrides for components).
-- `advWidth`: `number | string` (0 for non-spacing marks).
+- `isCustom`: `boolean` (Flag for user-added characters).
+- `advWidth`: `number | string` (Explicit advance width; 0 for non-spacing marks).
+- `isPuaAssigned`: `boolean` (Flag if unicode was generated via internal PUA logic).
+- `option`: `string` (Style variant key).
+- `desc`: `string` (Description string).
+- `if`: `string` (Conditional visibility key).
 - `hidden`: `boolean` (UI visibility flag).
+
+### B. Component Transformation (`ComponentTransform`)
+Positional and scale overrides for elements within a composite or linked glyph.
+- `scale`: `number` (Default: 1.0).
+- `x`: `number` (X coordinate offset).
+- `y`: `number` (Y coordinate offset).
+- `mode`: `PositioningMode` (`relative | absolute | touching`).
+
+### C. Character Set (`CharacterSet`)
+A grouping of characters used for UI categorization and batch logic.
+- `nameKey`: `string` (Translation key for the group name).
+- `characters`: `Character[]` (List of character definitions in the set).
 
 ---
 
@@ -100,7 +126,7 @@ Used in kerning and collision detection algorithms.
 - `FilterMode`: `none | all | completed | incomplete`.
 
 ### B. Localization (`LocaleInfo`)
-- `code`: `Locale` (e.g., `'en' | 'ta' | 'hi'`).
+- `code`: `Locale` (e.g., `'en' | 'ta' | 'de' | 'es' | 'fr' | 'hi' | 'kn' | 'ml' | 'si' | 'te'`).
 - `nativeName`: `string`.
 
 ---
@@ -175,12 +201,21 @@ The template used to initialize a new project for a specific language.
 - `nameKey`: `string`.
 - `charactersPath`: `string`.
 - `rulesPath`: `string`.
+- `rulesFeaPath`: `string` (Optional path to static FEA file).
+- `rulesFeaContent`: `string` (Optional raw FEA text content).
 - `metrics`: `FontMetrics`.
-- `defaults`: `ScriptDefaults`.
+- `sampleText`: `string` (Initial preview text).
+- `defaults`: `ScriptDefaults` (Initial setting template).
+- `grid`: `{ characterNameSize: number }`.
 - `guideFont`: `GuideFont`.
+- `testPage`: `TestPageConfig`.
 - `support`: `string` ("full" | "partial").
 
-### B. Font Metrics Schema (`FontMetrics`)
+### B. Script Defaults (`ScriptDefaults`)
+The subset of settings provided as a template in a script configuration.
+- `fontName`, `strokeThickness`, `contrast`, `pathSimplification`, `showGridOutlines`, `isAutosaveEnabled`, `editorMode`, `isPrefillEnabled`, `showHiddenGlyphs`, `showUnicodeValues`, `showGlyphNames`, `preferKerningTerm`.
+
+### C. Font Metrics Schema (`FontMetrics`)
 - `unitsPerEm`, `ascender`, `descender`, `defaultAdvanceWidth`, `topLineY`, `baseLineY`, `styleName`, `spaceAdvanceWidth`, `defaultLSB`, `defaultRSB`, `superTopLineY`, `subBaseLineY`.
 
 ---
@@ -197,16 +232,22 @@ The template used to initialize a new project for a specific language.
 - **AttachmentPoint**: `'topLeft' | 'topCenter' | 'topRight' | 'midLeft' | 'midRight' | 'bottomLeft' | 'bottomCenter' | 'bottomRight'`.
 - **HandleType**: `'point' | 'handleIn' | 'handleOut'`. Used in edit tool hit-testing for Bezier control.
 - **Handle**: `{ type: 'scale' | 'rotate' | 'move', direction: HandleDirection }`.
+- **TransformState**: `{ rotate: number, scale: number, flipX?: boolean, flipY?: boolean }`. Standalone state for toolbar/batch logic.
 - **TransformAction**: `{ type, target, startPoint, initialPaths, initialTransform, initialBox, handle }`.
 
-### C. Tools & Ranges
+### C. Structural Logic Blocks
+- **PositioningRules**: `{ base: string[], mark: string[], gpos?: string, gsub?: string, ligatureMap?: Record<string, Record<string, string>>, movement?: 'horizontal' | 'vertical' }`.
+- **AttachmentClass**: `{ name?: string, members: string[], exceptions?: string[], applies?: string[], exceptPairs?: string[] }`.
+- **TestPageConfig**: `{ fontSize: { default: number }, lineHeight: { default: number } }`.
+
+### D. Tools & Ranges
 - **ToolRanges**: `{ strokeThickness: Range, pathSimplification: Range, contrast: Range }`.
 - **SliderRange**: `{ min: number, max: number, step?: number }`.
 - **Range**: `{ min: number, max: number, step?: number }`.
 
-### D. Variant Groups
+### E. Variant Groups
 - **VariantGroup**: `{ optionKey: string, variants: Character[], description: string }`. Used in `ScriptVariantModal.tsx` for stylistic project initialization.
 
-### E. Misc Project Meta
+### F. Misc Project Meta
 - **GuideFont**: `{ fontName: string, fontUrl: string, stylisticSet: string }`.
 - **ScriptsFile**: `{ defaultScriptId: string, scripts: ScriptConfig[] }`.
