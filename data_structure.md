@@ -4,7 +4,9 @@ This document defines the absolute schema for project persistence, template blue
 
 ---
 
-## 1. Project Root (`ProjectData`)
+## 1. Project Root & History Models
+
+### A. Project Data (`ProjectData`)
 Stored in IndexedDB `projects` store. This represents the total state of a font project.
 
 | Field | Type | Description |
@@ -29,6 +31,14 @@ Stored in IndexedDB `projects` store. This represents the total state of a font 
 | `isFeaEditMode` | `boolean` | Manual OpenType code override flag. |
 | `manualFeaCode` | `string` | Raw text for manual OpenType features. |
 | `savedAt` | `string` | ISO 8601 modification timestamp. |
+
+### B. Project Snapshot (`ProjectSnapshot`)
+Stored in IndexedDB `snapshots` store for version history (limit 5 per project).
+- `id`: `number` (Auto-increment PK).
+- `projectId`: `number` (FK to project).
+- `data`: `ProjectData` (Full state dump).
+- `timestamp`: `number` (ms).
+- `name`: `string` (Optional label).
 
 ---
 
@@ -72,7 +82,7 @@ Used in kerning and collision detection algorithms.
 - `unicode`: `number` (Primary ID).
 - `name`: `string` (Friendly export name).
 - `lsb/rsb`: `number` (Manual side bearing overrides).
-- `glyphClass`: `base | ligature | mark`.
+- `glyphClass`: `base | ligature | mark | dottedCircle`.
 - `composite`: `string[]` (List of component names for templates).
 - `link`: `string[]` (List of component names for live linked glyphs).
 - `sourceLink`: `string[]` (Original link cache for relinking).
@@ -89,10 +99,9 @@ Used in kerning and collision detection algorithms.
 - `Tool`: `pen | eraser | line | dot | circle | curve | select | pan | edit | ellipse | calligraphy | slice`.
 - `FilterMode`: `none | all | completed | incomplete`.
 
-### B. State Machines & Modal Logic
-- **ModalState**: `{ name, props }`.
-- **DraggedPointInfo**: `{ type: 'freehand' | 'segment', pathId, pointIndex, segmentGroupIndex, segmentIndex, handleType }`.
-- **TransformAction**: `{ type: 'move' | 'scale' | 'rotate', target: 'paths' | 'image', startPoint, initialPaths, initialTransform, initialBox, handle }`.
+### B. Localization (`LocaleInfo`)
+- `code`: `Locale` (e.g., `'en' | 'ta' | 'hi'`).
+- `nativeName`: `string`.
 
 ---
 
@@ -158,44 +167,46 @@ Located in `data/unicode_blocks.json`.
 
 ---
 
-## 10. Configuration Blueprints & Script Templates
+## 10. Configuration Blueprints & Templates
 
-### A. Scripts File Schema (`ScriptsFile`)
-Root structure of `scripts.json`.
-- `defaultScriptId`: `string`.
-- `scripts`: `ScriptConfig[]`.
-
-### B. Script Blueprint (`ScriptConfig`)
+### A. Script Blueprint (`ScriptConfig`)
 The template used to initialize a new project for a specific language.
 - `id`: `string` (e.g., "tamil").
-- `nameKey`: `string` (i18n pointer).
-- `charactersPath`: `string` (URL to character JSON).
-- `rulesPath`: `string` (URL to feature JSON).
-- `metrics`: `FontMetrics` (Script-specific baseline).
-- `sampleText`: `string` (Default test string).
-- `defaults`: `ScriptDefaults` (Initial app settings).
-- `guideFont`: `GuideFont` (Reference font URL/name).
+- `nameKey`: `string`.
+- `charactersPath`: `string`.
+- `rulesPath`: `string`.
+- `metrics`: `FontMetrics`.
+- `defaults`: `ScriptDefaults`.
+- `guideFont`: `GuideFont`.
 - `support`: `string` ("full" | "partial").
 
-### C. Script Defaults (`ScriptDefaults`)
-- `fontName`: `string`.
-- `strokeThickness`: `number`.
-- `pathSimplification`: `number`.
-- `showGridOutlines`: `boolean`.
-- `isAutosaveEnabled`: `boolean`.
-- `editorMode`: `"simple" | "advanced"`.
-- `isPrefillEnabled`: `boolean`.
+### B. Font Metrics Schema (`FontMetrics`)
+- `unitsPerEm`, `ascender`, `descender`, `defaultAdvanceWidth`, `topLineY`, `baseLineY`, `styleName`, `spaceAdvanceWidth`, `defaultLSB`, `defaultRSB`, `superTopLineY`, `subBaseLineY`.
 
-### D. Font Metrics Schema (`FontMetrics`)
-- `unitsPerEm`: `number` (Global scale).
-- `ascender`: `number`.
-- `descender`: `number`.
-- `defaultAdvanceWidth`: `number`.
-- `topLineY`: `number` (Visual guide).
-- `baseLineY`: `number` (Visual guide).
-- `styleName`: `string`.
-- `spaceAdvanceWidth`: `number`.
-- `defaultLSB`: `number`.
-- `defaultRSB`: `number`.
-- `superTopLineY`: `number` (Optional).
-- `subBaseLineY`: `number` (Optional).
+---
+
+## 11. Auxiliary Support Types
+
+### A. Theme & Exporting
+- **Theme**: `'light' | 'dark'`.
+- **ExportingType**: `'export' | 'test' | 'create' | null`.
+- **Locale**: `'en' | 'ta' | 'de' | 'es' | 'fr' | 'hi' | 'kn' | 'ml' | 'si' | 'te'`.
+
+### B. Drawing & Transformation Types
+- **PositioningMode**: `'relative' | 'absolute' | 'touching'`. Used in component assembly logic.
+- **AttachmentPoint**: `'topLeft' | 'topCenter' | 'topRight' | 'midLeft' | 'midRight' | 'bottomLeft' | 'bottomCenter' | 'bottomRight'`.
+- **HandleType**: `'point' | 'handleIn' | 'handleOut'`. Used in edit tool hit-testing for Bezier control.
+- **Handle**: `{ type: 'scale' | 'rotate' | 'move', direction: HandleDirection }`.
+- **TransformAction**: `{ type, target, startPoint, initialPaths, initialTransform, initialBox, handle }`.
+
+### C. Tools & Ranges
+- **ToolRanges**: `{ strokeThickness: Range, pathSimplification: Range, contrast: Range }`.
+- **SliderRange**: `{ min: number, max: number, step?: number }`.
+- **Range**: `{ min: number, max: number, step?: number }`.
+
+### D. Variant Groups
+- **VariantGroup**: `{ optionKey: string, variants: Character[], description: string }`. Used in `ScriptVariantModal.tsx` for stylistic project initialization.
+
+### E. Misc Project Meta
+- **GuideFont**: `{ fontName: string, fontUrl: string, stylisticSet: string }`.
+- **ScriptsFile**: `{ defaultScriptId: string, scripts: ScriptConfig[] }`.
