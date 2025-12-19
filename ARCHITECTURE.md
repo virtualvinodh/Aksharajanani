@@ -11,75 +11,52 @@ Aksharajanani is a high-performance, browser-based font engineering suite. It us
 - **Vector Engine**: Paper.js (Geometric operations, boolean path logic, smoothing).
 - **Font I/O**: Opentype.js (Initial binary generation, path command mapping).
 - **Font Engineering**: Pyodide (WASM) + FontTools (FEA compilation, GDEF generation, CMAP Format 12 patching).
-- **Persistence Layer**: IndexedDB (via `idb`) with a tiered snapshot system.
+- **Persistence Layer**: IndexedDB (via `idb`) with a tiered snapshot and font-cache system.
 
 ### B. Initialization Routine
 1.  **Pyodide Boot**: Triggered on `AppContainer` mount; installs `fonttools` via micropip. Reports granular status (`loadingPyodide`, `installingFonttools`) to the UI.
 2.  **Asset Injection**: Custom logo fonts (`Purnavarman_1`) and locale-specific fonts are injected into the DOM via dynamic `<style>` tags.
-3.  **PUA Sync**: The `puaCursorRef` scans all glyphs to find the maximum existing PUA to ensure sequential stability for new additions.
+3.  **PUA Cursor Recovery**: On project load, `puaCursorRef` scans all existing glyphs to find the maximum assigned PUA, ensuring subsequent "Quick Adds" follow a strictly increasing atomic sequence.
 
 ---
 
-## 2. Drawing & Interaction Logic
+## 2. Core Architectural Patterns
 
-### A. Viewport Dynamics
-- **Design Space**: Fixed **1000x1000 grid**.
-- **Animation**: Viewport transitions use **Linear Interpolation (LERP)** with a factor of `0.2` for smooth panning/zooming.
-- **Undo Buffer**: Limited to **20 states** per session to balance memory usage against complex glyph geometry.
-
-### B. Command Palette & Search Scoring
-The search engine uses a tiered scoring system (`searchUtils.ts`) to prioritize results:
-- **Tier 1 (95-100)**: Exact Name Match (case-insensitive), Quoted strings (`"A"`), or Exact Unicode Hex Match.
-- **Tier 2 (90)**: Alias/Synonym Match (e.g., searching "Metrics" for Settings).
-- **Tier 3 (80)**: Starts-with Name match.
-- **Tier 4 (60)**: Contains Name match.
-
----
-
-## 3. Core Data Flows
-
-### A. Reactivity & Persistence Flow
-1.  **Input**: User manipulates points in `DrawingCanvas`.
-2.  **Local State**: `useDrawingCanvas` updates `currentPaths` in the `EditorContext`.
-3.  **History**: Change is pushed to the `history` stack (Undo/Redo management).
-4.  **Persistence**: `useProjectPersistence` observes the change and triggers a **1500ms debounced** save to `IndexedDB`. If "Autosave" is off, it only flags the project as "Dirty".
+### A. Unified Project Model (UPM)
+Aksharajanani implements a **Self-Contained Project Model**. 
+- **Portability**: Positioning rules, attachment classes, and group definitions are serialized into the `.json` project file.
+- **JIT Expansion**: Groups (starting with `$`) are expanded "Just-In-Time" during rendering and export using the `groupExpansionService.ts`.
 
 ### B. Recursive Dependency Cascade (BFS)
-When a source glyph (e.g., a stem) is modified:
-1.  **Trigger**: `handleSaveGlyph` is called.
-2.  **Map Lookup**: The system queries the `dependencyMap` for all glyphs where this character is a component.
-3.  **Filter**: It identifies only **Linked Glyphs** (active sync). **Composite Glyphs** (baked copies) are ignored.
-4.  **Search**: A **Breadth-First Search** traverses the tree to handle nested dependencies (e.g., Stem -> Letter -> Ligature).
-5.  **Transform**: For each dependent, `updateComponentInPaths` recalculates local coordinates using the source's new geometry while preserving the child's specific `scale/x/y` transforms.
+When a source glyph is modified, a **Breadth-First Search** traversal identifies all linked descendants. 
+- **Smart Update**: Instead of full regeneration, `updateComponentInPaths` recalculates local coordinates using the source's new geometry while preserving child-specific transforms.
+- **Async Yielding**: To prevent UI lockup during heavy cascades, the logic yields control to the main thread every 5 glyphs processed.
+
+### C. Concurrency & Threading Model
+To maintain 60FPS UI performance, the engine offloads heavy tasks to two distinct workers:
+1.  **Geometry Worker (`fontService.ts`)**: Handles the conversion of Paper.js paths to Opentype.js commands. It performs coordinate inversion and nib-contrast outline expansion.
+2.  **Compilation Worker (`pythonFontService.ts`)**: Manages the Pyodide environment.
+- **Optimization**: Both workers utilize **Transferable Objects**. Large `ArrayBuffer` data (font binaries) is transferred between threads rather than copied, eliminating memory overhead.
+
+### D. State History & Undo Strategy
+The drawing editor maintains a local history stack using a linear array of path states.
+- **Memory Management**: The stack is capped at **20 states**. 
+- **Deep Cloning**: Every change triggers a `structuredClone` (or recursive fallback) to ensure that past states in the history are not mutated by current canvas operations.
 
 ---
 
-## 4. Font Generation Pipeline (Data Flow)
+## 3. Data Flow: The Positioning Pipeline
 
-The conversion from visual design to a binary `.otf` file is a three-stage asynchronous pipeline orchestrated by `fontService.ts`.
+The `markPositioningMap` is the central repository for all GPOS offsets. It is generated through a tiered pipeline:
 
-### Stage 1: Data Aggregation & Preparation (Main Thread)
-**Inputs**: Glyph Geometry (Drawing), GPOS Data (Positioning), GSUB Logic (Rules), and Metrics (Settings).
+1.  **Geometric Discovery**: The engine scans `PositioningRules`. If a Base/Mark pair is drawn but lacks an entry in the map, `calculateDefaultMarkOffset` determines a starting coordinate based on `markAttachmentRules` (e.g., `topCenter` to `bottomCenter`).
+2.  **Manual Intervention**: User interactions in the `PositioningEditorPage` update the map with explicit `{x, y}` deltas. 
+3.  **Class Propagation**: Updates to a **Class Representative** trigger a `SyncAttachmentClasses` routine. This calculates the **Anchor Delta** of the representative and applies it to all siblings in the `AttachmentClass`, effectively bulk-populating the `markPositioningMap`.
 
-**Manipulations**:
-- **Cache Check**: Generates a `cyrb53` hash of the project state. If the hash exists in the `fontCache` DB, the pipeline skips to the end and returns the cached Blob.
-- **FEA Compilation**: `feaService.ts` translates abstract rules into Adobe FEA code.
-- **Sanitization**: All identifiers pass through `sanitizeIdentifier` to ensure Adobe spec compliance (alphanumeric, no leading numbers).
-- **Serialization**: Maps/Sets are converted to flat Arrays for Worker transfer.
+---
 
-### Stage 2: Geometric & Binary Construction (Worker A)
-**Engine**: `opentype.js` + `paper.js`
+## 4. Font Generation Pipeline
 
-**Manipulations**:
-- **Coordinate Inversion**: Maps Canvas Y (top-down) to Font Y (bottom-up).
-- **Path Expansion**: Monoline segments expand into solid outlines via Nib contrast math.
-- **Boolean Resolution**: `paper.js` uses the `evenodd` winding rule to resolve overlapping strokes and create internal counters (holes).
-- **Binary Assembly**: `opentype.js` builds the base `.otf` table structure.
-
-### Stage 3: Python Feature Compilation & Patching (Worker B)
-**Engine**: `fontTools` (Python library via Pyodide)
-
-**Manipulations**:
-- **GPOS/GSUB Table Building**: `fontTools.feaLib` parses the FEA string and injects tables.
-- **Format 12 CMAP Patching**: A custom script injects a Segmented Coverage subtable for Plane 15 PUA support.
-- **Checksum Recalculation**: Finalizes the binary for OS installation.
+1.  **State Hashing**: Hashes the project state using `cyrb53`. If the hash exists in IndexedDB, the binary is served from cache.
+2.  **Geometry Worker**: Inverts coordinates, expands paths via Nib contrast math, and resolves boolean intersections using the `evenodd` rule.
+3.  **Compilation Worker**: Pyodide compiles the FEA string (incorporating the `markPositioningMap` as GPOS lookups) into binary tables and applies the **Format 12 CMAP patch**.

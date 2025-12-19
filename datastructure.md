@@ -1,60 +1,77 @@
 # Aksharajanani: Data Structure Spec (V16.0)
 
-This document defines the absolute schema for project persistence and session state.
+This document defines the absolute schema for project persistence, session state, and geometric models.
 
 ---
 
-## 1. ProjectData Schema (`ProjectData`)
+## 1. Project Root (`ProjectData`)
+Stored in IndexedDB `projects` store.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `projectId` | `number` | PK in IndexedDB. |
-| `scriptId` | `string` | Template identifier. |
-| `name` | `string` | Display name for the project dashboard. |
-| `settings` | `AppSettings` | Global config + `creatorSettings` block. |
-| `metrics` | `FontMetrics` | UPM, Ascender, Descender, and Canvas Guides. |
-| `glyphs` | `[number, GlyphData][]` | Map: Decimal Unicode -> Path Data. |
-| `characterSets` | `CharacterSet[]` | Tab-based organization of glyphs. |
-| `fontRules` | `FeatureAST` | The GSUB logic tree + `groups` + `lookups`. |
-| `kerning` | `[string, number][]` | Map: `LeftUni-RightUni` -> Kern value. |
-| `markPositioning`| `[string, Point][]` | Map: `BaseUni-MarkUni` -> GPOS vector. |
-| `isFeaEditMode` | `boolean` | Flag for manual FEA override. |
-| `manualFeaCode` | `string` | The raw FEA code used in manual mode. |
-| `guideFont` | `GuideFont` | Background tracing font configuration. |
-| `savedAt` | `string` | ISO modification timestamp. |
+| `projectId` | `number` | Unique ID (Auto-increment PK). |
+| `name` | `string` | User-defined project name. |
+| `glyphs` | `[number, GlyphData][]` | Map: `Decimal Unicode` -> `Geometry`. |
+| `markPositioning`| `[string, Point][]` | Serialized `markPositioningMap`. |
+| `positioningRules`| `PositioningRules[]`| Global GPOS rule definitions. |
+| `markAttachmentRules`| `MarkAttachmentRules`| Manual anchor point overrides. |
+| `markAttachmentClasses`| `AttachmentClass[]`| Automated positioning groups. |
+| `savedAt` | `string` | ISO 8601 modification timestamp. |
 
 ---
 
-## 2. Vector Models
+## 2. Geometric & Component Models
 
 ### A. Path (`Path`)
 - `id`: `string` (UUID).
 - `type`: `pen | calligraphy | dot | line | circle | curve | ellipse | outline`.
-- `points`: `Point[]` (Primary vertices).
-- `groupId`: `string` (Link to `component-X` or custom groups).
-- `segmentGroups`: `Segment[][]` (Handles/Holes for `outline` paths).
-- `angle`: `number` (Angle of the nib for `calligraphy` type).
+- `points`: `Point[]` (Flattened vertices).
+- `segmentGroups`: `Segment[][]` (Nested arrays for complex outlines with holes).
+- `groupId`: `string` (Link ID for multi-path components).
 
-### B. GlyphData (`GlyphData`)
-- `paths`: `Path[]`.
-- `_cache`: Internal bbox and stroke thickness cache.
+### B. Component Transform (`ComponentTransform`)
+Used in `Character.compositeTransform` to define relative placement.
+- `scale`: `number` (Default 1.0).
+- `x` / `y`: `number` (Offset from anchor).
+- `mode`: `relative | absolute | touching`.
 
----
-
-## 3. UI & Persistence Models
-
-### A. Creator Studio (`CreatorSettings`)
-- `text`, `fontSize`, `textColor`, `bgColor`, `bgImageData`, `overlayOpacity`, `textAlign`, `aspectRatio`, `addShadow`, `textPos`.
-
-### B. Version History (`ProjectSnapshot`)
-- `id`: PK.
-- `projectId`: FK to main project.
-- `data`: Complete `ProjectData` object.
-- `timestamp`: Creation time.
+### C. Attachment Class (`AttachmentClass`)
+Defines the "Representative-Sibling" relationship for auto-sync.
+- `name`: `string`.
+- `members`: `string[]` (Glyph names or `@groups`).
+- `applies`: `string[]` (Filter: Only sync when attached to these bases).
+- `exceptions`: `string[]` (Filter: Do not sync on these bases).
+- `exceptPairs`: `string[]` (String: "Base-Mark" format for manual unlinking).
 
 ---
 
-## 4. Mandatory Export Glyphs
-- **`.notdef`** (Uni 0): A rectangle with a stroke width of $1/25$ of the UPM.
-- **`space`** (Uni 32): Advance set by `metrics.spaceAdvanceWidth`.
-- **`zwj` / `zwnj`** (Uni 8205/8204): Force-assigned 0-width control characters.
+## 3. Runtime Logic State
+
+### A. MarkPositioningMap
+The active lookup table for GPOS offsets used during rendering and export.
+- **Type**: `Map<string, Point>`
+- **Key Format**: `${baseUnicode}-${markUnicode}` (e.g., `"2965-3021"`)
+- **Generation**: Created JIT in `PositioningWorkspace` via rules, or modified via manual user drag.
+
+### B. Project Snapshot (`ProjectSnapshot`)
+Stored in IndexedDB `snapshots` store.
+- **Limit**: Only the most recent **5 snapshots** are retained per project.
+- `id`: `number` (PK).
+- `projectId`: `number` (FK).
+- `data`: `ProjectData` (Deep copy of state).
+- `timestamp`: `number` (Epoch).
+
+---
+
+## 4. UI & Logic State
+
+### A. Creator Settings (`CreatorSettings`)
+- `textPos`: `{ x, y }` (Relative to high-res canvas).
+- `bgImageData`: `string` (Base64 raster background).
+- `aspectRatio`: `square | portrait | landscape`.
+
+### B. Search Query (`SearchQuery`)
+The internal model for the smart command palette.
+- `lower`: `string` (Lowercase normalized query).
+- `unicodeHex`: `string | null` (Extracted hex if query starts with U+ or 0x).
+- `exactMatch`: `string | null` (Extracted content if query is wrapped in quotes).
