@@ -1,82 +1,55 @@
-# Aksharajanani Technical Architecture
+# Aksharajanani Technical Architecture (V16.0)
 
-Aksharajanani is a sophisticated browser-based font creation tool specifically designed for Indic scripts, but extensible to any Unicode-based system. It bridges the gap between manual drawing and complex OpenType engineering.
-
-## 1. System Overview
-
-The application follows a **Modular Hook-Based Architecture** leveraging React's Context API for state management, Web Workers for heavy computation, and Pyodide (Python in WASM) for specialized font engineering tasks.
-
-### Core Tech Stack
-- **UI Framework**: React (v18)
-- **Styling**: Tailwind CSS
-- **Vector Engine**: Paper.js (for geometric operations like union/intersection and smoothing)
-- **Font Generation**: Opentype.js (for generating the base OTF binary)
-- **Font Engineering**: Pyodide + FontTools (for Adobe FEA compilation and table patching)
-- **Persistence**: IndexedDB (via `idb` library)
+Aksharajanani is a high-performance, browser-based font engineering suite. It uses a **Modular Hook-Based Architecture** with a decoupled vector engine and a Python-powered font compiler.
 
 ---
 
-## 2. Data Flow Architecture
+## 1. System Components & Lifecycle
 
-The data flow is centralized around a set of specialized Contexts that act as a "Single Source of Truth."
+### A. Core Technologies
+- **UI Architecture**: React 18 (Functional Components, Context API).
+- **Vector Engine**: Paper.js (Geometric operations, boolean path logic, smoothing).
+- **Font I/O**: Opentype.js (Initial binary generation, path command mapping).
+- **Font Engineering**: Pyodide (WASM) + FontTools (FEA compilation, GDEF generation, CMAP Format 12 patching).
+- **Persistence Layer**: IndexedDB (via `idb`) with a tiered snapshot system.
 
-### A. Initialization Flow
-1. **Script Selection**: User selects a script template (`scripts.json`).
-2. **Project Hydration**: `useProjectLoad` hook fetches static data (`data/characters_*.json`, `data/rules_*.json`) and merges it with user settings.
-3. **PUA Assignment**: Characters without standard Unicodes are assigned unique Private Use Area (PUA) codes via an atomic cursor.
-4. **Dependency Mapping**: A `dependencyMap` is built to track which glyphs are components of others (e.g., `ka` is a component of `ka-i`).
-
-### B. Editing Flow (The "Drawing" Workspace)
-1. **Canvas Interaction**: `DrawingCanvas` uses `useDrawingCanvas` to route inputs to specific tool hooks (`usePenTool`, `useSelectTool`, etc.).
-2. **State Commit**: Changes are pushed to `useGlyphEditSession`.
-3. **Autosave**: If enabled, `useProjectPersistence` debounces changes and writes the `ProjectData` object to IndexedDB.
-4. **Cascading Updates**: If a base glyph (e.g., `ka`) is saved, a recursive async process scans the `dependencyMap` and updates all "Linked Glyphs" (e.g., `ka-i`, `ka-u`) using `glyphRenderService`.
-
-### C. Positioning & Rules Flow
-1. **Geometric Rules**: `PositioningWorkspace` allows visual alignment of marks. Offsets are stored in `MarkPositioningMap`.
-2. **Class Sync**: `usePositioningActions` implements "Attachment Classes." Updating a "Class Representative" triggers a geometric cascade to all "Sibling" pairs using anchor-point math.
-3. **FEA Generation**: `feaService` translates the internal JSON rules and positioning maps into a raw Adobe FEA (Feature File) string.
-
-### D. Export Flow
-1. **Base Binary**: `fontService` converts internal vector paths into standard font outlines using Opentype.js.
-2. **Python Worker**: The base binary and the generated FEA string are sent to a background Web Worker.
-3. **Compilation**: Inside the worker, Pyodide executes `fontTools` to compile the FEA into OpenType tables (GSUB/GPOS) and patches the font binary.
-4. **Persistence**: The final patched binary is cached in IndexedDB to speed up subsequent "Test" or "Export" actions.
+### B. Initialization Routine
+1.  **Pyodide Boot**: Triggered on `AppContainer` mount; installs `fonttools` via micropip.
+2.  **Asset Injection**: Custom logo fonts (`Purnavarman_1`) and locale-specific fonts are injected into the DOM via dynamic `<style>` tags.
+3.  **PUA Sync**: The `puaCursorRef` scans all glyphs to find the maximum existing PUA to ensure sequential stability for new additions.
 
 ---
 
-## 3. Module Breakdown
+## 2. Drawing & Interaction Logic
 
-### `contexts/` (State Layer)
-- **ProjectContext**: Stores structural metadata (Character Sets, Font Rules, Positioning).
-- **GlyphDataContext**: Optimized storage for heavy path data using a React `ref` and versioning to prevent unnecessary re-renders of the entire grid.
-- **LayoutContext**: Manages UI state (active workspace, modal stack, navigation targets).
+### A. Viewport Dynamics
+- **Design Space**: Fixed **1000x1000 grid**.
+- **Animation**: Viewport transitions use **Linear Interpolation (LERP)** with a factor of `0.2` for smooth panning/zooming.
+- **Undo Buffer**: Limited to **20 states** per session to balance memory usage against complex glyph geometry.
 
-### `hooks/` (Logic Layer)
-- **useAppActions**: The "Controller" that coordinates high-level operations (Save/Load/Export).
-- **useGlyphEditSession**: Manages the lifecycle of the drawing modal, including undo/redo and dirty checking.
-- **useDrawingCanvas**: The bridge between DOM events and vector logic.
-- **useRulesState**: Manages the local state of the OpenType feature editor.
+### B. Command Palette & Search Scoring
+The search engine uses a tiered scoring system (`searchUtils.ts`):
+1.  **Score 1 (Highest)**: Exact Name Match (case-insensitive), Quoted strings (`"A"`), or Exact Unicode Hex Match (e.g., `0x0041`).
+2.  **Score 2**: Starts-with Name match.
+3.  **Score 3**: Contains Name match.
+4.  **Score 4**: Partial Unicode Hex match (e.g., `U+0B`).
 
-### `services/` (Service Layer)
-- **fontService.ts**: The core logic for converting Paper.js paths to Opentype.js commands.
-- **pythonFontService.ts**: Manages the Pyodide Web Worker lifecycle.
-- **glyphRenderService.ts**: Pure geometric functions for Bounding Box (BBox) calculation, mark alignment, and composite generation.
-- **dbService.ts**: Direct interface with IndexedDB for project and snapshot storage.
-
----
-
-## 4. Performance Strategies
-
-1. **Web Workers**: Font generation and FEA compilation are offloaded to workers to keep the UI responsive.
-2. **Virtualization**: `react-virtuoso` is used in the `CharacterGrid` to handle hundreds of glyph canvases efficiently.
-3. **JIT Expansion**: Glyph groups and classes are expanded "Just-In-Time" during rendering or export, rather than keeping massive flattened arrays in memory.
-4. **Memoization**: Heavy geometric calculations (BBoxes) are cached on the `GlyphData` object itself and invalidated only when paths change.
-5. **Debounced Persistence**: Database writes happen 1.5 seconds after the user stops typing/drawing to minimize I/O overhead.
+### C. Batch Operations
+Triggered via the "Select" mode in the grid:
+- **Bulk Transform**: Calculates the collective bounding box, identifies the center, and applies Scale/Rotate/Flip to all selected `GlyphData`.
+- **Metrics Normalization**: Overwrites LSB/RSB values across the selection while preserving existing values for null inputs.
 
 ---
 
-## 5. Security & Isolation
+## 3. Font Engineering Pipeline
 
-- **Sanitization**: All user-defined names (groups, classes, font names) are passed through `sanitizeIdentifier` to ensure compliance with the Adobe FEA specification and prevent code injection.
-- **Scope Isolation**: `paper.PaperScope` is used to create isolated environments for every geometric calculation, preventing memory leaks and state contamination between different glyphs.
+### A. Recursive Dependency Cascade (BFS)
+When a source glyph is modified:
+1.  A **Breadth-First Search** traverses the `dependencyMap`.
+2.  **Linked Glyphs**: Receive a recursive shape/transform update.
+3.  **Composite Glyphs**: Treated as "Bake-Once" templates and ignored by the cascade.
+4.  **Sever & Bake**: On source deletion, the engine "bakes" the current geometry into all dependents and severs the metadata link.
+
+### B. Feature Compilation (FEA)
+- **Sanitization**: All identifiers (Groups, Classes, Lookups) are sanitized to remove spaces/illegal characters.
+- **Lookup Ordering**: Managed via the `children` array in the `FeatureAST`, allowing lookups to be executed before or after inline rules.
