@@ -1,4 +1,4 @@
-# Aksharajanani: Data Structure Spec (V26.2)
+# Aksharajanani: Data Structure Spec (V26.4)
 
 This document defines the absolute schema for project persistence, template blueprints, session state, and geometric models, including internal logic layers, sub-folder components, and service-level protocols.
 
@@ -52,8 +52,8 @@ Basic 2D coordinate unit.
 ### B. Glyph Data Container (`GlyphData`)
 The primary data object for any character's visual representation.
 - `paths`: `Path[]` (Array of drawing paths).
-- `_cache`: `object` (Optional performance cache).
-    - `bbox`: `object` (Cached bounding box).
+- `_cache`: `object` (Internal performance cache for render services).
+    - `bbox`: `object` (Cached bounding box to prevent expensive recalculations).
         - `data`: `BoundingBox | null`.
         - `strokeThickness`: `number`.
 
@@ -82,6 +82,12 @@ Used for cubic Bezier outlines (primarily from SVG imports).
 Used in kerning and collision detection algorithms.
 - `minX`, `maxX`, `minY`, `maxY`: `number`.
 
+### F. Image Transformation (`ImageTransform`)
+Defines the spatial properties of background reference images.
+- `x`, `y`: `number` (Top-left coordinate).
+- `width`, `height`: `number`.
+- `rotation`: `number` (Rotation in radians).
+
 ---
 
 ## 3. Metadata & Character Models
@@ -104,14 +110,24 @@ Used in kerning and collision detection algorithms.
 - `if`: `string` (Conditional visibility key).
 - `hidden`: `boolean` (UI visibility flag).
 
-### B. Component Transformation (`ComponentTransform`)
+### B. Polymorphic Definition (`CharacterDefinition`)
+Union type used during project initialization and script parsing.
+- `CharacterSet` OR
+- `{ recommendedKerning: RecommendedKerning[] }` OR
+- `{ positioning: PositioningRules[] }` OR
+- `{ markAttachment: MarkAttachmentRules }` OR
+- `{ markAttachmentClass: AttachmentClass[] }` OR
+- `{ baseAttachmentClass: AttachmentClass[] }` OR
+- `{ groups: Record<string, string[]> }`.
+
+### C. Component Transformation (`ComponentTransform`)
 Positional and scale overrides for elements within a composite or linked glyph.
 - `scale`: `number` (Default: 1.0).
 - `x`: `number` (X coordinate offset).
 - `y`: `number` (Y coordinate offset).
 - `mode`: `PositioningMode` (`relative | absolute | touching`).
 
-### C. Character Set (`CharacterSet`)
+### D. Character Set (`CharacterSet`)
 A grouping of characters used for UI categorization and batch logic.
 - `nameKey`: `string` (Translation key for the group name).
 - `characters`: `Character[]` (List of character definitions in the set).
@@ -120,8 +136,9 @@ A grouping of characters used for UI categorization and batch logic.
 
 ## 4. UI Runtime Session State
 
-### A. Workspace & Tool Unions
-- `Workspace`: `drawing | positioning | kerning | rules | metrics`.
+### A. View & Workspace State
+- `View`: `'grid' | 'comparison' | 'settings' | 'creator' | 'rules'` (Top-level application view).
+- `Workspace`: `'drawing' | 'positioning' | 'kerning' | 'rules' | 'metrics'` (Navigation tabs).
 - `Tool`: `pen | eraser | line | dot | circle | curve | select | pan | edit | ellipse | calligraphy | slice`.
 - `FilterMode`: `none | all | completed | incomplete`.
 
@@ -129,9 +146,41 @@ A grouping of characters used for UI categorization and batch logic.
 - `code`: `Locale` (e.g., `'en' | 'ta' | 'de' | 'es' | 'fr' | 'hi' | 'kn' | 'ml' | 'si' | 'te'`).
 - `nativeName`: `string`.
 
+### C. Notifications & Modals
+- **ModalState**: `{ name: string, props?: any }` (Controls global modal visibility).
+- **NotificationState**: `{ message: string, id: number, type?: 'success'|'info'|'error', duration?: number, onUndo?: () => void }` (Schema for toast notifications).
+
 ---
 
-## 5. Sub-Folder Components & UI Logic
+## 5. State Mutation Protocols (Reducers)
+
+### A. Character & Project Actions (`CharacterAction`)
+- `SET_SCRIPT`: Initialize with script blueprint.
+- `SET_CHARACTER_SETS`: Overwrite all character sets.
+- `UPDATE_CHARACTER_SETS`: Functional update of character structure.
+- `DELETE_CHARACTER`: Remove glyph and clean dependencies.
+- `UPDATE_CHARACTER_METADATA`: Batch update of LSB, RSB, Class, Width.
+- `UPDATE_CHARACTER_BEARINGS`: Specific side-bearing override.
+- `ADD_CHARACTERS`: Inject new characters into a target set.
+- `UNLINK_GLYPH`: Convert linked glyph to manual composite.
+- `RELINK_GLYPH`: Restore live link from source cache.
+
+### B. Glyph Geometry Actions (`GlyphDataAction`)
+- `SET_MAP`: Overwrite entire drawing database.
+- `UPDATE_MAP`: Functional update of geometry.
+- `SET_GLYPH`: Update or add single glyph geometry.
+- `BATCH_UPDATE_GLYPHS`: Parallel update of multiple glyph geometries.
+- `DELETE_GLYPH`: Remove geometry for a unicode ID.
+
+### C. Feature Logic Actions (`RulesAction`)
+- `SET_FONT_RULES`: Overwrite GSUB/GPOS tree.
+- `SET_FEA_EDIT_MODE`: Toggle manual code override.
+- `SET_MANUAL_FEA_CODE`: Update raw text buffer.
+- `SET_HAS_UNSAVED_RULES`: Flag dirty state for navigation guards.
+
+---
+
+## 6. Sub-Folder Components & UI Logic
 
 ### A. Rules Sub-folder Logic
 - **DistContextualRuleValue**: `{ target: string, space: string, left?: string[], right?: string[] }`. Used in `DistRulesEditor.tsx`.
@@ -144,10 +193,11 @@ A grouping of characters used for UI categorization and batch logic.
 ### C. Positioning Sub-folder Logic
 - **SiblingPair**: `{ base: Character, mark: Character, ligature: Character }`. Used in `ClassPreviewStrip.tsx`.
 - **PositioningClassKey**: Structured string `BC:[idx]-MC:[idx]` used for class-based UI aggregation.
+- **ClassStatus**: Logic model for grid highlighting: `{ status: 'representative' | 'sibling' | 'unlinked' | 'none', representativeLabel?: string, classType?: 'mark' | 'base' }`.
 
 ---
 
-## 6. Service & Worker Protocols
+## 7. Service & Worker Protocols
 
 ### A. Python & Font Generation
 - **Python Worker Protocol**: `init` | `compile` | `result`.
@@ -159,7 +209,7 @@ A grouping of characters used for UI categorization and batch logic.
 
 ---
 
-## 7. Static Data Schemas
+## 8. Static Data Schemas
 
 ### A. Test Cases (`TestCase`)
 Located in `data/test_cases.json`.
@@ -167,6 +217,7 @@ Located in `data/test_cases.json`.
 - `category`: `string`.
 - `description`: `string`.
 - `priority`: `high | medium | low`.
+- **TestStatuses**: Persistence map: `Record<string, 'pending' | 'pass' | 'fail' | 'skip'>`.
 
 ### B. Unicode Blocks (`UnicodeBlock`)
 Located in `data/unicode_blocks.json`.
@@ -176,24 +227,27 @@ Located in `data/unicode_blocks.json`.
 
 ---
 
-## 8. Specialized Component Models
-
-### A. Creator Settings (`CreatorSettings`)
-- `text`, `fontSize`, `textColor`, `bgColor`, `overlayOpacity`, `textAlign`, `aspectRatio`, `addShadow`, `textPos`, `bgImageData`.
-
-### B. New Project Configuration (`NewProjectData`)
-- `projectName`, `fontFamily`, `upm`, `ascender`, `descender`, `includeLatin`.
-
----
-
 ## 9. Search & Scoring Models
 
-- `SearchQuery`: `{ raw, lower, unicodeHex, exactMatch, isEffective }`.
-- `Scoring`: Relevance mapping (1: Exact Name/Unicode, 2: StartsWith, 3: Contains, 4: Unicode prefix).
+- **SearchQuery**: `{ raw, lower, unicodeHex, exactMatch, isEffective }`.
+- **Scoring**: Relevance mapping (1: Exact Name/Unicode, 2: StartsWith, 3: Contains, 4: Unicode prefix).
+- **SearchResult**: Command palette model: `{ id, type, title, subtitle, aliases, icon, onExecute, unicode, character }`.
 
 ---
 
-## 10. Configuration Blueprints & Templates
+## 10. Component-Specific UI Models
+
+### A. Import Diffs (`ComparisonItem`)
+Used in `ImportGlyphsModal.tsx` to reconcile source and target projects.
+- `unicode`: `number` (Target ID).
+- `name`: `string`.
+- `sourceGlyph`: `GlyphData`.
+- `targetIsDrawn`: `boolean`.
+- `targetCharExists`: `boolean`.
+
+---
+
+## 11. Configuration Blueprints & Templates
 
 ### A. Script Blueprint (`ScriptConfig`)
 The template used to initialize a new project for a specific language.
@@ -205,14 +259,14 @@ The template used to initialize a new project for a specific language.
 - `rulesFeaContent`: `string` (Optional raw FEA text content).
 - `metrics`: `FontMetrics`.
 - `sampleText`: `string` (Initial preview text).
-- `defaults`: `ScriptDefaults` (Initial setting template).
+- `defaults`: `ScriptDefaults` (Initial template for `AppSettings`).
 - `grid`: `{ characterNameSize: number }`.
 - `guideFont`: `GuideFont`.
 - `testPage`: `TestPageConfig`.
 - `support`: `string` ("full" | "partial").
 
 ### B. Script Defaults (`ScriptDefaults`)
-The subset of settings provided as a template in a script configuration.
+Initial values used to populate `AppSettings` when a new project is created.
 - `fontName`, `strokeThickness`, `contrast`, `pathSimplification`, `showGridOutlines`, `isAutosaveEnabled`, `editorMode`, `isPrefillEnabled`, `showHiddenGlyphs`, `showUnicodeValues`, `showGlyphNames`, `preferKerningTerm`.
 
 ### C. Font Metrics Schema (`FontMetrics`)
@@ -220,7 +274,7 @@ The subset of settings provided as a template in a script configuration.
 
 ---
 
-## 11. Auxiliary Support Types
+## 12. Auxiliary Support Types
 
 ### A. Theme & Exporting
 - **Theme**: `'light' | 'dark'`.
@@ -232,8 +286,11 @@ The subset of settings provided as a template in a script configuration.
 - **AttachmentPoint**: `'topLeft' | 'topCenter' | 'topRight' | 'midLeft' | 'midRight' | 'bottomLeft' | 'bottomCenter' | 'bottomRight'`.
 - **HandleType**: `'point' | 'handleIn' | 'handleOut'`. Used in edit tool hit-testing for Bezier control.
 - **Handle**: `{ type: 'scale' | 'rotate' | 'move', direction: HandleDirection }`.
-- **TransformState**: `{ rotate: number, scale: number, flipX?: boolean, flipY?: boolean }`. Standalone state for toolbar/batch logic.
+- **TransformState**: `{ rotate: number, scale: number, flipX?: boolean, flipY?: boolean }` (State model for batch/toolbar operations).
 - **TransformAction**: `{ type, target, startPoint, initialPaths, initialTransform, initialBox, handle }`.
+- **DraggedPointInfo**: (Union type for edit tool state)
+    - **DraggedFreehandPointInfo**: `{ type: 'freehand', pathId: string, pointIndex: number }`.
+    - **DraggedSegmentPointInfo**: `{ type: 'segment', pathId: string, segmentGroupIndex: number, segmentIndex: number, handleType: HandleType }`.
 
 ### C. Structural Logic Blocks
 - **PositioningRules**: `{ base: string[], mark: string[], gpos?: string, gsub?: string, ligatureMap?: Record<string, Record<string, string>>, movement?: 'horizontal' | 'vertical' }`.
@@ -245,9 +302,14 @@ The subset of settings provided as a template in a script configuration.
 - **SliderRange**: `{ min: number, max: number, step?: number }`.
 - **Range**: `{ min: number, max: number, step?: number }`.
 
-### E. Variant Groups
+### E. Runtime Map Representations
+- **KerningMap**: `Map<string, number>` (Maps `"LeftUni-RightUni"` to numeric value).
+- **MarkPositioningMap**: `Map<string, Point>` (Maps `"BaseUni-MarkUni"` to 2D offset).
+
+### F. Variant Groups
 - **VariantGroup**: `{ optionKey: string, variants: Character[], description: string }`. Used in `ScriptVariantModal.tsx` for stylistic project initialization.
 
-### F. Misc Project Meta
+### G. Miscellaneous
+- **SaveOptions**: `{ isDraft?: boolean, silent?: boolean }` (Flags for cascading save logic).
 - **GuideFont**: `{ fontName: string, fontUrl: string, stylisticSet: string }`.
 - **ScriptsFile**: `{ defaultScriptId: string, scripts: ScriptConfig[] }`.
