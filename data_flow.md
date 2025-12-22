@@ -180,7 +180,7 @@ The Template export generates a "blueprint" of a script. It captures the archite
 The `handleSaveTemplate` logic in `useExportActions.ts` clones the current project but performs a "Structural Strip":
 1. **Geometry Purge**: Every entry in the `glyphs` map is replaced with an empty `GlyphData` object (`{ paths: [] }`).
 2. **Vector Reset**: All manual offsets in the `markPositioningMap` are cleared.
-3. **Spacing Reset**: All manual values in the `kerning` map are cleared.
+3. **Spacing Reset**: All manual values in the `kerning` box are cleared.
 
 ### 10.2 Logic Preservation
 Crucially, the template **retains**:
@@ -223,3 +223,104 @@ The base font binary and the FEA string are sent to a persistent Python worker (
 1.  **Hashing**: `simpleHash` generates a unique key for the current project state.
 2.  **IndexedDB Storage**: The final `.otf` blob is stored in the `fontCache` store.
 3.  **Instant Retrieval**: If the user clicks "Test" or "Export" again without modifying geometry or rules, the app serves the cached blob instantly, bypassing stages 1-3.
+
+---
+
+## 12. Command Palette & Intent Mapping Pipeline
+
+The Command Palette (`CommandPalette.tsx`) serves as the central orchestration layer for intent resolution, allowing users to jump to specific data states or execute global actions using natural-language-adjacent queries.
+
+### 12.1 Index Construction (Static & Snapshot)
+When the palette is opened (via `Ctrl+K`), it constructs a multi-source search index:
+1.  **Action Index**: Global application methods (Save, Load, Export, Test) are mapped to searchable aliases (e.g., "Duplicate" -> "Save Copy").
+2.  **Navigation Index**: Top-level workspaces (Drawing, Positioning, Kerning, Rules) are indexed with synonyms (e.g., "Spacing" -> "Kerning").
+3.  **Data Snapshot**: Every character in the project is snapshotted. This includes its name, Unicode, and drawing status. Snapshotting at open-time ensures that real-time drawing strokes don't trigger expensive re-indexing during typing.
+
+### 12.2 Query Parsing (The Smart Matcher)
+The input string is passed through `parseSearchQuery` in `searchUtils.ts`, which detects structural intents:
+1.  **Hex Detection**: If the query matches `U+[hex]` or `0x[hex]`, it is flagged as an explicit Unicode lookup.
+2.  **Exact Match**: Quotes (e.g., `"A"`) trigger a strict case-sensitive match, prioritizing single characters over broader names.
+3.  **Pair Resolution**: The palette attempts to split the query (e.g., "ka i"). If the components match a Base and Mark defined in the `positioningRules`, it maps the intent to a **Deep Positioning Link**.
+
+### 12.3 The Scoring Engine (Ranking Relevance)
+Matches are sorted using a tiered priority system to ensure the most useful intent is at the top (Index 0):
+*   **Tier 1 (Relevance 1)**: Exact case-insensitive Name or Unicode Hex match.
+*   **Tier 2 (Relevance 2)**: Match starts with the query.
+*   **Tier 3 (Relevance 3)**: Query is contained within the name.
+*   **Tier 4 (Relevance 4)**: Partial Unicode prefix matches.
+*   **Conflict Resolution**: If two items share a relevance score, **Type Priority** decides the order (e.g., jumping to a Glyph is prioritized over switching a Workspace).
+
+### 12.4 Deep Navigation Execution
+Executing a result (e.g., a "Positioning Pair") involves a multi-context handoff:
+1.  **Handoff**: The palette sets `pendingNavigationTarget` in the `LayoutContext` with a specialized identifier (e.g., `"2965-3007"`).
+2.  **State Change**: It calls `setWorkspace('positioning')` to switch views.
+3.  **Intercept**: The `PositioningPage` detects the `pendingNavigationTarget`, calculates its local index in the filtered grid, and automatically opens the `PositioningEditorPage` for that specific pair, effectively bypassing the main selection grid.
+
+---
+
+## 13. Smart Class Positioning & Propagation
+
+The **Smart Class** system enables efficient synchronization of relational positions across large sets of glyphs. This data flow ensures that positioning a single mark on a single base character can update dozens of other semantically related pairs.
+
+### 13.1 Edit Capture & Context Detection
+When a user modifies a mark's position in `PositioningEditorPage.tsx`:
+1. **Manual Offset**: The new `Point` is captured.
+2. **Context Resolution**: The engine (`usePositioningActions.ts`) checks the `markAttachmentClasses` and `baseAttachmentClasses` to see if the current base or mark belongs to a class.
+3. **Identity Mapping**: It identifies the "Class Representative" (usually the first member of the set).
+
+### 13.2 Joint Delta Calculation
+Instead of propagating raw absolute coordinates, Aksharajanani propagates a **Joint Delta**:
+1. **Snap Point Discovery**: The engine retrieves the theoretical "Anchor Point" for the pair (e.g., `base:topCenter -> mark:bottomCenter`) based on `markAttachmentRules`.
+2. **Manual Deviation**: It calculates the delta between this mathematical snap point and the user's manual placement: `AnchorDelta = ManualPoint - SnapPoint`.
+3. **Relativity**: This delta represents the "human touch" or stylistic adjustment specific to that class interaction.
+
+### 13.3 Propagation Cascade
+The propagation logic in `positioningService.ts` loops through all eligible siblings in the identified class:
+1. **Anchor Discovery**: For each sibling pair (e.g., `SiblingBase` + `Mark`), it calculates that pair's specific mathematical snap point.
+2. **Delta Injection**: It applies the previously calculated `AnchorDelta` to this new snap point.
+3. **Offset Generation**: The resulting coordinate is written to `markPositioningMap` for that sibling.
+4. **Validation**: Propagation is skipped for any pair explicitly marked as "Unlinked" (Exceptions).
+
+### 13.4 Persistence and Ligature Reconstruction
+If the positioning rule is GSUB-based (requiring a baked ligature glyph):
+1. **Reconstruction**: `generateCompositeGlyphData` is invoked for the primary pair and all affected siblings.
+2. **Baking**: The new paths are written to the `GlyphDataContext`.
+3. **Dispatch**: The global state is updated with a single atomic transaction.
+4. **Feedback**: A success notification provides an **Undo** path, which snapshots and reverts the entire batch update if the results were unexpected.
+
+---
+
+## 14. Dependency Bootstrap & Environment Lifecycle
+
+Aksharajanani is a "Fat Client" application that hydrtates multiple execution environments (JavaScript, Web Workers, and Python/WASM) upon startup.
+
+### 14.1 Script Tag Injection (Bootloader)
+Initialization begins in `index.html` via static `<script>` tags:
+1.  **Base Libraries**: `paper-full.min.js`, `opentype.js`, and `imagetracerjs` are loaded into the global `window` scope.
+2.  **Runtime Environment**: `pyodide.js` is loaded but not yet executed.
+3.  **Module Mapping**: The `importmap` resolves ES modules for `react`, `idb`, and `vitest`.
+
+### 14.2 App Container Mount
+The `AppContainer.tsx` component orchestrates the secondary hydration:
+1.  **Pyodide Initialization**: Calls `initializePyodide()` which spawns a dedicated Web Worker (`pythonFontService.ts`).
+2.  **Logo Injection**: Dynamically injects a `@font-face` for the application's branding logo.
+3.  **Metadata Fetching**: Retrieves `scripts.json` to populate the script selection screen.
+
+### 14.3 Python Worker Lifecycle
+The `pythonFontService.ts` executes a complex internal bootstrap:
+1.  **WASM Fetching**: The worker downloads the Pyodide WASM binary (~10MB).
+2.  **Micropip Setup**: Python's `micropip` module is initialized to manage virtual environment packages.
+3.  **Dependency Installation**: The worker calls `micropip.install('fonttools')` to load the 3.5MB font engineering library into memory.
+4.  **Signal**: The worker posts a `type: 'status', payload: 'ready'` message back to the main thread.
+
+### 14.4 Project Asset Hydration
+When a specific script (e.g., "Tamil") is selected:
+1.  **Blueprint Fetching**: `useProjectLoad.ts` fetches `characters_[id].json`, `positioning_[id].json`, and `rules_[id].json`.
+2.  **Guide Font Injection**: The `guide-font-face-style` element is created, fetching the reference `.ttf` file for tracing.
+3.  **Sample Text Loading**: The `sample_[id].txt` file is fetched and injected into the "Test" page settings.
+
+### 14.5 Garbage Collection & Cleanup
+To maintain performance during long sessions:
+1.  **Scope Disposal**: `paperScope.project.clear()` is called during every significant geometry operation (BBox calc, Export, Tracing) to prevent Canvas memory leaks.
+2.  **Worker Termination**: Geometry compilation workers are ephemeral and call `self.close()` immediately after a task is completed.
+3.  **Object URL Revocation**: `URL.revokeObjectURL()` is called after every font download or test page load to free browser memory buffers.
