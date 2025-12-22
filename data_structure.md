@@ -1,4 +1,4 @@
-# Aksharajanani: Data Structure Spec (V26.4)
+# Aksharajanani: Data Structure Spec (V26.5)
 
 This document defines the absolute schema for project persistence, template blueprints, session state, and geometric models, including internal logic layers, sub-folder components, and service-level protocols.
 
@@ -32,7 +32,20 @@ Stored in IndexedDB `projects` store. This represents the total state of a font 
 | `manualFeaCode` | `string` | Raw text for manual OpenType features. |
 | `savedAt` | `string` | ISO 8601 modification timestamp. |
 
-### B. Project Snapshot (`ProjectSnapshot`)
+### B. Creator Studio Settings (`CreatorSettings`)
+Persistence model for the "Create" view.
+- `text`: `string`.
+- `fontSize`: `number`.
+- `textColor`: `string`.
+- `bgColor`: `string`.
+- `overlayOpacity`: `number`.
+- `textAlign`: `'left' | 'center' | 'right'`.
+- `aspectRatio`: `'square' | 'portrait' | 'landscape'`.
+- `addShadow`: `boolean`.
+- `textPos`: `Point | null`.
+- `bgImageData`: `string | null` (Base64).
+
+### C. Project Snapshot (`ProjectSnapshot`)
 Stored in IndexedDB `snapshots` store for version history (limit 5 per project).
 - `id`: `number` (Auto-increment PK).
 - `projectId`: `number` (FK to project).
@@ -178,6 +191,17 @@ A grouping of characters used for UI categorization and batch logic.
 - `SET_MANUAL_FEA_CODE`: Update raw text buffer.
 - `SET_HAS_UNSAVED_RULES`: Flag dirty state for navigation guards.
 
+### D. Settings & Metrics Actions (`SettingsAction`)
+- `SET_SETTINGS`: Overwrite `AppSettings`.
+- `UPDATE_SETTINGS`: Functional update of specific settings.
+- `SET_METRICS`: Overwrite `FontMetrics`.
+- `UPDATE_METRICS`: Functional update of specific metrics.
+
+### E. Specialized Map Actions
+- **`PositioningAction`**: `SET_MAP` for `MarkPositioningMap`.
+- **`KerningAction`**: `SET_MAP` for `KerningMap`.
+- **`ClipboardAction`**: `SET_CLIPBOARD` for `Path[]`.
+
 ---
 
 ## 6. Sub-Folder Components & UI Logic
@@ -185,6 +209,7 @@ A grouping of characters used for UI categorization and batch logic.
 ### A. Rules Sub-folder Logic
 - **DistContextualRuleValue**: `{ target: string, space: string, left?: string[], right?: string[] }`. Used in `DistRulesEditor.tsx`.
 - **RuleGroupKey**: `{ ligature: 'liga', contextual: 'context', multiple: 'multi', single: 'single' }`. Internal mapping for `useRulesState`.
+- **DistRuleType**: `'simple' | 'contextual'`. Union used in `useRulesState.ts`.
 
 ### B. Rules/Manager Sub-folder Logic
 - **SmartOption**: `{ label: string, value: string, type: 'group' | 'char' | 'set' }`. Autocomplete structure for `SmartGlyphInput.tsx`.
@@ -200,7 +225,9 @@ A grouping of characters used for UI categorization and batch logic.
 ## 7. Service & Worker Protocols
 
 ### A. Python & Font Generation
-- **Python Worker Protocol**: `init` | `compile` | `result`.
+- **Python Worker Commands**: `init` | `compile`.
+- **Python Worker Responses**: `status` | `result` | `error` | `init_error`.
+- **Worker Status States**: `loadingPyodide` | `loadingMicropip` | `installingFonttools` | `ready`.
 - **FontCacheEntry**: `{ projectId, hash, fontBinary }`.
 
 ### B. Render & Imaging
@@ -245,6 +272,15 @@ Used in `ImportGlyphsModal.tsx` to reconcile source and target projects.
 - `targetIsDrawn`: `boolean`.
 - `targetCharExists`: `boolean`.
 
+### B. New Project Flow (`NewProjectData`)
+Captured in `NewProjectModal.tsx` to initiate a blank script project.
+- `projectName`: `string`.
+- `fontFamily`: `string`.
+- `upm`: `number`.
+- `ascender`: `number`.
+- `descender`: `number`.
+- `includeLatin`: `boolean`.
+
 ---
 
 ## 11. Configuration Blueprints & Templates
@@ -264,6 +300,11 @@ The template used to initialize a new project for a specific language.
 - `guideFont`: `GuideFont`.
 - `testPage`: `TestPageConfig`.
 - `support`: `string` ("full" | "partial").
+- `supportMessage`: `string` (Contextual help for partial support).
+- `kerning`: `string` ("true" flag).
+- `touchingConsonants`: `string` ("true" flag for specialized positioning).
+- `characterSetData`: `CharacterDefinition[]` (Bundled JSON data).
+- `rulesData`: `any` (Bundled JSON data).
 
 ### B. Script Defaults (`ScriptDefaults`)
 Initial values used to populate `AppSettings` when a new project is created.
@@ -305,6 +346,7 @@ Initial values used to populate `AppSettings` when a new project is created.
 ### E. Runtime Map Representations
 - **KerningMap**: `Map<string, number>` (Maps `"LeftUni-RightUni"` to numeric value).
 - **MarkPositioningMap**: `Map<string, Point>` (Maps `"BaseUni-MarkUni"` to 2D offset).
+- **PositioningGroupNames**: `Set<string>` (Prevents name collisions in Rules UI).
 
 ### F. Variant Groups
 - **VariantGroup**: `{ optionKey: string, variants: Character[], description: string }`. Used in `ScriptVariantModal.tsx` for stylistic project initialization.
@@ -313,3 +355,47 @@ Initial values used to populate `AppSettings` when a new project is created.
 - **SaveOptions**: `{ isDraft?: boolean, silent?: boolean }` (Flags for cascading save logic).
 - **GuideFont**: `{ fontName: string, fontUrl: string, stylisticSet: string }`.
 - **ScriptsFile**: `{ defaultScriptId: string, scripts: ScriptConfig[] }`.
+
+---
+
+## 13. Font Data (Reference)
+
+This section documents the internal application data structures that are fundamentally required by the font compiler to produce a valid, installable OpenType binary.
+
+### 1. The Geometric Source (`Path[]`)
+- **Location**: Contained within the `glyphs` property of `ProjectData`.
+- **Requirement**: At least one glyph (other than `.notdef` or `space`) must contain valid geometric paths.
+- **Compiler Role**: These paths are converted into low-level `opentype.Path` commands (`moveTo`, `lineTo`, `curveTo`, `closePath`).
+
+### 2. The Identity Mapping (`Character`)
+- **Location**: Defined within `characterSets`.
+- **Requirement**:
+    - **`unicode`**: Every exportable character must have a unique decimal codepoint for the CMap lookup table.
+    - **`name`**: Must have a PostScript-compatible name for internal referencing in FEA code.
+    - **`glyphClass`**: Categorization (Base, Mark, or Ligature) is required to build the GDEF (Glyph Definition) table.
+
+### 3. The Vertical Framework (`FontMetrics`)
+- **Location**: The `metrics` property of `ProjectData`.
+- **Requirement**:
+    - **`unitsPerEm`**: The overall coordinate scale (standard: 1000).
+    - **`ascender` / `descender`**: Global vertical boundaries that define the font's line height in OS/2 and hhea tables.
+
+### 4. Horizontal Spacing (`Character` bearings)
+- **Location**: Metadata properties on the `Character` object.
+- **Requirement**:
+    - **`lsb` (Left Side Bearing)**: Initial horizontal offset for the glyph outline.
+    - **`rsb` (Right Side Bearing)**: Trailing horizontal space after the glyph outline.
+    - **`advWidth` (Advance Width)**: For non-spacing marks, this must be explicitly set to `0` to ensure proper stacking in Indic scripts.
+
+### 5. Script Intelligence (`fontRules` & `PositioningRules`)
+- **Location**: The `fontRules` tree and `positioningRules` array.
+- **Requirement**:
+    - **GSUB (Substitution)**: Rules that define how character sequences map to ligatures.
+    - **GPOS (Positioning)**: Derived from the `markPositioningMap`, these provide the X/Y anchor coordinates for dynamic mark placement.
+    - **Output**: Compiled into the Adobe Feature File (`.fea`) syntax.
+
+### 6. Identity Metadata (`AppSettings`)
+- **Location**: Specific fields in the `settings` object.
+- **Requirement**:
+    - **`fontName`**: Essential for the 'Name' table (ID 1: Family Name, ID 4: Full Name).
+    - **Authoring Strings**: `designer`, `manufacturer`, and `licenseDescription` are required for professional OS-level identification.
