@@ -179,7 +179,7 @@ The Template export generates a "blueprint" of a script. It captures the archite
 ### 10.1 Structural Extraction
 The `handleSaveTemplate` logic in `useExportActions.ts` clones the current project but performs a "Structural Strip":
 1. **Geometry Purge**: Every entry in the `glyphs` map is replaced with an empty `GlyphData` object (`{ paths: [] }`).
-2. **Vector Reset**: All manual offsets in the `markPositioning` map are cleared.
+2. **Vector Reset**: All manual offsets in the `markPositioningMap` are cleared.
 3. **Spacing Reset**: All manual values in the `kerning` map are cleared.
 
 ### 10.2 Logic Preservation
@@ -191,3 +191,35 @@ Crucially, the template **retains**:
 
 ### 10.3 Output
 The resulting file is a standard `.json` project file. When loaded, it provides a "Clean Start" for a script, where all the complex OpenType logic is pre-configured, allowing a new user to simply begin drawing.
+
+---
+
+## 11. Multi-Stage Font Compilation Pipeline (OTF Export)
+
+The "Export Font" process is a sophisticated data bridge between JavaScript's vector math and Python's font engineering libraries.
+
+### Stage 1: Geometry Compilation (Web Worker)
+To prevent main-thread UI freezing, the initial conversion happens in a dedicated worker (`fontService.ts`):
+1.  **Scope Initialization**: A `paper.js` scope is created within the worker.
+2.  **Path Unioning**: For each glyph, individual drawn paths are united into a single binary shape using `paperPath.unite()`. This resolves self-intersections and handles holes via the "Even-Odd" winding rule.
+3.  **Command Translation**: The resulting Paper.js geometry is translated into `opentype.js` path commands (`moveTo`, `bezierCurveTo`, etc.).
+4.  **Coordinate Mapping**: Points are flipped (Canvas Y-down to Font Y-up) and scaled from 1000 units to the project's specific UPM.
+5.  **Metrics Application**: LSB and RSB are applied by shifting commands and calculating the final `advanceWidth`.
+
+### Stage 2: Adobe FEA Generation
+While the worker processes geometry, the main thread runs `feaService.ts`:
+1.  **Rule Expansion**: GPOS (Positioning) and GSUB (Substitution) rules are expanded from high-level definitions (e.g., `@vowels`) into individual glyph name mappings.
+2.  **Anchor Calculation**: Manual offsets in `markPositioningMap` are combined with default anchor rules to produce precise `<anchor X Y>` strings.
+3.  **Feature Assembly**: The data is concatenated into a standard Adobe Feature File (`.fea`) syntax string.
+
+### Stage 3: Python Binary Patching (Pyodide)
+The base font binary and the FEA string are sent to a persistent Python worker (`pythonFontService.ts`):
+1.  **Library Loading**: Pyodide initializes the `fontTools` Python library.
+2.  **FEA Compilation**: `fontTools.feaLib` parses the FEA string and builds the binary `GPOS`, `GSUB`, and `GDEF` tables.
+3.  **CMAP Injection**: A custom Python script adds a Unicode CMap (Format 4/12) to ensure the font works correctly on both Windows and MacOS.
+4.  **Serialization**: The patched `TTFont` object is compiled back into an ArrayBuffer.
+
+### Stage 4: Hash-Based Caching
+1.  **Hashing**: `simpleHash` generates a unique key for the current project state.
+2.  **IndexedDB Storage**: The final `.otf` blob is stored in the `fontCache` store.
+3.  **Instant Retrieval**: If the user clicks "Test" or "Export" again without modifying geometry or rules, the app serves the cached blob instantly, bypassing stages 1-3.
