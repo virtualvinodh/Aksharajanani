@@ -450,8 +450,25 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       />
 
       <main className={layoutClasses}>
+        {/* Toolbar - Sticky at bottom on mobile, side on desktop (Left) */}
+        <div className={isLargeScreen ? "order-1 flex-shrink-0 flex flex-col overflow-y-auto max-h-full no-scrollbar border-r dark:border-gray-700" : "order-2 flex-shrink-0 w-full z-20 p-1 bg-white dark:bg-gray-900 border-t dark:border-gray-700"}>
+             <div className={isLargeScreen ? "my-auto" : ""}>
+                 <DrawingToolbar
+                    character={character} currentTool={currentTool} setCurrentTool={setCurrentTool} settings={settings} isLargeScreen={isLargeScreen}
+                    onUndo={undo} canUndo={canUndo} onRedo={redo} canRedo={canRedo}
+                    onCut={handleCut} selectedPathIds={selectedPathIds} onCopy={handleCopy} onPaste={handlePaste} clipboard={clipboard}
+                    onGroup={handleGroup} canGroup={canGroup} onUngroup={handleUngroup} canUngroup={canUngroup}
+                    onZoom={handleZoom} onImageImportClick={() => imageImportRef.current?.click()} onSvgImportClick={() => svgImportRef.current?.click()}
+                    onImageTraceClick={() => imageTraceRef.current?.click()} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
+                    onApplyTransform={handleApplyTransform}
+                    previewTransform={previewTransform}
+                    setPreviewTransform={setPreviewTransform}
+                 />
+             </div>
+         </div>
+
         {/* Central Drawing Area (Canvas + Strips) */}
-        <div className={`flex flex-col items-center relative ${isLargeScreen ? 'h-full flex-1 overflow-hidden justify-center' : 'flex-1 w-full min-h-0'}`}>
+        <div className={`order-1 lg:order-2 flex flex-col items-center relative ${isLargeScreen ? 'h-full flex-1 overflow-hidden justify-center' : 'flex-1 w-full min-h-0'}`}>
             
             {/* Canvas Wrapper - Shrink to fit available space */}
             <div className={`w-full flex-1 min-h-0 flex items-center justify-center ${!isLargeScreen ? 'p-1' : ''}`}>
@@ -505,23 +522,6 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                 )}
             </div>
         </div>
-
-        {/* Toolbar - Sticky at bottom on mobile, side on desktop */}
-        <div className={isLargeScreen ? "flex-shrink-0 flex flex-col overflow-y-auto max-h-full no-scrollbar" : "flex-shrink-0 w-full z-20 p-1 bg-white dark:bg-gray-900 border-t dark:border-gray-700"}>
-             <div className={isLargeScreen ? "my-auto" : ""}>
-                 <DrawingToolbar
-                    character={character} currentTool={currentTool} setCurrentTool={setCurrentTool} settings={settings} isLargeScreen={isLargeScreen}
-                    onUndo={undo} canUndo={canUndo} onRedo={redo} canRedo={canRedo}
-                    onCut={handleCut} selectedPathIds={selectedPathIds} onCopy={handleCopy} onPaste={handlePaste} clipboard={clipboard}
-                    onGroup={handleGroup} canGroup={canGroup} onUngroup={handleUngroup} canUngroup={canUngroup}
-                    onZoom={handleZoom} onImageImportClick={() => imageImportRef.current?.click()} onSvgImportClick={() => svgImportRef.current?.click()}
-                    onImageTraceClick={() => imageTraceRef.current?.click()} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
-                    onApplyTransform={handleApplyTransform}
-                    previewTransform={previewTransform}
-                    setPreviewTransform={setPreviewTransform}
-                 />
-             </div>
-         </div>
       </main>
 
       <ImageControlPanel backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity} setBackgroundImageOpacity={setBackgroundImageOpacity} onClearImage={() => { setBackgroundImage(null); setImageTransform(null); }} />
