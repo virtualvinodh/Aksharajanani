@@ -92,15 +92,19 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                      if (mClass.exceptPairs?.includes(pairKey)) return { status: 'unlinked' };
                      
                      const members = expandMembers(mClass.members, groups, characterSets);
-                     // For Mark Class, the leader is the first MARK in the group attached to the CURRENT base
-                     const leaderMark = members[0];
                      
-                     if (leaderMark === mark.name) return { status: 'representative', classType: 'mark' };
+                     // --- DYNAMIC LEADER IDENTIFICATION ---
+                     const effectiveLeaderMark = members.find(memberName => {
+                         const pk = `${base.name}-${memberName}`;
+                         return !mClass.exceptPairs?.includes(pk);
+                     }) || members[0];
+                     
+                     if (effectiveLeaderMark === mark.name) return { status: 'representative', classType: 'mark' };
                      
                      return { 
                          status: 'sibling', 
                          classType: 'mark',
-                         representativeLabel: `${base.name} + ${leaderMark}`
+                         representativeLabel: `${base.name} + ${effectiveLeaderMark}`
                      };
                 }
             }
@@ -118,15 +122,19 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                     if (bClass.exceptPairs?.includes(pairKey)) return { status: 'unlinked' };
                     
                     const members = expandMembers(bClass.members, groups, characterSets);
-                    // For Base Class, the leader is the first BASE in the group attached to the CURRENT mark
-                    const leaderBase = members[0];
                     
-                    if (leaderBase === base.name) return { status: 'representative', classType: 'base' };
+                    // --- DYNAMIC LEADER IDENTIFICATION ---
+                    const effectiveLeaderBase = members.find(memberName => {
+                        const pk = `${memberName}-${mark.name}`;
+                        return !bClass.exceptPairs?.includes(pk);
+                    }) || members[0];
+                    
+                    if (effectiveLeaderBase === base.name) return { status: 'representative', classType: 'base' };
                     
                     return {
                         status: 'sibling',
                         classType: 'base',
-                        representativeLabel: `${leaderBase} + ${mark.name}`
+                        representativeLabel: `${effectiveLeaderBase} + ${mark.name}`
                     };
                 }
             }

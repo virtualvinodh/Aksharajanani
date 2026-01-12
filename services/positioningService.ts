@@ -326,7 +326,7 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
 
 /**
  * Sweeps through all defined classes and ensures all members are synchronized.
- * Uses a "first positioned member" strategy as the source of truth.
+ * Uses an effective leader (first linked member) as the source of truth.
  */
 export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePositioningResult => {
     const {
@@ -347,14 +347,9 @@ export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePo
 
     const applySync = (classDef: AttachmentClass, type: 'mark' | 'base') => {
         const members = expandMembers(classDef.members, groups, characterSets);
-        
-        // Better strategy: Iterate the CLASS members first.
         const memberChars = members.map(name => allCharsByName.get(name)).filter(c => c && c.unicode !== undefined);
         const memberIds = new Set(memberChars.map(c => c!.unicode!));
 
-        // Build the pivot map from existing positions involving ANY class member
-        // Key: PivotID (Base for MarkClass, Mark for BaseClass)
-        // Value: List of MemberIDs that are positioned on this Pivot
         const pivotToPositionedMembers = new Map<number, number[]>();
 
         for (const key of newMarkPositioningMap.keys()) {
@@ -370,26 +365,21 @@ export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePo
             }
         }
 
-        // For each pivot that has at least one positioned member:
         pivotToPositionedMembers.forEach((positionedMemberIds, pivotId) => {
             const pivotCharObj = idToChar.get(pivotId);
             if (!pivotCharObj) return;
 
-            // Pick Source: 
-            // We must filter out members that are EXCEPTIONS (Unlinked) from being the source of truth.
-            // If the only positioned member is an exception, we shouldn't sync the rest to it.
+            // --- DYNAMIC LEADER IDENTIFICATION FOR SWEEP ---
             const validSourceMemberIds = positionedMemberIds.filter(mid => {
                 const memberChar = idToChar.get(mid);
                 if (!memberChar) return false;
-                
                 const pairNameKey = type === 'mark' 
                     ? `${pivotCharObj.name}-${memberChar.name}`
                     : `${memberChar.name}-${pivotCharObj.name}`;
-                    
                 return !classDef.exceptPairs?.includes(pairNameKey);
             });
 
-            if (validSourceMemberIds.length === 0) return; // No valid source to sync from
+            if (validSourceMemberIds.length === 0) return;
 
             const sourceMemberId = validSourceMemberIds[0];
             const sourceMemberChar = memberChars.find(c => c!.unicode === sourceMemberId)!;
@@ -404,7 +394,6 @@ export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePo
             const markGlyph = newGlyphDataMap.get(markChar.unicode!);
             if (!baseGlyph || !markGlyph) return;
 
-            // Calculate Target Anchor Delta from Source
              const sourceRule = resolveAttachmentRule(
                 baseChar.name, 
                 markChar.name, 
@@ -413,9 +402,7 @@ export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePo
                 groups
             );
 
-            let sBasePt = "topCenter";
-            let sMarkPt = "bottomCenter";
-            let sBx = 0, sBy = 0;
+            let sBasePt = "topCenter", sMarkPt = "bottomCenter", sBx = 0, sBy = 0;
             if (sourceRule) {
                 sBasePt = sourceRule[0]; sMarkPt = sourceRule[1];
                 if (sourceRule[2]) sBx = parseFloat(sourceRule[2]);
@@ -427,24 +414,17 @@ export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePo
 
             if (!srcBaseAnc || !srcMarkAnc) return;
 
-            const targetAnchorDelta = VEC.sub(
-                VEC.add(sourceOffset, srcMarkAnc),
-                srcBaseAnc
-            );
+            const targetAnchorDelta = VEC.sub(VEC.add(sourceOffset, srcMarkAnc), srcBaseAnc);
 
-            // Propagate to ALL members of the class (positioned or not)
-            // Note: We skip the source itself to avoid redundant calc
             memberChars.forEach(targetMemberChar => {
                 if (!targetMemberChar || targetMemberChar.unicode === sourceMemberId) return;
 
-                // Check exceptions
                 const pairNameKey = type === 'mark' 
                     ? `${pivotCharObj!.name}-${targetMemberChar.name}`
                     : `${targetMemberChar.name}-${pivotCharObj!.name}`;
                 
                 if (classDef.exceptPairs && classDef.exceptPairs.includes(pairNameKey)) return;
                 
-                // Also check Applies/Exceptions lists on class
                 if (type === 'mark') {
                     if (classDef.exceptions && expandMembers(classDef.exceptions, groups, characterSets).includes(pivotCharObj!.name)) return;
                     if (classDef.applies && !expandMembers(classDef.applies, groups, characterSets).includes(pivotCharObj!.name)) return;
@@ -453,15 +433,9 @@ export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePo
                     if (classDef.applies && !expandMembers(classDef.applies, groups, characterSets).includes(pivotCharObj!.name)) return;
                 }
 
-
                 const targetKey = type === 'mark' ? `${pivotId}-${targetMemberChar.unicode}` : `${targetMemberChar.unicode}-${pivotId}`;
                 const targetLigature = allLigaturesByKey.get(targetKey);
                 
-                // Even if ligature doesn't exist in map (e.g. dynamic), we might need to position it if rules allow.
-                // But typically we only position if user requested or if it's a known pair.
-                // For sync, we update if it's in the ligatures map OR if it's already positioned.
-                
-                // Logic: If it exists in allLigaturesByKey, we update it.
                 if (targetLigature) {
                      const tBaseChar = type === 'mark' ? pivotCharObj! : targetMemberChar;
                      const tMarkChar = type === 'mark' ? targetMemberChar : pivotCharObj!;
@@ -482,14 +456,9 @@ export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePo
                      const tMarkAnc = getAnchorFromRule(tMarkGlyph, strokeThickness, tmPt);
                      
                      if (tBaseAnc && tMarkAnc) {
-                         const newTargetOffset = VEC.sub(
-                            VEC.add(targetAnchorDelta, tBaseAnc),
-                            tMarkAnc
-                         );
-                         
+                         const newTargetOffset = VEC.sub(VEC.add(targetAnchorDelta, tBaseAnc), tMarkAnc);
                          newMarkPositioningMap.set(targetKey, newTargetOffset);
 
-                         // GSUB Check
                          const gsubRule = positioningRules.find(r => 
                             expandMembers(r.base, groups, characterSets).includes(tBaseChar.name) && 
                             expandMembers(r.mark, groups, characterSets).includes(tMarkChar.name)
@@ -511,13 +480,9 @@ export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePo
         });
     };
 
-    // Run Sync for Marks
     markAttachmentClasses.forEach(cls => applySync(cls, 'mark'));
-    
-    // Run Sync for Bases
     baseAttachmentClasses.forEach(cls => applySync(cls, 'base'));
 
-    // --- Update Character Sets for any new ligatures created ---
     const ligatureExistsMap = new Map<number, boolean>();
     newLigaturesToUpdate.forEach(lig => ligatureExistsMap.set(lig.unicode, false));
 
@@ -527,7 +492,6 @@ export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePo
             if (newLigaturesToUpdate.has(char.unicode)) {
                 ligatureExistsMap.set(char.unicode, true);
                 const updatedLigature = newLigaturesToUpdate.get(char.unicode)!;
-                // Merge props
                 return { ...char, ...updatedLigature };
             }
             return char;

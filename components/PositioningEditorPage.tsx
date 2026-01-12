@@ -144,7 +144,17 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
 
         if (activeClass && targetType) {
              const members = expandMembers(activeClass.members, groups, characterSets);
-             if (members.length > 0) pName = members[0];
+             
+             // --- DYNAMIC LEADER PROMOTION ---
+             // Pick the first member that is NOT unlinked (exception)
+             const effectiveLeader = members.find(memberName => {
+                 const pairKey = targetType === 'mark' 
+                    ? `${baseChar.name}-${memberName}` 
+                    : `${memberName}-${markChar.name}`;
+                 return !activeClass?.exceptPairs?.includes(pairKey);
+             });
+
+             pName = effectiveLeader || members[0];
              
              if (targetType === 'mark') {
                  isP = markChar.name === pName;
@@ -396,9 +406,15 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
              const members = expandMembers(activeAttachmentClass.members, groups, characterSets);
              if (members.length === 0) return;
              
-             const leaderName = members[0];
-             const leaderChar = allChars.get(leaderName);
-             
+             // --- RELINK SYNC LOGIC (USES DYNAMIC LEADER) ---
+             const effectiveLeaderName = members.find(memberName => {
+                 const pk = activeClassType === 'mark' 
+                    ? `${baseChar.name}-${memberName}` 
+                    : `${memberName}-${markChar.name}`;
+                 return !activeAttachmentClass.exceptPairs?.includes(pk);
+             }) || members[0];
+
+             const leaderChar = allChars.get(effectiveLeaderName);
              if (!leaderChar) return;
              
              const refBase = activeClassType === 'base' ? leaderChar : baseChar;
@@ -486,7 +502,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             onSave(targetLigature, newGlyphData, newOffset, { lsb, rsb }, saveOptions as any);
             setInitialMarkPaths(deepClone(newPaths)); 
             
-            showNotification("Relinked and synced to class leader.", "success");
+            showNotification(t('glyphRelinkedSuccess'), "success");
         }
     };
     
@@ -789,6 +805,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                             {isPropertiesPanelOpen && <GlyphPropertiesPanel lsb={lsb} setLsb={setLsb} rsb={rsb} setRsb={setRsb} metrics={metrics} onClose={() => setIsPropertiesPanelOpen(false)} />}
                         </div>
                     )}
+                    {/* FIX: handleSave expects Path[] as first argument. Wrapping in arrow function to pass markPaths. */}
                     {!settings.isAutosaveEnabled && <button onClick={() => handleSave(markPaths)} className="p-2 bg-indigo-600 text-white rounded-lg flex-shrink-0"><SaveIcon /></button>}
                 </div>
             </header>
@@ -909,7 +926,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             
             <UnsavedChangesModal isOpen={isUnsavedModalOpen} onClose={() => {setIsUnsavedModalOpen(false); setPendingNavigation(null);}} onSave={() => {handleSave(markPaths); if(pendingNavigation) handleNavigationAttempt(pendingNavigation);}} onDiscard={() => {if(pendingNavigation) { if (pendingNavigation === 'back') onClose(); else if (pendingNavigation === 'prev' && currentIndex! > 0) onNavigate(currentIndex! - 1); else if (pendingNavigation === 'next') onNavigate(currentIndex! + 1); } setIsUnsavedModalOpen(false);}} />
             
-            <Modal isOpen={isResetConfirmOpen} onClose={setIsResetConfirmOpen} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={handleConfirmReset} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: targetLigature.name })}</p></Modal>
+            {/* FIX: onClose prop expects () => void, wrapping setIsResetConfirmOpen in an arrow function. */}
+            <Modal isOpen={isResetConfirmOpen} onClose={() => setIsResetConfirmOpen(false)} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={handleConfirmReset} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: targetLigature.name })}</p></Modal>
         </div>
     );
 };
