@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { BackIcon, SaveIcon, PropertiesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, LinkIcon, BrokenLinkIcon, CloseIcon, DRAWING_CANVAS_SIZE } from '../constants';
+import { BackIcon, SaveIcon, PropertiesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, CloseIcon, DRAWING_CANVAS_SIZE } from '../constants';
 import DrawingCanvas from './DrawingCanvas';
 import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, CharacterSet, AttachmentClass, AttachmentPoint } from '../types';
 import { calculateDefaultMarkOffset, getAccurateGlyphBBox, resolveAttachmentRule, getAttachmentPointCoords } from '../services/glyphRenderService';
@@ -631,7 +631,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
     const prevPair = currentIndex !== null && currentIndex > 0 ? allPairs[currentIndex - 1] : null;
     const nextPair = currentIndex !== null && currentIndex < allPairs.length - 1 ? allPairs[currentIndex + 1] : null;
 
-    const showStrip = !!activeAttachmentClass && isLinked && classSiblings.length > 0;
+    const showStrip = !!activeAttachmentClass && classSiblings.length > 0;
 
     const reuseSources = useMemo(() => {
         if (!characterSets) return [];
@@ -782,28 +782,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                     
                     {isLargeScreen && coordinateControls}
                     
-                    {(markAttachmentClasses || baseAttachmentClasses) && activeAttachmentClass && (
-                        isLinked ? (
-                            <button
-                                onClick={handleToggleLink}
-                                title="Unlink from Class"
-                                className="flex items-center gap-2 justify-center p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-semibold rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors duration-200"
-                            >
-                                <BrokenLinkIcon className="w-5 h-5" />
-                                <span className="hidden xl:inline">Unlink</span>
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleToggleLink}
-                                title="Relink to Class"
-                                className="flex items-center gap-2 justify-center p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors duration-200"
-                            >
-                                <LinkIcon className="w-5 h-5" />
-                                <span className="hidden xl:inline">Relink</span>
-                            </button>
-                        )
-                    )}
-
                     <button onClick={() => setIsResetConfirmOpen(true)} disabled={!isPositioned} className="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 flex-shrink-0"><UndoIcon /></button>
                     {isGsubPair && (
                         <div className="relative">
@@ -875,6 +853,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                                 strokeThickness={settings.strokeThickness}
                                 anchorDelta={anchorDelta}
                                 isLinked={isLinked} 
+                                onToggleLink={handleToggleLink}
                                 orientation="horizontal"
                                 onSelectPair={handleSelectSibling}
                                 metrics={metrics}
@@ -930,7 +909,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             
             <UnsavedChangesModal isOpen={isUnsavedModalOpen} onClose={() => {setIsUnsavedModalOpen(false); setPendingNavigation(null);}} onSave={() => {handleSave(markPaths); if(pendingNavigation) handleNavigationAttempt(pendingNavigation);}} onDiscard={() => {if(pendingNavigation) { if (pendingNavigation === 'back') onClose(); else if (pendingNavigation === 'prev' && currentIndex! > 0) onNavigate(currentIndex! - 1); else if (pendingNavigation === 'next') onNavigate(currentIndex! + 1); } setIsUnsavedModalOpen(false);}} />
             
-            <Modal isOpen={isResetConfirmOpen} onClose={() => setIsResetConfirmOpen(false)} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={handleConfirmReset} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: targetLigature.name })}</p></Modal>
+            <Modal isOpen={isResetConfirmOpen} onClose={setIsResetConfirmOpen} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={handleConfirmReset} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: targetLigature.name })}</p></Modal>
         </div>
     );
 };

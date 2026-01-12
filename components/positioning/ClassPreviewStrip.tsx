@@ -5,7 +5,7 @@ import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, Characte
 import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths, calculateDefaultMarkOffset, getAccurateGlyphBBox } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
-import { LeftArrowIcon, RightArrowIcon, FoldIcon, CloseIcon } from '../../constants';
+import { LeftArrowIcon, RightArrowIcon, FoldIcon, CloseIcon, LinkIcon, BrokenLinkIcon } from '../../constants';
 import { VEC } from '../../utils/vectorUtils';
 import { useLocale } from '../../contexts/LocaleContext';
 import { expandMembers } from '../../services/groupExpansionService';
@@ -24,6 +24,7 @@ interface ClassPreviewStripProps {
     strokeThickness: number;
     anchorDelta: Point; // The manual deviation from the default anchor snap (calculated in Editor)
     isLinked: boolean;
+    onToggleLink: () => void; // New callback for sync control
     orientation?: 'horizontal' | 'vertical';
     onSelectPair: (pair: SiblingPair) => void;
     
@@ -61,6 +62,8 @@ const SiblingThumbnail: React.FC<{
     glyphDataMap: Map<number, GlyphData>;
     strokeThickness: number;
     anchorDelta: Point;
+    isLinked: boolean; // Global editor sync state
+    activeClass?: AttachmentClass; // For individual exception checking
     onClick: () => void;
     size?: number;
     metrics: FontMetrics;
@@ -68,7 +71,7 @@ const SiblingThumbnail: React.FC<{
     positioningRules: PositioningRules[] | null;
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
-}> = React.memo(({ pair, isActive, isPivot, glyphDataMap, strokeThickness, anchorDelta, onClick, size = 80, metrics, markAttachmentRules, positioningRules, characterSets, groups }) => {
+}> = React.memo(({ pair, isActive, isPivot, glyphDataMap, strokeThickness, anchorDelta, isLinked, activeClass, onClick, size = 80, metrics, markAttachmentRules, positioningRules, characterSets, groups }) => {
     const { t } = useLocale();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
@@ -84,6 +87,13 @@ const SiblingThumbnail: React.FC<{
         );
         return (rule && (rule.movement === 'horizontal' || rule.movement === 'vertical')) ? rule.movement : 'none';
     }, [positioningRules, pair, groups, characterSets]);
+
+    // Check if THIS specific sibling is an exception in the current class
+    const isThisSiblingAnException = useMemo(() => {
+        if (!activeClass?.exceptPairs) return false;
+        const key = `${pair.base.name}-${pair.mark.name}`;
+        return activeClass.exceptPairs.includes(key);
+    }, [activeClass, pair]);
 
     // Memoize the default anchor offset for this specific sibling pair.
     const defaultAnchorOffset = useMemo(() => {
@@ -115,8 +125,14 @@ const SiblingThumbnail: React.FC<{
         
         if (!baseGlyph || !markGlyph) return;
 
-        // --- Dynamic Sizing Logic ---
-        const finalOffset = VEC.add(defaultAnchorOffset, anchorDelta);
+        // --- ISOLATION LOGIC ---
+        // We only use the anchorDelta if:
+        // 1. This thumbnail represents the pair currently being edited (isActive)
+        // 2. Global Sync is ON (isLinked) AND this specific sibling is not an exception.
+        const shouldApplyDelta = isActive || (isLinked && !isThisSiblingAnException);
+        const effectiveDelta = shouldApplyDelta ? anchorDelta : { x: 0, y: 0 };
+
+        const finalOffset = VEC.add(defaultAnchorOffset, effectiveDelta);
         const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, strokeThickness);
         const markBbox = getAccurateGlyphBBox(markGlyph.paths, strokeThickness);
 
@@ -171,7 +187,7 @@ const SiblingThumbnail: React.FC<{
 
         ctx.restore();
 
-    }, [pair, glyphDataMap, strokeThickness, defaultAnchorOffset, anchorDelta, theme, size, baseGlyph, markGlyph]);
+    }, [pair, glyphDataMap, strokeThickness, defaultAnchorOffset, anchorDelta, theme, size, baseGlyph, markGlyph, isLinked, isActive, isThisSiblingAnException]);
 
     // Dynamic Classes
     const containerClasses = `flex-shrink-0 flex flex-col items-center justify-center bg-white dark:bg-gray-800 border rounded shadow-sm cursor-pointer transition-all duration-200 aspect-square relative
@@ -192,12 +208,17 @@ const SiblingThumbnail: React.FC<{
                     <CrownIcon className="w-3 h-3" />
                  </div>
             )}
+            {isThisSiblingAnException && !isActive && (
+                <div className="absolute top-0.5 right-0.5 bg-orange-100 text-orange-600 rounded-full p-0.5 border border-orange-200 z-20 shadow-sm" title="Exception (Unlinked)">
+                    <BrokenLinkIcon className="w-2.5 h-2.5" />
+                </div>
+            )}
         </div>
     );
 });
 
 const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ 
-    siblings, activePair, pivotChar, glyphDataMap, strokeThickness, anchorDelta, isLinked, onSelectPair,
+    siblings, activePair, pivotChar, glyphDataMap, strokeThickness, anchorDelta, isLinked, onToggleLink, onSelectPair,
     metrics, markAttachmentRules, positioningRules, characterSets, groups,
     isExpanded, setIsExpanded, activeClass,
     hasDualContext, activeClassType, onToggleContext
@@ -221,6 +242,8 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
         glyphDataMap,
         strokeThickness,
         anchorDelta, 
+        isLinked,
+        activeClass,
         metrics,
         markAttachmentRules,
         positioningRules,
@@ -229,7 +252,6 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
     };
     
     // Check if a pair is the Pivot
-    // Logic: Identify if the Base or Mark in the pair matches the pivot character provided
     const isPairPivot = (pair: SiblingPair) => {
         if (!pivotChar) return false;
         return pair.base.unicode === pivotChar.unicode || pair.mark.unicode === pivotChar.unicode;
@@ -317,16 +339,28 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                      </div>
                  )}
 
-                 <div className={`w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center transition-all duration-300 rounded-b-lg ${!isLinked ? 'grayscale opacity-75' : ''}`}>
-                     {/* Control Column */}
+                 <div className={`w-full max-w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center transition-all duration-300 rounded-b-lg`}>
+                     {/* Control Column - CLASS HUB */}
                      <div className="flex flex-col items-center justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 self-stretch">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide text-center leading-tight">
-                            Class<br/>
-                            <span className="text-indigo-600 dark:text-indigo-400 text-xs">{siblings.length}</span>
+                        <button 
+                            onClick={onToggleLink}
+                            className={`p-2 rounded-lg transition-all shadow-sm ${
+                                isLinked 
+                                ? 'bg-indigo-600 text-white hover:bg-indigo-700 ring-2 ring-indigo-200 dark:ring-indigo-900' 
+                                : 'bg-orange-100 text-orange-600 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400 ring-2 ring-orange-50 dark:ring-orange-950'
+                            }`}
+                            title={isLinked ? "Synced: Click to Break Sync (Make Exception)" : "Exception: Click to Relink to Class"}
+                        >
+                            {isLinked ? <LinkIcon className="w-5 h-5" /> : <BrokenLinkIcon className="w-5 h-5" />}
+                        </button>
+                        
+                        <span className={`text-[10px] font-bold uppercase tracking-tight text-center leading-tight ${isLinked ? 'text-indigo-500' : 'text-orange-600'}`}>
+                            {isLinked ? 'Synced' : 'Override'}
                         </span>
+
                         <button 
                             onClick={() => setIsExpanded(true)}
-                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 transition-colors"
                             title="Expand to Fullscreen"
                         >
                             <FoldIcon className="w-4 h-4 rotate-180" />
@@ -334,7 +368,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                      </div>
     
                      {/* Collapsed Scroll View */}
-                     <div className="relative flex-grow overflow-hidden flex items-center">
+                     <div className={`relative flex-grow overflow-hidden flex items-center transition-opacity duration-300`}>
                          {visibility.left && (
                             <button
                                 onClick={() => handleScroll('left')}
