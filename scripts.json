@@ -239,7 +239,7 @@
         "isPrefillEnabled": true
       },
       "grid": {
-        "characterNameSize": 450
+        "characterNameSize": 640
       },
       "guideFont": {
         "fontName": "Noto Sans Kannada Modified",
