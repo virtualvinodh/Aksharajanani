@@ -10,6 +10,11 @@ interface PositioningToolbarProps {
   onZoom: (factor: number) => void;
   orientation?: 'vertical' | 'horizontal';
   reuseDisabled?: boolean;
+  manualX: string;
+  manualY: string;
+  onManualChange: (axis: 'x' | 'y', value: string) => void;
+  onManualCommit: () => void;
+  canEdit: boolean;
 }
 
 const ToolButton: React.FC<{ isActive: boolean, label: string, onClick: () => void, children: React.ReactNode }> = React.memo(({ isActive, label, onClick, children }) => (
@@ -37,17 +42,35 @@ const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: bo
   </button>
 ));
 
-const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ onReuseClick, pageTool, onToggleTool, onZoom, orientation = 'vertical', reuseDisabled = false }) => {
+const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ 
+    onReuseClick, pageTool, onToggleTool, onZoom, orientation = 'vertical', 
+    reuseDisabled = false, manualX, manualY, onManualChange, onManualCommit, canEdit 
+}) => {
   const { t } = useLocale();
   const isVertical = orientation === 'vertical';
 
+  const coordinateInput = (axis: 'x' | 'y', value: string) => (
+      <div className="flex flex-col items-center gap-0.5">
+          <label className="text-[9px] font-black text-gray-400 uppercase leading-none">{axis}</label>
+          <input
+              type="text"
+              value={value}
+              onChange={(e) => onManualChange(axis, e.target.value)}
+              onBlur={onManualCommit}
+              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+              disabled={!canEdit}
+              className="w-10 p-1 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-[10px] focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+      </div>
+  );
+
   return (
-    <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2 p-1.5 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg`}>
+    <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2 p-1.5 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg items-center`}>
       <ActionButton onClick={onReuseClick} title={t('copyPositionFrom')} disabled={reuseDisabled}>
         <PasteIcon />
       </ActionButton>
       
-      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'w-px h-full mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
       <ToolButton
         isActive={pageTool === 'select'}
@@ -65,7 +88,7 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ onReuseClick, p
         <PanIcon />
       </ToolButton>
 
-      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'w-px h-full mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
       <ActionButton onClick={() => onZoom(1.25)} title={t('zoomIn')}>
         <ZoomInIcon />
@@ -73,6 +96,13 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ onReuseClick, p
       <ActionButton onClick={() => onZoom(0.8)} title={t('zoomOut')}>
         <ZoomOutIcon />
       </ActionButton>
+
+      <div className={`${isVertical ? 'h-px w-full my-1' : 'w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+
+      <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2`}>
+          {coordinateInput('x', manualX)}
+          {coordinateInput('y', manualY)}
+      </div>
     </div>
   );
 };

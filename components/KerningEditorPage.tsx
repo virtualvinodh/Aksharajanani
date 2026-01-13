@@ -1,15 +1,13 @@
-
-
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { ZoomInIcon, ZoomOutIcon, SparklesIcon, SaveIcon, TrashIcon, BackIcon, LeftArrowIcon, RightArrowIcon, UndoIcon } from '../constants';
 import { calculateAutoKerning } from '../services/kerningService';
-import { renderPaths, getAccurateGlyphBBox, getGlyphSubBBoxes, BoundingBox, BBox } from '../services/glyphRenderService';
+import { renderPaths, getAccurateGlyphBBox, getGlyphSubBBoxes, BBox } from '../services/glyphRenderService';
 import { VEC } from '../utils/vectorUtils';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import KerningEditorHeader from './kerning/KerningEditorHeader';
+import KerningEditorWorkspace from './kerning/KerningEditorWorkspace';
 
 interface KerningEditorPageProps {
     pair: { left: Character, right: Character };
@@ -32,12 +30,12 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
     pair, onClose, onSave, onRemove, initialValue, glyphDataMap, strokeThickness, metrics, settings, recommendedKerning,
     onNavigate, hasPrev, hasNext, glyphVersion
 }) => {
-    const { t } = useLocale();
     const { theme } = useTheme();
     const [inputValue, setInputValue] = useState(String(initialValue));
     const [isDirty, setIsDirty] = useState(false);
     const [isAutoKerning, setIsAutoKerning] = useState(false);
     const [zoom, setZoom] = useState(1);
+    const [baseScale, setBaseScale] = useState(1); // New state for stabilized scale
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -62,11 +60,9 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
     useEffect(() => {
         setInputValue(String(initialValue));
         setIsDirty(false);
-        // Reset view state on nav
         setIsDragging(false);
         setIsHovering(false);
         
-        // Trigger visual cue
         setShowInitialCue(true);
         const timer = setTimeout(() => setShowInitialCue(false), 1500);
         return () => clearTimeout(timer);
@@ -78,8 +74,11 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
         if (!container) return;
 
         const updateSize = () => {
-            const { width, height } = container.getBoundingClientRect();
-            setCanvasSize({ width, height });
+            const rect = container.getBoundingClientRect();
+            setCanvasSize({ 
+                width: Math.floor(rect.width), 
+                height: Math.floor(rect.height) 
+            });
         };
 
         updateSize();
@@ -87,6 +86,33 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
         resizeObserver.observe(container);
         return () => resizeObserver.disconnect();
     }, []);
+
+    // Calculate baseScale only when pair or canvas size changes
+    useEffect(() => {
+        if (canvasSize.width === 0 || canvasSize.height === 0) return;
+
+        const leftGlyph = glyphDataMap.get(pair.left.unicode!);
+        const rightGlyph = glyphDataMap.get(pair.right.unicode!);
+        if (!leftGlyph || !rightGlyph) return;
+
+        const leftBox = getAccurateGlyphBBox(leftGlyph.paths, strokeThickness);
+        const rightBox = getAccurateGlyphBBox(rightGlyph.paths, strokeThickness);
+        if (!leftBox || !rightBox) return;
+
+        // Use a "neutral" total width for scaling so the scale doesn't change as user kerns
+        // Reference width = combined widths + neutral space (0 kern)
+        const neutralKern = 0;
+        const rsbLeft = pair.left.rsb ?? metrics.defaultRSB;
+        const lsbRight = pair.right.lsb ?? metrics.defaultLSB;
+        const totalRefWidth = (leftBox.width) + rsbLeft + neutralKern + lsbRight + (rightBox.width);
+        
+        const fitScale = Math.min(
+            (canvasSize.width * 0.8) / totalRefWidth, // Use 80% instead of 90% for safer margin
+            (canvasSize.height * 0.8) / 700
+        );
+
+        setBaseScale(fitScale);
+    }, [pair, canvasSize, glyphDataMap, metrics, strokeThickness]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -126,7 +152,6 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
                 setInputValue(String(kernValue));
                 setIsDirty(true);
                 if(settings.isAutosaveEnabled) {
-                     // Immediate save for button action
                      onSave(kernValue);
                      setIsDirty(false);
                 }
@@ -250,10 +275,14 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
         const ctx = canvas?.getContext('2d');
         if (!ctx || !canvas || canvasSize.width === 0) return;
 
+        // Sync internal resolution with DOM size
+        canvas.width = canvasSize.width;
+        canvas.height = canvasSize.height;
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const leftGlyph = glyphDataMap.get(pair.left.unicode);
-        const rightGlyph = glyphDataMap.get(pair.right.unicode);
+        const leftGlyph = glyphDataMap.get(pair.left.unicode!);
+        const rightGlyph = glyphDataMap.get(pair.right.unicode!);
         if (!leftGlyph || !rightGlyph) { setXHeightDistance(null); return; }
 
         const leftBox = getAccurateGlyphBBox(leftGlyph.paths, strokeThickness);
@@ -277,38 +306,29 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
             setXHeightDistance(null);
         }
 
-        // Auto-fit logic
+        // Apply Stabilized Scale
         const totalContentWidth = (leftMaxX - leftBox.x) + rsbLeft + localKernValue + lsbRight + (rightBox.width);
-        if (totalContentWidth <= 0) return;
-
-        const visWidth = totalContentWidth;
-        const visHeight = 700; // Reference height from drawing canvas size
+        const finalScale = baseScale * zoom;
         
-        const fitScale = Math.min(
-            (canvasSize.width * 0.9) / visWidth,
-            (canvasSize.height * 0.9) / visHeight
-        ) * zoom;
-        
-        const tx = (canvasSize.width - visWidth * fitScale) / 2 - (leftBox.x * fitScale);
-        const ty = (canvasSize.height - visHeight * fitScale) / 2;
+        const tx = (canvasSize.width - (totalContentWidth * finalScale)) / 2 - (leftBox.x * finalScale);
+        const ty = (canvasSize.height - (700 * finalScale)) / 2;
         
         ctx.save();
         ctx.translate(tx, ty);
-        ctx.scale(fitScale, fitScale);
+        ctx.scale(finalScale, finalScale);
         
-        const unscaledLineWidth = 1 / fitScale;
+        const unscaledLineWidth = 1 / finalScale;
 
         // Guides
         ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
         ctx.lineWidth = unscaledLineWidth;
-        ctx.setLineDash([8 / fitScale, 6 / fitScale]);
-        const guideW = visWidth + leftBox.x + rightBox.x;
-        ctx.beginPath(); ctx.moveTo(-500, metrics.topLineY); ctx.lineTo(guideW + 500, metrics.topLineY); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-500, metrics.baseLineY); ctx.lineTo(guideW + 500, metrics.baseLineY); ctx.stroke();
+        ctx.setLineDash([8 / finalScale, 6 / finalScale]);
+        const guideW = totalContentWidth + leftBox.x + rightBox.x + 1000;
+        ctx.beginPath(); ctx.moveTo(-500, metrics.topLineY); ctx.lineTo(guideW, metrics.topLineY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-500, metrics.baseLineY); ctx.lineTo(guideW, metrics.baseLineY); ctx.stroke();
         ctx.setLineDash([]);
 
         const glyphColor = theme === 'dark' ? '#E2E8F0' : '#1F2937';
-        // Use showInitialCue to trigger highlight
         const rightColor = isDragging || isHovering || showInitialCue ? (theme === 'dark' ? '#A78BFA' : '#8B5CF6') : glyphColor;
 
         ctx.save();
@@ -322,12 +342,12 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
 
         // Store Hit Box
         rightGlyphBboxRef.current = {
-            x: tx + (rightStartTranslateX * fitScale) + (rightBox.x * fitScale),
-            y: ty + (rightBox.y * fitScale),
-            width: rightBox.width * fitScale,
-            height: rightBox.height * fitScale
+            x: tx + (rightStartTranslateX * finalScale) + (rightBox.x * finalScale),
+            y: ty + (rightBox.y * finalScale),
+            width: rightBox.width * finalScale,
+            height: rightBox.height * finalScale
         };
-        dragState.current.scale = fitScale;
+        dragState.current.scale = finalScale;
 
         // Dimension Line
         if ((settings.isDebugKerningEnabled || isXDistFocused || isXDistHovered) && leftSubBoxes?.xHeight && rightSubBoxes?.xHeight) {
@@ -339,18 +359,18 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
             ctx.save();
             ctx.strokeStyle = color;
             ctx.fillStyle = color;
-            ctx.lineWidth = 2 / fitScale;
+            ctx.lineWidth = 2 / finalScale;
             ctx.beginPath();
             ctx.moveTo(x1, yMid); ctx.lineTo(x2, yMid);
-            const tick = 10 / fitScale;
+            const tick = 10 / finalScale;
             ctx.moveTo(x1, yMid - tick); ctx.lineTo(x1, yMid + tick);
             ctx.moveTo(x2, yMid - tick); ctx.lineTo(x2, yMid + tick);
             ctx.stroke();
             
             if (xHeightDistance !== null) {
-                ctx.font = `bold ${24/fitScale}px sans-serif`;
+                ctx.font = `bold ${24/finalScale}px sans-serif`;
                 ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-                ctx.fillText(String(xHeightDistance), (x1+x2)/2, yMid - (5/fitScale));
+                ctx.fillText(String(xHeightDistance), (x1+x2)/2, yMid - (5/finalScale));
             }
             ctx.restore();
         }
@@ -358,7 +378,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
         // Debug Boxes
         if (settings.isDebugKerningEnabled) {
             ctx.save();
-            ctx.lineWidth = 3 / fitScale;
+            ctx.lineWidth = 3 / finalScale;
             ctx.globalAlpha = 0.6;
             const drawBox = (b: BBox | null, c: string, tx = 0) => {
                 if (!b) return;
@@ -376,166 +396,60 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
 
         ctx.restore();
 
-        // Hover UI overlay (in DOM space)
+        // Hover UI
         if (isHovering || isDragging || showInitialCue) {
              const bbox = rightGlyphBboxRef.current;
              ctx.save();
-             ctx.strokeStyle = '#6366F1';
-             ctx.lineWidth = 1;
-             ctx.setLineDash([4, 4]);
+             ctx.strokeStyle = '#6366F1'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
              ctx.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
-             
-             const cx = bbox.x + bbox.width/2;
-             const cy = bbox.y + bbox.height/2;
-             ctx.fillStyle = 'rgba(99, 102, 241, 0.7)';
-             ctx.setLineDash([]);
-             ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI*2); ctx.fill();
-             ctx.stroke();
-             
-             // Draw horizontal move arrows inside the circle
-             ctx.strokeStyle = '#FFFFFF';
-             ctx.lineWidth = 2;
-             ctx.beginPath();
-             const arrowLength = 5;
-             // Horizontal line
+             const cx = bbox.x + bbox.width/2; const cy = bbox.y + bbox.height/2;
+             ctx.fillStyle = 'rgba(99, 102, 241, 0.7)'; ctx.setLineDash([]); ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+             ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.beginPath(); const arrowLength = 5;
              ctx.moveTo(cx - arrowLength, cy); ctx.lineTo(cx + arrowLength, cy);
-             // Right arrow head
-             ctx.moveTo(cx + arrowLength, cy); ctx.lineTo(cx + arrowLength - 3, cy - 3);
-             ctx.moveTo(cx + arrowLength, cy); ctx.lineTo(cx + arrowLength - 3, cy + 3);
-             // Left arrow head
-             ctx.moveTo(cx - arrowLength, cy); ctx.lineTo(cx - arrowLength + 3, cy - 3);
-             ctx.moveTo(cx - arrowLength, cy); ctx.lineTo(cx - arrowLength + 3, cy + 3);
-             ctx.stroke();
-
-             ctx.restore();
+             ctx.moveTo(cx + arrowLength, cy); ctx.lineTo(cx + arrowLength - 3, cy - 3); ctx.moveTo(cx + arrowLength, cy); ctx.lineTo(cx + arrowLength - 3, cy + 3);
+             ctx.moveTo(cx - arrowLength, cy); ctx.lineTo(cx - arrowLength + 3, cy - 3); ctx.moveTo(cx - arrowLength, cy); ctx.lineTo(cx - arrowLength + 3, cy + 3);
+             ctx.stroke(); ctx.restore();
         }
-    }, [pair, localKernValue, zoom, glyphDataMap, metrics, strokeThickness, theme, canvasSize, isDragging, isHovering, settings.isDebugKerningEnabled, xHeightDistance, isXDistHovered, isXDistFocused, showInitialCue, glyphVersion]);
-
-
-    const navButtonClass = "p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors";
-    const useKerningTerm = settings.editorMode === 'advanced' || settings.preferKerningTerm;
-    const inputLabel = useKerningTerm ? t('kerning') : t('spacing');
-
-    const controls = (
-        <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-700/50 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-600">
-            <div className="flex items-center gap-2 relative">
-                <label htmlFor="kern-input" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {inputLabel}:
-                </label>
-                <div className="relative">
-                    <input
-                        id="kern-input"
-                        type="text"
-                        value={inputValue}
-                        onChange={handleInputChange}
-                        className="w-16 p-1 border rounded-md bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
-                    {isDirty && <span className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span></span>}
-                </div>
-            </div>
-
-            <div className={`flex items-center gap-2 ${isXDistFocused || isXDistHovered ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                <label htmlFor="xdist-input" className="text-sm font-medium flex items-center gap-1 cursor-help" title={t('xDist')}>
-                    <span className="font-mono text-xs">x</span><span className="text-[10px] opacity-70">↔</span>
-                </label>
-                <input
-                    ref={xDistInputRef}
-                    id="xdist-input"
-                    type="text"
-                    value={xDistInputValue}
-                    onChange={e => setXDistInputValue(e.target.value)}
-                    onBlur={() => { handleXDistCommit(); setIsXDistFocused(false); }}
-                    onFocus={() => setIsXDistFocused(true)}
-                    onMouseEnter={() => setIsXDistHovered(true)}
-                    onMouseLeave={() => setIsXDistHovered(false)}
-                    onKeyDown={e => e.key === 'Enter' && xDistInputRef.current?.blur()}
-                    className={`w-14 p-1 border rounded-md bg-white dark:bg-gray-900 font-mono text-center text-xs transition-colors focus:outline-none ${isXDistFocused ? 'border-teal-500 ring-2 ring-teal-500' : 'dark:border-gray-600'}`}
-                />
-            </div>
-        </div>
-    );
+    }, [pair, localKernValue, zoom, baseScale, glyphDataMap, metrics, strokeThickness, theme, canvasSize, isDragging, isHovering, settings.isDebugKerningEnabled, xHeightDistance, isXDistHovered, isXDistFocused, showInitialCue, glyphVersion]);
 
     return (
-        <div className="flex flex-col h-full w-full bg-white dark:bg-gray-800">
-            <header className="flex flex-col w-full flex-shrink-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 z-20">
-                 <div className="flex items-center justify-between p-2 sm:p-4 gap-4">
-                    {/* Left: Back */}
-                    <div className="flex-shrink-0">
-                        <button onClick={onClose} className="flex items-center gap-2 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                            <BackIcon /><span className="hidden sm:inline">{t('back')}</span>
-                        </button>
-                    </div>
+        <div className="flex flex-col h-full w-full bg-white dark:bg-gray-800 animate-fade-in-up">
+            <KerningEditorHeader 
+                pair={pair} 
+                onClose={onClose} 
+                onNavigate={onNavigate} 
+                hasPrev={hasPrev} 
+                hasNext={hasNext} 
+                onAutoKern={handleAutoKernSinglePair} 
+                isAutoKerning={isAutoKerning} 
+                onSave={handleSaveClick} 
+                onRemove={onRemove} 
+                isDirty={isDirty} 
+                isAutosaveEnabled={settings.isAutosaveEnabled} 
+            />
 
-                    {/* Center: Navigation */}
-                    <div className="flex items-center gap-2 sm:gap-4 flex-grow justify-center">
-                        <button onClick={() => onNavigate('prev')} disabled={!hasPrev} className={navButtonClass}><LeftArrowIcon /></button>
-                        <div className="text-center min-w-[80px]">
-                            <h2 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
-                                {pair.left.name} + {pair.right.name}
-                            </h2>
-                        </div>
-                        <button onClick={() => onNavigate('next')} disabled={!hasNext} className={navButtonClass}><RightArrowIcon /></button>
-                    </div>
-
-                    {/* Right: Actions (Desktop) */}
-                    <div className="hidden md:flex items-center gap-2">
-                         {controls}
-                         <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                         <button onClick={handleAutoKernSinglePair} disabled={isAutoKerning} title={t('autoKern')} className="p-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-teal-400 transition-colors shadow-sm">
-                            {isAutoKerning ? <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" /> : <SparklesIcon />}
-                        </button>
-                        {!settings.isAutosaveEnabled && (
-                            <button onClick={handleSaveClick} title={t('save')} disabled={!isDirty} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 transition-colors shadow-sm">
-                                <SaveIcon />
-                            </button>
-                        )}
-                        <button onClick={onRemove} title={t('removeKerning')} className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm">
-                            <TrashIcon />
-                        </button>
-                    </div>
-
-                    {/* Right: Actions (Mobile - Minimal) */}
-                    <div className="flex md:hidden items-center gap-2">
-                         {!settings.isAutosaveEnabled && (
-                            <button onClick={handleSaveClick} title={t('save')} disabled={!isDirty} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400">
-                                <SaveIcon />
-                            </button>
-                        )}
-                        <button onClick={onRemove} title={t('removeKerning')} className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                            <TrashIcon />
-                        </button>
-                    </div>
-                </div>
-                
-                {/* Mobile Controls Bar */}
-                <div className="md:hidden flex items-center justify-center gap-3 p-2 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 overflow-x-auto">
-                    {controls}
-                    <button onClick={handleAutoKernSinglePair} disabled={isAutoKerning} title={t('autoKern')} className="p-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-teal-400 flex-shrink-0">
-                        {isAutoKerning ? <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> : <SparklesIcon />}
-                    </button>
-                </div>
-            </header>
-
-            {/* Main Canvas */}
-            <main className="flex-grow relative bg-gray-100 dark:bg-gray-900 overflow-hidden" ref={containerRef}>
-                 <canvas
-                    ref={canvasRef}
-                    width={canvasSize.width}
-                    height={canvasSize.height}
-                    className="w-full h-full cursor-ew-resize"
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleMouseUp}
-                />
-                <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-                    <button onClick={() => setZoom(z => z * 1.2)} className="p-2 bg-white dark:bg-gray-800 rounded-md shadow hover:bg-gray-100 dark:hover:bg-gray-700"><ZoomInIcon/></button>
-                    <button onClick={() => setZoom(z => z / 1.2)} className="p-2 bg-white dark:bg-gray-800 rounded-md shadow hover:bg-gray-100 dark:hover:bg-gray-700"><ZoomOutIcon/></button>
-                </div>
-            </main>
+            <KerningEditorWorkspace 
+                isLargeScreen={isLargeScreen}
+                canvasRef={canvasRef}
+                containerRef={containerRef}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onZoom={f => setZoom(z => Math.max(0.1, Math.min(10, z * f)))}
+                kernValue={inputValue}
+                onKernChange={handleInputChange}
+                isKernDirty={isDirty}
+                xDistValue={xDistInputValue}
+                onXDistChange={e => setXDistInputValue(e.target.value)}
+                onXDistCommit={handleXDistCommit}
+                isXDistFocused={isXDistFocused}
+                isXDistHovered={isXDistHovered}
+                onXDistFocus={setIsXDistFocused}
+                onXDistHover={setIsXDistHovered}
+                xDistInputRef={xDistInputRef}
+            />
         </div>
     );
 };
