@@ -177,35 +177,43 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         if (!offset && baseBbox) {
             offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups, movementConstraint);
         }
-        if (offset) setCurrentOffset(offset);
-        const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
+        
+        // Safety: ensure offset is never undefined
+        const effectiveOffset = offset || { x: 0, y: 0 };
+        setCurrentOffset(effectiveOffset);
+
+        const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths || [];
         const newMarkPaths = deepClone(originalMarkPaths).map((p: Path) => ({
             ...p,
             groupId: "positioning-mark-group",
-            points: p.points.map(pt => ({ x: pt.x + offset!.x, y: pt.y + offset!.y })),
-            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + offset!.x, y: seg.point.y + offset!.y }}))) : undefined
+            points: p.points.map(pt => ({ x: pt.x + effectiveOffset.x, y: pt.y + effectiveOffset.y })),
+            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + effectiveOffset.x, y: seg.point.y + effectiveOffset.y }}))) : undefined
         }));
         setMarkPaths(newMarkPaths);
         setInitialMarkPaths(deepClone(newMarkPaths));
         
-        // Select mark paths by default so they are ready to drag
         setSelectedPathIds(new Set(newMarkPaths.map(p => p.id)));
 
         setLsb(targetLigature.lsb); setRsb(targetLigature.rsb);
         setIsLinked(!(activeAttachmentClass?.exceptPairs?.includes(pairNameKey)));
 
-        if (lastPairIdentifierRef.current !== pairIdentifier) {
-            const allPaths = [...(baseGlyph?.paths || []), ...newMarkPaths];
+        // Robust auto-fit logic
+        const allPaths = [...(baseGlyph?.paths || []), ...newMarkPaths];
+        if (allPaths.length > 0) {
             const combinedBbox = getAccurateGlyphBBox(allPaths, settings.strokeThickness);
-            if (combinedBbox) {
-                // Initial Centering Logic: Focus strictly on the characters with tight padding (40 units)
-                const newZoom = Math.min(DRAWING_CANVAS_SIZE / (combinedBbox.width + 40), DRAWING_CANVAS_SIZE / (combinedBbox.height + 40), 2.5);
-                const newViewOffset = { x: (DRAWING_CANVAS_SIZE/2) - (combinedBbox.x + combinedBbox.width/2) * newZoom, y: (DRAWING_CANVAS_SIZE/2) - (combinedBbox.y + combinedBbox.height/2) * newZoom };
+            // Check if we need to fit (either first time or pair changed)
+            if (combinedBbox && (lastPairIdentifierRef.current !== pairIdentifier || zoom === 1)) {
+                const padding = 100;
+                const newZoom = Math.min(DRAWING_CANVAS_SIZE / (combinedBbox.width + padding), DRAWING_CANVAS_SIZE / (combinedBbox.height + padding), 2.5);
+                const newViewOffset = { 
+                    x: (DRAWING_CANVAS_SIZE/2) - (combinedBbox.x + combinedBbox.width/2) * newZoom, 
+                    y: (DRAWING_CANVAS_SIZE/2) - (combinedBbox.y + combinedBbox.height/2) * newZoom 
+                };
                 setZoom(newZoom); setViewOffset(newViewOffset);
+                lastPairIdentifierRef.current = pairIdentifier;
             }
-            lastPairIdentifierRef.current = pairIdentifier;
         }
-    }, [baseChar, markChar, targetLigature, markPositioningMap, glyphDataMap, markAttachmentRules, baseBbox, metrics, settings.strokeThickness, characterSets, pairIdentifier, groups, activeAttachmentClass, pairNameKey, movementConstraint]);
+    }, [baseChar, markChar, targetLigature, markPositioningMap, glyphDataMap, markAttachmentRules, baseBbox, metrics, settings.strokeThickness, characterSets, pairIdentifier, groups, activeAttachmentClass, pairNameKey, movementConstraint, glyphVersion]);
 
     const handleSave = useCallback((pathsToSave: Path[], isAutosave: boolean = false) => {
         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
@@ -213,8 +221,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         const finalBbox = getAccurateGlyphBBox(pathsToSave, settings.strokeThickness);
         let finalOffset: Point = { x: 0, y: 0 };
         if (originalBbox && finalBbox) finalOffset = { x: finalBbox.x - originalBbox.x, y: finalBbox.y - originalBbox.y };
-        const saveOptions = { isDraft: isAutosave, propagateToRule: isLinked && !!activeAttachmentClass, ruleContext: parentRule };
-        onSave(targetLigature, { paths: [...(baseGlyph?.paths ?? []), ...pathsToSave] }, finalOffset, { lsb, rsb }, saveOptions as any);
+        
+        onSave(targetLigature, { paths: [...(baseGlyph?.paths ?? []), ...pathsToSave] }, finalOffset, { lsb, rsb }, isAutosave);
+        
         setInitialMarkPaths(deepClone(pathsToSave));
     }, [glyphDataMap, markChar.unicode, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, settings.strokeThickness, isLinked, activeAttachmentClass, parentRule]);
 
@@ -285,7 +294,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         if (activeClassType === 'base' && baseAttachmentClasses) activeClsRef = updateClassList(baseAttachmentClasses, setBaseAttachmentClasses);
         
         if (newIsLinked && activeClsRef) {
-            // RELINK LOGIC: Find pivot delta and apply to current pair's snap point
             const members = expandMembers(activeClsRef.members, groups, characterSets);
             const pivotName = members.find(m => !activeClsRef?.exceptPairs?.includes(activeClassType === 'mark' ? `${baseChar.name}-${m}` : `${m}-${markChar.name}`)) || members[0];
             
@@ -297,21 +305,15 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                 const pivotOffset = markPositioningMap.get(pivotKey);
                 
                 if (pivotOffset) {
-                    // 1. Calculate pivot's mathematical snap point
                     const pbGlyph = glyphDataMap.get(pivotBase.unicode);
                     const pmGlyph = glyphDataMap.get(pivotMark.unicode);
                     if (pbGlyph && pmGlyph) {
                         const pbBbox = getAccurateGlyphBBox(pbGlyph.paths, settings.strokeThickness);
                         const pmBbox = getAccurateGlyphBBox(pmGlyph.paths, settings.strokeThickness);
                         const pSnap = calculateDefaultMarkOffset(pivotBase, pivotMark, pbBbox, pmBbox, markAttachmentRules, metrics, characterSets, false, groups, movementConstraint);
-                        
-                        // 2. Pivot Delta (Manual shift from snap)
                         const pDelta = VEC.sub(pivotOffset, pSnap);
-                        
-                        // 3. New Synced Offset = currentSnap + pDelta
                         const syncedOffset = VEC.add(alignmentOffset, pDelta);
                         
-                        // 4. Transform Paths
                         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
                         const newPaths = deepClone(originalMarkPaths).map((p: Path) => ({
                             ...p,
@@ -320,7 +322,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                             segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + syncedOffset.x, y: seg.point.y + syncedOffset.y }}))) : undefined
                         }));
                         
-                        // 5. Apply Locally and Save
                         setMarkPaths(newPaths);
                         setCurrentOffset(syncedOffset);
                         handleSave(newPaths, false);
@@ -329,7 +330,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                     }
                 }
             }
-            // Fallback if pivot info missing: just save current (might be unchanged but at least resets state)
             handleSave(markPaths, false);
             showNotification(t('glyphRelinkedSuccess'), "success");
         }

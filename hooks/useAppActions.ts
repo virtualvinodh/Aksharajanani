@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
@@ -41,11 +40,36 @@ export const useAppActions = ({
         recommendedKerning, 
         markAttachmentRules, 
         markAttachmentClasses, 
-        baseAttachmentClasses 
+        baseAttachmentClasses,
+        characterSets
     } = useProject();
     
     const dependencyMap = useRef<Map<number, Set<number>>>(new Map());
     const [isScriptDataLoadingState, setIsScriptDataLoadingState] = useState(true);
+
+    const refreshDependencyMap = useCallback(() => {
+        if (!characterSets) return;
+        const newMap = new Map<number, Set<number>>();
+        const allCharsByName = new Map(characterSets.flatMap(s => s.characters).map(c => [c.name, c]));
+        
+        characterSets.forEach(set => {
+            set.characters.forEach(char => {
+                if (char.unicode !== undefined) {
+                    const components = char.link || char.composite;
+                    if (components) {
+                        components.forEach(compName => {
+                            const componentChar = allCharsByName.get(compName);
+                            if (componentChar?.unicode !== undefined) {
+                                if (!newMap.has(componentChar.unicode)) newMap.set(componentChar.unicode, new Set());
+                                newMap.get(componentChar.unicode)!.add(char.unicode!);
+                            }
+                        });
+                    }
+                }
+            });
+        });
+        dependencyMap.current = newMap;
+    }, [characterSets]);
 
     // 2. Persistence Hook
     const {
@@ -261,6 +285,7 @@ export const useAppActions = ({
         handleTakeSnapshot,
         handleRestoreSnapshot,
         hasSnapshot,
-        openSaveAsModal
+        openSaveAsModal,
+        refreshDependencyMap
     };
 };

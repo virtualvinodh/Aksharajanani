@@ -1,7 +1,6 @@
-
 import { useState, useCallback, useEffect } from 'react';
 
-export const useHorizontalScroll = () => {
+export const useHorizontalScroll = (dependencies: any[] = []) => {
     const [node, setNode] = useState<HTMLElement | null>(null);
     const [visibility, setVisibility] = useState({ left: false, right: false });
 
@@ -25,6 +24,13 @@ export const useHorizontalScroll = () => {
             return { left: canScrollLeft, right: canScrollRight };
         });
     }, [node]);
+
+    // Re-check visibility whenever dependencies change (e.g. item count)
+    useEffect(() => {
+        if (node) {
+            checkVisibility();
+        }
+    }, [node, checkVisibility, ...dependencies]);
 
     useEffect(() => {
         if (!node) return;

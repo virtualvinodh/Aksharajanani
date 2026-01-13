@@ -88,12 +88,19 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                 </div>
             )}
 
-            <div className="flex-1 flex flex-col items-center w-full h-full overflow-hidden">
-                {/* Central Canvas Area: White square box in gray background */}
-                <div className="flex-1 w-full flex flex-col items-center justify-center p-4 overflow-hidden relative">
+            <div className="flex-1 flex flex-col items-center justify-center w-full h-full overflow-hidden relative">
+                {/* Central Canvas Area: Using fixed aspect container to ensure layout stability */}
+                <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-4 sm:p-8 overflow-hidden relative">
                     <div 
-                        className="rounded-md overflow-hidden shadow-lg aspect-square relative flex items-center justify-center max-h-full max-w-full"
-                        style={{ width: 'auto' }}
+                        className="rounded-md overflow-hidden shadow-2xl aspect-square relative flex items-center justify-center bg-white dark:bg-gray-900"
+                        style={{ 
+                            maxHeight: '100%', 
+                            maxWidth: '100%', 
+                            height: isLargeScreen ? '80vh' : '60vh', 
+                            width: isLargeScreen ? '80vh' : '60vh',
+                            minHeight: '200px',
+                            minWidth: '200px'
+                        }}
                     >
                         <DrawingCanvas
                             width={DRAWING_CANVAS_SIZE} 
@@ -108,8 +115,8 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                             viewOffset={viewOffset} 
                             setViewOffset={setViewOffset}
                             settings={settings} 
-                            allGlyphData={new Map()} 
-                            allCharacterSets={[]} 
+                            allGlyphData={glyphDataMap} 
+                            allCharacterSets={characterSets} 
                             currentCharacter={targetLigature}
                             gridConfig={{ characterNameSize: 450 }} 
                             backgroundImage={null} 
@@ -154,7 +161,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
 
                 {/* Sibling Strip: Positioned directly below canvas */}
                 {showStrip && (
-                    <div className="w-full max-w-5xl flex-shrink-0 z-10 transition-all duration-300">
+                    <div className="w-full max-w-5xl mx-auto flex-shrink-0 z-10 transition-all duration-300">
                         <ClassPreviewStrip 
                             siblings={classSiblings}
                             activePair={activePair}

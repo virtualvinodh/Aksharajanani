@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { PasteIcon, PanIcon, ZoomInIcon, ZoomOutIcon, SelectIcon } from '../constants';
 
@@ -42,27 +41,51 @@ const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: bo
   </button>
 ));
 
+const CoordinateInput: React.FC<{
+    axis: 'x' | 'y';
+    value: string;
+    onChange: (v: string) => void;
+    onCommit: () => void;
+    disabled: boolean;
+}> = ({ axis, value, onChange, onCommit, disabled }) => {
+    const [localValue, setLocalValue] = useState(value);
+
+    // Sync from parent if externally changed (e.g. on drag)
+    useEffect(() => {
+        setLocalValue(value);
+    }, [value]);
+
+    return (
+        <div className="flex flex-col items-center gap-0.5">
+            <label className="text-[9px] font-black text-gray-400 uppercase leading-none">{axis}</label>
+            <input
+                type="text"
+                value={localValue}
+                onChange={(e) => setLocalValue(e.target.value)}
+                onBlur={() => {
+                    onChange(localValue);
+                    onCommit();
+                }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        onChange(localValue);
+                        onCommit();
+                        e.currentTarget.blur();
+                    }
+                }}
+                disabled={disabled}
+                className="w-10 p-1 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-[10px] focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+        </div>
+    );
+};
+
 const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ 
     onReuseClick, pageTool, onToggleTool, onZoom, orientation = 'vertical', 
     reuseDisabled = false, manualX, manualY, onManualChange, onManualCommit, canEdit 
 }) => {
   const { t } = useLocale();
   const isVertical = orientation === 'vertical';
-
-  const coordinateInput = (axis: 'x' | 'y', value: string) => (
-      <div className="flex flex-col items-center gap-0.5">
-          <label className="text-[9px] font-black text-gray-400 uppercase leading-none">{axis}</label>
-          <input
-              type="text"
-              value={value}
-              onChange={(e) => onManualChange(axis, e.target.value)}
-              onBlur={onManualCommit}
-              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-              disabled={!canEdit}
-              className="w-10 p-1 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-[10px] focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-      </div>
-  );
 
   return (
     <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2 p-1.5 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg items-center`}>
@@ -100,8 +123,8 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({
       <div className={`${isVertical ? 'h-px w-full my-1' : 'w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
       <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2`}>
-          {coordinateInput('x', manualX)}
-          {coordinateInput('y', manualY)}
+          <CoordinateInput axis="x" value={manualX} onChange={v => onManualChange('x', v)} onCommit={onManualCommit} disabled={!canEdit} />
+          <CoordinateInput axis="y" value={manualY} onChange={v => onManualChange('y', v)} onCommit={onManualCommit} disabled={!canEdit} />
       </div>
     </div>
   );
