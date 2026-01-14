@@ -81,7 +81,10 @@ const KerningToolbar: React.FC<KerningToolbarProps> = ({
                     type="text"
                     value={xDistValue}
                     onChange={onXDistChange}
-                    onBlur={onXDistCommit}
+                    onBlur={() => {
+                        onXDistCommit();
+                        onXDistFocus(false);
+                    }}
                     onFocus={() => onXDistFocus(true)}
                     onMouseEnter={() => onXDistHover(true)}
                     onMouseLeave={() => onXDistHover(false)}
