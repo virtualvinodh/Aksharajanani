@@ -1,9 +1,8 @@
-
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { VEC } from '../utils/vectorUtils';
-import { renderPaths, getAccurateGlyphBBox, BoundingBox } from '../services/glyphRenderService';
+import { renderPaths } from '../services/glyphRenderService';
 import { useDrawingCanvas } from '../hooks/useDrawingCanvas';
 import type { Handle, DraggedPointInfo } from '../hooks/useDrawingCanvas';
 
@@ -39,23 +38,26 @@ interface DrawingCanvasProps {
   backgroundPaths?: Path[];
   backgroundPathsColor?: string;
   showBearingGuides?: boolean;
-  disableTransformations?: boolean;
-  lockedMessage?: string;
   calligraphyAngle?: 45 | 30 | 15;
-  transformMode?: 'all' | 'move-only';
-  movementConstraint?: 'horizontal' | 'vertical' | 'none';
   isInitiallyDrawn?: boolean;
   previewTransform?: TransformState | null;
   disableAutoFit?: boolean;
+  // FIX: Added missing properties to DrawingCanvasProps
+  disableTransformations?: boolean;
+  lockedMessage?: string;
+  transformMode?: 'all' | 'move-only';
+  movementConstraint?: 'horizontal' | 'vertical' | 'none';
 }
 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 
     width, height, paths: initialPaths, onPathsChange, metrics, tool, onToolChange, zoom, setZoom, viewOffset, setViewOffset, 
     settings, currentCharacter, gridConfig, backgroundImage, backgroundImageOpacity, imageTransform, 
     onImageTransformChange, selectedPathIds, onSelectionChange, isImageSelected, onImageSelectionChange, 
-    lsb, rsb, onMetricsChange, backgroundPaths, backgroundPathsColor, showBearingGuides = true, disableTransformations = false, lockedMessage,
-    calligraphyAngle = 45, transformMode = 'all', movementConstraint = 'none', isInitiallyDrawn = false,
-    previewTransform = null, disableAutoFit = false
+    lsb, rsb, onMetricsChange, backgroundPaths, backgroundPathsColor, showBearingGuides = true,
+    calligraphyAngle = 45, isInitiallyDrawn = false,
+    previewTransform = null, disableAutoFit = false,
+    // FIX: Destructure added props
+    disableTransformations, lockedMessage, transformMode, movementConstraint
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
@@ -64,22 +66,17 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     currentPaths, previewPath, marqueeBox, selectionBox, focusedPathId, selectedPointInfo, bgImageObject, hoveredPathIds,
     handleMouseDown, handleMouseMove, handleMouseUp, handleTouchStart, handleTouchMove,
     handleTouchEnd, handleTouchCancel, handleWheel, handleDoubleClick, getCursor, isMobile, HANDLE_SIZE, handles,
-    // Metric state from hook
     glyphBBox, hoveredMetric, draggingMetric,
-    // Slice Tool state
     highlightedPathId
   } = useDrawingCanvas({
     canvasRef, initialPaths, onPathsChange, tool, onToolChange, zoom, setZoom, viewOffset, setViewOffset,
     settings, backgroundImage, imageTransform, onImageTransformChange, selectedPathIds, onSelectionChange,
     isImageSelected, onImageSelectionChange, 
     calligraphyAngle: calligraphyAngle as 45 | 30 | 15,
-    disableTransformations, 
-    lockedMessage,
-    transformMode: transformMode as 'all' | 'move-only',
-    movementConstraint: movementConstraint as 'horizontal' | 'vertical' | 'none',
-    // Pass metrics related props to hook
     lsb, rsb, onMetricsChange, metrics,
-    disableAutoFit
+    disableAutoFit,
+    // FIX: Pass added props to useDrawingCanvas hook
+    disableTransformations, lockedMessage, transformMode, movementConstraint
   });
 
   const drawControlPoints = useCallback((ctx: CanvasRenderingContext2D, pathsToDraw: Path[], focusedId: string | null, selectedPoint: DraggedPointInfo | null) => {
@@ -178,31 +175,23 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.setLineDash([]);
     }
     if (selectionBox) {
-        if (transformMode === 'move-only' && !isImageSelected) {
-            ctx.strokeStyle = '#4f46e5'; 
-            ctx.lineWidth = 1.5 / zoom;
-            ctx.setLineDash([8 / zoom, 6 / zoom]);
-            ctx.strokeRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
+        ctx.strokeStyle = '#6366F1'; 
+        ctx.lineWidth = 1 / zoom; 
+        ctx.setLineDash([]);
+        if (isImageSelected && imageTransform) {
+            ctx.save();
+            const center = {x: imageTransform.x + imageTransform.width/2, y: imageTransform.y + imageTransform.height/2};
+            ctx.translate(center.x, center.y);
+            ctx.rotate(imageTransform.rotation);
+            ctx.strokeRect(-imageTransform.width/2, -imageTransform.height/2, imageTransform.width, imageTransform.height);
+            ctx.restore();
         } else {
-            ctx.strokeStyle = '#6366F1'; 
-            ctx.lineWidth = 1 / zoom; 
-            ctx.setLineDash([]);
-            if (isImageSelected && imageTransform) {
-                ctx.save();
-                const center = {x: imageTransform.x + imageTransform.width/2, y: imageTransform.y + imageTransform.height/2};
-                ctx.translate(center.x, center.y);
-                ctx.rotate(imageTransform.rotation);
-                ctx.strokeRect(-imageTransform.width/2, -imageTransform.height/2, imageTransform.width, imageTransform.height);
-                ctx.restore();
-            } else {
-                if (!previewTransform) {
-                    ctx.strokeRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
-                }
+            if (!previewTransform) {
+                ctx.strokeRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
             }
         }
-        ctx.setLineDash([]);
         
-        if (handles && transformMode !== 'move-only' && !previewTransform) {
+        if (handles && !previewTransform) {
             const scaledHandleSize = HANDLE_SIZE / zoom;
 
             Object.values(handles).forEach((handle: Handle & Point) => {
@@ -236,7 +225,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             });
         }
     }
-  }, [marqueeBox, zoom, selectionBox, isImageSelected, imageTransform, handles, HANDLE_SIZE, isMobile, theme, transformMode, previewTransform]);
+  }, [marqueeBox, zoom, selectionBox, isImageSelected, imageTransform, handles, HANDLE_SIZE, isMobile, theme, previewTransform]);
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d');
@@ -276,7 +265,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       ctx.fillText(currentCharacter.name, width / 2, metrics.baseLineY);
     }
     
-    // Draw main guides
     ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
     ctx.lineWidth = 1 / zoom;
     ctx.setLineDash([8 / zoom, 6 / zoom]);
@@ -309,18 +297,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
     ctx.setLineDash([]);
     
-    // --- Metric Guides & Interactive UI ---
     if (showBearingGuides && glyphBBox) {
-        const PIXELS_PER_FONT_UNIT = 1000 / metrics.unitsPerEm; // Drawing canvas is 1000
+        const PIXELS_PER_FONT_UNIT = 1000 / metrics.unitsPerEm; 
         const lsbVal = lsb ?? metrics.defaultLSB;
         const rsbVal = rsb ?? metrics.defaultRSB;
         const lsbInPixels = lsbVal * PIXELS_PER_FONT_UNIT;
         const rsbInPixels = rsbVal * PIXELS_PER_FONT_UNIT;
-
         const lsbX = glyphBBox.x - lsbInPixels;
         const rsbX = glyphBBox.x + glyphBBox.width + rsbInPixels;
 
-        // Draw BBox
         ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
         ctx.lineWidth = 1 / zoom; 
         ctx.beginPath(); 
@@ -328,7 +313,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.beginPath(); 
         ctx.moveTo(glyphBBox.x + glyphBBox.width, logicalViewY); ctx.lineTo(glyphBBox.x + glyphBBox.width, logicalViewY + logicalViewHeight); ctx.stroke();
 
-        // Draw LSB Line
         const isLsbActive = hoveredMetric === 'lsb' || draggingMetric === 'lsb';
         ctx.strokeStyle = isLsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.4)' : 'rgba(217, 119, 6, 0.5)');
         ctx.lineWidth = (isLsbActive ? 2.5 : 1.5) / zoom;
@@ -337,7 +321,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.moveTo(lsbX, logicalViewY); ctx.lineTo(lsbX, logicalViewY + logicalViewHeight); 
         ctx.stroke();
 
-        // Draw RSB Line
         const isRsbActive = hoveredMetric === 'rsb' || draggingMetric === 'rsb';
         ctx.strokeStyle = isRsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.4)' : 'rgba(217, 119, 6, 0.5)');
         ctx.lineWidth = (isRsbActive ? 2.5 : 1.5) / zoom;
@@ -346,25 +329,17 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.moveTo(rsbX, logicalViewY); ctx.lineTo(rsbX, logicalViewY + logicalViewHeight); 
         ctx.stroke();
 
-        // Draw Tooltip if dragging
         if (draggingMetric) {
             const activeX = draggingMetric === 'lsb' ? lsbX : rsbX;
             const activeVal = draggingMetric === 'lsb' ? lsbVal : rsbVal;
             const label = draggingMetric === 'lsb' ? 'LSB' : 'RSB';
-            
             ctx.save();
-            // Reset transform for absolute positioning of text (screen-space text looks cleaner)
             ctx.setTransform(1, 0, 0, 1, 0, 0); 
-            
-            // Calculate screen position
             const screenX = (activeX * zoom) + viewOffset.x;
             const screenY = (glyphBBox.y * zoom) + viewOffset.y - 20;
-
             const text = `${label}: ${Math.round(activeVal)}`;
             ctx.font = 'bold 12px sans-serif';
             const textWidth = ctx.measureText(text).width + 12;
-            
-            // Draw background pill
             ctx.fillStyle = theme === 'dark' ? '#1f2937' : '#ffffff';
             ctx.strokeStyle = '#d1d5db';
             ctx.lineWidth = 1;
@@ -372,13 +347,10 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             ctx.roundRect(screenX - textWidth/2, screenY - 20, textWidth, 24, 4);
             ctx.fill();
             ctx.stroke();
-            
-            // Draw text
             ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#111827';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(text, screenX, screenY - 8);
-            
             ctx.restore();
         }
     }
@@ -403,7 +375,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         
         pathsToRender = currentPaths.map(p => {
             if (!selectedPathIds.has(p.id)) return p;
-
             const transformPoint = (pt: Point) => {
                 let px = pt.x - center.x;
                 let py = pt.y - center.y;
@@ -415,7 +386,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 py = ry * sy;
                 return { x: px + center.x, y: py + center.y };
             };
-            
             const newP = { ...p, points: p.points.map(transformPoint) };
             if (p.segmentGroups) {
                 newP.segmentGroups = p.segmentGroups.map(g => g.map(s => {
@@ -423,13 +393,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                     const sy = (previewTransform.flipY ? -1 : 1) * previewTransform.scale;
                     const hInRot = VEC.rotate(s.handleIn, angleRad);
                     const hOutRot = VEC.rotate(s.handleOut, angleRad);
-                    const hInTransformed = { x: hInRot.x * sx, y: hInRot.y * sy };
-                    const hOutTransformed = { x: hOutRot.x * sx, y: hOutRot.y * sy };
                     return {
                         ...s,
                         point: transformPoint(s.point),
-                        handleIn: hInTransformed,
-                        handleOut: hOutTransformed
+                        handleIn: { x: hInRot.x * sx, y: hInRot.y * sy },
+                        handleOut: { x: hOutRot.x * sx, y: hOutRot.y * sy }
                     };
                 }));
             }
@@ -438,56 +406,25 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }
 
     pathsToRender.forEach(path => {
-        if (highlightedPathId === path.id) {
-             highlightedPaths.push(path);
-        }
-
-        if ((tool === 'select' || tool === 'edit') && hoveredPathIds.has(path.id)) {
-            hoveredPaths.push(path);
-        } else if (selectedPathIds.has(path.id)) {
-            selectedNotHoveredPaths.push(path);
-        } else {
-            normalPaths.push(path);
-        }
+        if (highlightedPathId === path.id) highlightedPaths.push(path);
+        if ((tool === 'select' || tool === 'edit') && hoveredPathIds.has(path.id)) hoveredPaths.push(path);
+        else if (selectedPathIds.has(path.id)) selectedNotHoveredPaths.push(path);
+        else normalPaths.push(path);
     });
 
-    // Render highlighted path (underneath standard rendering if possible, but distinct)
-    if (highlightedPaths.length > 0) {
-         renderPaths(ctx, highlightedPaths, { strokeThickness: settings.strokeThickness + 4, contrast: settings.contrast, color: '#22D3EE' }); // Cyan highlight glow
-    }
-
+    if (highlightedPaths.length > 0) renderPaths(ctx, highlightedPaths, { strokeThickness: settings.strokeThickness + 4, contrast: settings.contrast, color: '#22D3EE' });
     renderPaths(ctx, normalPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: mainColor });
-    if (selectedNotHoveredPaths.length > 0) {
-        renderPaths(ctx, selectedNotHoveredPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: highlightColor });
-    }
-    if (hoveredPaths.length > 0) {
-        renderPaths(ctx, hoveredPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: highlightColor });
-    }
+    if (selectedNotHoveredPaths.length > 0) renderPaths(ctx, selectedNotHoveredPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: highlightColor });
+    if (hoveredPaths.length > 0) renderPaths(ctx, hoveredPaths, { strokeThickness: settings.strokeThickness, contrast: settings.contrast, color: highlightColor });
     
-    if (tool === 'edit') {
-      drawControlPoints(ctx, pathsToRender, focusedPathId, selectedPointInfo);
-    }
+    if (tool === 'edit') drawControlPoints(ctx, pathsToRender, focusedPathId, selectedPointInfo);
 
     if (previewPath) {
-        if (tool === 'slice') {
-             // Specific styling for slice tool: Red, Thin, Dashed
-             renderPaths(ctx, [previewPath], { 
-                 color: '#EF4444', 
-                 strokeThickness: 2 / zoom, 
-                 lineDash: [4 / zoom, 4 / zoom] 
-             });
-        } else {
-             renderPaths(ctx, [previewPath], { 
-                 color: theme === 'dark' ? '#6366F1' : '#818CF8', 
-                 strokeThickness: settings.strokeThickness, 
-                 contrast: settings.contrast, 
-                 lineDash: [5, 5] 
-             });
-        }
+        if (tool === 'slice') renderPaths(ctx, [previewPath], { color: '#EF4444', strokeThickness: 2 / zoom, lineDash: [4 / zoom, 4 / zoom] });
+        else renderPaths(ctx, [previewPath], { color: theme === 'dark' ? '#6366F1' : '#818CF8', strokeThickness: settings.strokeThickness, contrast: settings.contrast, lineDash: [5, 5] });
     }
     
     if (tool === 'select') drawSelectionUI(ctx);
-
     ctx.restore();
   }, [currentPaths, previewPath, marqueeBox, selectionBox, width, height, settings, metrics, theme, tool, zoom, viewOffset, currentCharacter, gridConfig, bgImageObject, backgroundImageOpacity, imageTransform, focusedPathId, selectedPointInfo, lsb, rsb, backgroundPaths, backgroundPathsColor, showBearingGuides, drawControlPoints, drawSelectionUI, hoveredPathIds, selectedPathIds, isInitiallyDrawn, previewTransform, glyphBBox, hoveredMetric, draggingMetric, highlightedPathId]);
   

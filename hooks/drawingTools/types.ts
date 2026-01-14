@@ -56,19 +56,18 @@ export interface UseDrawingCanvasProps {
     isImageSelected: boolean;
     onImageSelectionChange: (isSelected: boolean) => void;
     calligraphyAngle?: 45 | 30 | 15;
-    disableTransformations?: boolean;
-    lockedMessage?: string;
-    transformMode?: 'all' | 'move-only';
-    movementConstraint?: 'horizontal' | 'vertical' | 'none';
-    // New props for live preview
+    // Positioning specific props removed from here as they move to PositioningCanvas
     previewTransform?: any; 
-    
-    // Metrics Editing
     lsb?: number;
     rsb?: number;
     onMetricsChange?: (lsb: number, rsb: number) => void;
     metrics?: any; // FontMetrics
     disableAutoFit?: boolean;
+    // FIX: Added missing properties to resolve destructuring errors in tool hooks
+    disableTransformations?: boolean;
+    lockedMessage?: string;
+    transformMode?: 'all' | 'move-only';
+    movementConstraint?: 'horizontal' | 'vertical' | 'none';
 }
 
 export interface ToolHookProps extends UseDrawingCanvasProps {

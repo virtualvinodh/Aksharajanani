@@ -1,5 +1,5 @@
 import React from 'react';
-import DrawingCanvas from '../DrawingCanvas';
+import PositioningCanvas from '../PositioningCanvas';
 import PositioningToolbar from '../PositioningToolbar';
 import ClassPreviewStrip from './ClassPreviewStrip';
 import { Character, GlyphData, Path, Point, FontMetrics, MarkAttachmentRules, PositioningRules, CharacterSet, AttachmentClass } from '../../types';
@@ -64,8 +64,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     isLinked, onToggleLink, handleSelectSibling, markAttachmentRules, positioningRules,
     characterSets, groups, isStripExpanded, setIsStripExpanded, activeAttachmentClass,
     hasDualContext, activeClassType, onToggleContext, isLargeScreen,
-    manualX, manualY, onManualChange, onManualCommit,
-    selectedPathIds, onSelectionChange
+    manualX, manualY, onManualChange, onManualCommit
 }) => {
     return (
         <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative h-full">
@@ -94,17 +93,13 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                 <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-4 sm:p-12 overflow-hidden relative">
                     <div 
                         className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 max-h-full max-w-full aspect-square"
-                        style={{ 
-                            width: 'auto',
-                            height: 'auto'
-                        }}
                     >
-                        <DrawingCanvas
+                        <PositioningCanvas
                             width={DRAWING_CANVAS_SIZE} 
                             height={DRAWING_CANVAS_SIZE}
-                            paths={markPaths} 
+                            markPaths={markPaths}
+                            basePaths={basePaths}
                             onPathsChange={onPathsChange} 
-                            backgroundPaths={basePaths}
                             metrics={metrics} 
                             tool={pageTool} 
                             zoom={zoom} 
@@ -112,27 +107,9 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                             viewOffset={viewOffset} 
                             setViewOffset={setViewOffset}
                             settings={settings} 
-                            allGlyphData={glyphDataMap} 
-                            allCharacterSets={characterSets} 
-                            currentCharacter={targetLigature}
-                            gridConfig={{ characterNameSize: 450 }} 
-                            backgroundImage={null} 
-                            backgroundImageOpacity={1} 
-                            imageTransform={null} 
-                            onImageTransformChange={() => {}}
-                            selectedPathIds={selectedPathIds} 
-                            onSelectionChange={onSelectionChange} 
-                            isImageSelected={false} 
-                            onImageSelectionChange={() => {}}
-                            lsb={targetLigature.lsb} 
-                            rsb={targetLigature.rsb} 
-                            showBearingGuides={false} 
-                            disableTransformations={!canEdit} 
-                            lockedMessage={lockedMessage}
-                            transformMode="move-only" 
-                            movementConstraint={movementConstraint} 
-                            isInitiallyDrawn={true}
-                            disableAutoFit={true} 
+                            movementConstraint={movementConstraint}
+                            canEdit={canEdit}
+                            character={targetLigature}
                         />
                     </div>
                 </div>
