@@ -68,8 +68,8 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     selectedPathIds, onSelectionChange
 }) => {
     return (
-        <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900 relative">
-            {/* Desktop Toolbar: Floating over the workspace like Drawing Modal */}
+        <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-black/20 relative h-full">
+            {/* Desktop Toolbar: Vertically docked */}
             {isLargeScreen && !isStripExpanded && (
                 <div className="absolute left-6 top-1/2 -translate-y-1/2 z-20">
                     <PositioningToolbar 
@@ -89,17 +89,13 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
             )}
 
             <div className="flex-1 flex flex-col items-center justify-center w-full h-full overflow-hidden relative">
-                {/* Central Canvas Area: Using fixed aspect container to ensure layout stability */}
-                <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-4 sm:p-8 overflow-hidden relative">
+                {/* Central Canvas Area: Aligned with Drawing Modal Hero wrapper */}
+                <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-4 sm:p-8 overflow-hidden relative">
                     <div 
-                        className="rounded-md overflow-hidden shadow-2xl aspect-square relative flex items-center justify-center bg-white dark:bg-gray-900"
+                        className="rounded-md overflow-hidden shadow-2xl aspect-square relative flex items-center justify-center bg-white dark:bg-gray-900 max-h-full max-w-full"
                         style={{ 
-                            maxHeight: '100%', 
-                            maxWidth: '100%', 
-                            height: isLargeScreen ? '80vh' : '60vh', 
-                            width: isLargeScreen ? '80vh' : '60vh',
-                            minHeight: '200px',
-                            minWidth: '200px'
+                            width: 'auto',
+                            height: 'auto'
                         }}
                     >
                         <DrawingCanvas
@@ -135,12 +131,12 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                             transformMode="move-only" 
                             movementConstraint={movementConstraint} 
                             isInitiallyDrawn={true}
-                            disableAutoFit={true}
+                            disableAutoFit={true} // Page component handles fitting logic to include base paths
                         />
                     </div>
                 </div>
 
-                {/* Mobile Toolbar: Shown only on small screens, fixed at bottom bar */}
+                {/* Mobile Toolbar */}
                 {!isLargeScreen && (
                     <div className="flex-shrink-0 w-full z-20 p-2 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex justify-center">
                         <PositioningToolbar 
@@ -159,7 +155,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                     </div>
                 )}
 
-                {/* Sibling Strip: Positioned directly below canvas */}
+                {/* Sibling Strip */}
                 {showStrip && (
                     <div className="w-full max-w-5xl mx-auto flex-shrink-0 z-10 transition-all duration-300">
                         <ClassPreviewStrip 

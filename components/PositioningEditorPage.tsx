@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { CloseIcon, DRAWING_CANVAS_SIZE } from '../constants';
+import { DRAWING_CANVAS_SIZE } from '../constants';
 import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, CharacterSet, AttachmentClass, AttachmentPoint } from '../types';
 import { calculateDefaultMarkOffset, getAccurateGlyphBBox, resolveAttachmentRule, getAttachmentPointCoords } from '../services/glyphRenderService';
 import { updatePositioningAndCascade } from '../services/positioningService';
@@ -9,7 +9,6 @@ import { isGlyphDrawn } from '../utils/glyphUtils';
 import ReusePreviewCard from './ReusePreviewCard';
 import UnsavedChangesModal from './UnsavedChangesModal';
 import { VEC } from '../utils/vectorUtils';
-import PositioningToolbar from './PositioningToolbar';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import Modal from './Modal';
 import { deepClone } from '../utils/cloneUtils';
@@ -18,6 +17,7 @@ import { expandMembers } from '../services/groupExpansionService';
 import { useProject } from '../contexts/ProjectContext';
 import PositioningEditorHeader from './positioning/PositioningEditorHeader';
 import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace';
+import { CloseIcon } from '../constants';
 
 interface PositioningEditorPageProps {
     baseChar: Character;
@@ -169,6 +169,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         return calculatedOffset;
     }, [baseChar, markChar, baseBbox, markAttachmentRules, characterSets, groups, settings.strokeThickness, glyphDataMap, movementConstraint]);
 
+    // Effect 1: Hydrate Data
+    // Reactive fix: Includes markPositioningMap to trigger re-hydration on Reset/Save
     useEffect(() => {
         const key = `${baseChar.unicode}-${markChar.unicode}`;
         let offset = markPositioningMap.get(key);
@@ -178,7 +180,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
             offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups, movementConstraint);
         }
         
-        // Safety: ensure offset is never undefined
         const effectiveOffset = offset || { x: 0, y: 0 };
         setCurrentOffset(effectiveOffset);
 
@@ -191,29 +192,51 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         }));
         setMarkPaths(newMarkPaths);
         setInitialMarkPaths(deepClone(newMarkPaths));
-        
         setSelectedPathIds(new Set(newMarkPaths.map(p => p.id)));
 
-        setLsb(targetLigature.lsb); setRsb(targetLigature.rsb);
+        setLsb(targetLigature.lsb); 
+        setRsb(targetLigature.rsb);
         setIsLinked(!(activeAttachmentClass?.exceptPairs?.includes(pairNameKey)));
+    }, [pairIdentifier, glyphVersion, markPositioningMap, markAttachmentRules, characterSets, groups, movementConstraint]);
 
-        // Robust auto-fit logic
-        const allPaths = [...(baseGlyph?.paths || []), ...newMarkPaths];
+    // Effect 2: Auto-Fit (Morphic UI Alignment with Drawing Modal Logic)
+    useEffect(() => {
+        if (lastPairIdentifierRef.current === pairIdentifier) return;
+        
+        const allPaths = [...(baseGlyph?.paths || []), ...markPaths];
         if (allPaths.length > 0) {
             const combinedBbox = getAccurateGlyphBBox(allPaths, settings.strokeThickness);
-            // Check if we need to fit (either first time or pair changed)
-            if (combinedBbox && (lastPairIdentifierRef.current !== pairIdentifier || zoom === 1)) {
-                const padding = 100;
-                const newZoom = Math.min(DRAWING_CANVAS_SIZE / (combinedBbox.width + padding), DRAWING_CANVAS_SIZE / (combinedBbox.height + padding), 2.5);
-                const newViewOffset = { 
-                    x: (DRAWING_CANVAS_SIZE/2) - (combinedBbox.x + combinedBbox.width/2) * newZoom, 
-                    y: (DRAWING_CANVAS_SIZE/2) - (combinedBbox.y + combinedBbox.height/2) * newZoom 
-                };
-                setZoom(newZoom); setViewOffset(newViewOffset);
+            if (combinedBbox) {
+                // Design space is 1000x1000. Morphic UI: Only zoom out if outside these bounds.
+                const isBeyond = combinedBbox.x < 0 || combinedBbox.y < 0 || 
+                               (combinedBbox.x + combinedBbox.width) > 1000 || 
+                               (combinedBbox.y + combinedBbox.height) > 1000;
+
+                if (isBeyond || zoom !== 1) {
+                    const PADDING = 100;
+                    const availableDim = 1000 - (PADDING * 2);
+                    const fitScale = Math.min(availableDim / combinedBbox.width, availableDim / combinedBbox.height, 1);
+                    
+                    const contentCenterX = combinedBbox.x + combinedBbox.width / 2;
+                    const contentCenterY = combinedBbox.y + combinedBbox.height / 2;
+                    
+                    const newZoom = fitScale;
+                    const newViewOffset = {
+                        x: 500 - (contentCenterX * newZoom),
+                        y: 500 - (contentCenterY * newZoom)
+                    };
+
+                    setZoom(newZoom); 
+                    setViewOffset(newViewOffset);
+                } else {
+                    // If it fits, default to 1:1 scale at origin
+                    setZoom(1);
+                    setViewOffset({ x: 0, y: 0 });
+                }
                 lastPairIdentifierRef.current = pairIdentifier;
             }
         }
-    }, [baseChar, markChar, targetLigature, markPositioningMap, glyphDataMap, markAttachmentRules, baseBbox, metrics, settings.strokeThickness, characterSets, pairIdentifier, groups, activeAttachmentClass, pairNameKey, movementConstraint, glyphVersion]);
+    }, [pairIdentifier, markPaths.length, baseGlyph, settings.strokeThickness]);
 
     const handleSave = useCallback((pathsToSave: Path[], isAutosave: boolean = false) => {
         const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
@@ -223,9 +246,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
         if (originalBbox && finalBbox) finalOffset = { x: finalBbox.x - originalBbox.x, y: finalBbox.y - originalBbox.y };
         
         onSave(targetLigature, { paths: [...(baseGlyph?.paths ?? []), ...pathsToSave] }, finalOffset, { lsb, rsb }, isAutosave);
-        
         setInitialMarkPaths(deepClone(pathsToSave));
-    }, [glyphDataMap, markChar.unicode, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, settings.strokeThickness, isLinked, activeAttachmentClass, parentRule]);
+    }, [glyphDataMap, markChar.unicode, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, settings.strokeThickness]);
 
     const handlePathsChange = useCallback((newPaths: Path[]) => {
         if (!canEdit) return;
@@ -289,48 +311,10 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
              return null;
         };
 
-        let activeClsRef: AttachmentClass | null = null;
-        if (activeClassType === 'mark' && markAttachmentClasses) activeClsRef = updateClassList(markAttachmentClasses, setMarkAttachmentClasses);
-        if (activeClassType === 'base' && baseAttachmentClasses) activeClsRef = updateClassList(baseAttachmentClasses, setBaseAttachmentClasses);
+        if (activeClassType === 'mark' && markAttachmentClasses) updateClassList(markAttachmentClasses, setMarkAttachmentClasses);
+        if (activeClassType === 'base' && baseAttachmentClasses) updateClassList(baseAttachmentClasses, setBaseAttachmentClasses);
         
-        if (newIsLinked && activeClsRef) {
-            const members = expandMembers(activeClsRef.members, groups, characterSets);
-            const pivotName = members.find(m => !activeClsRef?.exceptPairs?.includes(activeClassType === 'mark' ? `${baseChar.name}-${m}` : `${m}-${markChar.name}`)) || members[0];
-            
-            const pivotBase = activeClassType === 'mark' ? baseChar : allChars.get(pivotName);
-            const pivotMark = activeClassType === 'mark' ? allChars.get(pivotName) : markChar;
-            
-            if (pivotBase && pivotMark) {
-                const pivotKey = `${pivotBase.unicode}-${pivotMark.unicode}`;
-                const pivotOffset = markPositioningMap.get(pivotKey);
-                
-                if (pivotOffset) {
-                    const pbGlyph = glyphDataMap.get(pivotBase.unicode);
-                    const pmGlyph = glyphDataMap.get(pivotMark.unicode);
-                    if (pbGlyph && pmGlyph) {
-                        const pbBbox = getAccurateGlyphBBox(pbGlyph.paths, settings.strokeThickness);
-                        const pmBbox = getAccurateGlyphBBox(pmGlyph.paths, settings.strokeThickness);
-                        const pSnap = calculateDefaultMarkOffset(pivotBase, pivotMark, pbBbox, pmBbox, markAttachmentRules, metrics, characterSets, false, groups, movementConstraint);
-                        const pDelta = VEC.sub(pivotOffset, pSnap);
-                        const syncedOffset = VEC.add(alignmentOffset, pDelta);
-                        
-                        const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
-                        const newPaths = deepClone(originalMarkPaths).map((p: Path) => ({
-                            ...p,
-                            groupId: "positioning-mark-group",
-                            points: p.points.map(pt => ({ x: pt.x + syncedOffset.x, y: pt.y + syncedOffset.y })),
-                            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + syncedOffset.x, y: seg.point.y + syncedOffset.y }}))) : undefined
-                        }));
-                        
-                        setMarkPaths(newPaths);
-                        setCurrentOffset(syncedOffset);
-                        handleSave(newPaths, false);
-                        showNotification(t('glyphRelinkedSuccess'), "success");
-                        return;
-                    }
-                }
-            }
-            handleSave(markPaths, false);
+        if (newIsLinked) {
             showNotification(t('glyphRelinkedSuccess'), "success");
         }
     };

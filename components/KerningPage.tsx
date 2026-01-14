@@ -1,26 +1,17 @@
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Character, GlyphData, FontMetrics, CharacterSet, KerningMap, RecommendedKerning, AppSettings } from '../types';
+import { RecommendedKerning } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { SparklesIcon, LeftArrowIcon, RightArrowIcon, UndoIcon } from '../constants';
-import { calculateAutoKerning } from '../services/kerningService';
-import PairCard from './PairCard';
-import CharacterSelectionPanel from './kerning/CharacterSelectionPanel';
-import CharacterSelectionRow from './kerning/CharacterSelectionRow';
-import { useKerning } from '../contexts/KerningContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
+import { useKerning } from '../contexts/KerningContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { isGlyphDrawn as isGlyphDrawnUtil } from '../utils/glyphUtils';
-import AutoKerningProgressModal from './AutoKerningProgressModal';
-import { useMediaQuery } from '../hooks/useMediaQuery';
-import Modal from './Modal';
+import KerningSelectionView from './kerning/KerningSelectionView';
 import KerningEditorPage from './KerningEditorPage';
-import { parseSearchQuery, getCharacterMatchScore } from '../utils/searchUtils';
 import { useRules } from '../contexts/RulesContext';
 import { expandMembers } from '../services/groupExpansionService';
+import { parseSearchQuery, getCharacterMatchScore } from '../utils/searchUtils';
+import { isGlyphDrawn as isGlyphDrawnUtil } from '../utils/glyphUtils';
 
 interface KerningPageProps {
   recommendedKerning: RecommendedKerning[] | null;
@@ -31,559 +22,157 @@ interface KerningPageProps {
 
 const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMode, mode, showRecommendedLabel }) => {
     const { t } = useLocale();
-    const { showNotification, pendingNavigationTarget, setPendingNavigationTarget, filterMode, searchQuery } = useLayout();
-    const { characterSets, allCharsByName } = useProject();
+    const { pendingNavigationTarget, setPendingNavigationTarget, filterMode, searchQuery } = useLayout();
+    const { characterSets, allCharsByName, allCharsByUnicode } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
     const { settings, metrics } = useSettings();
     const { state: rulesState } = useRules();
     
-    // Changed: Track index in filtered list instead of object
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
-    
     const [selectedLeftChars, setSelectedLeftChars] = useState(new Set<number>());
     const [selectedRightChars, setSelectedRightChars] = useState(new Set<number>());
-    const [isAutoKerning, setIsAutoKerning] = useState(false);
-    const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
-    const [kerningProgressValue, setKerningProgressValue] = useState(0);
-    // Removed local showOnlyUnkerned state in favor of global filterMode
-    const [isResetVisibleConfirmOpen, setIsResetVisibleConfirmOpen] = useState(false);
 
-    const [currentPage, setCurrentPage] = useState(1);
-    const isLargeScreen = useMediaQuery('(min-width: 1024px)');
-    const PAGE_SIZE = isLargeScreen ? 100 : 20;
-
-    const allCharsByUnicode = useMemo(() => {
-        const map = new Map<number, Character>();
-        characterSets!.flatMap(set => set.characters).forEach(char => {
-            if (char.unicode) {
-              map.set(char.unicode, char);
-            }
-        });
-        return map;
-    }, [characterSets]);
-    
-    const isGlyphDrawn = useCallback((char: Character): boolean => {
-        if (!char || char.unicode === undefined) return false;
-        return isGlyphDrawnUtil(glyphDataMap.get(char.unicode));
+    const isGlyphDrawn = useCallback((unicode: number | undefined): boolean => {
+        if (unicode === undefined) return false;
+        return isGlyphDrawnUtil(glyphDataMap.get(unicode));
     }, [glyphDataMap, glyphVersion]);
 
-    const drawnCharacters = useMemo(() => {
-        return Array.from(allCharsByUnicode.values())
-            .filter((char: Character) => !char.hidden && isGlyphDrawn(char))
-            .sort((a: Character, b: Character) => (a.unicode || 0) - (b.unicode || 0));
-    }, [allCharsByUnicode, isGlyphDrawn]);
-    
-    const expandedRecommendedPairs = useMemo(() => {
-        if (!recommendedKerning || !characterSets) return [];
-        const pairs: { left: Character, right: Character }[] = [];
-        const seenPairs = new Set<string>();
+    // 1. Expand all possible pairs based on rules
+    const allPairsInContext = useMemo(() => {
+        if (!characterSets) return [];
         const groups = rulesState.fontRules?.groups || {};
-        
-        recommendedKerning.forEach(([leftRule, rightRule]) => {
-            const lefts = expandMembers([leftRule], groups, characterSets);
-            const rights = expandMembers([rightRule], groups, characterSets);
+
+        if (mode === 'recommended') {
+            if (!recommendedKerning) return [];
+            const pairs: { left: any, right: any }[] = [];
+            const seen = new Set<string>();
             
-            lefts.forEach(lName => {
-                rights.forEach(rName => {
-                    const lChar = allCharsByName.get(lName);
-                    const rChar = allCharsByName.get(rName);
-                    if (lChar && rChar && lChar.unicode !== undefined && rChar.unicode !== undefined) {
-                        const key = `${lChar.unicode}-${rChar.unicode}`;
-                        if (!seenPairs.has(key)) {
-                            // We include it in the list, drawn check happens next
-                            pairs.push({ left: lChar, right: rChar });
-                            seenPairs.add(key);
+            recommendedKerning.forEach(([leftRule, rightRule]) => {
+                const lefts = expandMembers([leftRule], groups, characterSets);
+                const rights = expandMembers([rightRule], groups, characterSets);
+                
+                lefts.forEach(lName => {
+                    rights.forEach(rName => {
+                        const lChar = allCharsByName.get(lName);
+                        const rChar = allCharsByName.get(rName);
+                        if (lChar?.unicode !== undefined && rChar?.unicode !== undefined) {
+                            const key = `${lChar.unicode}-${rChar.unicode}`;
+                            if (!seen.has(key)) {
+                                pairs.push({ left: lChar, right: rChar });
+                                seen.add(key);
+                            }
                         }
-                    }
+                    });
                 });
             });
-        });
-        return pairs;
-    }, [recommendedKerning, rulesState.fontRules, characterSets, allCharsByName]);
-
-    const areAllRecGlyphsDrawn = useMemo(() => {
-        // If any pair in the expanded list has an undrawn glyph, we return false
-        return expandedRecommendedPairs.every(pair => isGlyphDrawn(pair.left) && isGlyphDrawn(pair.right));
-    }, [expandedRecommendedPairs, isGlyphDrawn]);
-    
-    const drawnRecommendedKerning = useMemo(() => {
-        return expandedRecommendedPairs.filter(pair => isGlyphDrawn(pair.left) && isGlyphDrawn(pair.right));
-    }, [expandedRecommendedPairs, isGlyphDrawn]);
-
-    const allPairsToDisplay = useMemo(() => {
-        if (mode === 'recommended') {
-            let pairs = drawnRecommendedKerning;
-            if (selectedLeftChars.size > 0 || selectedRightChars.size > 0) {
-                pairs = pairs.filter(pair => {
-                    const leftMatch = selectedLeftChars.size === 0 || selectedLeftChars.has(pair.left.unicode!);
-                    const rightMatch = selectedRightChars.size === 0 || selectedRightChars.has(pair.right.unicode!);
-                    return leftMatch && rightMatch;
-                });
-            }
             return pairs;
-        } else { // 'all' mode
-            const combinedList: { left: Character, right: Character }[] = [];
-            
+        } else {
+            const combined: { left: any, right: any }[] = [];
             if (selectedLeftChars.size === 0 && selectedRightChars.size === 0) {
-                // REVIEW MODE: No selection, show all currently kerned pairs
-                // If filter is active (incomplete/completed), we also need to respect that.
-                
+                // Review Mode: Show everything currently in the map
                 kerningMap.forEach((_, key) => {
-                    const [leftUnicode, rightUnicode] = key.split('-').map(Number);
-                    const leftChar = allCharsByUnicode.get(leftUnicode);
-                    const rightChar = allCharsByUnicode.get(rightUnicode);
-                    // Only include if the characters still exist in the project
-                    if (leftChar && rightChar) {
-                         combinedList.push({ left: leftChar, right: rightChar });
-                    }
+                    const [lId, rId] = key.split('-').map(Number);
+                    const l = allCharsByUnicode.get(lId);
+                    const r = allCharsByUnicode.get(rId);
+                    if (l && r) combined.push({ left: l, right: r });
                 });
             } else if (selectedLeftChars.size > 0 && selectedRightChars.size > 0) {
-                // GENERATOR MODE: Both sides selected, generate cross-product
-                for (const leftUnicode of selectedLeftChars) {
-                    for (const rightUnicode of selectedRightChars) {
-                        const leftChar = allCharsByUnicode.get(leftUnicode);
-                        const rightChar = allCharsByUnicode.get(rightUnicode);
-                        if (leftChar && rightChar && isGlyphDrawn(leftChar) && isGlyphDrawn(rightChar)) {
-                            combinedList.push({ left: leftChar, right: rightChar });
-                        }
+                // Generator Mode: Cross product
+                for (const lId of selectedLeftChars) {
+                    for (const rId of selectedRightChars) {
+                        const l = allCharsByUnicode.get(lId);
+                        const r = allCharsByUnicode.get(rId);
+                        if (l && r) combined.push({ left: l, right: r });
                     }
                 }
             }
-            return combinedList.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
+            return combined.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
         }
-    }, [mode, drawnRecommendedKerning, selectedLeftChars, selectedRightChars, allCharsByUnicode, isGlyphDrawn, kerningMap]);
+    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, kerningMap, allCharsByUnicode]);
 
-    const filteredPairsToDisplay = useMemo(() => {
-        let result = allPairsToDisplay;
+    // 2. Filter list by drawing status and search query
+    const filteredPairs = useMemo(() => {
+        let result = allPairsInContext.filter(p => isGlyphDrawn(p.left.unicode) && isGlyphDrawn(p.right.unicode));
         
-        // Status Filter
         if (filterMode === 'completed') {
-             result = result.filter(pair => {
-                 const key = `${pair.left.unicode}-${pair.right.unicode}`;
-                 return kerningMap.has(key);
-             });
+            result = result.filter(p => kerningMap.has(`${p.left.unicode}-${p.right.unicode}`));
         } else if (filterMode === 'incomplete') {
-             result = result.filter(pair => {
-                 const key = `${pair.left.unicode}-${pair.right.unicode}`;
-                 return !kerningMap.has(key);
-             });
+            result = result.filter(p => !kerningMap.has(`${p.left.unicode}-${p.right.unicode}`));
         }
         
-        // Search Filter (Smart Sorting)
-        if (searchQuery.trim().length > 0) {
+        if (searchQuery.trim()) {
             const q = parseSearchQuery(searchQuery);
             if (q.isEffective) {
-                const matches = result.map(pair => {
-                    // Check left OR right char against the query
-                    const scoreL = getCharacterMatchScore(pair.left, q);
-                    const scoreR = getCharacterMatchScore(pair.right, q);
-                    
-                    // Best score wins (if either matches, we include the pair)
-                    // If neither matches (-1), score is -1.
-                    let bestScore = -1;
-                    if (scoreL > 0 && scoreR > 0) bestScore = Math.min(scoreL, scoreR);
-                    else if (scoreL > 0) bestScore = scoreL;
-                    else if (scoreR > 0) bestScore = scoreR;
-                    
-                    return { pair, score: bestScore };
-                }).filter(item => item.score > 0);
-
-                matches.sort((a, b) => {
-                    if (a.score !== b.score) return a.score - b.score;
-                    // Secondary sort by name for stability
-                    return a.pair.left.name.localeCompare(b.pair.left.name) || a.pair.right.name.localeCompare(b.pair.right.name);
-                });
-                
-                result = matches.map(m => m.pair);
+                const scored = result.map(p => {
+                    const sL = getCharacterMatchScore(p.left, q);
+                    const sR = getCharacterMatchScore(p.right, q);
+                    let best = -1;
+                    if (sL > 0 && sR > 0) best = Math.min(sL, sR);
+                    else if (sL > 0) best = sL;
+                    else if (sR > 0) best = sR;
+                    return { p, score: best };
+                }).filter(x => x.score > 0);
+                scored.sort((a,b) => a.score - b.score || a.p.left.name.localeCompare(b.p.left.name));
+                result = scored.map(x => x.p);
             }
         }
-        
         return result;
-    }, [allPairsToDisplay, filterMode, kerningMap, searchQuery]);
-    
-    const visibleKernedCount = useMemo(() => {
-        return filteredPairsToDisplay.reduce((count, pair) => {
-            const key = `${pair.left.unicode}-${pair.right.unicode}`;
-            return kerningMap.has(key) ? count + 1 : count;
-        }, 0);
-    }, [filteredPairsToDisplay, kerningMap]);
+    }, [allPairsInContext, filterMode, kerningMap, searchQuery, isGlyphDrawn]);
 
-    const totalPages = useMemo(() => Math.ceil(filteredPairsToDisplay.length / PAGE_SIZE), [filteredPairsToDisplay.length, PAGE_SIZE]);
-
+    // Deep Link Handler
     useEffect(() => {
-        // Don't reset page if we are returning from editor (preserving context)
-        if (editingIndex === null) {
-             setCurrentPage(1);
-        }
-    }, [filteredPairsToDisplay.length, mode, selectedLeftChars, selectedRightChars, filterMode]); 
-
-    // --- Deep Linking Handling ---
-    useEffect(() => {
-        if (!pendingNavigationTarget) return;
-        
-        const [leftId, rightId] = pendingNavigationTarget.split('-').map(Number);
-        // Find index in current list (might need to switch view/filters if not found, but basic handling first)
-        const index = filteredPairsToDisplay.findIndex(p => p.left.unicode === leftId && p.right.unicode === rightId);
-        
-        if (index !== -1) {
-            setEditingIndex(index);
-            setPendingNavigationTarget(null);
-        } else {
-             // If not in current view, maybe we need to switch modes? 
-             // For now, simple deep linking assumes user can find it via search which sets correct workspace state.
-        }
-    }, [pendingNavigationTarget, filteredPairsToDisplay, setPendingNavigationTarget]);
-
-
-    const paginatedPairs = useMemo(() => {
-        const startIndex = (currentPage - 1) * PAGE_SIZE;
-        return filteredPairsToDisplay.slice(startIndex, startIndex + PAGE_SIZE);
-    }, [currentPage, PAGE_SIZE, filteredPairsToDisplay]);
-
-
-    const handleSaveKerning = (pair: {left: Character, right: Character}, value: number) => {
-        const key = `${pair.left.unicode}-${pair.right.unicode}`;
-        const newMap = new Map(kerningMap);
-        newMap.set(key, value);
-        kerningDispatch({ type: 'SET_MAP', payload: newMap });
-    };
-
-    const handleRemoveKerning = (pair: {left: Character, right: Character}) => {
-        const key = `${pair.left.unicode}-${pair.right.unicode}`;
-        const newMap = new Map(kerningMap);
-        if (newMap.has(key)) {
-            newMap.delete(key);
-            kerningDispatch({ type: 'SET_MAP', payload: newMap });
-        }
-    };
-
-    const handleLeftSelectionChange = useCallback((unicode: number, isSelected: boolean) => {
-        setSelectedLeftChars(prev => {
-            const newSet = new Set(prev);
-            isSelected ? newSet.add(unicode) : newSet.delete(unicode);
-            return newSet;
-        });
-    }, []);
-
-    const handleRightSelectionChange = useCallback((unicode: number, isSelected: boolean) => {
-        setSelectedRightChars(prev => {
-            const newSet = new Set(prev);
-            isSelected ? newSet.add(unicode) : newSet.delete(unicode);
-            return newSet;
-        });
-    }, []);
-
-    const handleAutoKern = async () => {
-        if (!metrics || !settings) return;
-        setIsAutoKerning(true);
-    
-        const pairsToKern = allPairsToDisplay.filter(pair => {
-            if (!pair.left || !pair.right) return false;
-            const key = `${pair.left.unicode}-${pair.right.unicode}`;
-            return !kerningMap.has(key) && isGlyphDrawn(pair.left) && isGlyphDrawn(pair.right);
-        });
-        
-        if (pairsToKern.length === 0) {
-            showNotification(t('noPairsToKern'), 'info');
-            setIsAutoKerning(false);
-            return;
-        }
-
-        setKerningProgressValue(0);
-        setIsProgressModalOpen(true);
-    
-        const onProgressUpdate = (progress: number) => {
-            setKerningProgressValue(progress);
-        };
-    
-        const newKerningValues = await calculateAutoKerning(
-            pairsToKern,
-            glyphDataMap,
-            metrics,
-            settings.strokeThickness,
-            onProgressUpdate,
-            recommendedKerning
-        );
-    
-        if (newKerningValues.size > 0) {
-            kerningDispatch({ type: 'SET_MAP', payload: new Map([...kerningMap, ...newKerningValues]) });
-            showNotification(t('autoKerningComplete', { count: newKerningValues.size }), 'success');
-        } else {
-            showNotification(t('autoKerningNoChange'), 'info');
-        }
-        
-        setIsProgressModalOpen(false);
-        setIsAutoKerning(false);
-    };
-    
-    const handleResetVisibleKerning = () => {
-        const newMap = new Map(kerningMap);
-        let count = 0;
-        filteredPairsToDisplay.forEach(pair => {
-            const key = `${pair.left.unicode}-${pair.right.unicode}`;
-            if (newMap.has(key)) {
-                newMap.delete(key);
-                count++;
+        if (pendingNavigationTarget) {
+            const index = filteredPairs.findIndex(p => `${p.left.unicode}-${p.right.unicode}` === pendingNavigationTarget);
+            if (index !== -1) {
+                setEditingIndex(index);
+                setPendingNavigationTarget(null);
             }
-        });
-    
-        if (count > 0) {
-            kerningDispatch({ type: 'SET_MAP', payload: newMap });
-            showNotification(t('kerningResetSuccess', { count }), 'success');
         }
-        setIsResetVisibleConfirmOpen(false);
-    };
+    }, [pendingNavigationTarget, filteredPairs, setPendingNavigationTarget]);
 
-    const handleNavigateEditor = (direction: 'prev' | 'next') => {
+    const handleNavigate = (direction: 'prev' | 'next') => {
         if (editingIndex === null) return;
         if (direction === 'prev' && editingIndex > 0) setEditingIndex(editingIndex - 1);
-        if (direction === 'next' && editingIndex < filteredPairsToDisplay.length - 1) setEditingIndex(editingIndex + 1);
+        if (direction === 'next' && editingIndex < filteredPairs.length - 1) setEditingIndex(editingIndex + 1);
     };
 
-    if (!settings || !metrics) return null;
-
-    const useKerningTerm = settings.editorMode === 'advanced' || settings.preferKerningTerm;
-    const noCharsDrawnText = !useKerningTerm ? t('spacingNoCharsDrawn') : t('kerningNoCharsDrawn');
-    const showOnlyCompleteText = !useKerningTerm ? t('spacingShowOnlyComplete') : t('kerningShowOnlyComplete');
-
-    const leftTitleKey = mode === 'recommended' ? 'kerningFilterLeftChars' : 'kerningSelectLeftChars';
-    const rightTitleKey = mode === 'recommended' ? 'kerningFilterRightChars' : 'kerningSelectRightChars';
-
-    // --- Render Editor ---
     if (editingIndex !== null) {
-        const pair = filteredPairsToDisplay[editingIndex];
-        if (!pair) { setEditingIndex(null); return null; } // Safety check
-
+        const pair = filteredPairs[editingIndex];
+        if (!pair) { setEditingIndex(null); return null; }
         const key = `${pair.left.unicode}-${pair.right.unicode}`;
-        const initialValue = kerningMap.get(key) ?? 0;
-
         return (
             <KerningEditorPage
-                pair={pair}
-                initialValue={initialValue}
-                glyphDataMap={glyphDataMap}
-                strokeThickness={settings.strokeThickness}
-                metrics={metrics}
-                settings={settings}
-                recommendedKerning={recommendedKerning}
-                onSave={(val) => handleSaveKerning(pair, val)}
-                onRemove={() => { handleRemoveKerning(pair); setEditingIndex(null); }}
-                onClose={() => setEditingIndex(null)}
-                onNavigate={handleNavigateEditor}
-                hasPrev={editingIndex > 0}
-                hasNext={editingIndex < filteredPairsToDisplay.length - 1}
+                pair={pair} initialValue={kerningMap.get(key) ?? 0}
+                glyphDataMap={glyphDataMap} strokeThickness={settings!.strokeThickness}
+                metrics={metrics!} settings={settings!} recommendedKerning={recommendedKerning}
+                onSave={(val) => {
+                    const newMap = new Map(kerningMap);
+                    newMap.set(key, val);
+                    kerningDispatch({ type: 'SET_MAP', payload: newMap });
+                }}
+                onRemove={() => {
+                    const newMap = new Map(kerningMap);
+                    newMap.delete(key);
+                    kerningDispatch({ type: 'SET_MAP', payload: newMap });
+                    setEditingIndex(null);
+                }}
+                onClose={() => setEditingIndex(null)} onNavigate={handleNavigate}
+                hasPrev={editingIndex > 0} hasNext={editingIndex < filteredPairs.length - 1}
                 glyphVersion={glyphVersion}
             />
         );
     }
 
-    // --- Render Grid ---
-    const renderContent = () => {
-        if (drawnCharacters.length === 0) {
-            return (
-                <div className="flex-grow text-center p-8 bg-gray-100 dark:bg-gray-800 rounded-lg m-4">
-                    <p className="text-gray-600 dark:text-gray-400">{noCharsDrawnText}</p>
-                </div>
-            );
-        }
-
-        if (filteredPairsToDisplay.length > 0) {
-             return (
-                    <>
-                        <div className="p-4 grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-4">
-                            {paginatedPairs.map((pair, index) => {
-                                if (!pair.left || !pair.right) return null;
-                                const key = `${pair.left.unicode}-${pair.right.unicode}`;
-                                const isRec = recommendedKerning?.some(rec => rec[0] === pair.left.name && rec[1] === pair.right.name);
-                                // Calculate actual index in full list for click handler
-                                const realIndex = ((currentPage - 1) * PAGE_SIZE) + index;
-                                
-                                return (
-                                    <PairCard
-                                        key={key + index}
-                                        pair={pair}
-                                        onClick={() => setEditingIndex(realIndex)}
-                                        isRecommended={!!isRec}
-                                        showRecommendedLabel={showRecommendedLabel}
-                                        kerningValue={kerningMap.get(key)}
-                                        glyphDataMap={glyphDataMap}
-                                        strokeThickness={settings.strokeThickness}
-                                        metrics={metrics}
-                                        glyphVersion={glyphVersion}
-                                    />
-                                );
-                            })}
-                        </div>
-                        {totalPages > 1 && (
-                            <div className="p-4 flex justify-center items-center gap-4 text-sm">
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <LeftArrowIcon className="h-4 w-4" />
-                                    <span>{t('previous')}</span>
-                                </button>
-                                <span>
-                                    {t('page')} {currentPage} / {totalPages}
-                                </span>
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <span>{t('next')}</span>
-                                    <RightArrowIcon className="h-4 w-4" />
-                                </button>
-                            </div>
-                        )}
-                    </>
-                );
-        }
-
-        // If no pairs are displayed, determine the appropriate empty state message.
-        if (mode === 'all') {
-            const isReviewMode = selectedLeftChars.size === 0 && selectedRightChars.size === 0;
-            const isPartialSelection = !isReviewMode && (selectedLeftChars.size === 0 || selectedRightChars.size === 0);
-
-            if (isReviewMode) {
-                if (kerningMap.size === 0 && filterMode === 'none') {
-                    // Empty state only when filter is 'none' (default). If filter is 'completed/incomplete', standard no results is better.
-                    return (
-                        <div className="flex-grow flex items-center justify-center text-center p-8">
-                            <div className="max-w-md">
-                                <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">{t('kerningGeneratePairsTitle')}</h3>
-                                <p className="text-gray-600 dark:text-gray-400">{t('kerningGeneratePairsBody')}</p>
-                            </div>
-                        </div>
-                    );
-                } else {
-                    return (
-                        <div className="flex-grow flex items-center justify-center text-center p-8">
-                             <p className="text-gray-500 dark:text-gray-400">{t('noResultsFound')}</p>
-                        </div>
-                    );
-                }
-            }
-            
-            if (isPartialSelection) {
-                 return (
-                    <div className="flex-grow flex items-center justify-center text-center p-8">
-                        <div className="max-w-md">
-                            <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">{t('kerningGeneratePairsTitle')}</h3>
-                            <p className="text-gray-600 dark:text-gray-400">{t('kerningGeneratePairsBody')}</p>
-                        </div>
-                    </div>
-                );
-            }
-        }
-
-        return (
-             <div className="flex-grow flex items-center justify-center text-center p-8">
-                <p className="text-gray-500 dark:text-gray-400">
-                   {t('noResultsFound')}
-                </p>
-             </div>
-        );
-    };
-    
     return (
-        <div className="w-full h-full flex flex-col">
-            <div className="flex flex-1 overflow-hidden">
-                {/* Desktop Left Panel */}
-                <div className="hidden lg:flex lg:w-64 flex-shrink-0 h-full">
-                    <CharacterSelectionPanel
-                        title={leftTitleKey}
-                        characters={drawnCharacters}
-                        selectedChars={selectedLeftChars}
-                        onSelectionChange={handleLeftSelectionChange}
-                        onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))}
-                        onSelectNone={() => setSelectedLeftChars(new Set())}
-                    />
-                </div>
-                <main className="flex-1 flex flex-col overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
-                    {/* Mobile Selection Rows */}
-                    <div className="block lg:hidden p-4 space-y-4 border-b dark:border-gray-700">
-                        <CharacterSelectionRow
-                            title={leftTitleKey}
-                            characters={drawnCharacters}
-                            selectedChars={selectedLeftChars}
-                            onSelectionChange={handleLeftSelectionChange}
-                            onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))}
-                            onSelectNone={() => setSelectedLeftChars(new Set())}
-                        />
-                        <CharacterSelectionRow
-                            title={rightTitleKey}
-                            characters={drawnCharacters}
-                            selectedChars={selectedRightChars}
-                            onSelectionChange={handleRightSelectionChange}
-                            onSelectAll={() => setSelectedRightChars(new Set(drawnCharacters.map(c => c.unicode!)))}
-                            onSelectNone={() => setSelectedRightChars(new Set())}
-                        />
-                    </div>
-                     {/* Main Grid */}
-                    <div className="flex-grow flex flex-col">
-                         <div className="p-4 border-b dark:border-gray-700 flex items-center gap-4 flex-wrap">
-                            <button 
-                                onClick={handleAutoKern} 
-                                disabled={isAutoKerning}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:bg-teal-400 disabled:cursor-wait transition-colors"
-                            >
-                                <SparklesIcon />
-                                {isAutoKerning ? t('autoKerningInProgress') : t('autoKern')} 
-                            </button>
-                            
-                            <button 
-                                onClick={() => setIsResetVisibleConfirmOpen(true)}
-                                disabled={visibleKernedCount === 0}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 disabled:bg-yellow-400 disabled:cursor-not-allowed transition-colors"
-                            >
-                                <UndoIcon />
-                                {t('resetVisible')}
-                            </button>
-
-                            {/* Removed deprecated checkbox toggle in favor of header filter menu */}
-                        </div>
-                        {!areAllRecGlyphsDrawn && mode === 'recommended' && (
-                            <div className="mx-4 mt-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">
-                                {showOnlyCompleteText}
-                            </div>
-                        )}
-                        {renderContent()}
-                    </div>
-                </main>
-                {/* Desktop Right Panel */}
-                <div className="hidden lg:flex lg:w-64 flex-shrink-0 h-full">
-                    <CharacterSelectionPanel
-                        title={rightTitleKey}
-                        characters={drawnCharacters}
-                        selectedChars={selectedRightChars}
-                        onSelectionChange={handleRightSelectionChange}
-                        onSelectAll={() => setSelectedRightChars(new Set(drawnCharacters.map(c => c.unicode!)))}
-                        onSelectNone={() => setSelectedRightChars(new Set())}
-                    />
-                </div>
-            </div>
-            {isProgressModalOpen && (
-                <AutoKerningProgressModal isOpen={isProgressModalOpen} progress={kerningProgressValue} />
-            )}
-            <Modal
-                isOpen={isResetVisibleConfirmOpen}
-                onClose={() => setIsResetVisibleConfirmOpen(false)}
-                title={t('resetVisibleTitle')}
-                footer={
-                    <>
-                        <button onClick={() => setIsResetVisibleConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors">{t('cancel')}</button>
-                        <button onClick={handleResetVisibleKerning} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">{t('reset')}</button>
-                    </>
-                }
-            >
-                <p>{t('resetVisibleMessage', { count: visibleKernedCount })}</p>
-            </Modal>
-        </div>
+        <KerningSelectionView 
+            filteredPairs={filteredPairs}
+            onEditPair={(pair) => setEditingIndex(filteredPairs.indexOf(pair))}
+            selectedLeftChars={selectedLeftChars} setSelectedLeftChars={setSelectedLeftChars}
+            selectedRightChars={selectedRightChars} setSelectedRightChars={setSelectedRightChars}
+            mode={mode} showRecommendedLabel={showRecommendedLabel}
+        />
     );
 };
-
 
 export default React.memo(KerningPage);
