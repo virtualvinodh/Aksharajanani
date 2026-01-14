@@ -175,12 +175,12 @@ export const useGlyphActions = (
             }
         });
 
-        const hasDependents = positionedPairCount > 0;
+        const hasDependents = (linkedDependents.size > 0) || positionedPairCount > 0;
 
         if (hasDependents) {
             // Show "Processing" notification only if not silent
             if (!silent) {
-                 layout.showNotification(t('updatingDependents', { count: positionedPairCount }), 'info', { duration: 10000 });
+                 layout.showNotification(t('updatingDependents', { count: linkedDependents.size + positionedPairCount }), 'info', { duration: 10000 });
             }
 
             // Defer heavy calculation to next tick to let UI render the immediate save
@@ -324,7 +324,7 @@ export const useGlyphActions = (
                 // We omit the specific "Updated X dependents" count to avoid clutter, 
                 // as the visual strip now provides feedback.
                 if (!silent) {
-                    // layout.showNotification(t('saveGlyphSuccess'));
+                    layout.showNotification(t('saveGlyphSuccess'));
                 }
             }, 0);
             

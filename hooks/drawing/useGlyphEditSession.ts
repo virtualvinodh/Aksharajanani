@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Path, Character, GlyphData, AppSettings, FontMetrics, MarkAttachmentRules, CharacterSet } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -278,7 +279,7 @@ export const useGlyphEditSession = ({
         if (settings.isAutosaveEnabled) {
             // Force a commit save (cascade updates) if anything was touched
             if (hasPendingCascade.current || hasUnsavedChanges) {
-                performSave(currentPaths, { isDraft: false, silent: false });
+                performSave(currentPaths, { isDraft: false, silent: true });
             }
             proceed();
         } else if (hasUnsavedChanges) {
