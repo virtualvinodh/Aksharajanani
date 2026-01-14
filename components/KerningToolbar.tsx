@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { ZoomInIcon, ZoomOutIcon } from '../constants';
@@ -43,7 +44,7 @@ const KerningToolbar: React.FC<KerningToolbarProps> = ({
     );
 
     return (
-        <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-3 p-2 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg items-center`}>
+        <div className={`flex ${isVertical ? 'flex-col' : 'flex-row flex-wrap justify-center'} gap-3 p-2 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg items-center max-w-[95vw]`}>
             {/* Zoom Controls */}
             <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2`}>
                 <ActionButton onClick={() => onZoom(1.25)} title={t('zoomIn')}>
@@ -54,7 +55,7 @@ const KerningToolbar: React.FC<KerningToolbarProps> = ({
                 </ActionButton>
             </div>
 
-            <div className={`${isVertical ? 'h-px w-full my-0.5' : 'w-px h-8 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+            <div className={`${isVertical ? 'h-px w-full my-0.5' : 'hidden sm:block w-px h-8 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
             {/* Kerning/Spacing Input */}
             <div className="flex flex-col items-center gap-0.5">

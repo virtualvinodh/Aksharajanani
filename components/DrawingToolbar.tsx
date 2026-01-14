@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
 import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
@@ -49,13 +46,13 @@ const ToolButton: React.FC<{ tool: Tool, currentTool: Tool, label: string, onCli
       onClick={() => onClick(tool)}
       title={label}
       disabled={disabled}
-      className={`p-2 rounded-md transition-colors ${
+      className={`p-2 rounded-lg transition-all shadow-sm ${
         isActive
-          ? 'bg-indigo-600 text-white'
-          : 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white hover:bg-gray-400 dark:hover:bg-gray-500'
-      } disabled:opacity-50 disabled:cursor-not-allowed`}
+          ? 'bg-indigo-600 text-white ring-2 ring-indigo-500/30'
+          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
+      } disabled:opacity-50 disabled:cursor-not-allowed active:scale-95`}
     >
-      {children}
+      {React.cloneElement(children as React.ReactElement, { className: 'w-5 h-5' })}
     </button>
   );
 });
@@ -65,9 +62,9 @@ const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: bo
     onClick={onClick}
     title={title}
     disabled={disabled}
-    className="p-2 rounded-md transition-colors bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white hover:bg-gray-400 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+    className="p-2 rounded-lg transition-all bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
   >
-    {children}
+    {React.cloneElement(children as React.ReactElement, { className: 'w-5 h-5' })}
   </button>
 ));
 
@@ -122,22 +119,22 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
                     onClick={handleCalligraphyToolClick}
                     title="Calligraphy Pen"
                     disabled={isLocked}
-                    className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    className={`p-2 rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 ${
                     currentTool === 'calligraphy'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white hover:bg-gray-400 dark:hover:bg-gray-500'
+                        ? 'bg-indigo-600 text-white ring-2 ring-indigo-500/30'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
                     }`}
                 >
-                    <CalligraphyIcon />
+                    <CalligraphyIcon className="w-5 h-5" />
                      <div className={`absolute bottom-0.5 right-0.5 w-0 h-0 border-l-[4px] border-l-transparent border-b-[4px] ${currentTool === 'calligraphy' ? 'border-b-white' : 'border-b-gray-500 dark:border-b-gray-400'}`}></div>
                 </button>
                 {isAnglePickerOpen && (
-                    <div className={`absolute z-20 bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 flex gap-1 animate-fade-in-up ${isLargeScreen ? 'left-full ml-2 top-0 flex-col' : 'bottom-full mb-2 left-1/2 -translate-x-1/2'}`}>
+                    <div className={`absolute z-50 bg-white dark:bg-gray-700 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 p-1 flex gap-1 animate-fade-in-up ${isLargeScreen ? 'left-full ml-2 top-0 flex-col' : 'bottom-full mb-2 left-1/2 -translate-x-1/2'}`}>
                         {[45, 30, 15].map((angle) => (
                             <button
                                 key={angle}
                                 onClick={() => { setCalligraphyAngle(angle as 45|30|15); setIsAnglePickerOpen(false); }}
-                                className={`px-3 py-1 text-sm rounded-md w-full text-left ${calligraphyAngle === angle ? 'bg-indigo-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                                className={`px-3 py-1 text-xs font-bold rounded-md w-full text-left transition-colors ${calligraphyAngle === angle ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                             >
                                 {angle}°
                             </button>
@@ -152,7 +149,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
             <ToolButton tool="ellipse" currentTool={currentTool} label="Ellipse" onClick={setCurrentTool} disabled={isLocked}><EllipseIcon /></ToolButton>
             <ToolButton tool="dot" currentTool={currentTool} label="Dot" onClick={setCurrentTool} disabled={isLocked}><DotIcon /></ToolButton>
             
-            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
+            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ToolButton tool="eraser" currentTool={currentTool} label="Eraser" onClick={setCurrentTool} disabled={isLocked}><EraserIcon /></ToolButton>
             <ToolButton tool="slice" currentTool={currentTool} label="Slice" onClick={setCurrentTool} disabled={isLocked}><SliceIcon /></ToolButton>
         </>
@@ -162,16 +159,16 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
         <>
             <ActionButton onClick={onUndo} title="Undo" disabled={!canUndo}><UndoIcon /></ActionButton>
             <ActionButton onClick={onRedo} title="Redo" disabled={!canRedo}><RedoIcon /></ActionButton>
-            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
+            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ActionButton onClick={onCut} title={t('cut')} disabled={selectedPathIds.size === 0 || isLocked}><CutIcon /></ActionButton>
             <ActionButton onClick={onCopy} title={t('copy')} disabled={isLocked}><CopyIcon /></ActionButton>
             <ActionButton onClick={onPaste} title={t('paste')} disabled={!clipboard || isLocked}><PasteIcon /></ActionButton>
             <ActionButton onClick={onGroup} title={t('group')} disabled={!canGroup || isLocked}><GroupIcon /></ActionButton>
             <ActionButton onClick={onUngroup} title={t('ungroup')} disabled={!canUngroup || isLocked}><UngroupIcon /></ActionButton>
-            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
+            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ActionButton onClick={() => onZoom(1.25)} title={t('zoomIn')}><ZoomInIcon /></ActionButton>
             <ActionButton onClick={() => onZoom(0.8)} title={t('zoomOut')}><ZoomOutIcon /></ActionButton>
-            <div className={`border-gray-400 dark:border-gray-600 ${isLargeScreen ? 'border-t w-full my-2 col-span-2' : 'border-l h-6 mx-2'}`}></div>
+            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ActionButton onClick={onImageImportClick} title={t('importGuide')}><ImageIcon/></ActionButton>
             <ActionButton onClick={onSvgImportClick} title={t('importSvg')} disabled={isLocked}><ImportIcon/></ActionButton>
         </>
@@ -179,25 +176,23 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
 
     if(isLargeScreen) {
         return (
-            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-xl grid grid-cols-2 gap-2 justify-items-center content-start shadow-inner max-h-full overflow-y-auto no-scrollbar">
+            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md p-2 rounded-2xl grid grid-cols-2 gap-1.5 justify-items-center content-start shadow-2xl border border-gray-200 dark:border-gray-700 max-h-full overflow-y-auto no-scrollbar w-24">
                  {commonTools}
-                 <div className="border-t w-full border-gray-400 dark:border-gray-600 my-1 col-span-2"></div>
+                 <div className="h-px w-full my-1 col-span-2 bg-gray-300 dark:bg-gray-600"></div>
                  {drawingTools}
-                 <div className="border-t w-full border-gray-400 dark:border-gray-600 my-1 col-span-2"></div>
+                 <div className="h-px w-full my-1 col-span-2 bg-gray-300 dark:bg-gray-600"></div>
                  {actionTools}
             </div>
         );
     }
 
-    // Horizontal layout for mobile/tablet or short desktop screens
-    // Consolidated into a single flex container for better flow
     return (
-        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-inner w-full sm:w-auto">
-             <div className="flex items-center justify-center flex-wrap gap-1 sm:gap-2">
+        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md p-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl w-full sm:w-auto max-w-[95vw]">
+             <div className="flex flex-wrap items-center justify-center gap-2">
                 {commonTools}
-                <div className="border-l h-6 border-gray-400 dark:border-gray-600 mx-1"></div>
+                <div className="hidden sm:block w-px h-6 mx-1 bg-gray-300 dark:bg-gray-600"></div>
                 {drawingTools}
-                <div className="border-l h-6 border-gray-400 dark:border-gray-600 mx-1"></div>
+                <div className="hidden sm:block w-px h-6 mx-1 bg-gray-300 dark:bg-gray-600"></div>
                 {actionTools}
              </div>
         </div>

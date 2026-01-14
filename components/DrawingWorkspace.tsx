@@ -1,50 +1,20 @@
 
-import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { Character, CharacterSet, GlyphData } from '../types';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Character, CharacterSet } from '../types';
 import CharacterGrid from './CharacterGrid';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { LeftArrowIcon, RightArrowIcon, CheckCircleIcon, AddIcon, EditIcon, TrashIcon, SelectIcon, SettingsIcon, BatchIcon, CompareIcon, CloseIcon, TransformIcon } from '../constants';
 import ProgressIndicator from './ProgressIndicator';
 import { useGlyphData } from '../contexts/GlyphDataContext';
-import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useProject } from '../contexts/ProjectContext';
 import { useSettings } from '../contexts/SettingsContext';
-import Modal from './Modal';
 import { useBatchOperations } from '../hooks/useBatchOperations';
 import { filterAndSortCharacters } from '../utils/searchUtils';
 import { sanitizeIdentifier } from '../utils/stringUtils';
 import { useRules } from '../contexts/RulesContext';
-
-// Reusing modals from BulkEditWorkspace logic but integrated here
-const BulkPropertiesModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (l: string, r: string, w: string) => void, count: number }> = ({ isOpen, onClose, onSave, count }) => {
-    const { t } = useLocale();
-    const [lsb, setLsb] = useState('');
-    const [rsb, setRsb] = useState('');
-    if (!isOpen) return null;
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`${t('editProperties')} (${count})`} footer={<><button onClick={onClose} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button><button onClick={() => onSave(lsb, rsb, '')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">{t('save')}</button></>}>
-            <div className="space-y-4"><p className="text-sm text-gray-500">Leave fields blank to keep existing values.</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">{t('leftSpace')} (LSB)</label><input type="number" value={lsb} onChange={e => setLsb(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" /></div><div><label className="block text-sm font-medium mb-1">{t('rightSpace')} (RSB)</label><input type="number" value={rsb} onChange={e => setRsb(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" /></div></div></div>
-        </Modal>
-    );
-};
-
-const BulkTransformModal: React.FC<{ isOpen: boolean, onClose: () => void, onConfirm: (sx: number, sy: number, r: number, fh: boolean, fv: boolean) => void, count: number, selectedGlyphs: any[], glyphDataMap: any, strokeThickness: number }> = ({ isOpen, onClose, onConfirm, count, selectedGlyphs, glyphDataMap, strokeThickness }) => {
-    const { t } = useLocale();
-    const [scaleX, setScaleX] = useState('1.0');
-    const [scaleY, setScaleY] = useState('1.0');
-    const [rotation, setRotation] = useState('0');
-    const [flipH, setFlipH] = useState(false);
-    const [flipV, setFlipV] = useState(false);
-    const [lockAspect, setLockAspect] = useState(true);
-
-    const handleScaleXChange = (val: string) => { setScaleX(val); if (lockAspect) setScaleY(val); };
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={t('transformGlyphsTitle', { count })} footer={<><button onClick={onClose} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button><button onClick={() => onConfirm(parseFloat(scaleX)||1, parseFloat(scaleY)||1, parseFloat(rotation)||0, flipH, flipV)} className="px-4 py-2 bg-green-600 text-white rounded-lg">{t('applyTransform')}</button></>}>
-             <div className="space-y-6"><p className="text-xs text-gray-500 italic text-center">{t('transformOriginCenter')}</p><div className="grid grid-cols-2 gap-4"><div className="col-span-2 sm:col-span-1"><label className="block text-sm font-medium mb-1">{t('scaleX')}</label><input type="number" step="0.1" value={scaleX} onChange={e => handleScaleXChange(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" /></div><div className="col-span-2 sm:col-span-1"><label className="block text-sm font-medium mb-1">{t('scaleY')}</label><input type="number" step="0.1" value={scaleY} onChange={e => setScaleY(e.target.value)} disabled={lockAspect} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50" /></div><div className="col-span-2 flex items-center"><input type="checkbox" id="lockAspect" checked={lockAspect} onChange={e => setLockAspect(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" /><label htmlFor="lockAspect" className="ml-2 text-sm">Lock Aspect Ratio</label></div></div><div><label className="block text-sm font-medium mb-1">{t('rotate')}</label><div className="flex items-center gap-2"><input type="range" min="-180" max="180" value={rotation} onChange={e => setRotation(e.target.value)} className="flex-grow" /><input type="number" value={rotation} onChange={e => setRotation(e.target.value)} className="w-16 p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 text-center" /></div></div><div className="flex gap-6 justify-center"><label className="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded border dark:border-gray-600"><input type="checkbox" checked={flipH} onChange={e => setFlipH(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" /><span>{t('flipHorizontal')}</span></label><label className="flex items-center gap-2 cursor-pointer bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded border dark:border-gray-600"><input type="checkbox" checked={flipV} onChange={e => setFlipV(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" /><span>{t('flipVertical')}</span></label></div></div>
-        </Modal>
-    );
-};
+import DrawingWorkspaceHeader from './drawing/DrawingWorkspaceHeader';
+import DrawingBatchToolbar from './drawing/DrawingBatchToolbar';
+import DrawingWorkspaceDialogs from './drawing/DrawingWorkspaceDialogs';
 
 interface DrawingWorkspaceProps {
     characterSets: CharacterSet[];
@@ -54,79 +24,6 @@ interface DrawingWorkspaceProps {
     drawingProgress: { completed: number; total: number };
 }
 
-interface ContextMenuState {
-    x: number;
-    y: number;
-    index: number;
-    isOpen: boolean;
-}
-
-const CharacterSetTab: React.FC<{
-    set: CharacterSet;
-    index: number;
-    activeTab: number;
-    setActiveTab: (index: number) => void;
-    glyphDataMap: Map<number, GlyphData>;
-    onContextMenu: (e: React.MouseEvent | React.TouchEvent, index: number) => void;
-    showHidden: boolean;
-    glyphVersion: number;
-}> = ({ set, index, activeTab, setActiveTab, glyphDataMap, onContextMenu, showHidden, glyphVersion }) => {
-    const { t } = useLocale();
-    const [isAnimating, setIsAnimating] = useState(false);
-    const wasComplete = useRef(false);
-    const longPressTimer = useRef<number | null>(null);
-
-    const isSetComplete = useMemo(() => {
-        const visibleChars = set.characters.filter(char => !char.hidden || showHidden);
-        if (!visibleChars || visibleChars.length === 0) return false;
-        return visibleChars.every(char => isGlyphDrawn(glyphDataMap.get(char.unicode)));
-    }, [set.characters, glyphDataMap, showHidden, glyphVersion]);
-
-    useEffect(() => {
-        if (isSetComplete && !wasComplete.current) {
-            setIsAnimating(true);
-            const timer = setTimeout(() => setIsAnimating(false), 600); // Match animation duration
-            return () => clearTimeout(timer);
-        }
-        wasComplete.current = isSetComplete;
-    }, [isSetComplete]);
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-        longPressTimer.current = window.setTimeout(() => {
-            onContextMenu(e, index);
-        }, 500); // Long press duration
-    };
-
-    const handleTouchEnd = () => {
-        if (longPressTimer.current) {
-            clearTimeout(longPressTimer.current);
-            longPressTimer.current = null;
-        }
-    };
-
-    const animationClass = isAnimating ? 'animate-pop-in' : '';
-
-    return (
-        <button
-            key={set.nameKey}
-            onClick={() => setActiveTab(index)}
-            onContextMenu={(e) => onContextMenu(e, index)}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={handleTouchEnd}
-            onTouchMove={handleTouchEnd}
-            className={`flex-shrink-0 flex items-center gap-1.5 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors select-none ${
-                activeTab === index
-                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-            }`}
-        >
-            <span>{t(set.nameKey)}</span>
-            {isSetComplete && <CheckCircleIcon className={`h-4 w-4 text-green-500 ${animationClass}`} />}
-        </button>
-    );
-};
-
 const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSelectCharacter, onAddGlyph, onAddBlock, drawingProgress }) => {
     const { t } = useLocale();
     const { 
@@ -135,39 +32,31 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         filterMode, setComparisonCharacters, setCurrentView,
         searchQuery
     } = useLayout();
-    const { dispatch: characterDispatch, positioningGroupNames } = useProject();
-    const { settings, metrics } = useSettings();
-    const navContainerRef = useRef<HTMLDivElement>(null);
-    const [showNavArrows, setShowNavArrows] = useState({ left: false, right: false });
     
+    const { dispatch: characterDispatch, positioningGroupNames } = useProject();
+    const { settings } = useSettings();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
+    const { state: rulesState } = useRules();
+    const rulesGroups = rulesState.fontRules?.groups || {};
 
-    // Context Menu State
-    const [contextMenu, setContextMenu] = useState<ContextMenuState>({ x: 0, y: 0, index: -1, isOpen: false });
+    const [contextMenu, setContextMenu] = useState({ x: 0, y: 0, index: -1, isOpen: false });
     const contextMenuRef = useRef<HTMLDivElement>(null);
 
-    // Group Management Modal State
     const [modalState, setModalState] = useState<{ type: 'create' | 'rename', index?: number, isOpen: boolean }>({ type: 'create', isOpen: false });
     const [modalInputValue, setModalInputValue] = useState('');
     const [showNamingHint, setShowNamingHint] = useState(false);
 
-    // Batch Operation States
     const { handleBulkTransform, handleSaveMetrics, handleBulkDelete } = useBatchOperations();
-    const [isTransformModalOpen, setIsTransformModalOpen] = useState(false);
-    const [isPropertiesModalOpen, setIsPropertiesModalOpen] = useState(false);
-    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-
-    const { state: rulesState } = useRules();
-    const rulesGroups = rulesState.fontRules?.groups || {};
+    const [isTransformOpen, setIsTransformOpen] = useState(false);
+    const [isPropertiesOpen, setIsPropertiesOpen] = useState(false);
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
     const showHidden = settings?.showHiddenGlyphs ?? false;
-
-    // Filter Logic
     const isSearching = searchQuery.trim().length > 0;
     const isFiltered = filterMode !== 'none' || isSearching;
-    
+
     const visibleCharacterSets = useMemo(() => {
-        if (isFiltered) return []; // In filtered mode, we don't use sets
+        if (isFiltered) return [];
         return characterSets
             .map(set => ({
                 ...set,
@@ -178,177 +67,36 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
 
     const filteredFlatList = useMemo(() => {
         if (!isFiltered) return [];
-        
-        let candidates = characterSets
-            .flatMap(set => set.characters)
-            .filter(char => {
-                // Filter out non-drawables
-                if (char.unicode === 8205 || char.unicode === 8204) return false;
-                
-                const drawn = isGlyphDrawn(glyphDataMap.get(char.unicode));
-                
-                // If filterMode is 'all', we show everything (flat list).
-                // If it's completed/incomplete, we filter by drawn status.
-                const matchesStatus = filterMode === 'all' || filterMode === 'none' || (filterMode === 'completed' && drawn) || (filterMode === 'incomplete' && !drawn);
-                
-                if (!matchesStatus) return false;
-                
-                // Respect hidden property unless showHidden is on
-                return (!char.hidden || showHidden);
-            });
-
-        // Use new shared utility for Search Filtering & Sorting
-        if (isSearching) {
-            candidates = filterAndSortCharacters(candidates, searchQuery);
-        } else {
-            // Default Sort (Unicode) if not searching
-            candidates.sort((a, b) => (a.unicode || 0) - (b.unicode || 0));
-        }
-            
-        return candidates;
-            
-    }, [characterSets, glyphDataMap, filterMode, showHidden, isFiltered, glyphVersion, searchQuery, isSearching]);
-
-    const currentGridCharacters = isFiltered 
-        ? filteredFlatList 
-        : (visibleCharacterSets[activeTab]?.characters || []);
-
-    const drawnCharacters = useMemo(() => {
-        if (!characterSets) return [];
-        return characterSets
-            .flatMap(set => set.characters)
-            .filter(char => char.unicode !== undefined && !char.hidden && isGlyphDrawn(glyphDataMap.get(char.unicode)))
-            .sort((a, b) => a.unicode! - b.unicode!);
-    }, [characterSets, glyphDataMap, glyphVersion]);
-
-    const selectedGlyphData = useMemo(() => {
-        return drawnCharacters.filter(c => metricsSelection.has(c.unicode!));
-    }, [drawnCharacters, metricsSelection]);
-
-    // Ensure active tab logic...
-    useEffect(() => {
-        if (!isFiltered && activeTab >= visibleCharacterSets.length && visibleCharacterSets.length > 0) {
-            setActiveTab(visibleCharacterSets.length - 1);
-        } else if (!isFiltered && visibleCharacterSets.length === 0) {
-            setActiveTab(0);
-        }
-    }, [activeTab, setActiveTab, visibleCharacterSets.length, isFiltered]);
-
-    // Scroll Logic...
-    const checkNavOverflow = useCallback(() => {
-        const c = navContainerRef.current;
-        if (!c) return;
-        const tol = 2;
-        const isOverflowing = c.scrollWidth > c.clientWidth + tol;
-        setShowNavArrows({
-            left: isOverflowing && c.scrollLeft > tol,
-            right: isOverflowing && c.scrollLeft < c.scrollWidth - c.clientWidth - tol,
+        let candidates = characterSets.flatMap(set => set.characters).filter(char => {
+            if (char.unicode === 8205 || char.unicode === 8204) return false;
+            const drawn = glyphDataMap.has(char.unicode!);
+            const matchesStatus = filterMode === 'all' || filterMode === 'none' || (filterMode === 'completed' && drawn) || (filterMode === 'incomplete' && !drawn);
+            if (!matchesStatus) return false;
+            return (!char.hidden || showHidden);
         });
-    }, []);
+        return isSearching ? filterAndSortCharacters(candidates, searchQuery) : candidates.sort((a, b) => (a.unicode || 0) - (b.unicode || 0));
+    }, [characterSets, glyphDataMap, filterMode, showHidden, isFiltered, searchQuery, isSearching]);
 
-    useEffect(() => {
-        const c = navContainerRef.current;
-        if (!c) return;
-        checkNavOverflow();
-        const resizeObserver = new ResizeObserver(checkNavOverflow);
-        resizeObserver.observe(c);
-        c.addEventListener('scroll', checkNavOverflow);
-        return () => { if(c) { resizeObserver.disconnect(); c.removeEventListener('scroll', checkNavOverflow); } };
-    }, [checkNavOverflow, visibleCharacterSets]);
+    const currentGridCharacters = isFiltered ? filteredFlatList : (visibleCharacterSets[activeTab]?.characters || []);
 
-    const handleNavScroll = (dir: 'left' | 'right') => {
-        const c = navContainerRef.current;
-        if (c) c.scrollBy({ left: dir === 'left' ? -c.clientWidth * 0.75 : c.clientWidth * 0.75, behavior: 'smooth' });
-    };
-
-    // Context Menu Logic...
-    const handleContextMenu = (e: React.MouseEvent | React.TouchEvent, index: number) => {
+    const handleTabContextMenu = (e: React.MouseEvent | React.TouchEvent, index: number) => {
         e.preventDefault();
-        let clientX, clientY;
-        if ('touches' in e) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; } 
-        else { clientX = (e as React.MouseEvent).clientX; clientY = (e as React.MouseEvent).clientY; }
-        const menuWidth = 160; const menuHeight = 100;
-        const x = Math.min(clientX, window.innerWidth - menuWidth);
-        const y = Math.min(clientY, window.innerHeight - menuHeight);
-        setContextMenu({ x, y, index, isOpen: true });
+        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+        setContextMenu({ x: Math.min(clientX, window.innerWidth - 160), y: Math.min(clientY, window.innerHeight - 100), index, isOpen: true });
     };
 
-    const closeContextMenu = () => setContextMenu(prev => ({ ...prev, isOpen: false }));
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (contextMenu.isOpen && contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
-                closeContextMenu();
-            }
-        };
-        window.addEventListener('mousedown', handleClickOutside);
-        return () => window.removeEventListener('mousedown', handleClickOutside);
-    }, [contextMenu.isOpen]);
-
-    // Group Management Handlers...
-    const openCreateModal = () => { 
-        setModalInputValue(''); 
-        setShowNamingHint(false);
-        setModalState({ type: 'create', isOpen: true }); 
-    };
-
-    const openRenameModal = () => {
-        const currentName = visibleCharacterSets[contextMenu.index].nameKey;
-        setModalInputValue(t(currentName) === currentName ? currentName : t(currentName));
-        setShowNamingHint(false);
-        setModalState({ type: 'rename', index: contextMenu.index, isOpen: true });
-        closeContextMenu();
-    };
-
-    const handleNameChange = (val: string) => {
+    const handleNameInput = (val: string) => {
         const sanitized = sanitizeIdentifier(val);
-        // If normalization (space->underscore) happens, we don't necessarily show a rejection hint
-        // but if illegal chars or numbers are stripped, we do.
-        if (val.length > 0 && sanitized !== val.replace(/[\s-]+/g, '_')) {
-            setShowNamingHint(true);
-        } else {
-            setShowNamingHint(false);
-        }
+        setShowNamingHint(val.length > 0 && sanitized !== val.replace(/[\s-]+/g, '_'));
         setModalInputValue(sanitized);
-    };
-
-    const handleDeleteGroupHandler = () => {
-        if (visibleCharacterSets.length <= 1) { showNotification(t('cannotDeleteLastGroup'), 'error'); closeContextMenu(); return; }
-        const targetSet = visibleCharacterSets[contextMenu.index];
-        const realIndex = characterSets.findIndex(s => s.nameKey === targetSet.nameKey);
-        if (window.confirm(t('confirmDeleteGroup', { name: t(targetSet.nameKey) }))) {
-             characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prev) => prev ? prev.filter((_, i) => i !== realIndex) : null });
-        }
-        closeContextMenu();
     };
 
     const handleModalSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const name = sanitizeIdentifier(modalInputValue.trim()); 
+        const name = modalInputValue.trim();
         if (!name) return;
-
-        // --- GLOBAL CASE-INSENSITIVE DUPLICATE CHECK ---
         const lowerName = name.toLowerCase();
-        const existingCharSetKeys = characterSets.map(cs => cs.nameKey.toLowerCase());
-        const positioningGroupKeys = Array.from(positioningGroupNames).map(n => n.toLowerCase());
-        const rulesGroupKeys = Object.keys(rulesGroups).map(n => n.toLowerCase());
-        
-        const isSelfRename = modalState.type === 'rename' && modalState.index !== undefined && visibleCharacterSets[modalState.index].nameKey.toLowerCase() === lowerName;
-        
-        if (!isSelfRename) {
-            if (existingCharSetKeys.includes(lowerName)) {
-                showNotification(t('errorCharSetExists'), 'error');
-                return;
-            }
-            if (positioningGroupKeys.includes(lowerName)) {
-                showNotification(t('errorPosGroupExists'), 'error');
-                return;
-            }
-            if (rulesGroupKeys.includes(lowerName)) {
-                showNotification(t('errorRuleGroupExists'), 'error');
-                return;
-            }
-        }
         
         if (modalState.type === 'create') {
              characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prev) => prev ? [...prev, { nameKey: name, characters: [] }] : [{ nameKey: name, characters: [] }] });
@@ -356,65 +104,21 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         } else if (modalState.type === 'rename' && modalState.index !== undefined) {
             const targetSet = visibleCharacterSets[modalState.index];
             const realIndex = characterSets.findIndex(s => s.nameKey === targetSet.nameKey);
-             characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prev) => prev ? prev.map((set, i) => i === realIndex ? { ...set, nameKey: name } : set) : null });
+            characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prev) => prev ? prev.map((set, i) => i === realIndex ? { ...set, nameKey: name } : set) : null });
         }
         setModalState(prev => ({ ...prev, isOpen: false }));
     };
 
-    // Batch Operations Helpers...
     const handleBatchComplete = () => {
         setMetricsSelection(new Set());
         setIsMetricsSelectionMode(false);
-        setIsPropertiesModalOpen(false);
-        setIsTransformModalOpen(false);
-        setIsDeleteConfirmOpen(false);
-    };
-
-    const toggleSelectionMode = () => {
-        if (isMetricsSelectionMode) {
-             setIsMetricsSelectionMode(false);
-             setMetricsSelection(new Set());
-        } else {
-             setIsMetricsSelectionMode(true);
-        }
-    };
-    
-    // Selects only what's currently visible in the grid (based on tab or filter)
-    const handleSelectVisible = () => {
-        const visibleUnicodes = new Set<number>();
-        currentGridCharacters.forEach(c => {
-             if (c.unicode !== undefined) visibleUnicodes.add(c.unicode);
-        });
-        setMetricsSelection(visibleUnicodes);
-    };
-
-    // Selects ALL characters in the font (across all tabs)
-    const handleSelectAll = () => {
-        const allUnicodes = new Set<number>();
-        characterSets.flatMap(set => set.characters).forEach(c => {
-             if (c.unicode !== undefined) allUnicodes.add(c.unicode);
-        });
-        setMetricsSelection(allUnicodes);
-    };
-
-    const handleCompareSelected = () => {
-        const selectedChars = drawnCharacters.filter(c => c.unicode !== undefined && metricsSelection.has(c.unicode));
-        if (selectedChars.length === 0) {
-             showNotification('No characters selected to compare.', 'info');
-             return;
-        }
-        setComparisonCharacters(selectedChars);
-        
-        // Disable selection mode before switching views to ensure toolbar disappears
-        setIsMetricsSelectionMode(false);
-        
-        setCurrentView('comparison');
+        setIsPropertiesOpen(false);
+        setIsTransformOpen(false);
+        setIsDeleteOpen(false);
     };
 
     const getBannerText = () => {
-        if (isSearching) {
-            return t('searchingFor', { query: searchQuery });
-        }
+        if (isSearching) return t('searchingFor', { query: searchQuery });
         switch(filterMode) {
             case 'completed': return t('filterCompleted');
             case 'incomplete': return t('filterIncomplete');
@@ -425,29 +129,19 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
 
     return (
         <div className="flex flex-col h-full overflow-hidden relative">
-            <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center pr-2">
-                
-                {/* Scrollable Tabs Container - HIDDEN when Filter is active */}
-                {!isFiltered ? (
-                    <div className="flex-grow relative overflow-hidden flex items-center">
-                        {showNavArrows.left && <button onClick={() => handleNavScroll('left')} className="absolute left-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-r dark:border-gray-700"><LeftArrowIcon className="h-5 w-5" /></button>}
-                        
-                        <div ref={navContainerRef} className="flex space-x-1 overflow-x-auto no-scrollbar px-2 sm:px-4 w-full items-center">
-                            {visibleCharacterSets.map((set, index) => (
-                                <CharacterSetTab key={set.nameKey} set={set} index={index} activeTab={activeTab} setActiveTab={setActiveTab} glyphDataMap={glyphDataMap} onContextMenu={handleContextMenu} showHidden={showHidden} glyphVersion={glyphVersion} />
-                            ))}
-                            <button onClick={openCreateModal} title={t('newGroup')} className="flex-shrink-0 flex items-center justify-center p-1.5 ml-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors"><AddIcon className="h-5 w-5" /></button>
-                        </div>
-
-                        {showNavArrows.right && <button onClick={() => handleNavScroll('right')} className="absolute right-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-l dark:border-gray-700 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><RightArrowIcon className="h-5 w-5" /></button>}
-                    </div>
-                ) : (
-                    <div className="flex-grow p-3 px-4 font-bold text-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20">
-                        {getBannerText()}
-                        <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">({filteredFlatList.length} found)</span>
-                    </div>
-                )}
-            </div>
+            <DrawingWorkspaceHeader 
+                visibleCharacterSets={visibleCharacterSets}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                glyphDataMap={glyphDataMap}
+                glyphVersion={glyphVersion}
+                showHidden={showHidden}
+                isFiltered={isFiltered}
+                bannerText={getBannerText()}
+                resultCount={filteredFlatList.length}
+                onAddGroup={() => { setModalInputValue(''); setShowNamingHint(false); setModalState({ type: 'create', isOpen: true }); }}
+                onTabContextMenu={handleTabContextMenu}
+            />
             
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <ProgressIndicator completed={drawingProgress.completed} total={drawingProgress.total} progressTextKey="progressText" />
@@ -459,95 +153,47 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                         key={isFiltered ? 'flat-list' : activeTab}
                         characters={currentGridCharacters}
                         onSelectCharacter={onSelectCharacter}
-                        // Only allow adding glyphs in standard view to avoid context confusion
                         onAddGlyph={!isFiltered ? () => onAddGlyph(visibleCharacterSets[activeTab]?.nameKey) : () => {}}
                         onAddBlock={onAddBlock}
                     />
                 ) : (
-                    <div className="flex items-center justify-center h-full text-gray-500">
-                        {isFiltered ? t('noMatchesFound') : t('noCharacters')}
-                    </div>
+                    <div className="flex items-center justify-center h-full text-gray-500 italic">{isFiltered ? t('noMatchesFound') : t('noCharacters')}</div>
                 )}
             </div>
-            
-            {/* Contextual Action Bar for Selection */}
+
             {isMetricsSelectionMode && (
-                <div className="fixed inset-x-0 bottom-0 md:top-0 md:bottom-auto p-4 bg-white dark:bg-gray-800 border-t md:border-b md:border-t-0 dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:shadow-lg z-[60] animate-fade-in-up transition-all duration-300">
-                    <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-                        
-                        {/* Left Side: Count & Selection Controls */}
-                        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-                             <div className="flex items-center gap-4">
-                                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400">
-                                     <span className="font-bold text-sm">{metricsSelection.size}</span>
-                                 </div>
-                             </div>
-                             
-                             <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 hidden md:block"></div>
-                             
-                             <div className="flex gap-2">
-                                <button onClick={handleSelectVisible} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors">{t('selectVisible')}</button>
-                                <button onClick={handleSelectAll} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors">{t('selectAll')}</button>
-                                <button onClick={() => setMetricsSelection(new Set())} disabled={metricsSelection.size === 0} className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md transition-colors disabled:opacity-50">{t('selectNone')}</button>
-                             </div>
-                        </div>
-                        
-                        {/* Right Side: Actions */}
-                        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 no-scrollbar justify-start md:justify-end">
-                             <button onClick={() => setIsTransformModalOpen(true)} disabled={metricsSelection.size === 0} title={t('transform')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
-                                <TransformIcon />
-                                <span className="hidden xl:inline">{t('transform')}</span>
-                            </button>
-                            <button onClick={() => setIsPropertiesModalOpen(true)} disabled={metricsSelection.size === 0} title={t('editProperties')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
-                                <SettingsIcon /> <span className="hidden xl:inline">{t('editProperties')}</span>
-                            </button>
-                             <button onClick={handleCompareSelected} disabled={metricsSelection.size === 0} title={t('compare')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm text-white">
-                                <CompareIcon /> <span className="hidden xl:inline">{t('compare')}</span>
-                            </button>
-                            <button onClick={() => setIsDeleteConfirmOpen(true)} disabled={metricsSelection.size === 0} title={t('delete')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-sm">
-                                <TrashIcon /> <span className="hidden xl:inline">{t('delete')}</span>
-                            </button>
-                            
-                             <div className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-2 hidden md:block"></div>
-                             
-                            <button onClick={toggleSelectionMode} className="p-2 bg-gray-800 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-200 shadow-sm transition-colors" title="Close Selection Mode">
-                                <CloseIcon />
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <DrawingBatchToolbar 
+                    selectionSize={metricsSelection.size}
+                    onSelectVisible={() => { const v = new Set<number>(); currentGridCharacters.forEach(c => c.unicode && v.add(c.unicode)); setMetricsSelection(v); }}
+                    onSelectAll={() => { const a = new Set<number>(); characterSets.flatMap(s => s.characters).forEach(c => c.unicode && a.add(c.unicode)); setMetricsSelection(a); }}
+                    onSelectNone={() => setMetricsSelection(new Set())}
+                    onTransform={() => setIsTransformOpen(true)}
+                    onProperties={() => setIsPropertiesOpen(true)}
+                    onCompare={() => { setComparisonCharacters(visibleCharacterSets.flatMap(s => s.characters).filter(c => c.unicode && metricsSelection.has(c.unicode))); setIsMetricsSelectionMode(false); setCurrentView('comparison'); }}
+                    onDelete={() => setIsDeleteOpen(true)}
+                    onClose={() => { setIsMetricsSelectionMode(false); setMetricsSelection(new Set()); }}
+                />
             )}
 
-            {/* Context Menu */}
+            <DrawingWorkspaceDialogs 
+                modalState={modalState} setModalState={setModalState}
+                modalInputValue={modalInputValue} setModalInputValue={handleNameInput}
+                showNamingHint={showNamingHint} handleModalSubmit={handleModalSubmit}
+                isTransformOpen={isTransformOpen} setIsTransformOpen={setIsTransformOpen}
+                onBulkTransform={(sx, sy, r, fh, fv) => handleBulkTransform(metricsSelection, sx, sy, r, fh, fv, handleBatchComplete)}
+                isPropertiesOpen={isPropertiesOpen} setIsPropertiesOpen={setIsPropertiesOpen}
+                onBulkProperties={(l, r) => handleSaveMetrics(metricsSelection, l, r, handleBatchComplete)}
+                isDeleteOpen={isDeleteOpen} setIsDeleteOpen={setIsDeleteOpen}
+                onBulkDelete={() => handleBulkDelete(metricsSelection, handleBatchComplete)}
+                selectionSize={metricsSelection.size}
+            />
+
             {contextMenu.isOpen && (
-                <div ref={contextMenuRef} className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-lg rounded-md z-50 py-1 w-40 text-sm" style={{ top: contextMenu.y, left: contextMenu.x }}>
-                    <button onClick={openRenameModal} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-2"><EditIcon /> {t('renameGroup')}</button>
-                    <button onClick={handleDeleteGroupHandler} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center gap-2"><TrashIcon /> {t('deleteGroup')}</button>
+                <div ref={contextMenuRef} className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-xl rounded-lg z-[100] py-2 w-48 text-sm animate-pop-in" style={{ top: contextMenu.y, left: contextMenu.x }}>
+                    <button onClick={() => { const name = visibleCharacterSets[contextMenu.index].nameKey; setModalInputValue(t(name) === name ? name : t(name)); setModalState({ type: 'rename', index: contextMenu.index, isOpen: true }); setContextMenu({ ...contextMenu, isOpen: false }); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">Edit Name</button>
+                    <button onClick={() => { if (visibleCharacterSets.length <= 1) { showNotification(t('cannotDeleteLastGroup'), 'error'); } else { const s = visibleCharacterSets[contextMenu.index]; if(window.confirm(t('confirmDeleteGroup', { name: t(s.nameKey) }))) characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (p) => p ? p.filter(x => x.nameKey !== s.nameKey) : null }); } setContextMenu({ ...contextMenu, isOpen: false }); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 flex items-center gap-3">Delete Group</button>
                 </div>
             )}
-
-            {/* Modals */}
-            <Modal isOpen={modalState.isOpen} onClose={() => setModalState(prev => ({ ...prev, isOpen: false }))} title={modalState.type === 'create' ? t('newGroup') : t('renameGroup')} size="sm" footer={<><button onClick={() => setModalState(prev => ({ ...prev, isOpen: false }))} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">{t('cancel')}</button><button onClick={handleModalSubmit} disabled={!modalInputValue.trim()} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-indigo-400">{t('save')}</button></>}>
-                <form onSubmit={handleModalSubmit}>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('groupName')}</label>
-                    <input 
-                        type="text" 
-                        value={modalInputValue} 
-                        onChange={e => handleNameChange(e.target.value)} 
-                        autoFocus 
-                        className={`w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none ${showNamingHint ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
-                    />
-                    {showNamingHint && (
-                        <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
-                            {t('namingRestrictionHint')}
-                        </p>
-                    )}
-                </form>
-            </Modal>
-            
-            <BulkPropertiesModal isOpen={isPropertiesModalOpen} onClose={() => setIsPropertiesModalOpen(false)} onSave={(l, r, w) => handleSaveMetrics(metricsSelection, l, r, handleBatchComplete)} count={metricsSelection.size} />
-            <BulkTransformModal isOpen={isTransformModalOpen} onClose={() => setIsTransformModalOpen(false)} onConfirm={(sx, sy, r, fh, fv) => handleBulkTransform(metricsSelection, sx, sy, r, fh, fv, handleBatchComplete)} count={metricsSelection.size} selectedGlyphs={selectedGlyphData} glyphDataMap={glyphDataMap} strokeThickness={settings?.strokeThickness || 15} />
-            <Modal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} title={t('confirmDeleteSelectedTitle')} titleClassName="text-red-600" footer={<><button onClick={() => setIsDeleteConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button><button onClick={() => handleBulkDelete(metricsSelection, handleBatchComplete)} className="px-4 py-2 bg-red-600 text-white rounded-lg">{t('delete')}</button></>}><p>{t('confirmDeleteSelectedMessage', { count: metricsSelection.size })}</p></Modal>
         </div>
     );
 };

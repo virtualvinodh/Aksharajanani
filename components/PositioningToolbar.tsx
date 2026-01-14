@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { PasteIcon, PanIcon, ZoomInIcon, ZoomOutIcon, SelectIcon } from '../constants';
@@ -88,12 +89,12 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({
   const isVertical = orientation === 'vertical';
 
   return (
-    <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2 p-1.5 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg items-center`}>
+    <div className={`flex ${isVertical ? 'flex-col' : 'flex-row flex-wrap justify-center'} gap-2 p-1.5 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg items-center max-w-[95vw]`}>
       <ActionButton onClick={onReuseClick} title={t('copyPositionFrom')} disabled={reuseDisabled}>
         <PasteIcon />
       </ActionButton>
       
-      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
       <ToolButton
         isActive={pageTool === 'select'}
@@ -111,7 +112,7 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({
         <PanIcon />
       </ToolButton>
 
-      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
       <ActionButton onClick={() => onZoom(1.25)} title={t('zoomIn')}>
         <ZoomInIcon />
@@ -120,7 +121,7 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({
         <ZoomOutIcon />
       </ActionButton>
 
-      <div className={`${isVertical ? 'h-px w-full my-1' : 'w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+      <div className={`${isVertical ? 'h-px w-full my-1' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
       <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2`}>
           <CoordinateInput axis="x" value={manualX} onChange={v => onManualChange('x', v)} onCommit={onManualCommit} disabled={!canEdit} />

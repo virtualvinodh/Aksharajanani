@@ -103,52 +103,55 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
         props.setViewOffset(newOffset);
     };
 
-    const mainContentClasses = `flex-grow transition-opacity duration-150 ${props.isTransitioning ? 'opacity-0' : 'opacity-100'} flex flex-col lg:flex-row items-center bg-gray-50 dark:bg-gray-950/20 overflow-hidden relative`;
+    const mainContentClasses = `flex-grow transition-opacity duration-150 ${props.isTransitioning ? 'opacity-0' : 'opacity-100'} flex flex-col items-center bg-gray-50 dark:bg-gray-950/20 overflow-hidden relative`;
 
     return (
         <main className={mainContentClasses}>
-            {/* Morphic Toolbar */}
-            {props.isLargeScreen && (
-                <div className="absolute left-6 top-1/2 -translate-y-1/2 z-30 animate-fade-in-up">
-                    <DrawingToolbar
-                        character={props.character} currentTool={props.currentTool} setCurrentTool={props.setCurrentTool} 
-                        settings={props.settings} isLargeScreen={true}
-                        onUndo={props.undo} canUndo={props.canUndo} onRedo={props.redo} canRedo={props.canRedo}
-                        onCut={props.handleCut} selectedPathIds={props.selectedPathIds} onCopy={props.handleCopy} onPaste={props.handlePaste} clipboard={props.clipboard}
-                        onGroup={props.handleGroup} canGroup={props.canGroup} onUngroup={props.handleUngroup} canUngroup={props.canUngroup}
-                        onZoom={handleZoomAction} onImageImportClick={props.onImageImportClick} onSvgImportClick={props.onSvgImportClick}
-                        onImageTraceClick={props.onImageTraceClick} calligraphyAngle={props.calligraphyAngle} setCalligraphyAngle={props.setCalligraphyAngle}
-                        onApplyTransform={props.onApplyTransform} previewTransform={props.previewTransform} setPreviewTransform={props.setPreviewTransform}
-                    />
-                </div>
-            )}
-
             <div className="flex-1 flex flex-col items-center justify-center w-full h-full min-h-0 relative">
                 {/* Hero Canvas Area */}
                 <div className="flex-1 w-full min-h-0 flex items-center justify-center p-4 lg:p-12 overflow-hidden relative" ref={canvasWrapperRef}>
-                    <div className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 max-h-full max-w-full aspect-square">
-                        {activeSelectionBBox && (
-                            <ContextualToolbar 
-                                selectionBox={activeSelectionBBox} zoom={props.zoom} viewOffset={props.viewOffset}
-                                onApplyTransform={props.onApplyTransform} previewTransform={props.previewTransform} setPreviewTransform={props.setPreviewTransform}
-                                containerWidth={containerSize.width} containerHeight={containerSize.height} internalCanvasSize={DRAWING_CANVAS_SIZE}
-                                onEditMode={() => props.setCurrentTool('edit')}
-                            />
+                    
+                    {/* Centered Canvas Box Container: The Toolbar is anchored HERE with a generous margin */}
+                    <div className="relative flex items-center justify-center h-full max-w-full">
+                        {props.isLargeScreen && (
+                            <div className="absolute right-full mr-6 top-0 z-30 animate-fade-in-up">
+                                <DrawingToolbar
+                                    character={props.character} currentTool={props.currentTool} setCurrentTool={props.setCurrentTool} 
+                                    settings={props.settings} isLargeScreen={true}
+                                    onUndo={props.undo} canUndo={props.canUndo} onRedo={props.redo} canRedo={props.canRedo}
+                                    onCut={props.handleCut} selectedPathIds={props.selectedPathIds} onCopy={props.handleCopy} onPaste={props.handlePaste} clipboard={props.clipboard}
+                                    onGroup={props.handleGroup} canGroup={props.canGroup} onUngroup={props.handleUngroup} canUngroup={props.canUngroup}
+                                    onZoom={handleZoomAction} onImageImportClick={props.onImageImportClick} onSvgImportClick={props.onSvgImportClick}
+                                    onImageTraceClick={props.onImageTraceClick} calligraphyAngle={props.calligraphyAngle} setCalligraphyAngle={props.setCalligraphyAngle}
+                                    onApplyTransform={props.onApplyTransform} previewTransform={props.previewTransform} setPreviewTransform={props.setPreviewTransform}
+                                />
+                            </div>
                         )}
-                        <DrawingCanvas 
-                            width={DRAWING_CANVAS_SIZE} height={DRAWING_CANVAS_SIZE} 
-                            paths={props.currentPaths} onPathsChange={props.onPathsChange} metrics={props.metrics}
-                            tool={props.currentTool} onToolChange={props.setCurrentTool}
-                            zoom={props.zoom} setZoom={props.setZoom} viewOffset={props.viewOffset} setViewOffset={props.setViewOffset}
-                            settings={props.settings} allGlyphData={props.allGlyphData} allCharacterSets={props.allCharacterSets} currentCharacter={props.character}
-                            gridConfig={{ characterNameSize: 450 }} backgroundImage={props.backgroundImage} backgroundImageOpacity={props.backgroundImageOpacity}
-                            imageTransform={props.imageTransform} onImageTransformChange={props.setImageTransform}
-                            selectedPathIds={props.selectedPathIds} onSelectionChange={props.setSelectedPathIds}
-                            isImageSelected={props.isImageSelected} onImageSelectionChange={props.setIsImageSelected}
-                            lsb={props.lsb} rsb={props.rsb} onMetricsChange={props.onMetricsChange} 
-                            calligraphyAngle={props.calligraphyAngle} isInitiallyDrawn={!props.wasEmptyOnLoad}
-                            transformMode={props.isLocked ? 'move-only' : 'all'} previewTransform={props.previewTransform}
-                        />
+
+                        <div className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 max-h-full max-w-full aspect-square">
+                            {activeSelectionBBox && (
+                                <ContextualToolbar 
+                                    selectionBox={activeSelectionBBox} zoom={props.zoom} viewOffset={props.viewOffset}
+                                    onApplyTransform={props.onApplyTransform} previewTransform={props.previewTransform} setPreviewTransform={props.setPreviewTransform}
+                                    containerWidth={containerSize.width} containerHeight={containerSize.height} internalCanvasSize={DRAWING_CANVAS_SIZE}
+                                    onEditMode={() => props.setCurrentTool('edit')}
+                                />
+                            )}
+                            <DrawingCanvas 
+                                width={DRAWING_CANVAS_SIZE} height={DRAWING_CANVAS_SIZE} 
+                                paths={props.currentPaths} onPathsChange={props.onPathsChange} metrics={props.metrics}
+                                tool={props.currentTool} onToolChange={props.setCurrentTool}
+                                zoom={props.zoom} setZoom={props.setZoom} viewOffset={props.viewOffset} setViewOffset={props.setViewOffset}
+                                settings={props.settings} allGlyphData={props.allGlyphData} allCharacterSets={props.allCharacterSets} currentCharacter={props.character}
+                                gridConfig={{ characterNameSize: 450 }} backgroundImage={props.backgroundImage} backgroundImageOpacity={props.backgroundImageOpacity}
+                                imageTransform={props.imageTransform} onImageTransformChange={props.setImageTransform}
+                                selectedPathIds={props.selectedPathIds} onSelectionChange={props.setSelectedPathIds}
+                                isImageSelected={props.isImageSelected} onImageSelectionChange={props.setIsImageSelected}
+                                lsb={props.lsb} rsb={props.rsb} onMetricsChange={props.onMetricsChange} 
+                                calligraphyAngle={props.calligraphyAngle} isInitiallyDrawn={!props.wasEmptyOnLoad}
+                                transformMode={props.isLocked ? 'move-only' : 'all'} previewTransform={props.previewTransform}
+                            />
+                        </div>
                     </div>
                 </div>
 

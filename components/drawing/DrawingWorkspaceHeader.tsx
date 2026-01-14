@@ -1,0 +1,141 @@
+
+import React, { useEffect, useCallback } from 'react';
+import { Character, CharacterSet, GlyphData } from '../../types';
+import { useLocale } from '../../contexts/LocaleContext';
+import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
+import { LeftArrowIcon, RightArrowIcon, AddIcon, CheckCircleIcon } from '../../constants';
+import { isGlyphDrawn } from '../../utils/glyphUtils';
+
+interface DrawingWorkspaceHeaderProps {
+    visibleCharacterSets: CharacterSet[];
+    activeTab: number;
+    setActiveTab: (index: number) => void;
+    glyphDataMap: Map<number, GlyphData>;
+    glyphVersion: number;
+    showHidden: boolean;
+    isFiltered: boolean;
+    bannerText: string;
+    resultCount: number;
+    onAddGroup: () => void;
+    onTabContextMenu: (e: React.MouseEvent | React.TouchEvent, index: number) => void;
+}
+
+const CharacterSetTab: React.FC<{
+    set: CharacterSet;
+    index: number;
+    activeTab: number;
+    setActiveTab: (index: number) => void;
+    glyphDataMap: Map<number, GlyphData>;
+    onContextMenu: (e: React.MouseEvent | React.TouchEvent, index: number) => void;
+    showHidden: boolean;
+    glyphVersion: number;
+}> = ({ set, index, activeTab, setActiveTab, glyphDataMap, onContextMenu, showHidden, glyphVersion }) => {
+    const { t } = useLocale();
+    const isSetComplete = React.useMemo(() => {
+        const visibleChars = set.characters.filter(char => !char.hidden || showHidden);
+        if (visibleChars.length === 0) return false;
+        return visibleChars.every(char => isGlyphDrawn(glyphDataMap.get(char.unicode)));
+    }, [set.characters, glyphDataMap, showHidden, glyphVersion]);
+
+    const isActive = activeTab === index;
+
+    return (
+        <button
+            onClick={() => setActiveTab(index)}
+            onContextMenu={(e) => onContextMenu(e, index)}
+            className={`flex-shrink-0 flex items-center gap-2 py-2 px-4 text-sm font-bold rounded-full transition-all duration-200 select-none whitespace-nowrap border
+                ${isActive 
+                    ? 'bg-indigo-100 border-indigo-200 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 dark:border-indigo-800 shadow-sm' 
+                    : 'bg-white dark:bg-gray-800 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-750'
+                }`}
+        >
+            <span>{t(set.nameKey)}</span>
+            {isSetComplete && <CheckCircleIcon className="h-4 w-4 text-green-500 animate-pop-in" />}
+        </button>
+    );
+};
+
+const DrawingWorkspaceHeader: React.FC<DrawingWorkspaceHeaderProps> = (props) => {
+    const { t } = useLocale();
+    const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
+    const containerRef = React.useRef<HTMLDivElement | null>(null);
+
+    const setRefs = useCallback((node: HTMLDivElement | null) => {
+        containerRef.current = node;
+        scrollRef(node);
+    }, [scrollRef]);
+
+    useEffect(() => {
+        checkVisibility();
+        const timer = setTimeout(checkVisibility, 100);
+        return () => clearTimeout(timer);
+    }, [props.visibleCharacterSets, props.isFiltered, checkVisibility]);
+
+    useEffect(() => {
+        if (containerRef.current && props.visibleCharacterSets.length > 0) {
+            const activeElement = containerRef.current.children[props.activeTab] as HTMLElement;
+            if (activeElement) {
+                activeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+    }, [props.activeTab, props.visibleCharacterSets]);
+
+    return (
+        <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[60px] flex flex-col justify-center">
+            {props.isFiltered ? (
+                <div className="flex items-center justify-between px-6 py-3 bg-indigo-50/50 dark:bg-indigo-900/10 animate-fade-in-up">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg text-indigo-600 dark:text-indigo-400">
+                            <CheckCircleIcon className="w-5 h-5" />
+                        </div>
+                        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 uppercase tracking-tight">
+                            {props.bannerText}
+                        </h2>
+                    </div>
+                    <div className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-black px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800">
+                        {props.resultCount} {t('characters').toUpperCase()}
+                    </div>
+                </div>
+            ) : (
+                <div className="relative flex items-center px-2">
+                    {visibility.left && (
+                         <button onClick={() => handleScroll('left')} className="absolute left-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-r dark:border-gray-700 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <LeftArrowIcon className="h-5 w-5" />
+                         </button>
+                    )}
+                    
+                    <div ref={setRefs} className="flex space-x-2 overflow-x-auto no-scrollbar py-2 w-full px-4 sm:px-8 scroll-smooth items-center">
+                        {props.visibleCharacterSets.map((set, index) => (
+                            <CharacterSetTab 
+                                key={set.nameKey} 
+                                set={set} 
+                                index={index} 
+                                activeTab={props.activeTab} 
+                                setActiveTab={props.setActiveTab} 
+                                glyphDataMap={props.glyphDataMap} 
+                                onContextMenu={props.onTabContextMenu} 
+                                showHidden={props.showHidden} 
+                                glyphVersion={props.glyphVersion} 
+                            />
+                        ))}
+                        <button 
+                            onClick={props.onAddGroup} 
+                            title={t('addGroup')} 
+                            className="flex-shrink-0 flex items-center justify-center p-2 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all hover:scale-110 active:scale-95 border border-indigo-100 dark:border-indigo-800/50"
+                        >
+                            <AddIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {visibility.right && (
+                        <button onClick={() => handleScroll('right')} className="absolute right-0 z-10 bg-white/90 dark:bg-gray-800/90 p-1.5 h-full shadow-md border-l dark:border-gray-700 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <RightArrowIcon className="h-5 w-5" />
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default React.memo(DrawingWorkspaceHeader);
