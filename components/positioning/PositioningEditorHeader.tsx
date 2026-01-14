@@ -96,10 +96,11 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                 <button 
                     onClick={onResetRequest} 
                     disabled={!isPositioned} 
-                    className="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 transition-all active:scale-95 shadow-sm"
+                    className="flex items-center gap-2 px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-yellow-400 transition-all active:scale-95 shadow-sm"
                     title={t('resetPosition')}
                 >
                     <UndoIcon />
+                    <span className="hidden xl:inline font-semibold">{t('reset')}</span>
                 </button>
                 
                 {isGsubPair && (
@@ -126,10 +127,11 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                 {!isAutosaveEnabled && (
                     <button 
                         onClick={onSaveRequest} 
-                        className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
+                        className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
                         title={t('save')}
                     >
                         <SaveIcon />
+                        <span className="hidden xl:inline font-semibold">{t('save')}</span>
                     </button>
                 )}
             </div>

@@ -301,7 +301,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
 
     return (
         <div className="flex flex-col h-full w-full bg-white dark:bg-gray-800 animate-fade-in-up">
-            <KerningEditorHeader pair={pair} onClose={onClose} onNavigate={onNavigate} hasPrev={hasPrev} hasNext={hasNext} onAutoKern={handleAutoKern} isAutoKerning={isAutoKerning} onSave={handleSaveClick} onRemove={onRemove} isDirty={isDirty} isAutosaveEnabled={settings.isAutosaveEnabled} />
+            <KerningEditorHeader pair={pair} onClose={onClose} onNavigate={onNavigate} hasPrev={hasPrev} hasNext={hasNext} onAutoKern={handleAutoKern} isAutoKerning={isAutoKerning} onSave={handleSaveClick} onRemove={onRemove} isDirty={isDirty} settings={settings} />
             <KerningEditorWorkspace 
                 isLargeScreen={isLargeScreen} canvasRef={canvasRef} containerRef={containerRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onTouchStart={() => {}} onTouchMove={() => {}} onZoom={f => setZoom(z => Math.max(0.1, Math.min(10, z * f)))} 
                 kernValue={inputValue} onKernChange={handleInputChange} onKernFocus={setIsKernFocused} onKernHover={setIsKernHovered} isKernDirty={isDirty} 

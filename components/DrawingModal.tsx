@@ -1,56 +1,27 @@
+
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment, TransformState, ComponentTransform } from '../types';
-import DrawingCanvas from './DrawingCanvas';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
-import UnsavedChangesModal from './UnsavedChangesModal';
-import DeleteConfirmationModal from './DeleteConfirmationModal';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import DrawingModalHeader from './DrawingModalHeader';
-import DrawingToolbar from './DrawingToolbar';
+import DrawingEditorHeader from './drawing/DrawingEditorHeader';
+import DrawingEditorWorkspace from './drawing/DrawingEditorWorkspace';
+import DrawingConfirmationStack from './drawing/DrawingConfirmationStack';
 import ImageControlPanel from './ImageControlPanel';
 import { useClipboard } from '../contexts/ClipboardContext';
 import { useLayout } from '../contexts/LayoutContext';
-import Modal from './Modal';
-import ImageTracerModal from './modals/ImageTracerModal';
 import { useGlyphEditSession } from '../hooks/drawing/useGlyphEditSession';
 import { useDrawingShortcuts } from '../hooks/drawing/useDrawingShortcuts';
 import { useImportLogic } from '../hooks/drawing/useImportLogic';
 import { useCanvasOperations } from '../hooks/drawing/useCanvasOperations';
 import { getAccurateGlyphBBox, generateCompositeGlyphData } from '../services/glyphRenderService';
 import { VEC } from '../utils/vectorUtils';
-import ContextualToolbar from './ContextualToolbar';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 import { useRules } from '../contexts/RulesContext';
-import LinkedGlyphsStrip from './drawing/LinkedGlyphsStrip';
 
-declare var paper: any;
-
-interface DrawingModalProps {
-  character: Character;
-  characterSet: CharacterSet;
-  glyphData: GlyphData | undefined;
-  onSave: (unicode: number, newGlyphData: GlyphData, newBearings: { lsb?: number, rsb?: number }, onSuccess?: () => void, options?: any) => void;
-  onClose: () => void;
-  onDelete: (unicode: number) => void;
-  onNavigate: (character: Character) => void;
-  settings: AppSettings;
-  metrics: FontMetrics;
-  allGlyphData: Map<number, GlyphData>;
-  allCharacterSets: CharacterSet[];
-  gridConfig: { characterNameSize: number };
-  clipboard: Path[] | null;
-  setClipboard: (paths: Path[] | null) => void;
-  markAttachmentRules: MarkAttachmentRules | null;
-  onUnlockGlyph: (unicode: number) => void;
-  onRelinkGlyph: (unicode: number) => void;
-  onUpdateDependencies: (unicode: number, newLinkComponents: string[] | null) => void;
-  onEditorModeChange: (mode: 'simple' | 'advanced') => void;
-}
-
-const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange }) => {
+const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange }) => {
   const { t } = useLocale();
   const { showNotification, modalOriginRect, checkAndSetFlag } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
@@ -77,28 +48,24 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
   const [isUnlockConfirmOpen, setIsUnlockConfirmOpen] = useState(false);
   const [isRelinkConfirmOpen, setIsRelinkConfirmOpen] = useState(false);
   const [isConstructionWarningOpen, setIsConstructionWarningOpen] = useState(false);
-  const [pendingConstruction, setPendingConstruction] = useState<{type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]} | null>(null);
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [pendingConstruction, setPendingConstruction] = useState<any>(null);
   
   const modalRef = useRef<HTMLDivElement>(null);
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const animationTimeoutRef = useRef<number | null>(null);
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
   
   const isLocked = !!character.link;
   const isComposite = !!character.composite && character.composite.length > 0;
 
-  const visibleCharactersForNav = useMemo(() => characterSet.characters.filter(c => !c.hidden), [characterSet]);
-  const currentIndex = visibleCharactersForNav.findIndex(c => c.unicode === character.unicode);
+  const visibleCharactersForNav = useMemo(() => characterSet.characters.filter((c: any) => !c.hidden), [characterSet]);
+  const currentIndex = visibleCharactersForNav.findIndex((c: any) => c.unicode === character.unicode);
   const prevCharacter = currentIndex > 0 ? visibleCharactersForNav[currentIndex - 1] : null;
   const nextCharacter = currentIndex < visibleCharactersForNav.length - 1 ? visibleCharactersForNav[currentIndex + 1] : null;
 
-  // --- Calculate Linked Glyph Relations ---
   const sourceGlyphs = useMemo(() => {
       const componentNames = character.link; 
       if (!componentNames) return [];
-      return componentNames.map(name => allCharsByName.get(name)).filter((c): c is Character => !!c);
+      return componentNames.map((name: any) => allCharsByName.get(name)).filter((c: any): c is Character => !!c);
   }, [character, allCharsByName]);
 
   const dependentGlyphs = useMemo(() => {
@@ -160,17 +127,10 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
                       if (c.unicode === character.unicode) {
                           const updated = { ...c };
                           if (type === 'drawing') {
-                              delete updated.link;
-                              delete updated.composite;
-                              delete updated.compositeTransform;
-                          } else if (type === 'link') {
-                              updated.link = components;
-                              delete updated.composite;
-                              if (transforms && transforms.length > 0) updated.compositeTransform = transforms;
-                              else delete updated.compositeTransform;
-                          } else if (type === 'composite') {
-                              updated.composite = components;
-                              delete updated.link;
+                              delete updated.link; delete updated.composite; delete updated.compositeTransform;
+                          } else if (type === 'link' || type === 'composite') {
+                              if (type === 'link') { updated.link = components; delete updated.composite; }
+                              else { updated.composite = components; delete updated.link; }
                               if (transforms && transforms.length > 0) updated.compositeTransform = transforms;
                               else delete updated.compositeTransform;
                           }
@@ -181,51 +141,25 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
               }));
           }
       });
+      onUpdateDependencies(character.unicode, (type === 'link' || type === 'composite') ? components : null);
       if (type === 'link' || type === 'composite') {
-          onUpdateDependencies(character.unicode, components);
-      } else {
-          onUpdateDependencies(character.unicode, null);
-      }
-      if (type === 'link' || type === 'composite') {
-          const tempChar: Character = { 
-              ...character, 
-              link: type === 'link' ? components : undefined, 
-              composite: type === 'composite' ? components : undefined,
-              compositeTransform: transforms
-          };
-          
-          const compositeData = generateCompositeGlyphData({
-              character: tempChar,
-              allCharsByName,
-              allGlyphData,
-              settings,
-              metrics,
-              markAttachmentRules,
-              allCharacterSets,
-              groups
-          });
-
+          const tempChar: Character = { ...character, link: type === 'link' ? components : undefined, composite: type === 'composite' ? components : undefined, compositeTransform: transforms };
+          const compositeData = generateCompositeGlyphData({ character: tempChar, allCharsByName, allGlyphData, settings, metrics, markAttachmentRules, allCharacterSets, groups });
           if (compositeData) {
               handlePathsChange(compositeData.paths);
               glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev) => new Map(prev).set(character.unicode!, compositeData) });
-          } else {
-               handlePathsChange([]);
-          }
+          } else { handlePathsChange([]); }
       }
       showNotification(t('glyphRefreshedSuccess'), 'success');
-      setIsConstructionWarningOpen(false);
-      setPendingConstruction(null);
+      setIsConstructionWarningOpen(false); setPendingConstruction(null);
   };
 
   const handleSaveConstruction = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]) => {
       const hasContent = currentPaths.length > 0;
-      const wasVisual = isLocked || isComposite;
-      if (!wasVisual && (type === 'link' || type === 'composite') && hasContent) {
+      if (!(isLocked || isComposite) && (type === 'link' || type === 'composite') && hasContent) {
           setPendingConstruction({ type, components, transforms });
           setIsConstructionWarningOpen(true);
-      } else {
-          executeConstructionUpdate(type, components, transforms);
-      }
+      } else { executeConstructionUpdate(type, components, transforms); }
   };
   
   const dependentsCount = useMemo(() => {
@@ -234,9 +168,7 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       allCharacterSets.forEach(set => {
           set.characters.forEach(c => {
               const components = c.link || c.composite;
-              if (components && components.includes(character.name)) {
-                  count++;
-              }
+              if (components && components.includes(character.name)) count++;
           });
       });
       return count;
@@ -244,53 +176,33 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
 
   const handleApplyTransform = (transform: TransformState & { flipX?: boolean; flipY?: boolean }) => {
       if (selectedPathIds.size === 0) return;
-
       const selectedPaths = currentPaths.filter(p => selectedPathIds.has(p.id));
       const bbox = getAccurateGlyphBBox(selectedPaths, settings.strokeThickness);
       if (!bbox) return;
-
       const center = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
       const angleRad = (transform.rotate * Math.PI) / 180;
       const sx = (transform.flipX ? -1 : 1) * transform.scale;
       const sy = (transform.flipY ? -1 : 1) * transform.scale;
-
       const transformPoint = (pt: Point) => {
-          let px = pt.x - center.x;
-          let py = pt.y - center.y;
+          let px = pt.x - center.x; let py = pt.y - center.y;
           const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
           const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
-          px = rx * sx;
-          py = ry * sy;
-          return { x: rx + center.x, y: ry + center.y };
+          return { x: rx * sx + center.x, y: ry * sy + center.y };
       };
-
       const newPaths = currentPaths.map(p => {
           if (!selectedPathIds.has(p.id)) return p;
           const newP = { ...p, points: p.points.map(transformPoint) };
           if (p.segmentGroups) {
-              newP.segmentGroups = p.segmentGroups.map(g => g.map(s => {
-                  const hInRot = VEC.rotate(s.handleIn, angleRad);
-                  const hOutRot = VEC.rotate(s.handleOut, angleRad);
-                  const hInTransformed = { x: hInRot.x * sx, y: hInRot.y * sy };
-                  const hOutTransformed = { x: hOutRot.x * sx, y: hOutRot.y * sy };
-                  return {
-                      ...s,
-                      point: transformPoint(s.point),
-                      handleIn: hInTransformed,
-                      handleOut: hOutTransformed
-                  };
-              }));
+              newP.segmentGroups = p.segmentGroups.map(g => g.map(s => ({
+                  ...s, point: transformPoint(s.point),
+                  handleIn: { x: VEC.rotate(s.handleIn, angleRad).x * sx, y: VEC.rotate(s.handleIn, angleRad).y * sy },
+                  handleOut: { x: VEC.rotate(s.handleOut, angleRad).x * sx, y: VEC.rotate(s.handleOut, angleRad).y * sy }
+              })));
           }
           return newP;
       });
-
-      handlePathsChange(newPaths);
-      setPreviewTransform(null);
+      handlePathsChange(newPaths); setPreviewTransform(null);
   };
-
-  useEffect(() => {
-      setPreviewTransform(null);
-  }, [selectedPathIds]);
 
   useDrawingShortcuts({
       onUndo: undo, onRedo: redo, onCopy: handleCopy, onCut: handleCut, onPaste: handlePaste,
@@ -301,258 +213,86 @@ const DrawingModal: React.FC<DrawingModalProps> = ({ character, characterSet, gl
       canNavigatePrev: !!prevCharacter, canNavigateNext: !!nextCharacter
   });
 
-  useEffect(() => {
-    if (canvasWrapperRef.current) {
-        const { clientWidth, clientHeight } = canvasWrapperRef.current;
-        setContainerSize({ width: clientWidth, height: clientHeight });
-        const resizeObserver = new ResizeObserver((entries) => {
-            if (entries[0]) {
-                setContainerSize({ width: entries[0].contentRect.width, height: entries[0].contentRect.height });
-            }
-        });
-        resizeObserver.observe(canvasWrapperRef.current);
-        return () => resizeObserver.disconnect();
-    }
-  }, []);
-
   useLayoutEffect(() => {
     if (modalOriginRect && modalRef.current) {
         const modalEl = modalRef.current;
-        const originX = modalOriginRect.left + modalOriginRect.width / 2;
-        const originY = modalOriginRect.top + modalOriginRect.height / 2;
-        const scaleX = modalOriginRect.width / window.innerWidth;
-        const scaleY = modalOriginRect.height / window.innerHeight;
-
-        modalEl.style.setProperty('--modal-origin-x', `${originX}px`);
-        modalEl.style.setProperty('--modal-origin-y', `${originY}px`);
-        modalEl.style.setProperty('--modal-scale-x', scaleX.toFixed(5));
-        modalEl.style.setProperty('--modal-scale-y', scaleY.toFixed(5));
-        
+        modalEl.style.setProperty('--modal-origin-x', `${modalOriginRect.left + modalOriginRect.width / 2}px`);
+        modalEl.style.setProperty('--modal-origin-y', `${modalOriginRect.top + modalOriginRect.height / 2}px`);
+        modalEl.style.setProperty('--modal-scale-x', (modalOriginRect.width / window.innerWidth).toFixed(5));
+        modalEl.style.setProperty('--modal-scale-y', (modalOriginRect.height / window.innerHeight).toFixed(5));
         setAnimationClass('animate-modal-enter');
         animationTimeoutRef.current = window.setTimeout(() => setAnimationClass(''), 300);
     }
     return () => { if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current); };
   }, [modalOriginRect]);
 
-  const handleClear = () => handlePathsChange([]);
-  const handleZoom = (factor: number) => {
-      const newZoom = Math.max(0.1, Math.min(10, zoom * factor));
-      const center = { x: DRAWING_CANVAS_SIZE / 2, y: DRAWING_CANVAS_SIZE / 2 };
-      const newOffset = {
-          x: center.x - (center.x - viewOffset.x) * (newZoom / zoom),
-          y: center.y - (center.y - viewOffset.y) * (newZoom / zoom)
-      };
-      setZoom(newZoom);
-      setViewOffset(newOffset);
-  };
-
   const handleConfirmUnlock = () => { onUnlockGlyph(character.unicode!); setIsUnlockConfirmOpen(false); showNotification(t('glyphUnlockedSuccess'), 'success'); };
-  
-  const handleConfirmRelink = () => { 
-    onRelinkGlyph(character.unicode!); 
-    handleRefresh();
-    setIsRelinkConfirmOpen(false); 
-    showNotification(t('glyphRelinkedSuccess'), 'success'); 
-  };
+  const handleConfirmRelink = () => { onRelinkGlyph(character.unicode!); handleRefresh(); setIsRelinkConfirmOpen(false); showNotification(t('glyphRelinkedSuccess'), 'success'); };
 
   useEffect(() => {
-      setZoom(1); 
-      setViewOffset({ x: 0, y: 0 }); 
-      setIsImageSelected(false);
-      setBackgroundImage(null); 
-      setImageTransform(null); 
-      setBackgroundImageOpacity(0.5);
-
+      setZoom(1); setViewOffset({ x: 0, y: 0 }); setIsImageSelected(false); setBackgroundImage(null); setImageTransform(null);
       const initiallyDrawn = !!glyphData && glyphData.paths.length > 0;
-      const isFreshPrefill = !initiallyDrawn && currentPaths.length > 0;
-      
-      if (isFreshPrefill) {
+      if (!initiallyDrawn && currentPaths.length > 0) {
           const components = character.composite || character.link || [];
           if (components.length > 1) {
-              const lastIndex = components.length - 1;
-              const targetGroupId = `component-${lastIndex}`;
+              const targetGroupId = `component-${components.length - 1}`;
               const idsToSelect = new Set<string>();
-              currentPaths.forEach(p => {
-                  if (p.groupId === targetGroupId) {
-                      idsToSelect.add(p.id);
-                  }
-              });
-              setSelectedPathIds(idsToSelect);
-              setCurrentTool('select');
-          } else {
-               setSelectedPathIds(new Set());
-               if (character.link) setCurrentTool('select'); 
-               else setCurrentTool('pen');
-          }
-      } else {
-          setSelectedPathIds(new Set());
-          if (character.link) setCurrentTool('select'); else setCurrentTool('pen');
-      }
-
-      if (character.link && currentPaths.length > 0) {
-        const hasSeen = checkAndSetFlag('linked_intro');
-        const joiner = hasSeen ? ', ' : ' + ';
-        const componentsStr = character.link.join(joiner);
-        const messageKey = hasSeen ? 'linkedGlyphLockedShort' : 'linkedGlyphLocked';
-        showNotification(t(messageKey, { components: componentsStr }), 'info');
-      }
+              currentPaths.forEach(p => { if (p.groupId === targetGroupId) idsToSelect.add(p.id); });
+              setSelectedPathIds(idsToSelect); setCurrentTool('select');
+          } else { setSelectedPathIds(new Set()); setCurrentTool(character.link ? 'select' : 'pen'); }
+      } else { setSelectedPathIds(new Set()); setCurrentTool(character.link ? 'select' : 'pen'); }
   }, []);
-
-  const activeSelectionBBox = useMemo(() => {
-    if (selectedPathIds.size === 0 || isLocked) return null;
-    const selectedPaths = currentPaths.filter(p => selectedPathIds.has(p.id));
-    return getAccurateGlyphBBox(selectedPaths, settings.strokeThickness);
-  }, [selectedPathIds, currentPaths, settings.strokeThickness, isLocked]);
-
-  const canvasComponent = (
-     <DrawingCanvas 
-        width={DRAWING_CANVAS_SIZE} height={DRAWING_CANVAS_SIZE} 
-        paths={currentPaths} onPathsChange={handlePathsChange} metrics={metrics}
-        tool={currentTool} 
-        onToolChange={setCurrentTool}
-        zoom={zoom} setZoom={setZoom} viewOffset={viewOffset} setViewOffset={setViewOffset}
-        settings={settings} allGlyphData={allGlyphData} allCharacterSets={allCharacterSets} currentCharacter={character}
-        gridConfig={gridConfig} backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity}
-        imageTransform={imageTransform} onImageTransformChange={setImageTransform}
-        selectedPathIds={selectedPathIds} onSelectionChange={setSelectedPathIds}
-        isImageSelected={isImageSelected} onImageSelectionChange={setIsImageSelected}
-        lsb={lsb} rsb={rsb} onMetricsChange={(l, r) => { setLsb(l); setRsb(r); }} calligraphyAngle={calligraphyAngle} 
-        isInitiallyDrawn={!wasEmptyOnLoad}
-        transformMode={isLocked ? 'move-only' : 'all'}
-        previewTransform={previewTransform}
-    />
-  );
-  
-  const mainContentClasses = `flex-grow transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`;
-  const layoutClasses = isLargeScreen 
-      ? `${mainContentClasses} flex flex-row justify-center items-center p-4 gap-4 bg-gray-100 dark:bg-black/20 overflow-hidden` 
-      : `${mainContentClasses} flex flex-col items-center bg-gray-50 dark:bg-gray-900/40 overflow-hidden`;
 
   return (
     <div ref={modalRef} className={`fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col ${animationClass}`}>
-      <input type="file" ref={imageImportRef} onChange={handleImageImport} className="hidden" accept="image/png, image/jpeg, image/gif, image/bmp" />
+      <input type="file" ref={imageImportRef} onChange={handleImageImport} className="hidden" accept="image/*" />
       <input type="file" ref={svgImportRef} onChange={handleSvgImport} className="hidden" accept="image/svg+xml" />
-      <input type="file" ref={imageTraceRef} onChange={handleImageTraceFileChange} className="hidden" accept="image/png, image/jpeg, image/gif, image/bmp" />
+      <input type="file" ref={imageTraceRef} onChange={handleImageTraceFileChange} className="hidden" accept="image/*" />
 
-      <DrawingModalHeader
+      <DrawingEditorHeader
         character={character} glyphData={glyphData} prevCharacter={prevCharacter} nextCharacter={nextCharacter}
         onBackClick={() => handleNavigationAttempt(null)} onNavigate={handleNavigationAttempt}
         settings={settings} metrics={metrics} lsb={lsb} setLsb={setLsb} rsb={rsb} setRsb={setRsb}
-        onDeleteClick={() => setIsDeleteConfirmOpen(true)} onClear={handleClear} 
-        onSave={handleSave} 
+        onDeleteClick={() => setIsDeleteConfirmOpen(true)} onClear={() => handlePathsChange([])} onSave={handleSave} 
         isLocked={isLocked} isComposite={isComposite} onRefresh={handleRefresh}
-        allCharacterSets={allCharacterSets}
-        onSaveConstruction={handleSaveConstruction}
-        onUnlock={() => setIsUnlockConfirmOpen(true)}
-        onRelink={() => setIsRelinkConfirmOpen(true)}
-        glyphClass={glyphClass} setGlyphClass={setGlyphClass}
-        advWidth={advWidth} setAdvWidth={setAdvWidth}
+        allCharacterSets={allCharacterSets} onSaveConstruction={handleSaveConstruction}
+        onUnlock={() => setIsUnlockConfirmOpen(true)} onRelink={() => setIsRelinkConfirmOpen(true)}
+        glyphClass={glyphClass} setGlyphClass={setGlyphClass} advWidth={advWidth} setAdvWidth={setAdvWidth}
       />
 
-      <main className={layoutClasses}>
-        {/* Toolbar - Sticky at bottom on mobile, side on desktop (Left) */}
-        <div className={isLargeScreen ? "order-1 flex-shrink-0 flex flex-col overflow-y-auto max-h-full no-scrollbar border-r dark:border-gray-700" : "order-2 flex-shrink-0 w-full z-20 p-1 bg-white dark:bg-gray-900 border-t dark:border-gray-700"}>
-             <div className={isLargeScreen ? "my-auto" : ""}>
-                 <DrawingToolbar
-                    character={character} currentTool={currentTool} setCurrentTool={setCurrentTool} settings={settings} isLargeScreen={isLargeScreen}
-                    onUndo={undo} canUndo={canUndo} onRedo={redo} canRedo={canRedo}
-                    onCut={handleCut} selectedPathIds={selectedPathIds} onCopy={handleCopy} onPaste={handlePaste} clipboard={clipboard}
-                    onGroup={handleGroup} canGroup={canGroup} onUngroup={handleUngroup} canUngroup={canUngroup}
-                    onZoom={handleZoom} onImageImportClick={() => imageImportRef.current?.click()} onSvgImportClick={() => svgImportRef.current?.click()}
-                    onImageTraceClick={() => imageTraceRef.current?.click()} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
-                    onApplyTransform={handleApplyTransform}
-                    previewTransform={previewTransform}
-                    setPreviewTransform={setPreviewTransform}
-                 />
-             </div>
-         </div>
-
-        {/* Central Drawing Area (Canvas + Strips) */}
-        <div className={`order-1 lg:order-2 flex flex-col items-center relative ${isLargeScreen ? 'h-full flex-1 overflow-hidden justify-center' : 'flex-1 w-full min-h-0'}`}>
-            
-            {/* Canvas Wrapper - Shrink to fit available space */}
-            <div className={`w-full flex-1 min-h-0 flex items-center justify-center ${!isLargeScreen ? 'p-1' : ''}`}>
-                <div className={`rounded-md overflow-hidden shadow-lg aspect-square relative flex items-center justify-center max-h-full max-w-full ${isLargeScreen ? 'h-auto' : ''}`} style={{ width: 'auto' }} ref={canvasWrapperRef}>
-                    {activeSelectionBBox && (
-                        <ContextualToolbar 
-                            selectionBox={activeSelectionBBox}
-                            zoom={zoom}
-                            viewOffset={viewOffset}
-                            onApplyTransform={handleApplyTransform}
-                            previewTransform={previewTransform}
-                            setPreviewTransform={setPreviewTransform}
-                            containerWidth={containerSize.width}
-                            containerHeight={containerSize.height}
-                            internalCanvasSize={DRAWING_CANVAS_SIZE}
-                            onEditMode={() => setCurrentTool('edit')}
-                        />
-                    )}
-                    {canvasComponent}
-                </div>
-            </div>
-            
-            {/* LINKED GLYPHS STRIPS - Positioned directly below canvas */}
-            <div className="w-full max-w-full lg:max-w-5xl flex flex-col gap-0.5 flex-shrink-0">
-                {sourceGlyphs.length > 0 && (
-                    <LinkedGlyphsStrip 
-                        title="Sources" 
-                        items={sourceGlyphs} 
-                        glyphDataMap={allGlyphData} 
-                        settings={settings}
-                        onSelect={handleNavigationAttempt}
-                        variant="sources"
-                    />
-                )}
-                {dependentGlyphs.length > 0 && (
-                     <LinkedGlyphsStrip 
-                        title="Used In" 
-                        items={dependentGlyphs} 
-                        glyphDataMap={allGlyphData} 
-                        settings={settings}
-                        onSelect={handleNavigationAttempt}
-                        variant="dependents"
-                        liveSourcePaths={currentPaths}
-                        sourceCharacter={character}
-                        allCharsByName={allCharsByName}
-                        metrics={metrics}
-                        markAttachmentRules={markAttachmentRules}
-                        characterSets={allCharacterSets}
-                        groups={groups}
-                    />
-                )}
-            </div>
-        </div>
-      </main>
+      <DrawingEditorWorkspace 
+        character={character} currentPaths={currentPaths} onPathsChange={handlePathsChange} metrics={metrics}
+        currentTool={currentTool} setCurrentTool={setCurrentTool} zoom={zoom} setZoom={setZoom}
+        viewOffset={viewOffset} setViewOffset={setViewOffset} settings={settings}
+        allGlyphData={allGlyphData} allCharacterSets={allCharacterSets} allCharsByName={allCharsByName}
+        lsb={lsb} rsb={rsb} onMetricsChange={(l, r) => { setLsb(l); setRsb(r); }}
+        isLargeScreen={isLargeScreen} isTransitioning={isTransitioning} wasEmptyOnLoad={!wasEmptyOnLoad}
+        isLocked={isLocked} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
+        selectedPathIds={selectedPathIds} setSelectedPathIds={setSelectedPathIds}
+        isImageSelected={isImageSelected} setIsImageSelected={setIsImageSelected}
+        backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity}
+        imageTransform={imageTransform} setImageTransform={setImageTransform}
+        previewTransform={previewTransform} setPreviewTransform={setPreviewTransform}
+        onApplyTransform={handleApplyTransform} onImageImportClick={() => imageImportRef.current?.click()}
+        onSvgImportClick={() => svgImportRef.current?.click()} onImageTraceClick={() => imageTraceRef.current?.click()}
+        undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} handleCut={handleCut}
+        handleCopy={handleCopy} handlePaste={handlePaste} clipboard={clipboard}
+        handleGroup={handleGroup} handleUngroup={handleUngroup} canGroup={canGroup} canUngroup={canUngroup}
+        sourceGlyphs={sourceGlyphs} dependentGlyphs={dependentGlyphs} groups={groups}
+        handleNavigationAttempt={handleNavigationAttempt}
+        markAttachmentRules={markAttachmentRules}
+      />
 
       <ImageControlPanel backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity} setBackgroundImageOpacity={setBackgroundImageOpacity} onClearImage={() => { setBackgroundImage(null); setImageTransform(null); }} />
-      <UnsavedChangesModal isOpen={isUnsavedModalOpen} onClose={closeUnsavedModal} onSave={confirmSave} onDiscard={confirmDiscard} />
-      <DeleteConfirmationModal 
-        isOpen={isDeleteConfirmOpen} 
-        onClose={() => setIsDeleteConfirmOpen(false)} 
-        onConfirm={() => { onDelete(character.unicode!); setIsDeleteConfirmOpen(false); }} 
-        character={character} 
-        isStandardGlyph={!character.isCustom} 
-        dependentCount={dependentsCount}
-      />
-      <Modal isOpen={isUnlockConfirmOpen} onClose={() => setIsUnlockConfirmOpen(false)} title={t('unlockGlyphTitle')} titleClassName="text-yellow-600 dark:text-yellow-400" footer={<><button onClick={() => setIsUnlockConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg">{t('cancel')}</button><button onClick={handleConfirmUnlock} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg">{t('unlock')}</button></>}><p>{t('unlockGlyphMessage')}</p></Modal>
-      <Modal isOpen={isRelinkConfirmOpen} onClose={() => setIsRelinkConfirmOpen(false)} title={t('relinkGlyphTitle')} titleClassName="text-yellow-600 dark:text-yellow-400" footer={<><button onClick={() => setIsRelinkConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg">{t('cancel')}</button><button onClick={handleConfirmRelink} className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg">{t('relink')}</button></>}><p>{t('relinkGlyphMessage')}</p></Modal>
       
-      <Modal 
-        isOpen={isConstructionWarningOpen} 
-        onClose={() => { setIsConstructionWarningOpen(false); setPendingConstruction(null); }} 
-        title="Overwrite Glyph Data?" 
-        titleClassName="text-red-600 dark:text-red-400"
-        footer={
-          <>
-             <button onClick={() => { setIsConstructionWarningOpen(false); setPendingConstruction(null); }} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button>
-             <button onClick={() => pendingConstruction && executeConstructionUpdate(pendingConstruction.type, pendingConstruction.components, pendingConstruction.transforms)} className="px-4 py-2 bg-red-600 text-white rounded-lg">Overwrite & Reconstruct</button>
-          </>
-        }
-      >
-        <p>Switching construction mode will discard your current manual drawings and replace them with the selected components. This cannot be undone.</p>
-      </Modal>
-
-      <ImageTracerModal isOpen={isTracerModalOpen} onClose={() => setIsTracerModalOpen(false)} imageSrc={tracerImageSrc} onInsertSVG={handleInsertTracedSVG} drawingCanvasSize={DRAWING_CANVAS_SIZE} metrics={metrics} />
+      <DrawingConfirmationStack 
+        isUnsavedModalOpen={isUnsavedModalOpen} closeUnsavedModal={closeUnsavedModal} confirmSave={confirmSave} confirmDiscard={confirmDiscard}
+        isDeleteConfirmOpen={isDeleteConfirmOpen} setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} onDelete={onDelete} character={character} dependentsCount={dependentsCount}
+        isUnlockConfirmOpen={isUnlockConfirmOpen} setIsUnlockConfirmOpen={setIsUnlockConfirmOpen} onUnlock={handleConfirmUnlock}
+        isRelinkConfirmOpen={isRelinkConfirmOpen} setIsRelinkConfirmOpen={setIsRelinkConfirmOpen} onRelink={handleConfirmRelink}
+        isConstructionWarningOpen={isConstructionWarningOpen} setIsConstructionWarningOpen={setIsConstructionWarningOpen} pendingConstruction={pendingConstruction} executeConstructionUpdate={executeConstructionUpdate}
+        isTracerModalOpen={isTracerModalOpen} setIsTracerModalOpen={setIsTracerModalOpen} tracerImageSrc={tracerImageSrc} handleInsertTracedSVG={handleInsertTracedSVG} metrics={metrics}
+      />
     </div>
   );
 };

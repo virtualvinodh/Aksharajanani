@@ -14,15 +14,18 @@ interface KerningEditorHeaderProps {
     onSave: () => void;
     onRemove: () => void;
     isDirty: boolean;
-    isAutosaveEnabled: boolean;
+    settings: AppSettings;
 }
 
 const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
-    pair, onClose, onNavigate, hasPrev, hasNext, onAutoKern, isAutoKerning, onSave, onRemove, isDirty, isAutosaveEnabled
+    pair, onClose, onNavigate, hasPrev, hasNext, onAutoKern, isAutoKerning, onSave, onRemove, isDirty, settings
 }) => {
     const { t } = useLocale();
 
     const navButtonClass = "p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all";
+    
+    const useKerningTerm = settings.editorMode === 'advanced' || settings.preferKerningTerm;
+    const autoLabel = useKerningTerm ? t('autoKern') : "Auto-space";
 
     return (
         <header className="bg-gray-50 dark:bg-gray-800 p-4 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0 z-20 shadow-sm">
@@ -62,33 +65,36 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                 <button 
                     onClick={onAutoKern} 
                     disabled={isAutoKerning} 
-                    title={t('autoKern')} 
-                    className="p-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-teal-400 transition-all active:scale-95 shadow-sm"
+                    title={autoLabel} 
+                    className="flex items-center gap-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-teal-400 transition-all active:scale-95 shadow-sm"
                 >
                     {isAutoKerning ? (
                         <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
                     ) : (
                         <SparklesIcon />
                     )}
+                    <span className="hidden xl:inline font-semibold">{autoLabel}</span>
                 </button>
                 
-                {!isAutosaveEnabled && (
+                {!settings.isAutosaveEnabled && (
                     <button 
                         onClick={onSave} 
                         title={t('save')} 
                         disabled={!isDirty} 
-                        className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 transition-all active:scale-95 shadow-md"
+                        className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 transition-all active:scale-95 shadow-md"
                     >
                         <SaveIcon />
+                        <span className="hidden xl:inline font-semibold">{t('save')}</span>
                     </button>
                 )}
                 
                 <button 
                     onClick={onRemove} 
                     title={t('removeKerning')} 
-                    className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 shadow-sm"
+                    className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 shadow-sm"
                 >
                     <TrashIcon />
+                    <span className="hidden xl:inline font-semibold">{t('delete')}</span>
                 </button>
             </div>
         </header>
