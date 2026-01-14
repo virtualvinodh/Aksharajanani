@@ -68,10 +68,10 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     selectedPathIds, onSelectionChange
 }) => {
     return (
-        <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-black/20 relative h-full">
-            {/* Desktop Toolbar: Vertically docked */}
+        <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative h-full">
+            {/* Morphic Toolbar: Vertically docked on desktop, floats for touch accessibility */}
             {isLargeScreen && !isStripExpanded && (
-                <div className="absolute left-6 top-1/2 -translate-y-1/2 z-20">
+                <div className="absolute left-6 top-1/2 -translate-y-1/2 z-30 animate-fade-in-up">
                     <PositioningToolbar 
                         orientation="vertical"
                         onReuseClick={onReuseClick} 
@@ -89,10 +89,11 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
             )}
 
             <div className="flex-1 flex flex-col items-center justify-center w-full h-full overflow-hidden relative">
-                {/* Central Canvas Area: Aligned with Drawing Modal Hero wrapper */}
-                <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-4 sm:p-8 overflow-hidden relative">
+                
+                {/* Hero Canvas Area: Standardized across all editors */}
+                <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-4 sm:p-12 overflow-hidden relative">
                     <div 
-                        className="rounded-md overflow-hidden shadow-2xl aspect-square relative flex items-center justify-center bg-white dark:bg-gray-900 max-h-full max-w-full"
+                        className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 max-h-full max-w-full aspect-square"
                         style={{ 
                             width: 'auto',
                             height: 'auto'
@@ -131,14 +132,14 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                             transformMode="move-only" 
                             movementConstraint={movementConstraint} 
                             isInitiallyDrawn={true}
-                            disableAutoFit={true} // Page component handles fitting logic to include base paths
+                            disableAutoFit={true} 
                         />
                     </div>
                 </div>
 
-                {/* Mobile Toolbar */}
+                {/* Mobile Toolbar: Anchored for ergonomic thumb usage */}
                 {!isLargeScreen && (
-                    <div className="flex-shrink-0 w-full z-20 p-2 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex justify-center">
+                    <div className="flex-shrink-0 w-full z-20 p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-center shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
                         <PositioningToolbar 
                             orientation="horizontal"
                             onReuseClick={onReuseClick} 
@@ -155,32 +156,34 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                     </div>
                 )}
 
-                {/* Sibling Strip */}
+                {/* Morphic Sibling Strip: Floats at the bottom, matching the Drawing Modal dependent strip style */}
                 {showStrip && (
-                    <div className="w-full max-w-5xl mx-auto flex-shrink-0 z-10 transition-all duration-300">
-                        <ClassPreviewStrip 
-                            siblings={classSiblings}
-                            activePair={activePair}
-                            pivotChar={pivotChar} 
-                            glyphDataMap={glyphDataMap}
-                            strokeThickness={settings.strokeThickness}
-                            anchorDelta={anchorDelta}
-                            isLinked={isLinked} 
-                            onToggleLink={onToggleLink}
-                            orientation="horizontal"
-                            onSelectPair={handleSelectSibling}
-                            metrics={metrics}
-                            markAttachmentRules={markAttachmentRules}
-                            positioningRules={positioningRules}
-                            characterSets={characterSets}
-                            groups={groups}
-                            isExpanded={isStripExpanded}
-                            setIsExpanded={setIsStripExpanded}
-                            activeClass={activeAttachmentClass}
-                            hasDualContext={hasDualContext}
-                            activeClassType={activeClassType}
-                            onToggleContext={onToggleContext}
-                        />
+                    <div className="w-full max-w-5xl mx-auto flex-shrink-0 z-20 transition-all duration-300 px-2 pb-2">
+                        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                            <ClassPreviewStrip 
+                                siblings={classSiblings}
+                                activePair={activePair}
+                                pivotChar={pivotChar} 
+                                glyphDataMap={glyphDataMap}
+                                strokeThickness={settings.strokeThickness}
+                                anchorDelta={anchorDelta}
+                                isLinked={isLinked} 
+                                onToggleLink={onToggleLink}
+                                orientation="horizontal"
+                                onSelectPair={handleSelectSibling}
+                                metrics={metrics}
+                                markAttachmentRules={markAttachmentRules}
+                                positioningRules={positioningRules}
+                                characterSets={characterSets}
+                                groups={groups}
+                                isExpanded={isStripExpanded}
+                                setIsExpanded={setIsStripExpanded}
+                                activeClass={activeAttachmentClass}
+                                hasDualContext={hasDualContext}
+                                activeClassType={activeClassType}
+                                onToggleContext={onToggleContext}
+                            />
+                        </div>
                     </div>
                 )}
             </div>

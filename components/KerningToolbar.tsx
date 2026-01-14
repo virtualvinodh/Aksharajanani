@@ -9,6 +9,8 @@ interface KerningToolbarProps {
     // Kerning Input Props
     kernValue: string;
     onKernChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onKernFocus: (focused: boolean) => void;
+    onKernHover: (hovered: boolean) => void;
     isKernDirty: boolean;
 
     // X-Dist Input Props
@@ -24,7 +26,7 @@ interface KerningToolbarProps {
 
 const KerningToolbar: React.FC<KerningToolbarProps> = ({
     orientation = 'vertical', onZoom, 
-    kernValue, onKernChange, isKernDirty,
+    kernValue, onKernChange, onKernFocus, onKernHover, isKernDirty,
     xDistValue, onXDistChange, onXDistCommit, isXDistFocused, isXDistHovered, onXDistFocus, onXDistHover, xDistInputRef
 }) => {
     const { t } = useLocale();
@@ -62,6 +64,10 @@ const KerningToolbar: React.FC<KerningToolbarProps> = ({
                         type="text"
                         value={kernValue}
                         onChange={onKernChange}
+                        onFocus={() => onKernFocus(true)}
+                        onBlur={() => onKernFocus(false)}
+                        onMouseEnter={() => onKernHover(true)}
+                        onMouseLeave={() => onKernHover(false)}
                         className="w-12 p-1.5 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
                     {isKernDirty && (
