@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
 import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
@@ -52,7 +51,8 @@ const ToolButton: React.FC<{ tool: Tool, currentTool: Tool, label: string, onCli
           : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
       } disabled:opacity-50 disabled:cursor-not-allowed active:scale-95`}
     >
-      {React.cloneElement(children as React.ReactElement, { className: 'w-5 h-5' })}
+      {/* Fix: Casting children to React.ReactElement with explicit prop type for cloneElement */}
+      {React.cloneElement(children as React.ReactElement<{ className?: string }>, { className: 'w-5 h-5' })}
     </button>
   );
 });
@@ -64,7 +64,8 @@ const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: bo
     disabled={disabled}
     className="p-2 rounded-lg transition-all bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
   >
-    {React.cloneElement(children as React.ReactElement, { className: 'w-5 h-5' })}
+    {/* Fix: Casting children to React.ReactElement with explicit prop type for cloneElement */}
+    {React.cloneElement(children as React.ReactElement<{ className?: string }>, { className: 'w-5 h-5' })}
   </button>
 ));
 

@@ -3,16 +3,10 @@ import KerningToolbar from '../KerningToolbar';
 
 interface KerningEditorWorkspaceProps {
     isLargeScreen: boolean;
-    canvasRef: React.RefObject<HTMLCanvasElement>;
     containerRef: React.RefObject<HTMLDivElement>;
-    onMouseDown: (e: React.MouseEvent) => void;
-    onMouseMove: (e: React.MouseEvent) => void;
-    onMouseUp: () => void;
-    onTouchStart: (e: React.TouchEvent) => void;
-    onTouchMove: (e: React.TouchEvent) => void;
+    onZoom: (factor: number) => void;
     
     // Toolbar Props
-    onZoom: (factor: number) => void;
     kernValue: string;
     onKernChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onKernFocus: (focused: boolean) => void;
@@ -26,55 +20,56 @@ interface KerningEditorWorkspaceProps {
     onXDistFocus: (focused: boolean) => void;
     onXDistHover: (hovered: boolean) => void;
     xDistInputRef: React.RefObject<HTMLInputElement>;
+    children?: React.ReactNode;
 }
 
 const KerningEditorWorkspace: React.FC<KerningEditorWorkspaceProps> = ({
-    isLargeScreen, canvasRef, containerRef, onMouseDown, onMouseMove, onMouseUp, onTouchStart, onTouchMove,
-    onZoom, kernValue, onKernChange, onKernFocus, onKernHover, isKernDirty, xDistValue, onXDistChange, onXDistCommit, isXDistFocused, isXDistHovered, onXDistFocus, onXDistHover, xDistInputRef
+    isLargeScreen, containerRef, onZoom, kernValue, onKernChange, onKernFocus, onKernHover, 
+    isKernDirty, xDistValue, onXDistChange, onXDistCommit, isXDistFocused, isXDistHovered, 
+    onXDistFocus, onXDistHover, xDistInputRef, children
 }) => {
     return (
         <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative">
             <div className="flex-1 flex flex-col items-center w-full h-full overflow-hidden relative">
-                <div className="flex-1 w-full max-w-6xl flex flex-row items-center justify-center gap-3 min-h-0 relative px-4">
-                    {/* Morphic Desktop Toolbar: Floating vertical dock */}
-                    {isLargeScreen && (
-                        <div className="absolute left-6 top-1/2 -translate-y-1/2 z-30 animate-fade-in-up">
-                            <KerningToolbar 
-                                orientation="vertical"
-                                onZoom={onZoom}
-                                kernValue={kernValue}
-                                onKernChange={onKernChange}
-                                onKernFocus={onKernFocus}
-                                onKernHover={onKernHover}
-                                isKernDirty={isKernDirty}
-                                xDistValue={xDistValue}
-                                onXDistChange={onXDistChange}
-                                onXDistCommit={onXDistCommit}
-                                isXDistFocused={isXDistFocused}
-                                isXDistHovered={isXDistHovered}
-                                onXDistFocus={onXDistFocus}
-                                onXDistHover={onXDistHover}
-                                xDistInputRef={xDistInputRef}
-                            />
-                        </div>
-                    )}
+                <div className="flex-1 w-full flex flex-col items-center justify-center min-h-0 relative px-4" ref={containerRef}>
+                    
+                    {/* 
+                      Centering Wrapper:
+                      This container centers the entire workspace content within the available area.
+                    */}
+                    <div className="flex items-center justify-center h-full max-w-full">
+                        
+                        {/* 
+                           Morphic Content Wrapper:
+                           This relative div wraps the canvas container. 
+                           Placing the absolute toolbar here ensures 'top-0' is the top of the canvas.
+                        */}
+                        <div className="relative">
+                            {isLargeScreen && (
+                                <div className="absolute right-full mr-6 top-0 z-30 animate-fade-in-up">
+                                    <KerningToolbar 
+                                        orientation="vertical"
+                                        onZoom={onZoom}
+                                        kernValue={kernValue}
+                                        onKernChange={onKernChange}
+                                        onKernFocus={onKernFocus}
+                                        onKernHover={onKernHover}
+                                        isKernDirty={isKernDirty}
+                                        xDistValue={xDistValue}
+                                        onXDistChange={onXDistChange}
+                                        onXDistCommit={onXDistCommit}
+                                        isXDistFocused={isXDistFocused}
+                                        isXDistHovered={isXDistHovered}
+                                        onXDistFocus={onXDistFocus}
+                                        onXDistHover={onXDistHover}
+                                        xDistInputRef={xDistInputRef}
+                                    />
+                                </div>
+                            )}
 
-                    {/* Standardized Hero Canvas Wrapper */}
-                    <div 
-                        className="aspect-square h-full max-h-full w-auto max-w-full bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden border-4 border-white dark:border-gray-800 relative transition-shadow duration-300 hover:shadow-indigo-500/10" 
-                        ref={containerRef}
-                    >
-                        <canvas
-                            ref={canvasRef}
-                            className="w-full h-full cursor-ew-resize touch-none"
-                            onMouseDown={onMouseDown}
-                            onMouseMove={onMouseMove}
-                            onMouseUp={onMouseUp}
-                            onMouseLeave={onMouseUp}
-                            onTouchStart={onTouchStart}
-                            onTouchMove={onTouchMove}
-                            onTouchEnd={onMouseUp}
-                        />
+                            {/* Standardized Hero Canvas Area (Passed as children from Page) */}
+                            {children}
+                        </div>
                     </div>
                 </div>
 

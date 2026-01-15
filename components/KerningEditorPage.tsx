@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning } from '../types';
+import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning, Point } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { calculateAutoKerning } from '../services/kerningService';
-import { renderPaths, getAccurateGlyphBBox, getGlyphSubBBoxes, BBox } from '../services/glyphRenderService';
-import { VEC } from '../utils/vectorUtils';
+import { getAccurateGlyphBBox, getGlyphSubBBoxes } from '../services/glyphRenderService';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import KerningEditorHeader from './kerning/KerningEditorHeader';
 import KerningEditorWorkspace from './kerning/KerningEditorWorkspace';
+import KerningCanvas from './KerningCanvas';
 
 interface KerningEditorPageProps {
     pair: { left: Character, right: Character };
@@ -30,52 +30,35 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
     pair, onClose, onSave, onRemove, initialValue, glyphDataMap, strokeThickness, metrics, settings, recommendedKerning,
     onNavigate, hasPrev, hasNext, glyphVersion
 }) => {
-    const { theme } = useTheme();
+    const { t } = useLocale();
     const [inputValue, setInputValue] = useState(String(initialValue));
     const [isDirty, setIsDirty] = useState(false);
     const [isAutoKerning, setIsAutoKerning] = useState(false);
+    
+    // Viewport State
     const [zoom, setZoom] = useState(1);
+    const [viewOffset, setViewOffset] = useState<Point>({ x: 0, y: 0 });
     const [baseScale, setBaseScale] = useState(1); 
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [pageTool, setPageTool] = useState<'select' | 'pan'>('select');
+
     const containerRef = useRef<HTMLDivElement>(null);
-    const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const [canvasDisplaySize, setCanvasDisplaySize] = useState({ width: 0, height: 0 });
     const debounceTimeout = useRef<number | null>(null);
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
-    const [isDragging, setIsDragging] = useState(false);
-    const [isHovering, setIsHovering] = useState(false);
-    const [showInitialCue, setShowInitialCue] = useState(false);
-    const rightGlyphBboxRef = useRef<{x: number, y: number, width: number, height: number} | null>(null);
-    const dragState = useRef({ startX: 0, startValue: 0, scale: 1 });
     const [xHeightDistance, setXHeightDistance] = useState<number | null>(null);
-
     const [xDistInputValue, setXDistInputValue] = useState<string>('');
     const [isXDistFocused, setIsXDistFocused] = useState(false);
     const [isXDistHovered, setIsXDistHovered] = useState(false);
-    
-    // Primary Kern Input States
     const [isKernFocused, setIsKernFocused] = useState(false);
     const [isKernHovered, setIsKernHovered] = useState(false);
 
     const xDistInputRef = useRef<HTMLInputElement>(null);
 
-    // BBox and Scale tracking for layout calculations
-    const layoutRef = useRef({ 
-        leftMaxX: 0, 
-        rightMinX: 0, 
-        yMid: 0, 
-        yTop: 0, 
-        yBottom: 0 
-    });
-
     useEffect(() => {
         setInputValue(String(initialValue));
         setIsDirty(false);
-        setIsDragging(false);
-        
-        setShowInitialCue(true);
-        const timer = setTimeout(() => setShowInitialCue(false), 1200);
-        return () => clearTimeout(timer);
     }, [initialValue, pair]);
 
     useEffect(() => {
@@ -83,7 +66,9 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
         if (!container) return;
         const updateSize = () => {
             const rect = container.getBoundingClientRect();
-            setCanvasSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+            if (rect.width > 0 && rect.height > 0) {
+                setContainerSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+            }
         };
         updateSize();
         const ro = new ResizeObserver(updateSize);
@@ -92,26 +77,34 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
     }, []);
 
     useEffect(() => {
-        if (canvasSize.width === 0 || canvasSize.height === 0) return;
-        const leftGlyph = glyphDataMap.get(pair.left.unicode!);
-        const rightGlyph = glyphDataMap.get(pair.right.unicode!);
-        if (!leftGlyph || !rightGlyph) return;
-
-        const lBox = getAccurateGlyphBBox(leftGlyph.paths, strokeThickness);
-        const rBox = getAccurateGlyphBBox(rightGlyph.paths, strokeThickness);
-        if (!lBox || !rBox) return;
-
-        const rsbL = pair.left.rsb ?? metrics.defaultRSB;
-        const lsbR = pair.right.lsb ?? metrics.defaultLSB;
-        const totalRefWidth = lBox.width + rsbL + lsbR + rBox.width;
+        if (containerSize.width === 0 || containerSize.height === 0) return;
         
-        const fitScale = Math.min((canvasSize.width * 0.8) / totalRefWidth, (canvasSize.height * 0.8) / 700);
-        setBaseScale(fitScale);
-    }, [pair, canvasSize, glyphDataMap, metrics, strokeThickness]);
+        // Logical aspect ratio requested: 2500 / 1000 = 2.5
+        const targetRatio = 2.5;
+        let w = containerSize.width * 0.95;
+        let h = w / targetRatio;
+        
+        // If calculated height exceeds available container height, cap height and adjust width
+        if (h > containerSize.height * 0.95) {
+            h = containerSize.height * 0.95;
+            w = h * targetRatio;
+        }
+        
+        const finalWidth = Math.floor(w);
+        const finalHeight = Math.floor(h);
+        
+        setCanvasDisplaySize({ width: finalWidth, height: finalHeight });
+        
+        // Base scale maps our logical units (2500 width) to visual pixels
+        setBaseScale(finalWidth / 2500);
+    }, [containerSize]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
-        if (val === '' || val === '-' || /^-?\d*$/.test(val)) { setInputValue(val); setIsDirty(true); }
+        if (val === '' || val === '-' || /^-?\d*$/.test(val)) { 
+            setInputValue(val); 
+            setIsDirty(true); 
+        }
     };
 
     const handleSaveClick = useCallback(() => {
@@ -127,60 +120,16 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
         return () => { if (debounceTimeout.current) clearTimeout(debounceTimeout.current); };
     }, [inputValue, isDirty, settings.isAutosaveEnabled, handleSaveClick]);
 
-    const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        if (!canvasRef.current || !rightGlyphBboxRef.current) return;
-        const rect = canvasRef.current.getBoundingClientRect();
-        const pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        if (pt.x >= rightGlyphBboxRef.current.x && pt.x <= rightGlyphBboxRef.current.x + rightGlyphBboxRef.current.width &&
-            pt.y >= rightGlyphBboxRef.current.y && pt.y <= rightGlyphBboxRef.current.y + rightGlyphBboxRef.current.height) {
-            setIsDragging(true);
-            dragState.current.startX = pt.x;
-            dragState.current.startValue = parseInt(inputValue, 10) || 0;
-            e.preventDefault();
-        }
-    }, [inputValue]);
-
-    const handleMouseMove = useCallback((e: React.MouseEvent) => {
-        if (!canvasRef.current) return;
-        const rect = canvasRef.current.getBoundingClientRect();
-        const pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        
-        if (isDragging) {
-            const change = Math.round((pt.x - dragState.current.startX) / dragState.current.scale);
-            setInputValue(String(dragState.current.startValue + change));
-            setIsDirty(true);
-        } else {
-            // Right glyph hover
-            if (rightGlyphBboxRef.current) {
-                setIsHovering(pt.x >= rightGlyphBboxRef.current.x && pt.x <= rightGlyphBboxRef.current.x + rightGlyphBboxRef.current.width &&
-                             pt.y >= rightGlyphBboxRef.current.y && pt.y <= rightGlyphBboxRef.current.y + rightGlyphBboxRef.current.height);
-            }
-        }
-    }, [isDragging]);
-
-    const handleMouseUp = useCallback(() => {
-        setIsDragging(false);
-    }, []);
-
     const handleAutoKern = useCallback(async () => {
         if (!metrics || !settings) return;
         setIsAutoKerning(true);
         try {
-            const results = await calculateAutoKerning(
-                [pair],
-                glyphDataMap,
-                metrics,
-                strokeThickness,
-                () => {}, 
-                recommendedKerning
-            );
+            const results = await calculateAutoKerning([pair], glyphDataMap, metrics, strokeThickness, () => {}, recommendedKerning);
             const key = `${pair.left.unicode}-${pair.right.unicode}`;
             if (results.has(key)) {
                 setInputValue(String(results.get(key)));
                 setIsDirty(true);
             }
-        } catch (error) {
-            console.error("Auto-kerning failed for pair:", pair, error);
         } finally {
             setIsAutoKerning(false);
         }
@@ -196,117 +145,91 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
         }
     };
 
+    // Update x-height distance calculation whenever kern value or glyphs change
     useEffect(() => {
-        if (document.activeElement !== xDistInputRef.current) setXDistInputValue(xHeightDistance !== null ? String(xHeightDistance) : 'N/A');
-    }, [xHeightDistance]);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
-        if (!ctx || !canvas || canvasSize.width === 0) return;
-        canvas.width = canvasSize.width; canvas.height = canvasSize.height;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         const leftGlyph = glyphDataMap.get(pair.left.unicode!);
         const rightGlyph = glyphDataMap.get(pair.right.unicode!);
         if (!leftGlyph || !rightGlyph) return;
-        const lBox = getAccurateGlyphBBox(leftGlyph.paths, strokeThickness);
-        const rBox = getAccurateGlyphBBox(rightGlyph.paths, strokeThickness);
-        if (!lBox || !rBox) return;
-
-        const rsbL = pair.left.rsb ?? metrics.defaultRSB;
-        const lsbR = pair.right.lsb ?? metrics.defaultLSB;
-        const kern = parseInt(inputValue, 10) || 0;
-        const rightTranslateX = lBox.x + lBox.width + rsbL + kern + lsbR - rBox.x;
-
+        
         const lSub = getGlyphSubBBoxes(leftGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
         const rSub = getGlyphSubBBoxes(rightGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
         
         if (lSub?.xHeight && rSub?.xHeight) {
-            setXHeightDistance(Math.round(rSub.xHeight.minX + rightTranslateX - lSub.xHeight.maxX));
-            layoutRef.current.leftMaxX = lSub.xHeight.maxX;
-            layoutRef.current.rightMinX = rSub.xHeight.minX + rightTranslateX;
-            layoutRef.current.yMid = (metrics.baseLineY + metrics.topLineY) / 2;
-            layoutRef.current.yTop = metrics.topLineY;
-            layoutRef.current.yBottom = metrics.baseLineY;
+            const kern = parseInt(inputValue, 10) || 0;
+            const lBox = getAccurateGlyphBBox(leftGlyph.paths, strokeThickness)!;
+            const rBox = getAccurateGlyphBBox(rightGlyph.paths, strokeThickness)!;
+            const rsbL = pair.left.rsb ?? metrics.defaultRSB;
+            const lsbR = pair.right.lsb ?? metrics.defaultLSB;
+            const rightTranslateX = lBox.x + lBox.width + rsbL + kern + lsbR - rBox.x;
+            
+            const dist = Math.round(rSub.xHeight.minX + rightTranslateX - lSub.xHeight.maxX);
+            setXHeightDistance(dist);
+            if (document.activeElement !== xDistInputRef.current) setXDistInputValue(String(dist));
         }
+    }, [pair, inputValue, glyphDataMap, strokeThickness, metrics]);
 
-        const finalScale = baseScale * zoom;
-        const totalW = (lBox.x + lBox.width - lBox.x) + rsbL + kern + lsbR + rBox.width;
-        const tx = (canvasSize.width - (totalW * finalScale)) / 2 - (lBox.x * finalScale);
-        const ty = (canvasSize.height - (700 * finalScale)) / 2;
-
-        ctx.save();
-        ctx.translate(tx, ty); ctx.scale(finalScale, finalScale);
-
-        ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
-        ctx.lineWidth = 1 / finalScale; ctx.setLineDash([8/finalScale, 6/finalScale]);
-        ctx.beginPath(); ctx.moveTo(-500, metrics.topLineY); ctx.lineTo(totalW+1000, metrics.topLineY); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-500, metrics.baseLineY); ctx.lineTo(totalW+1000, metrics.baseLineY); ctx.stroke();
-        ctx.setLineDash([]);
-
-        const glyphColor = theme === 'dark' ? '#E2E8F0' : '#1F2937';
-        const rightColor = isDragging || isHovering || showInitialCue ? (theme === 'dark' ? '#A78BFA' : '#8B5CF6') : glyphColor;
-        
-        renderPaths(ctx, leftGlyph.paths, { strokeThickness, color: glyphColor });
-        ctx.save(); ctx.translate(rightTranslateX, 0); renderPaths(ctx, rightGlyph.paths, { strokeThickness, color: rightColor }); ctx.restore();
-
-        // Measurement line logic (Active Control Tool)
-        const showLine = isXDistFocused || isXDistHovered || isKernFocused || isKernHovered || showInitialCue;
-        if (showLine && lSub?.xHeight && rSub?.xHeight) {
-            const x1 = lSub.xHeight.maxX;
-            const x2 = rSub.xHeight.minX + rightTranslateX;
-            const ym = layoutRef.current.yMid;
-            
-            // Refined Arrowhead Logic
-            const dist = Math.abs(x2 - x1);
-            const arrowSize = Math.min(6 / finalScale, dist / 3); // Smaller arrowheads, relative to gap
-            
-            ctx.shadowBlur = 10 / finalScale;
-            ctx.shadowColor = 'rgba(20, 184, 166, 0.3)';
-            ctx.strokeStyle = '#14b8a6'; 
-            ctx.lineWidth = 2 / finalScale; 
-            ctx.setLineDash([]);
-            
-            // Main Line
-            ctx.beginPath();
-            ctx.moveTo(x1, ym);
-            ctx.lineTo(x2, ym);
-            ctx.stroke();
-
-            // Arrowheads - prevent overlap/swap when distance is tiny
-            if (dist > (arrowSize * 1.5)) {
-                ctx.beginPath();
-                // Left arrow
-                ctx.moveTo(x1 + arrowSize, ym - arrowSize / 1.5);
-                ctx.lineTo(x1, ym);
-                ctx.lineTo(x1 + arrowSize, ym + arrowSize / 1.5);
-                // Right arrow
-                ctx.moveTo(x2 - arrowSize, ym - arrowSize / 1.5);
-                ctx.lineTo(x2, ym);
-                ctx.lineTo(x2 - arrowSize, ym + arrowSize / 1.5);
-                ctx.stroke();
-            } else if (dist > 0) {
-                // Point-only or outward line logic could go here if needed
-            }
-            
-            ctx.shadowBlur = 0; 
-        }
-
-        rightGlyphBboxRef.current = { x: tx + (rightTranslateX + rBox.x)*finalScale, y: ty + rBox.y*finalScale, width: rBox.width*finalScale, height: rBox.height*finalScale };
-        dragState.current.scale = finalScale;
-
-        ctx.restore();
-    }, [pair, inputValue, zoom, baseScale, canvasSize, theme, isDragging, isHovering, isXDistFocused, isXDistHovered, isKernFocused, isKernHovered, showInitialCue, glyphVersion]);
+    const showMeasurement = isXDistFocused || isXDistHovered || isKernFocused || isKernHovered;
 
     return (
         <div className="flex flex-col h-full w-full bg-white dark:bg-gray-800 animate-fade-in-up">
-            <KerningEditorHeader pair={pair} onClose={onClose} onNavigate={onNavigate} hasPrev={hasPrev} hasNext={hasNext} onAutoKern={handleAutoKern} isAutoKerning={isAutoKerning} onSave={handleSaveClick} onRemove={onRemove} isDirty={isDirty} settings={settings} />
-            <KerningEditorWorkspace 
-                isLargeScreen={isLargeScreen} canvasRef={canvasRef} containerRef={containerRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onTouchStart={() => {}} onTouchMove={() => {}} onZoom={f => setZoom(z => Math.max(0.1, Math.min(10, z * f)))} 
-                kernValue={inputValue} onKernChange={handleInputChange} onKernFocus={setIsKernFocused} onKernHover={setIsKernHovered} isKernDirty={isDirty} 
-                xDistValue={xDistInputValue} onXDistChange={e => setXDistInputValue(e.target.value)} onXDistCommit={handleXDistCommit} isXDistFocused={isXDistFocused} isXDistHovered={isXDistHovered} onXDistFocus={setIsXDistFocused} onXDistHover={setIsXDistHovered} xDistInputRef={xDistInputRef} 
+            <KerningEditorHeader 
+                pair={pair} 
+                onClose={onClose} 
+                onNavigate={onNavigate} 
+                hasPrev={hasPrev} 
+                hasNext={hasNext} 
+                onAutoKern={handleAutoKern} 
+                isAutoKerning={isAutoKerning} 
+                onSave={handleSaveClick} 
+                onRemove={onRemove} 
+                isDirty={isDirty} 
+                settings={settings} 
             />
+            
+            <KerningEditorWorkspace 
+                isLargeScreen={isLargeScreen}
+                containerRef={containerRef}
+                onZoom={f => setZoom(z => Math.max(0.1, Math.min(10, z * f)))} 
+                kernValue={inputValue} 
+                onKernChange={handleInputChange} 
+                onKernFocus={setIsKernFocused} 
+                onKernHover={setIsKernHovered} 
+                isKernDirty={isDirty} 
+                xDistValue={xDistInputValue} 
+                onXDistChange={e => setXDistInputValue(e.target.value)} 
+                onXDistCommit={handleXDistCommit} 
+                isXDistFocused={isXDistFocused} 
+                isXDistHovered={isXDistHovered} 
+                onXDistFocus={setIsXDistFocused} 
+                onXDistHover={setIsXDistHovered} 
+                xDistInputRef={xDistInputRef} 
+            >
+                {/* The visual container for the canvas, strictly following the aspect ratio */}
+                <div 
+                    className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800"
+                    style={{ width: canvasDisplaySize.width, height: canvasDisplaySize.height }}
+                >
+                    <KerningCanvas
+                        width={canvasDisplaySize.width}
+                        height={canvasDisplaySize.height}
+                        leftChar={pair.left}
+                        rightChar={pair.right}
+                        glyphDataMap={glyphDataMap}
+                        kernValue={inputValue}
+                        onKernChange={setInputValue}
+                        metrics={metrics}
+                        tool={pageTool}
+                        zoom={zoom}
+                        setZoom={setZoom}
+                        viewOffset={viewOffset}
+                        setViewOffset={setViewOffset}
+                        settings={settings}
+                        baseScale={baseScale}
+                        strokeThickness={strokeThickness}
+                        showMeasurement={showMeasurement}
+                    />
+                </div>
+            </KerningEditorWorkspace>
         </div>
     );
 };
