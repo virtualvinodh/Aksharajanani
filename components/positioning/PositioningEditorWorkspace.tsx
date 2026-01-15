@@ -68,49 +68,54 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
 }) => {
     return (
         <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative h-full">
-            {/* Morphic Toolbar: Vertically docked on desktop, floats for touch accessibility */}
-            {isLargeScreen && !isStripExpanded && (
-                <div className="absolute left-6 top-1/2 -translate-y-1/2 z-30 animate-fade-in-up">
-                    <PositioningToolbar 
-                        orientation="vertical"
-                        onReuseClick={onReuseClick} 
-                        pageTool={pageTool} 
-                        onToggleTool={onToggleTool} 
-                        onZoom={onZoom} 
-                        reuseDisabled={!canEdit}
-                        manualX={manualX}
-                        manualY={manualY}
-                        onManualChange={onManualChange}
-                        onManualCommit={onManualCommit}
-                        canEdit={canEdit}
-                    />
-                </div>
-            )}
-
             <div className="flex-1 flex flex-col items-center justify-center w-full h-full overflow-hidden relative">
                 
                 {/* Hero Canvas Area: Standardized across all editors */}
                 <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-4 sm:p-12 overflow-hidden relative">
-                    <div 
-                        className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 max-h-full max-w-full aspect-square"
-                    >
-                        <PositioningCanvas
-                            width={DRAWING_CANVAS_SIZE} 
-                            height={DRAWING_CANVAS_SIZE}
-                            markPaths={markPaths}
-                            basePaths={basePaths}
-                            onPathsChange={onPathsChange} 
-                            metrics={metrics} 
-                            tool={pageTool} 
-                            zoom={zoom} 
-                            setZoom={setZoom} 
-                            viewOffset={viewOffset} 
-                            setViewOffset={setViewOffset}
-                            settings={settings} 
-                            movementConstraint={movementConstraint}
-                            canEdit={canEdit}
-                            character={targetLigature}
-                        />
+                    
+                    {/* The Relative Wrapper ensuring coordinate system for the toolbar */}
+                    <div className="relative">
+                        
+                        {/* Morphic Toolbar: Vertically docked on desktop, anchored to the left of the centered hero area */}
+                        {isLargeScreen && !isStripExpanded && (
+                            <div className="absolute right-full mr-6 top-0 z-30 animate-fade-in-up">
+                                <PositioningToolbar 
+                                    orientation="vertical"
+                                    onReuseClick={onReuseClick} 
+                                    pageTool={pageTool} 
+                                    onToggleTool={onToggleTool} 
+                                    onZoom={onZoom} 
+                                    reuseDisabled={!canEdit}
+                                    manualX={manualX}
+                                    manualY={manualY}
+                                    onManualChange={onManualChange}
+                                    onManualCommit={onManualCommit}
+                                    canEdit={canEdit}
+                                />
+                            </div>
+                        )}
+
+                        <div 
+                            className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 max-h-full max-w-full aspect-square"
+                        >
+                            <PositioningCanvas
+                                width={DRAWING_CANVAS_SIZE} 
+                                height={DRAWING_CANVAS_SIZE}
+                                markPaths={markPaths}
+                                basePaths={basePaths}
+                                onPathsChange={onPathsChange} 
+                                metrics={metrics} 
+                                tool={pageTool} 
+                                zoom={zoom} 
+                                setZoom={setZoom} 
+                                viewOffset={viewOffset} 
+                                setViewOffset={setViewOffset}
+                                settings={settings} 
+                                movementConstraint={movementConstraint}
+                                canEdit={canEdit}
+                                character={targetLigature}
+                            />
+                        </div>
                     </div>
                 </div>
 
