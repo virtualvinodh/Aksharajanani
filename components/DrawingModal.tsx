@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
-import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment, TransformState, ComponentTransform } from '../types';
-import { DRAWING_CANVAS_SIZE } from '../constants';
+import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, TransformState, ComponentTransform } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import DrawingEditorHeader from './drawing/DrawingEditorHeader';
@@ -14,8 +13,7 @@ import { useGlyphEditSession } from '../hooks/drawing/useGlyphEditSession';
 import { useDrawingShortcuts } from '../hooks/drawing/useDrawingShortcuts';
 import { useImportLogic } from '../hooks/drawing/useImportLogic';
 import { useCanvasOperations } from '../hooks/drawing/useCanvasOperations';
-import { getAccurateGlyphBBox, generateCompositeGlyphData } from '../services/glyphRenderService';
-import { VEC } from '../utils/vectorUtils';
+import { useGlyphConstruction } from '../hooks/drawing/useGlyphConstruction';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
@@ -26,7 +24,6 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
   const { showNotification, modalOriginRect, checkAndSetFlag } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   const { dispatch: characterDispatch, allCharsByName } = useProject();
-  // FIX: Called useGlyphDataContext hook instead of referencing non-existent useGlyphData variable.
   const { dispatch: glyphDataDispatch } = useGlyphDataContext();
   const { state: rulesState } = useRules();
   const groups = rulesState.fontRules?.groups || {};
@@ -48,35 +45,15 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isUnlockConfirmOpen, setIsUnlockConfirmOpen] = useState(false);
   const [isRelinkConfirmOpen, setIsRelinkConfirmOpen] = useState(false);
-  const [isConstructionWarningOpen, setIsConstructionWarningOpen] = useState(false);
-  const [pendingConstruction, setPendingConstruction] = useState<any>(null);
   
   const modalRef = useRef<HTMLDivElement>(null);
   const animationTimeoutRef = useRef<number | null>(null);
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
   
-  const isLocked = !!character.link;
-  const isComposite = !!character.composite && character.composite.length > 0;
-
   const visibleCharactersForNav = useMemo(() => characterSet.characters.filter((c: any) => !c.hidden), [characterSet]);
   const currentIndex = visibleCharactersForNav.findIndex((c: any) => c.unicode === character.unicode);
   const prevCharacter = currentIndex > 0 ? visibleCharactersForNav[currentIndex - 1] : null;
   const nextCharacter = currentIndex < visibleCharactersForNav.length - 1 ? visibleCharactersForNav[currentIndex + 1] : null;
-
-  const sourceGlyphs = useMemo(() => {
-      const componentNames = character.link; 
-      if (!componentNames) return [];
-      return componentNames.map((name: any) => allCharsByName.get(name)).filter((c: any): c is Character => !!c);
-  }, [character, allCharsByName]);
-
-  const dependentGlyphs = useMemo(() => {
-      return allCharacterSets.flatMap(set => set.characters)
-          .filter(c => {
-              if (c.hidden || c.unicode === undefined) return false;
-              if (!c.link?.includes(character.name)) return false;
-              return isGlyphDrawn(allGlyphData.get(c.unicode));
-          });
-  }, [character, allCharacterSets, allGlyphData]);
 
   const triggerClose = useCallback((postAnimationCallback: () => void) => {
     if (modalOriginRect) {
@@ -110,101 +87,37 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
 
   const {
       handleCopy, handleCut, handlePaste, handleDeleteSelection, moveSelection,
+      handleApplyTransform,
       handleGroup, handleUngroup, canGroup, canUngroup
   } = useCanvasOperations({
       currentPaths, handlePathsChange, selectedPathIds, setSelectedPathIds,
-      clipboard, clipboardDispatch, showNotification, t
+      clipboard, clipboardDispatch, showNotification, t,
+      strokeThickness: settings.strokeThickness, setPreviewTransform
   });
 
-  const executeConstructionUpdate = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]) => {
-      if (character.unicode === undefined) return;
-      characterDispatch({
-          type: 'UPDATE_CHARACTER_SETS',
-          payload: (prevSets) => {
-              if (!prevSets) return null;
-              return prevSets.map(set => ({
-                  ...set,
-                  characters: set.characters.map(c => {
-                      if (c.unicode === character.unicode) {
-                          const updated = { ...c };
-                          if (type === 'drawing') {
-                              delete updated.link; delete updated.composite; delete updated.compositeTransform;
-                          } else if (type === 'link' || type === 'composite') {
-                              if (type === 'link') { updated.link = components; delete updated.composite; }
-                              else { updated.composite = components; delete updated.link; }
-                              if (transforms && transforms.length > 0) updated.compositeTransform = transforms;
-                              else delete updated.compositeTransform;
-                          }
-                          return updated;
-                      }
-                      return c;
-                  })
-              }));
-          }
-      });
-      onUpdateDependencies(character.unicode, (type === 'link' || type === 'composite') ? components : null);
-      if (type === 'link' || type === 'composite') {
-          const tempChar: Character = { ...character, link: type === 'link' ? components : undefined, composite: type === 'composite' ? components : undefined, compositeTransform: transforms };
-          const compositeData = generateCompositeGlyphData({ character: tempChar, allCharsByName, allGlyphData, settings, metrics, markAttachmentRules, allCharacterSets, groups });
-          if (compositeData) {
-              handlePathsChange(compositeData.paths);
-              // FIX: Explicitly typed the Map constructor and input parameter to resolve assignability error
-              glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev: Map<number, GlyphData>) => new Map<number, GlyphData>(prev).set(character.unicode!, compositeData) });
-          } else { handlePathsChange([]); }
-      }
-      showNotification(t('glyphRefreshedSuccess'), 'success');
-      setIsConstructionWarningOpen(false); setPendingConstruction(null);
-  };
+  const {
+      isLocked, isComposite, executeConstructionUpdate, handleSaveConstruction,
+      isConstructionWarningOpen, setIsConstructionWarningOpen, pendingConstruction, dependentsCount
+  } = useGlyphConstruction({
+      character, currentPaths, allCharsByName, allGlyphData, allCharacterSets, settings, metrics, 
+      markAttachmentRules, groups, characterDispatch, glyphDataDispatch, onUpdateDependencies, 
+      handlePathsChange, showNotification, t
+  });
 
-  const handleSaveConstruction = (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]) => {
-      const hasContent = currentPaths.length > 0;
-      if (!(isLocked || isComposite) && (type === 'link' || type === 'composite') && hasContent) {
-          setPendingConstruction({ type, components, transforms });
-          setIsConstructionWarningOpen(true);
-      } else { executeConstructionUpdate(type, components, transforms); }
-  };
-  
-  const dependentsCount = useMemo(() => {
-      if (!character || !allCharacterSets) return 0;
-      let count = 0;
-      allCharacterSets.forEach(set => {
-          set.characters.forEach(c => {
-              const components = c.link || c.composite;
-              if (components && components.includes(character.name)) count++;
+  const sourceGlyphs = useMemo(() => {
+      const componentNames = character.link; 
+      if (!componentNames) return [];
+      return componentNames.map((name: any) => allCharsByName.get(name)).filter((c: any): c is Character => !!c);
+  }, [character, allCharsByName]);
+
+  const dependentGlyphs = useMemo(() => {
+      return allCharacterSets.flatMap(set => set.characters)
+          .filter(c => {
+              if (c.hidden || c.unicode === undefined) return false;
+              if (!c.link?.includes(character.name)) return false;
+              return isGlyphDrawn(allGlyphData.get(c.unicode));
           });
-      });
-      return count;
-  }, [character, allCharacterSets]);
-
-  const handleApplyTransform = (transform: TransformState & { flipX?: boolean; flipY?: boolean }) => {
-      if (selectedPathIds.size === 0) return;
-      const selectedPaths = currentPaths.filter(p => selectedPathIds.has(p.id));
-      const bbox = getAccurateGlyphBBox(selectedPaths, settings.strokeThickness);
-      if (!bbox) return;
-      const center = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
-      const angleRad = (transform.rotate * Math.PI) / 180;
-      const sx = (transform.flipX ? -1 : 1) * transform.scale;
-      const sy = (transform.flipY ? -1 : 1) * transform.scale;
-      const transformPoint = (pt: Point) => {
-          let px = pt.x - center.x; let py = pt.y - center.y;
-          const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
-          const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
-          return { x: rx * sx + center.x, y: ry * sy + center.y };
-      };
-      const newPaths = currentPaths.map(p => {
-          if (!selectedPathIds.has(p.id)) return p;
-          const newP = { ...p, points: p.points.map(transformPoint) };
-          if (p.segmentGroups) {
-              newP.segmentGroups = p.segmentGroups.map(g => g.map(s => ({
-                  ...s, point: transformPoint(s.point),
-                  handleIn: { x: VEC.rotate(s.handleIn, angleRad).x * sx, y: VEC.rotate(s.handleIn, angleRad).y * sy },
-                  handleOut: { x: VEC.rotate(s.handleOut, angleRad).x * sx, y: VEC.rotate(s.handleOut, angleRad).y * sy }
-              })));
-          }
-          return newP;
-      });
-      handlePathsChange(newPaths); setPreviewTransform(null);
-  };
+  }, [character, allCharacterSets, allGlyphData]);
 
   useDrawingShortcuts({
       onUndo: undo, onRedo: redo, onCopy: handleCopy, onCut: handleCut, onPaste: handlePaste,
@@ -283,7 +196,6 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
         sourceGlyphs={sourceGlyphs} dependentGlyphs={dependentGlyphs} groups={groups}
         handleNavigationAttempt={handleNavigationAttempt}
         markAttachmentRules={markAttachmentRules}
-        // FIX: Pass required gridConfig prop to DrawingEditorWorkspace
         gridConfig={gridConfig}
       />
 

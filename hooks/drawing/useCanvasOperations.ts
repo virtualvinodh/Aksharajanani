@@ -1,9 +1,10 @@
 
 import { useCallback, useMemo } from 'react';
-import { Path, Point } from '../../types';
+import { Path, Point, TransformState } from '../../types';
 import { generateId } from '../drawingTools/types';
 import { VEC } from '../../utils/vectorUtils';
 import { deepClone } from '../../utils/cloneUtils';
+import { getAccurateGlyphBBox } from '../../services/glyphRenderService';
 
 interface UseCanvasOperationsProps {
     currentPaths: Path[];
@@ -14,11 +15,13 @@ interface UseCanvasOperationsProps {
     clipboardDispatch: any;
     showNotification: (msg: string) => void;
     t: (key: string) => string;
+    strokeThickness: number;
+    setPreviewTransform: (t: TransformState | null) => void;
 }
 
 export const useCanvasOperations = ({
     currentPaths, handlePathsChange, selectedPathIds, setSelectedPathIds,
-    clipboard, clipboardDispatch, showNotification, t
+    clipboard, clipboardDispatch, showNotification, t, strokeThickness, setPreviewTransform
 }: UseCanvasOperationsProps) => {
 
     const handleCopy = useCallback(() => {
@@ -31,14 +34,12 @@ export const useCanvasOperations = ({
             pathsToCopy = currentPaths.filter(p => selectedPathIds.has(p.id));
             showNotification(t('copiedSelection'));
         }
-        // OPTIMIZATION: Use deepClone
         clipboardDispatch({ type: 'SET_CLIPBOARD', payload: deepClone(pathsToCopy) });
     }, [currentPaths, selectedPathIds, clipboardDispatch, showNotification, t]);
 
     const handleCut = useCallback(() => {
         if (selectedPathIds.size === 0) return;
         const pathsToCut = currentPaths.filter(p => selectedPathIds.has(p.id));
-        // OPTIMIZATION: Use deepClone
         clipboardDispatch({ type: 'SET_CLIPBOARD', payload: deepClone(pathsToCut) });
         const newPaths = currentPaths.filter(p => !selectedPathIds.has(p.id));
         handlePathsChange(newPaths);
@@ -86,6 +87,49 @@ export const useCanvasOperations = ({
         handlePathsChange(movedPaths);
     }, [currentPaths, selectedPathIds, handlePathsChange]);
 
+    const handleApplyTransform = useCallback((transform: TransformState & { flipX?: boolean; flipY?: boolean }) => {
+        if (selectedPathIds.size === 0) return;
+        const selectedPaths = currentPaths.filter(p => selectedPathIds.has(p.id));
+        const bbox = getAccurateGlyphBBox(selectedPaths, strokeThickness);
+        if (!bbox) return;
+
+        const center = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
+        const angleRad = (transform.rotate * Math.PI) / 180;
+        const sx = (transform.flipX ? -1 : 1) * transform.scale;
+        const sy = (transform.flipY ? -1 : 1) * transform.scale;
+
+        const transformPoint = (pt: Point) => {
+            let px = pt.x - center.x;
+            let py = pt.y - center.y;
+            const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
+            const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
+            return { x: rx * sx + center.x, y: ry * sy + center.y };
+        };
+
+        const newPaths = currentPaths.map(p => {
+            if (!selectedPathIds.has(p.id)) return p;
+            const newP = { ...p, points: p.points.map(transformPoint) };
+            if (p.segmentGroups) {
+                newP.segmentGroups = p.segmentGroups.map(g => g.map(s => ({
+                    ...s,
+                    point: transformPoint(s.point),
+                    handleIn: { 
+                        x: VEC.rotate(s.handleIn, angleRad).x * sx, 
+                        y: VEC.rotate(s.handleIn, angleRad).y * sy 
+                    },
+                    handleOut: { 
+                        x: VEC.rotate(s.handleOut, angleRad).x * sx, 
+                        y: VEC.rotate(s.handleOut, angleRad).y * sy 
+                    }
+                })));
+            }
+            return newP;
+        });
+
+        handlePathsChange(newPaths);
+        setPreviewTransform(null);
+    }, [currentPaths, selectedPathIds, strokeThickness, handlePathsChange, setPreviewTransform]);
+
     const handleGroup = useCallback(() => {
         const newGroupId = generateId();
         const newPaths = currentPaths.map(p => selectedPathIds.has(p.id) ? { ...p, groupId: newGroupId } : p);
@@ -116,6 +160,7 @@ export const useCanvasOperations = ({
 
     return {
         handleCopy, handleCut, handlePaste, handleDeleteSelection, moveSelection,
+        handleApplyTransform,
         handleGroup, handleUngroup, canGroup, canUngroup
     };
 };
