@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { BoundingBox, Point, TransformState } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -34,10 +33,8 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
   const [rotateInput, setRotateInput] = useState('0');
   const [scaleInput, setScaleInput] = useState('1.0');
   
-  // Detect mobile screens to switch between docking modes
   const isMobile = useMediaQuery('(max-width: 768px)');
 
-  // Reset inputs when selection changes (new selection box)
   useEffect(() => {
     if (!previewTransform) {
       setRotateInput('0');
@@ -95,11 +92,9 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
     }
   };
 
-  // --- Positioning Logic ---
   let style: React.CSSProperties = {};
 
   if (isMobile) {
-    // Mobile: Absolute docking at the bottom center of the container
     style = {
         position: 'absolute', 
         bottom: '16px', 
@@ -114,9 +109,9 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
     };
   } else {
     // Desktop: Contextual positioning relative to selection
+    // Math: internal_design_units -> visible_canvas_pixels
     const domScale = internalCanvasSize > 0 ? containerWidth / internalCanvasSize : 1;
     
-    // Coordinates in DOM pixels
     const domSelLeft = (selectionBox.x * zoom + viewOffset.x) * domScale;
     const domSelTop = (selectionBox.y * zoom + viewOffset.y) * domScale;
     const domSelWidth = (selectionBox.width * zoom) * domScale;
@@ -124,19 +119,17 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
     const domSelCenterX = domSelLeft + domSelWidth / 2;
 
     const TOOLBAR_HEIGHT = 44; 
-    // Clamp 30 pixels above the bounding box
-    const GAP = 30; 
-    const VISUAL_MARGIN_TOP = 10;
-    
-    const TOOLBAR_HALF_WIDTH = 110; // Half-width guess for clamping
+    const GAP = 25; 
+    const VISUAL_MARGIN_CONTAINER = 10;
+    const TOOLBAR_HALF_WIDTH = 110; 
 
-    // Calculate intended top position (above selection)
+    // Preferred position: Above the selection
     let top = domSelTop - TOOLBAR_HEIGHT - GAP;
 
-    // Clamp to viewport top edge to keep it visible
-    top = Math.max(VISUAL_MARGIN_TOP, top);
+    // Fallback: If toolbar goes above container top, place it inside the top of container
+    top = Math.max(VISUAL_MARGIN_CONTAINER, top);
 
-    // Clamp Horizontal Position to keep it inside the container
+    // Horizontal clamping: Ensure it stays within container width
     let left = domSelCenterX;
     left = Math.max(TOOLBAR_HALF_WIDTH, Math.min(left, containerWidth - TOOLBAR_HALF_WIDTH));
 
@@ -159,9 +152,8 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
     <div
       className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded-full shadow-xl border border-gray-200 dark:border-gray-700 animate-pop-in overflow-x-auto no-scrollbar"
       style={style}
-      onMouseDown={(e) => e.stopPropagation()} // Prevent canvas drag start
+      onMouseDown={(e) => e.stopPropagation()} 
     >
-      {/* Edit Points Button */}
        <div className="flex items-center border-r border-gray-200 dark:border-gray-700 pr-2 mr-1">
         <button
             onClick={onEditMode}
@@ -172,7 +164,6 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         </button>
       </div>
 
-      {/* Flip Controls */}
       <div className="flex items-center gap-1 border-r border-gray-200 dark:border-gray-700 pr-2">
         <button 
             onClick={() => handleFlip('X')} 
@@ -190,7 +181,6 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         </button>
       </div>
 
-      {/* Rotation */}
       <div className="flex items-center gap-1">
         <span className="text-xs text-gray-500 font-medium">R°</span>
         <input
@@ -203,7 +193,6 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         />
       </div>
 
-      {/* Scale */}
       <div className="flex items-center gap-1">
         <span className="text-xs text-gray-500 font-medium">S</span>
         <input
@@ -217,7 +206,6 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         />
       </div>
 
-      {/* Apply Button (Only visible if changes made) */}
       {(previewTransform && (previewTransform.rotate !== 0 || previewTransform.scale !== 1.0 || previewTransform.flipX || previewTransform.flipY)) && (
         <button
           onClick={commitTransform}

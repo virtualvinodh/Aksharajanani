@@ -42,7 +42,6 @@ interface DrawingCanvasProps {
   isInitiallyDrawn?: boolean;
   previewTransform?: TransformState | null;
   disableAutoFit?: boolean;
-  // FIX: Added missing properties to DrawingCanvasProps
   disableTransformations?: boolean;
   lockedMessage?: string;
   transformMode?: 'all' | 'move-only';
@@ -56,7 +55,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     lsb, rsb, onMetricsChange, backgroundPaths, backgroundPathsColor, showBearingGuides = true,
     calligraphyAngle = 45, isInitiallyDrawn = false,
     previewTransform = null, disableAutoFit = false,
-    // FIX: Destructure added props
     disableTransformations, lockedMessage, transformMode, movementConstraint
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -75,7 +73,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     calligraphyAngle: calligraphyAngle as 45 | 30 | 15,
     lsb, rsb, onMetricsChange, metrics,
     disableAutoFit,
-    // FIX: Pass added props to useDrawingCanvas hook
     disableTransformations, lockedMessage, transformMode, movementConstraint
   });
 
@@ -257,12 +254,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.restore();
     }
 
+    // GHOST HINT LOGIC
+    // We only show the hint if GridOutlines is ON AND the glyph was empty on load.
     if (settings.showGridOutlines && !isInitiallyDrawn) {
-      const textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
+      const textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)';
       const guideFontFamily = getComputedStyle(document.documentElement).getPropertyValue('--guide-font-family').trim() || 'sans-serif';
-      ctx.fillStyle = textColor; ctx.font = `bold ${gridConfig.characterNameSize}px ${guideFontFamily}`;
+      const hintSize = settings.gridGhostSize ?? gridConfig.characterNameSize;
+      ctx.fillStyle = textColor; ctx.font = `bold ${hintSize}px ${guideFontFamily}`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      ctx.fillText(currentCharacter.name, width / 2, metrics.baseLineY);
+      ctx.fillText(currentCharacter.name, 500, metrics.baseLineY);
     }
     
     ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
@@ -373,6 +373,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         const center = { x: x + width / 2, y: y + height / 2 };
         const angleRad = (previewTransform.rotate * Math.PI) / 180;
         
+        const sx = (previewTransform.flipX ? -1 : 1) * previewTransform.scale;
+        const sy = (previewTransform.flipY ? -1 : 1) * previewTransform.scale;
+
         pathsToRender = currentPaths.map(p => {
             if (!selectedPathIds.has(p.id)) return p;
             const transformPoint = (pt: Point) => {
@@ -380,8 +383,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 let py = pt.y - center.y;
                 const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
                 const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
-                const sx = (previewTransform.flipX ? -1 : 1) * previewTransform.scale;
-                const sy = (previewTransform.flipY ? -1 : 1) * previewTransform.scale;
                 px = rx * sx;
                 py = ry * sy;
                 return { x: px + center.x, y: py + center.y };
@@ -389,15 +390,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             const newP = { ...p, points: p.points.map(transformPoint) };
             if (p.segmentGroups) {
                 newP.segmentGroups = p.segmentGroups.map(g => g.map(s => {
-                    const sx = (previewTransform.flipX ? -1 : 1) * previewTransform.scale;
-                    const sy = (previewTransform.flipY ? -1 : 1) * previewTransform.scale;
                     const hInRot = VEC.rotate(s.handleIn, angleRad);
                     const hOutRot = VEC.rotate(s.handleOut, angleRad);
+                    const hInTransformed = { x: hInRot.x * sx, y: hInRot.y * sy };
+                    const hOutTransformed = { x: hOutRot.x * sx, y: hOutRot.y * sy };
                     return {
                         ...s,
                         point: transformPoint(s.point),
-                        handleIn: { x: hInRot.x * sx, y: hInRot.y * sy },
-                        handleOut: { x: hOutRot.x * sx, y: hOutRot.y * sy }
+                        handleIn: hInTransformed,
+                        handleOut: hOutTransformed
                     };
                 }));
             }

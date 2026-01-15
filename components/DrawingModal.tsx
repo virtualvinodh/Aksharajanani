@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment, TransformState, ComponentTransform } from '../types';
 import { DRAWING_CANVAS_SIZE } from '../constants';
@@ -26,6 +25,7 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
   const { showNotification, modalOriginRect, checkAndSetFlag } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   const { dispatch: characterDispatch, allCharsByName } = useProject();
+  // FIX: Called useGlyphDataContext hook instead of referencing non-existent useGlyphData variable.
   const { dispatch: glyphDataDispatch } = useGlyphDataContext();
   const { state: rulesState } = useRules();
   const groups = rulesState.fontRules?.groups || {};
@@ -147,7 +147,8 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
           const compositeData = generateCompositeGlyphData({ character: tempChar, allCharsByName, allGlyphData, settings, metrics, markAttachmentRules, allCharacterSets, groups });
           if (compositeData) {
               handlePathsChange(compositeData.paths);
-              glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev) => new Map(prev).set(character.unicode!, compositeData) });
+              // FIX: Explicitly typed the Map constructor and input parameter to resolve assignability error
+              glyphDataDispatch({ type: 'UPDATE_MAP', payload: (prev: Map<number, GlyphData>) => new Map<number, GlyphData>(prev).set(character.unicode!, compositeData) });
           } else { handlePathsChange([]); }
       }
       showNotification(t('glyphRefreshedSuccess'), 'success');
@@ -266,7 +267,7 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
         viewOffset={viewOffset} setViewOffset={setViewOffset} settings={settings}
         allGlyphData={allGlyphData} allCharacterSets={allCharacterSets} allCharsByName={allCharsByName}
         lsb={lsb} rsb={rsb} onMetricsChange={(l, r) => { setLsb(l); setRsb(r); }}
-        isLargeScreen={isLargeScreen} isTransitioning={isTransitioning} wasEmptyOnLoad={!wasEmptyOnLoad}
+        isLargeScreen={isLargeScreen} isTransitioning={isTransitioning} wasEmptyOnLoad={wasEmptyOnLoad}
         isLocked={isLocked} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
         selectedPathIds={selectedPathIds} setSelectedPathIds={setSelectedPathIds}
         isImageSelected={isImageSelected} setIsImageSelected={setIsImageSelected}

@@ -1,5 +1,3 @@
-
-
 export interface Point {
   x: number;
   y: number;
@@ -135,6 +133,7 @@ export interface AppSettings {
   pathSimplification: number;
   fontName: string;
   showGridOutlines: boolean;
+  gridGhostSize?: number;
   isAutosaveEnabled: boolean;
   editorMode: 'simple' | 'advanced';
   isPrefillEnabled?: boolean;

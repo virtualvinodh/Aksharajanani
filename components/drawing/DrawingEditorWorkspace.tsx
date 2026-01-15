@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import DrawingCanvas from '../DrawingCanvas';
 import DrawingToolbar from '../DrawingToolbar';
@@ -63,25 +62,26 @@ interface DrawingEditorWorkspaceProps {
     groups: Record<string, string[]>;
     handleNavigationAttempt: (char: Character | null) => void;
     markAttachmentRules: MarkAttachmentRules | null;
+    gridConfig: { characterNameSize: number };
 }
 
 const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) => {
-    const canvasWrapperRef = useRef<HTMLDivElement>(null);
+    const canvasContainerRef = useRef<HTMLDivElement>(null);
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
-        if (canvasWrapperRef.current) {
+        if (canvasContainerRef.current) {
             const updateSize = () => {
-                if (canvasWrapperRef.current) {
+                if (canvasContainerRef.current) {
                     setContainerSize({ 
-                        width: canvasWrapperRef.current.clientWidth, 
-                        height: canvasWrapperRef.current.clientHeight 
+                        width: canvasContainerRef.current.clientWidth, 
+                        height: canvasContainerRef.current.clientHeight 
                     });
                 }
             };
             updateSize();
             const ro = new ResizeObserver(updateSize);
-            ro.observe(canvasWrapperRef.current);
+            ro.observe(canvasContainerRef.current);
             return () => ro.disconnect();
         }
     }, []);
@@ -109,7 +109,7 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
         <main className={mainContentClasses}>
             <div className="flex-1 flex flex-col items-center justify-center w-full h-full min-h-0 relative">
                 {/* Hero Canvas Area */}
-                <div className="flex-1 w-full min-h-0 flex items-center justify-center p-4 lg:p-12 overflow-hidden relative" ref={canvasWrapperRef}>
+                <div className="flex-1 w-full min-h-0 flex items-center justify-center p-4 lg:p-12 overflow-hidden relative">
                     
                     {/* Centered Canvas Box Container: The Toolbar is anchored HERE with a generous margin */}
                     <div className="relative flex items-center justify-center h-full max-w-full">
@@ -128,7 +128,10 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
                             </div>
                         )}
 
-                        <div className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 max-h-full max-w-full aspect-square">
+                        <div 
+                            ref={canvasContainerRef}
+                            className="rounded-xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 max-h-full max-w-full aspect-square shadow-2xl"
+                        >
                             {activeSelectionBBox && (
                                 <ContextualToolbar 
                                     selectionBox={activeSelectionBBox} zoom={props.zoom} viewOffset={props.viewOffset}
@@ -143,7 +146,7 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
                                 tool={props.currentTool} onToolChange={props.setCurrentTool}
                                 zoom={props.zoom} setZoom={props.setZoom} viewOffset={props.viewOffset} setViewOffset={props.setViewOffset}
                                 settings={props.settings} allGlyphData={props.allGlyphData} allCharacterSets={props.allCharacterSets} currentCharacter={props.character}
-                                gridConfig={{ characterNameSize: 450 }} backgroundImage={props.backgroundImage} backgroundImageOpacity={props.backgroundImageOpacity}
+                                gridConfig={props.gridConfig} backgroundImage={props.backgroundImage} backgroundImageOpacity={props.backgroundImageOpacity}
                                 imageTransform={props.imageTransform} onImageTransformChange={props.setImageTransform}
                                 selectedPathIds={props.selectedPathIds} onSelectionChange={props.setSelectedPathIds}
                                 isImageSelected={props.isImageSelected} onImageSelectionChange={props.setIsImageSelected}

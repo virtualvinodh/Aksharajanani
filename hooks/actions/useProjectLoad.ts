@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -8,7 +7,7 @@ import { usePositioning } from '../../contexts/PositioningContext';
 import { useRules } from '../../contexts/RulesContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { ScriptConfig, ProjectData, Character, CharacterSet, CharacterDefinition, AttachmentClass, RecommendedKerning, MarkAttachmentRules, PositioningRules } from '../../types';
+import { ScriptConfig, ProjectData, Character, CharacterSet, CharacterDefinition, AttachmentClass, RecommendedKerning, MarkAttachmentRules, PositioningRules, AppSettings } from '../../types';
 import { FONT_META_DEFAULTS } from '../../constants';
 
 interface UseProjectLoadProps {
@@ -149,6 +148,7 @@ export const useProjectLoad = ({
             allCharacterLists.forEach(char => {
                 const codepoint = char.unicode ?? (([...char.name].length === 1 ? char.name.codePointAt(0) : undefined));
                 if (codepoint !== undefined && codepoint >= 0xE000 && codepoint <= 0xF8FF) {
+                    // FIX: Corrected typo 'pCounter' to 'puaCounter'
                     puaCounter = Math.max(puaCounter, codepoint);
                 }
             });
@@ -288,7 +288,13 @@ export const useProjectLoad = ({
 
             const baseSettings = { ...currentScript.defaults };
             if (projectToLoad) {
-                const newSettings = { ...FONT_META_DEFAULTS, ...baseSettings, showUnicodeValues: projectToLoad.settings.showUnicodeValues ?? false, ...projectToLoad.settings };
+                const newSettings: AppSettings = { 
+                    ...FONT_META_DEFAULTS, 
+                    ...baseSettings, 
+                    showUnicodeValues: projectToLoad.settings.showUnicodeValues ?? false, 
+                    gridGhostSize: projectToLoad.settings.gridGhostSize ?? currentScript.grid.characterNameSize,
+                    ...projectToLoad.settings 
+                };
                 newSettings.testPage = { ...currentScript.testPage, ...(newSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(newSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(newSettings.testPage?.lineHeight || {}) } };
                 if (!newSettings.customSampleText) newSettings.customSampleText = sampleText;
                 if (!newSettings.description) newSettings.description = `${newSettings.fontName} - ${t(currentScript.nameKey)}`;
@@ -306,7 +312,13 @@ export const useProjectLoad = ({
             } else {
                 const savedSettingsRaw = localStorage.getItem(`font-creator-settings-${currentScript.id}`);
                 const savedSettings = savedSettingsRaw ? JSON.parse(savedSettingsRaw) : {};
-                const newSettings = { ...FONT_META_DEFAULTS, ...baseSettings, showUnicodeValues: false, ...savedSettings };
+                const newSettings: AppSettings = { 
+                    ...FONT_META_DEFAULTS, 
+                    ...baseSettings, 
+                    showUnicodeValues: false, 
+                    gridGhostSize: currentScript.grid.characterNameSize,
+                    ...savedSettings 
+                };
                 newSettings.testPage = { ...currentScript.testPage, ...(savedSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(savedSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(savedSettings.testPage?.lineHeight || {}) } };
                 newSettings.customSampleText = sampleText;
 

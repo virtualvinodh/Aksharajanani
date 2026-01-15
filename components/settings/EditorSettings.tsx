@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AppSettings, GuideFont } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -19,6 +18,10 @@ const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsCha
     
     const handleToggleChange = (key: keyof AppSettings) => (e: React.ChangeEvent<HTMLInputElement>) => {
         onSettingsChange(prev => ({ ...prev, [key]: e.target.checked }));
+    };
+
+    const handleNumberChange = (key: keyof AppSettings) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        onSettingsChange(prev => ({ ...prev, [key]: parseInt(e.target.value, 10) }));
     };
 
     const handleGuideFontChange = (key: keyof GuideFont) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,6 +68,19 @@ const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsCha
                                 {t('themeDark')}
                             </button>
                         </div>
+                    </div>
+
+                    <div className="max-w-md pt-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {t('characterNameSize')}: <span className="font-bold text-indigo-600 dark:text-indigo-400">{settings.gridGhostSize}</span>
+                        </label>
+                        <input 
+                            type="range" 
+                            min="100" max="1000" 
+                            value={settings.gridGhostSize ?? 450} 
+                            onChange={handleNumberChange('gridGhostSize')} 
+                            className="w-full accent-indigo-600 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" 
+                        />
                     </div>
                     
                     <div className="flex items-center gap-6 flex-wrap pt-2">
