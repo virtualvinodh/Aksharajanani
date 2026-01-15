@@ -16,7 +16,7 @@ interface PositioningEditorWorkspaceProps {
     zoom: number;
     setZoom: (val: number) => void;
     viewOffset: Point;
-    setViewOffset: (val: Point) => void;
+    setViewOffset: (offset: Point) => void;
     onZoom: (factor: number) => void;
     onReuseClick: () => void;
     canEdit: boolean;
@@ -29,7 +29,7 @@ interface PositioningEditorWorkspaceProps {
     manualX: string;
     manualY: string;
     onManualChange: (axis: 'x' | 'y', value: string) => void;
-    onManualCommit: () => void;
+    onManualCommit: (x?: string, y?: string) => void;
     setIsInputFocused: (focused: boolean) => void;
 
     // Selection Props
@@ -163,6 +163,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                                 characterSets={characterSets}
                                 groups={groups}
                                 isExpanded={isStripExpanded}
+                                // FIX: Use the correct prop name setIsStripExpanded instead of the non-existent setIsExpanded
                                 setIsExpanded={setIsStripExpanded}
                                 activeClass={activeAttachmentClass}
                                 hasDualContext={hasDualContext}

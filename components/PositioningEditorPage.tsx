@@ -13,7 +13,6 @@ import { useProject } from '../contexts/ProjectContext';
 import PositioningEditorHeader from './positioning/PositioningEditorHeader';
 import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace';
 import { CloseIcon } from '../constants';
-// FIX: Added missing VEC import
 import { VEC } from '../utils/vectorUtils';
 import { usePositioningSession } from '../hooks/positioning/usePositioningSession';
 import { deepClone } from '../utils/cloneUtils';
@@ -152,7 +151,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 viewOffset={session.viewOffset} setViewOffset={session.setViewOffset} onZoom={(f) => { const nZ = Math.max(0.1, Math.min(10, session.zoom*f)); const c = DRAWING_CANVAS_SIZE/2; session.setViewOffset({ x: c - (c - session.viewOffset.x) * (nZ / session.zoom), y: c - (c - session.viewOffset.y) * (nZ / session.zoom) }); session.setZoom(nZ); }}
                 onReuseClick={() => setIsReusePanelOpen(!isReusePanelOpen)} canEdit={session.canEdit} 
                 lockedMessage={!session.canEdit ? t('This pair is synced to {pivot}. Unlink to edit this specific pair, or edit {pivot} to update the whole class.', { pivot: session.pivotName || 'Class Representative' }) : undefined}
-                // FIX: Explicitly cast movementConstraint string result to specific union type literal to fix assignability error
                 movementConstraint={session.movementConstraint as 'horizontal' | 'vertical' | 'none'} settings={props.settings} metrics={props.metrics} showStrip={!!session.activeAttachmentClass}
                 classSiblings={classSiblings} activePair={{ base: props.baseChar, mark: props.markChar, ligature: props.targetLigature }} 
                 pivotChar={session.isPivot ? (session.activeAttachmentClass?.name ? null : props.markChar) : (session.pivotName ? props.allChars.get(session.pivotName) : null)}
@@ -162,7 +160,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 activeAttachmentClass={session.activeAttachmentClass} hasDualContext={session.hasDualContext} activeClassType={session.activeClassType} onToggleContext={session.setOverrideClassType}
                 isLargeScreen={isLargeScreen}
                 manualX={session.manualX} manualY={session.manualY} onManualChange={(a, v) => a === 'x' ? session.setManualX(v) : session.setManualY(v)} onManualCommit={session.handleManualCommit}
-                // FIX: Added missing setIsInputFocused prop required by PositioningEditorWorkspace
                 setIsInputFocused={session.setIsInputFocused}
                 selectedPathIds={session.selectedPathIds} onSelectionChange={session.setSelectedPathIds}
             />

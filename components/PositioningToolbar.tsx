@@ -13,7 +13,7 @@ interface PositioningToolbarProps {
   manualX: string;
   manualY: string;
   onManualChange: (axis: 'x' | 'y', value: string) => void;
-  onManualCommit: () => void;
+  onManualCommit: (x?: string, y?: string) => void;
   setIsInputFocused: (focused: boolean) => void;
   canEdit: boolean;
 }
@@ -47,7 +47,7 @@ const CoordinateInput: React.FC<{
     axis: 'x' | 'y';
     value: string;
     onChange: (v: string) => void;
-    onCommit: () => void;
+    onCommit: (val: string) => void;
     onFocus: (focused: boolean) => void;
     disabled: boolean;
 }> = ({ axis, value, onChange, onCommit, onFocus, disabled }) => {
@@ -68,18 +68,18 @@ const CoordinateInput: React.FC<{
                     const val = e.target.value;
                     setLocalValue(val);
                     onChange(val);
-                    onCommit(); // Live Update
+                    onCommit(val); // Trigger immediate calculation in session hook
                 }}
                 onFocus={() => onFocus(true)}
                 onBlur={() => {
                     onChange(localValue);
-                    onCommit();
+                    onCommit(localValue);
                     onFocus(false);
                 }}
                 onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                         onChange(localValue);
-                        onCommit();
+                        onCommit(localValue);
                         e.currentTarget.blur();
                     }
                 }}
@@ -133,8 +133,8 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({
       <div className={`${isVertical ? 'h-px w-full my-1' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
       <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2`}>
-          <CoordinateInput axis="x" value={manualX} onChange={v => onManualChange('x', v)} onCommit={onManualCommit} onFocus={setIsInputFocused} disabled={!canEdit} />
-          <CoordinateInput axis="y" value={manualY} onChange={v => onManualChange('y', v)} onCommit={onManualCommit} onFocus={setIsInputFocused} disabled={!canEdit} />
+          <CoordinateInput axis="x" value={manualX} onChange={v => onManualChange('x', v)} onCommit={(val) => onManualCommit(val, undefined)} onFocus={setIsInputFocused} disabled={!canEdit} />
+          <CoordinateInput axis="y" value={manualY} onChange={v => onManualChange('y', v)} onCommit={(val) => onManualCommit(undefined, val)} onFocus={setIsInputFocused} disabled={!canEdit} />
       </div>
     </div>
   );
