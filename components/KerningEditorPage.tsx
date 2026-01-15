@@ -79,8 +79,8 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
     useEffect(() => {
         if (containerSize.width === 0 || containerSize.height === 0) return;
         
-        // Logical aspect ratio requested: 2500 / 1000 = 2.5
-        const targetRatio = 2.5;
+        // Logical aspect ratio requested: 1.5
+        const targetRatio = 1.5;
         let w = containerSize.width * 0.95;
         let h = w / targetRatio;
         
@@ -95,8 +95,9 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = ({
         
         setCanvasDisplaySize({ width: finalWidth, height: finalHeight });
         
-        // Base scale maps our logical units (2500 width) to visual pixels
-        setBaseScale(finalWidth / 2500);
+        // Base scale maps our logical units (1500 width at 1.5 ratio) to visual pixels
+        // Logical Width = Ratio * Height = 1.5 * 1000 = 1500
+        setBaseScale(finalWidth / 1500);
     }, [containerSize]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -57,9 +57,9 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
         const finalScale = baseScale * zoom;
 
         // Centering Logic:
-        // We use a 2500x1000 logical design area.
-        // We center the design origin such that X=1250 is in the visual center of the canvas.
-        const tx = (width / 2) - (1250 * finalScale) + viewOffset.x;
+        // For a 1.5 ratio, we use 1500x1000 logical design area.
+        // We center the design origin such that X=750 is in the visual center of the canvas.
+        const tx = (width / 2) - (750 * finalScale) + viewOffset.x;
         // Y=500 is the center of the 1000-unit height (0 to 1000)
         const ty = (height / 2) - (500 * finalScale) + viewOffset.y;
 
@@ -99,8 +99,8 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
         ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
         ctx.lineWidth = 1.5 / finalScale; 
         ctx.setLineDash([8 / finalScale, 6 / finalScale]);
-        ctx.beginPath(); ctx.moveTo(-500, metrics.topLineY); ctx.lineTo(3000, metrics.topLineY); ctx.stroke();
-        ctx.beginPath(); ctx.setLineDash([]); ctx.moveTo(-500, metrics.baseLineY); ctx.lineTo(3000, metrics.baseLineY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-500, metrics.topLineY); ctx.lineTo(2000, metrics.topLineY); ctx.stroke();
+        ctx.beginPath(); ctx.setLineDash([]); ctx.moveTo(-500, metrics.baseLineY); ctx.lineTo(2000, metrics.baseLineY); ctx.stroke();
 
         // Standardized Colors
         const referenceGrey = theme === 'dark' ? '#4B5563' : '#94A3B8'; // Dimmed first letter
