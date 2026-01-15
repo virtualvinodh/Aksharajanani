@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, Segment, TransformState, ComponentTransform } from '../types';
 import { DRAWING_CANVAS_SIZE } from '../constants';
@@ -282,6 +283,8 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
         sourceGlyphs={sourceGlyphs} dependentGlyphs={dependentGlyphs} groups={groups}
         handleNavigationAttempt={handleNavigationAttempt}
         markAttachmentRules={markAttachmentRules}
+        // FIX: Pass required gridConfig prop to DrawingEditorWorkspace
+        gridConfig={gridConfig}
       />
 
       <ImageControlPanel backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity} setBackgroundImageOpacity={setBackgroundImageOpacity} onClearImage={() => { setBackgroundImage(null); setImageTransform(null); }} />

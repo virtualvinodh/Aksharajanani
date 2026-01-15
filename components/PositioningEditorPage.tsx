@@ -1,23 +1,23 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+
+import React, { useState, useMemo, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { DRAWING_CANVAS_SIZE } from '../constants';
-import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Path, Point, PositioningRules, CharacterSet, AttachmentClass, AttachmentPoint } from '../types';
-import { calculateDefaultMarkOffset, getAccurateGlyphBBox, resolveAttachmentRule, getAttachmentPointCoords } from '../services/glyphRenderService';
-import { updatePositioningAndCascade } from '../services/positioningService';
-import { isGlyphDrawn } from '../utils/glyphUtils';
+import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Point, PositioningRules, CharacterSet } from '../types';
 import ReusePreviewCard from './ReusePreviewCard';
 import UnsavedChangesModal from './UnsavedChangesModal';
-import { VEC } from '../utils/vectorUtils';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import Modal from './Modal';
-import { deepClone } from '../utils/cloneUtils';
 import { useRules } from '../contexts/RulesContext';
-import { expandMembers } from '../services/groupExpansionService';
 import { useProject } from '../contexts/ProjectContext';
 import PositioningEditorHeader from './positioning/PositioningEditorHeader';
 import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace';
 import { CloseIcon } from '../constants';
+// FIX: Added missing VEC import
+import { VEC } from '../utils/vectorUtils';
+import { usePositioningSession } from '../hooks/positioning/usePositioningSession';
+import { deepClone } from '../utils/cloneUtils';
+import { expandMembers } from '../services/groupExpansionService';
 
 interface PositioningEditorPageProps {
     baseChar: Character;
@@ -42,330 +42,129 @@ interface PositioningEditorPageProps {
     allLigaturesByKey: Map<string, Character>;
 }
 
-const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
-    baseChar, markChar, targetLigature, glyphDataMap, markPositioningMap, onSave, onClose, onReset, settings, metrics, markAttachmentRules, positioningRules, allChars,
-    allPairs, currentIndex, onNavigate, setEditingPair, characterSets, glyphVersion, allLigaturesByKey
-}) => {
+const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     const { t } = useLocale();
     const { showNotification } = useLayout();
     const { state: rulesState } = useRules();
     const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
-    
-    const { 
-        markAttachmentClasses, setMarkAttachmentClasses,
-        baseAttachmentClasses, setBaseAttachmentClasses 
-    } = useProject();
-
-    const [markPaths, setMarkPaths] = useState<Path[]>([]);
-    const [initialMarkPaths, setInitialMarkPaths] = useState<Path[]>([]);
-    const [selectedPathIds, setSelectedPathIds] = useState<Set<string>>(new Set());
-    
-    const [isReusePanelOpen, setIsReusePanelOpen] = useState(false);
-    const autosaveTimeout = useRef<number | null>(null);
-    const [zoom, setZoom] = useState(1);
-    const [viewOffset, setViewOffset] = useState<Point>({ x: 0, y: 0 });
-    const [pageTool, setPageTool] = useState<'select' | 'pan'>('select');
-    
-    const [isLinked, setIsLinked] = useState(true);
-    const [currentOffset, setCurrentOffset] = useState<Point>({ x: 0, y: 0 });
-    const [overrideClassType, setOverrideClassType] = useState<'mark' | 'base' | null>(null);
-    const [isStripExpanded, setIsStripExpanded] = useState(false);
-    
-    const [lsb, setLsb] = useState<number | undefined>(targetLigature.lsb);
-    const [rsb, setRsb] = useState<number | undefined>(targetLigature.rsb);
-    const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
-
-    const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
-    const [pendingNavigation, setPendingNavigation] = useState<'prev' | 'next' | 'back' | null>(null);
-    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
-
-    const [manualX, setManualX] = useState<string>('0');
-    const [manualY, setManualY] = useState<string>('0');
-    const [isInputFocused, setIsInputFocused] = useState(false);
-
-    const pairIdentifier = `${baseChar.unicode}-${markChar.unicode}`;
-    const pairNameKey = `${baseChar.name}-${markChar.name}`;
-    const lastPairIdentifierRef = useRef<string | null>(null);
+    const { markAttachmentClasses, setMarkAttachmentClasses, baseAttachmentClasses, setBaseAttachmentClasses } = useProject();
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
-    const isPositioned = useMemo(() => markPositioningMap.has(pairIdentifier), [markPositioningMap, pairIdentifier]);
-    
-    const parentRule = useMemo(() => {
-        if (!positioningRules) return null;
-        return positioningRules.find(rule => 
-            expandMembers(rule.base, groups, characterSets).includes(baseChar.name) && 
-            expandMembers(rule.mark, groups, characterSets).includes(markChar.name)
+    const [isReusePanelOpen, setIsReusePanelOpen] = useState(false);
+    const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
+    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+    const [isStripExpanded, setIsStripExpanded] = useState(false);
+    const [pageTool, setPageTool] = useState<'select' | 'pan'>('select');
+
+    const session = usePositioningSession({
+        ...props,
+        groups,
+        markAttachmentClasses,
+        baseAttachmentClasses,
+        allPairsCount: props.allPairs.length
+    });
+
+    const isPositioned = useMemo(() => props.markPositioningMap.has(`${props.baseChar.unicode}-${props.markChar.unicode}`), [props.markPositioningMap, props.baseChar, props.markChar]);
+    const isGsubPair = useMemo(() => {
+        if (!props.positioningRules) return false;
+        const rule = props.positioningRules.find(r => 
+            expandMembers(r.base, groups, props.characterSets).includes(props.baseChar.name) && 
+            expandMembers(r.mark, groups, props.characterSets).includes(props.markChar.name)
         );
-    }, [positioningRules, baseChar, markChar, groups, characterSets]);
-
-    const isGsubPair = !!parentRule?.gsub;
-
-    const { pivotName, isPivot, activeAttachmentClass, activeClassType, hasDualContext } = useMemo(() => {
-        let mClass = markAttachmentClasses?.find(c => expandMembers(c.members, groups, characterSets).includes(markChar.name));
-        let bClass = baseAttachmentClasses?.find(c => expandMembers(c.members, groups, characterSets).includes(baseChar.name));
-        const hasDual = !!(mClass && bClass);
-        let targetType: 'mark' | 'base' | null = null;
-        let activeClass: AttachmentClass | undefined;
-        if (overrideClassType) {
-             if (overrideClassType === 'mark' && mClass) { targetType = 'mark'; activeClass = mClass; }
-             else if (overrideClassType === 'base' && bClass) { targetType = 'base'; activeClass = bClass; }
-        }
-        if (!activeClass) {
-             if (mClass) { targetType = 'mark'; activeClass = mClass; }
-             else if (bClass) { targetType = 'base'; activeClass = bClass; }
-        }
-        let pName: string | undefined;
-        let isP = false;
-        if (activeClass && targetType) {
-             const members = expandMembers(activeClass.members, groups, characterSets);
-             const effectiveLeader = members.find(memberName => {
-                 const pairKey = targetType === 'mark' ? `${baseChar.name}-${memberName}` : `${memberName}-${markChar.name}`;
-                 return !activeClass?.exceptPairs?.includes(pairKey);
-             });
-             pName = effectiveLeader || members[0];
-             if (targetType === 'mark') isP = markChar.name === pName;
-             else isP = baseChar.name === pName;
-        }
-        return { pivotName: pName, isPivot: isP, activeAttachmentClass: activeClass, activeClassType: targetType, hasDualContext: hasDual };
-    }, [markAttachmentClasses, baseAttachmentClasses, markChar.name, baseChar.name, groups, characterSets, overrideClassType]);
+        return !!rule?.gsub;
+    }, [props.positioningRules, props.baseChar, props.markChar, groups, props.characterSets]);
 
     const classSiblings = useMemo(() => {
-        if (activeAttachmentClass && activeClassType) {
-             const members = expandMembers(activeAttachmentClass.members, groups, characterSets);
+        if (session.activeAttachmentClass && session.activeClassType) {
+             const members = expandMembers(session.activeAttachmentClass.members, groups, props.characterSets);
              const siblings: any[] = [];
              members.forEach(memberName => {
-                 let sBase = baseChar; let sMark = markChar;
-                 if (activeClassType === 'mark') { const c = allChars.get(memberName); if (c) sMark = c; }
-                 else { const c = allChars.get(memberName); if (c) sBase = c; }
+                 let sBase = props.baseChar; let sMark = props.markChar;
+                 if (session.activeClassType === 'mark') { const c = props.allChars.get(memberName); if (c) sMark = c; }
+                 else { const c = props.allChars.get(memberName); if (c) sBase = c; }
                  if (sBase.unicode === undefined || sMark.unicode === undefined) return;
-                 const bData = glyphDataMap.get(sBase.unicode); const mData = glyphDataMap.get(sMark.unicode);
-                 if (isGlyphDrawn(bData) && isGlyphDrawn(mData)) {
-                      const key = `${sBase.unicode}-${sMark.unicode}`;
-                      const lig = allLigaturesByKey.get(key);
-                      if (lig) siblings.push({ base: sBase, mark: sMark, ligature: lig });
-                 }
+                 const key = `${sBase.unicode}-${sMark.unicode}`;
+                 const lig = props.allLigaturesByKey.get(key);
+                 if (lig) siblings.push({ base: sBase, mark: sMark, ligature: lig });
              });
              return siblings;
         }
         return [];
-    }, [activeAttachmentClass, activeClassType, baseChar, markChar, groups, characterSets, allChars, glyphDataMap, allLigaturesByKey]);
-
-    const canEdit = !activeAttachmentClass || !isLinked || isPivot;
-    const movementConstraint = (parentRule && (parentRule.movement === 'horizontal' || parentRule.movement === 'vertical')) ? parentRule.movement : 'none';
-
-    const baseGlyph = glyphDataMap.get(baseChar.unicode);
-    const baseBbox = useMemo(() => getAccurateGlyphBBox(baseGlyph?.paths ?? [], settings.strokeThickness), [baseGlyph, settings.strokeThickness]);
-    
-    const alignmentOffset = useMemo(() => {
-        const markGlyph = glyphDataMap.get(markChar.unicode);
-        const markBbox = getAccurateGlyphBBox(markGlyph?.paths ?? [], settings.strokeThickness);
-        if (!baseBbox || !markBbox) return { x: 0, y: 0 };
-        let rule = resolveAttachmentRule(baseChar.name, markChar.name, markAttachmentRules, characterSets, groups) || ["topCenter", "bottomCenter"];
-        const baseAnchor = getAttachmentPointCoords(baseBbox, rule[0] as AttachmentPoint);
-        const markAnchor = getAttachmentPointCoords(markBbox, rule[1] as AttachmentPoint);
-        const calculatedOffset = VEC.sub(baseAnchor, markAnchor);
-        if (movementConstraint === 'horizontal') calculatedOffset.y = 0;
-        if (movementConstraint === 'vertical') calculatedOffset.x = 0;
-        return calculatedOffset;
-    }, [baseChar, markChar, baseBbox, markAttachmentRules, characterSets, groups, settings.strokeThickness, glyphDataMap, movementConstraint]);
-
-    // Effect 1: Hydrate Data
-    // Reactive fix: Includes markPositioningMap to trigger re-hydration on Reset/Save
-    useEffect(() => {
-        const key = `${baseChar.unicode}-${markChar.unicode}`;
-        let offset = markPositioningMap.get(key);
-        const markGlyph = glyphDataMap.get(markChar.unicode);
-        const markBbox = getAccurateGlyphBBox(markGlyph?.paths ?? [], settings.strokeThickness);
-        if (!offset && baseBbox) {
-            offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups, movementConstraint);
-        }
-        
-        const effectiveOffset = offset || { x: 0, y: 0 };
-        setCurrentOffset(effectiveOffset);
-
-        const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths || [];
-        const newMarkPaths = deepClone(originalMarkPaths).map((p: Path) => ({
-            ...p,
-            groupId: "positioning-mark-group",
-            points: p.points.map(pt => ({ x: pt.x + effectiveOffset.x, y: pt.y + effectiveOffset.y })),
-            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + effectiveOffset.x, y: seg.point.y + effectiveOffset.y }}))) : undefined
-        }));
-        setMarkPaths(newMarkPaths);
-        setInitialMarkPaths(deepClone(newMarkPaths));
-        setSelectedPathIds(new Set(newMarkPaths.map(p => p.id)));
-
-        setLsb(targetLigature.lsb); 
-        setRsb(targetLigature.rsb);
-        setIsLinked(!(activeAttachmentClass?.exceptPairs?.includes(pairNameKey)));
-    }, [pairIdentifier, glyphVersion, markPositioningMap, markAttachmentRules, characterSets, groups, movementConstraint]);
-
-    // Effect 2: Auto-Fit (Morphic UI Alignment with Drawing Modal Logic)
-    useEffect(() => {
-        if (lastPairIdentifierRef.current === pairIdentifier) return;
-        
-        const allPaths = [...(baseGlyph?.paths || []), ...markPaths];
-        if (allPaths.length > 0) {
-            const combinedBbox = getAccurateGlyphBBox(allPaths, settings.strokeThickness);
-            if (combinedBbox) {
-                // Design space is 1000x1000. Morphic UI: Only zoom out if outside these bounds.
-                const isBeyond = combinedBbox.x < 0 || combinedBbox.y < 0 || 
-                               (combinedBbox.x + combinedBbox.width) > 1000 || 
-                               (combinedBbox.y + combinedBbox.height) > 1000;
-
-                if (isBeyond || zoom !== 1) {
-                    const PADDING = 100;
-                    const availableDim = 1000 - (PADDING * 2);
-                    const fitScale = Math.min(availableDim / combinedBbox.width, availableDim / combinedBbox.height, 1);
-                    
-                    const contentCenterX = combinedBbox.x + combinedBbox.width / 2;
-                    const contentCenterY = combinedBbox.y + combinedBbox.height / 2;
-                    
-                    const newZoom = fitScale;
-                    const newViewOffset = {
-                        x: 500 - (contentCenterX * newZoom),
-                        y: 500 - (contentCenterY * newZoom)
-                    };
-
-                    setZoom(newZoom); 
-                    setViewOffset(newViewOffset);
-                } else {
-                    // If it fits, default to 1:1 scale at origin
-                    setZoom(1);
-                    setViewOffset({ x: 0, y: 0 });
-                }
-                lastPairIdentifierRef.current = pairIdentifier;
-            }
-        }
-    }, [pairIdentifier, markPaths.length, baseGlyph, settings.strokeThickness]);
-
-    const handleSave = useCallback((pathsToSave: Path[], isAutosave: boolean = false) => {
-        const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
-        const originalBbox = getAccurateGlyphBBox(originalMarkPaths, settings.strokeThickness);
-        const finalBbox = getAccurateGlyphBBox(pathsToSave, settings.strokeThickness);
-        let finalOffset: Point = { x: 0, y: 0 };
-        if (originalBbox && finalBbox) finalOffset = { x: finalBbox.x - originalBbox.x, y: finalBbox.y - originalBbox.y };
-        
-        onSave(targetLigature, { paths: [...(baseGlyph?.paths ?? []), ...pathsToSave] }, finalOffset, { lsb, rsb }, isAutosave);
-        setInitialMarkPaths(deepClone(pathsToSave));
-    }, [glyphDataMap, markChar.unicode, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, settings.strokeThickness]);
-
-    const handlePathsChange = useCallback((newPaths: Path[]) => {
-        if (!canEdit) return;
-        setMarkPaths(newPaths);
-        if (settings.isAutosaveEnabled) {
-            if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
-            autosaveTimeout.current = window.setTimeout(() => handleSave(newPaths, true), 500);
-        }
-    }, [settings.isAutosaveEnabled, handleSave, canEdit]);
-
-    useEffect(() => {
-        const originalMarkPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
-        const originalBbox = getAccurateGlyphBBox(originalMarkPaths, settings.strokeThickness);
-        const currentBbox = getAccurateGlyphBBox(markPaths, settings.strokeThickness);
-        let newCurrentOffset = { x: 0, y: 0 };
-        if (originalBbox && currentBbox) newCurrentOffset = { x: currentBbox.x - originalBbox.x, y: currentBbox.y - originalBbox.y };
-        setCurrentOffset(newCurrentOffset);
-        if (!isInputFocused) {
-            setManualX(Math.round(newCurrentOffset.x - alignmentOffset.x).toString());
-            setManualY(Math.round(newCurrentOffset.y - alignmentOffset.y).toString());
-        }
-    }, [markPaths, glyphDataMap, markChar, settings.strokeThickness, isInputFocused, alignmentOffset]);
-
-    const handleManualCommit = () => {
-        if (!canEdit) return;
-        const inputX = parseFloat(manualX), inputY = parseFloat(manualY);
-        if (isNaN(inputX) || isNaN(inputY)) return;
-        const targetX = alignmentOffset.x + inputX, targetY = alignmentOffset.y + inputY;
-        const moveX = targetX - currentOffset.x, moveY = targetY - currentOffset.y;
-        if (Math.abs(moveX) < 0.01 && Math.abs(moveY) < 0.01) return;
-        const newPaths = markPaths.map(p => ({
-            ...p,
-            points: p.points.map(pt => ({ x: pt.x + moveX, y: pt.y + moveY })),
-            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + moveX, y: seg.point.y + moveY }}))) : undefined
-        }));
-        handlePathsChange(newPaths);
-    };
-
-    const handleNavigationAttempt = useCallback((direction: 'prev' | 'next' | 'back') => {
-        const hasChanges = JSON.stringify(markPaths) !== JSON.stringify(initialMarkPaths) || lsb !== targetLigature.lsb || rsb !== targetLigature.rsb;
-        const proceed = () => { if (direction === 'back') onClose(); else if (direction === 'prev' && currentIndex! > 0) onNavigate(currentIndex! - 1); else if (currentIndex! < allPairs.length - 1) onNavigate(currentIndex! + 1); };
-        if (settings.isAutosaveEnabled) { if (hasChanges) handleSave(markPaths, false); proceed(); }
-        else if (hasChanges) { setPendingNavigation(direction); setIsUnsavedModalOpen(true); }
-        else proceed();
-    }, [settings.isAutosaveEnabled, markPaths, initialMarkPaths, lsb, rsb, targetLigature, onClose, currentIndex, onNavigate, allPairs.length, handleSave]);
+    }, [session.activeAttachmentClass, session.activeClassType, props.baseChar, props.markChar, groups, props.characterSets, props.allChars, props.allLigaturesByKey]);
 
     const handleToggleLink = () => {
-        const newIsLinked = !isLinked;
-        setIsLinked(newIsLinked);
+        const newIsLinked = !session.isLinked;
+        session.setIsLinked(newIsLinked);
+        const pairNameKey = `${props.baseChar.name}-${props.markChar.name}`;
         
-        const updateClassList = (classes: AttachmentClass[], setter: (c: AttachmentClass[]) => void) => {
+        const updateClassList = (classes: any[], setter: (c: any[]) => void) => {
              const newClasses = deepClone(classes);
-             const cls = newClasses.find(c => expandMembers(c.members, groups, characterSets).includes(activeClassType === 'mark' ? markChar.name : baseChar.name));
+             const cls = newClasses.find(c => expandMembers(c.members, groups, props.characterSets).includes(session.activeClassType === 'mark' ? props.markChar.name : props.baseChar.name));
              if (cls) {
                  if (!cls.exceptPairs) cls.exceptPairs = [];
-                 if (newIsLinked) cls.exceptPairs = cls.exceptPairs.filter(p => p !== pairNameKey);
+                 if (newIsLinked) cls.exceptPairs = cls.exceptPairs.filter((p: string) => p !== pairNameKey);
                  else if (!cls.exceptPairs.includes(pairNameKey)) cls.exceptPairs.push(pairNameKey);
                  setter(newClasses);
-                 return cls;
              }
-             return null;
         };
 
-        if (activeClassType === 'mark' && markAttachmentClasses) updateClassList(markAttachmentClasses, setMarkAttachmentClasses);
-        if (activeClassType === 'base' && baseAttachmentClasses) updateClassList(baseAttachmentClasses, setBaseAttachmentClasses);
-        
-        if (newIsLinked) {
-            showNotification(t('glyphRelinkedSuccess'), "success");
-        }
+        if (session.activeClassType === 'mark' && markAttachmentClasses) updateClassList(markAttachmentClasses, setMarkAttachmentClasses);
+        if (session.activeClassType === 'base' && baseAttachmentClasses) updateClassList(baseAttachmentClasses, setBaseAttachmentClasses);
+        if (newIsLinked) showNotification(t('glyphRelinkedSuccess'), "success");
     };
 
     const reuseSources = useMemo(() => {
         const sources: Character[] = []; const seen = new Set<number>();
-        characterSets.forEach(set => set.characters.forEach(c => {
-            if (c.unicode !== undefined && c.glyphClass !== 'mark' && c.unicode !== baseChar.unicode && markPositioningMap.has(`${c.unicode}-${markChar.unicode}`)) {
+        props.characterSets.forEach(set => set.characters.forEach(c => {
+            if (c.unicode !== undefined && c.glyphClass !== 'mark' && c.unicode !== props.baseChar.unicode && props.markPositioningMap.has(`${c.unicode}-${props.markChar.unicode}`)) {
                 if (!seen.has(c.unicode)) { sources.push(c); seen.add(c.unicode); }
             }
         }));
         return sources;
-    }, [characterSets, markPositioningMap, baseChar, markChar]);
+    }, [props.characterSets, props.markPositioningMap, props.baseChar, props.markChar]);
 
     const handleReuse = (sourceBase: Character) => {
-        const sourceOffset = markPositioningMap.get(`${sourceBase.unicode}-${markChar.unicode}`);
+        const sourceOffset = props.markPositioningMap.get(`${sourceBase.unicode}-${props.markChar.unicode}`);
         if (!sourceOffset) return;
-        const moveX = sourceOffset.x - currentOffset.x, moveY = sourceOffset.y - currentOffset.y;
-        const newPaths = markPaths.map(p => ({
+        const moveX = sourceOffset.x - session.currentOffset.x, moveY = sourceOffset.y - session.currentOffset.y;
+        const newPaths = session.markPaths.map(p => ({
             ...p,
             points: p.points.map(pt => ({ x: pt.x + moveX, y: pt.y + moveY })),
             segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + moveX, y: seg.point.y + moveY }}))) : undefined
         }));
-        handlePathsChange(newPaths); setIsReusePanelOpen(false); showNotification(t('positionsCopied'), 'success');
+        session.handlePathsChange(newPaths); setIsReusePanelOpen(false); showNotification(t('positionsCopied'), 'success');
     };
 
     return (
         <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-800 animate-fade-in-up">
             <PositioningEditorHeader 
-                targetLigature={targetLigature} prevPair={currentIndex! > 0} nextPair={currentIndex! < allPairs.length - 1}
-                onNavigate={handleNavigationAttempt} activeAttachmentClass={activeAttachmentClass} isLinked={isLinked} isPivot={isPivot}
-                canEdit={canEdit} isPositioned={isPositioned} onResetRequest={() => setIsResetConfirmOpen(true)} isGsubPair={isGsubPair}
+                targetLigature={props.targetLigature} prevPair={props.currentIndex! > 0} nextPair={props.currentIndex! < props.allPairs.length - 1}
+                onNavigate={session.handleNavigationAttempt} activeAttachmentClass={session.activeAttachmentClass} isLinked={session.isLinked} isPivot={session.isPivot}
+                canEdit={session.canEdit} isPositioned={isPositioned} onResetRequest={() => setIsResetConfirmOpen(true)} isGsubPair={isGsubPair}
                 isPropertiesPanelOpen={isPropertiesPanelOpen} setIsPropertiesPanelOpen={setIsPropertiesPanelOpen}
-                lsb={lsb} setLsb={setLsb} rsb={rsb} setRsb={setRsb} metrics={metrics} isAutosaveEnabled={settings.isAutosaveEnabled}
-                onSaveRequest={() => handleSave(markPaths)} isLargeScreen={isLargeScreen} isStripExpanded={isStripExpanded}
+                lsb={session.lsb} setLsb={session.setLsb} rsb={session.rsb} setRsb={session.setRsb} metrics={props.metrics} isAutosaveEnabled={props.settings.isAutosaveEnabled}
+                onSaveRequest={() => session.handleSave()} isLargeScreen={isLargeScreen} isStripExpanded={isStripExpanded}
             />
 
             <PositioningEditorWorkspace 
-                markPaths={markPaths} basePaths={baseGlyph?.paths || []} targetLigature={targetLigature} onPathsChange={handlePathsChange}
-                pageTool={pageTool} onToggleTool={() => setPageTool(t => t === 'select' ? 'pan' : 'select')} zoom={zoom} setZoom={setZoom}
-                viewOffset={viewOffset} setViewOffset={setViewOffset} onZoom={(f) => { const nZ = Math.max(0.1, Math.min(10, zoom*f)); const c = DRAWING_CANVAS_SIZE/2; setViewOffset({ x: c - (c - viewOffset.x) * (nZ / zoom), y: c - (c - viewOffset.y) * (nZ / zoom) }); setZoom(nZ); }}
-                onReuseClick={() => setIsReusePanelOpen(!isReusePanelOpen)} canEdit={canEdit} lockedMessage={!canEdit ? t('This pair is synced to {pivot}. Unlink to edit this specific pair, or edit {pivot} to update the whole class.', { pivot: pivotName || 'Class Representative' }) : undefined}
-                movementConstraint={movementConstraint} settings={settings} metrics={metrics} showStrip={!!activeAttachmentClass}
-                classSiblings={classSiblings} activePair={{ base: baseChar, mark: markChar, ligature: targetLigature }} pivotChar={isPivot ? (activeAttachmentClass?.name ? null : markChar) : (pivotName ? allChars.get(pivotName) : null)}
-                glyphDataMap={glyphDataMap} anchorDelta={VEC.sub(currentOffset, alignmentOffset)} isLinked={isLinked} onToggleLink={handleToggleLink}
-                handleSelectSibling={(p) => { if (setEditingPair) setEditingPair(p); }} markAttachmentRules={markAttachmentRules} positioningRules={positioningRules}
-                characterSets={characterSets} groups={groups} isStripExpanded={isStripExpanded} setIsStripExpanded={setIsStripExpanded}
-                activeAttachmentClass={activeAttachmentClass} hasDualContext={hasDualContext} activeClassType={activeClassType} onToggleContext={setOverrideClassType}
+                markPaths={session.markPaths} basePaths={session.basePaths} targetLigature={props.targetLigature} onPathsChange={session.handlePathsChange}
+                pageTool={pageTool} onToggleTool={() => setPageTool(t => t === 'select' ? 'pan' : 'select')} zoom={session.zoom} setZoom={session.setZoom}
+                viewOffset={session.viewOffset} setViewOffset={session.setViewOffset} onZoom={(f) => { const nZ = Math.max(0.1, Math.min(10, session.zoom*f)); const c = DRAWING_CANVAS_SIZE/2; session.setViewOffset({ x: c - (c - session.viewOffset.x) * (nZ / session.zoom), y: c - (c - session.viewOffset.y) * (nZ / session.zoom) }); session.setZoom(nZ); }}
+                onReuseClick={() => setIsReusePanelOpen(!isReusePanelOpen)} canEdit={session.canEdit} 
+                lockedMessage={!session.canEdit ? t('This pair is synced to {pivot}. Unlink to edit this specific pair, or edit {pivot} to update the whole class.', { pivot: session.pivotName || 'Class Representative' }) : undefined}
+                // FIX: Explicitly cast movementConstraint string result to specific union type literal to fix assignability error
+                movementConstraint={session.movementConstraint as 'horizontal' | 'vertical' | 'none'} settings={props.settings} metrics={props.metrics} showStrip={!!session.activeAttachmentClass}
+                classSiblings={classSiblings} activePair={{ base: props.baseChar, mark: props.markChar, ligature: props.targetLigature }} 
+                pivotChar={session.isPivot ? (session.activeAttachmentClass?.name ? null : props.markChar) : (session.pivotName ? props.allChars.get(session.pivotName) : null)}
+                glyphDataMap={props.glyphDataMap} anchorDelta={VEC.sub(session.currentOffset, session.alignmentOffset)} isLinked={session.isLinked} onToggleLink={handleToggleLink}
+                handleSelectSibling={(p) => { if (props.setEditingPair) props.setEditingPair(p); }} markAttachmentRules={props.markAttachmentRules} positioningRules={props.positioningRules}
+                characterSets={props.characterSets} groups={groups} isStripExpanded={isStripExpanded} setIsStripExpanded={setIsStripExpanded}
+                activeAttachmentClass={session.activeAttachmentClass} hasDualContext={session.hasDualContext} activeClassType={session.activeClassType} onToggleContext={session.setOverrideClassType}
                 isLargeScreen={isLargeScreen}
-                manualX={manualX} manualY={manualY} onManualChange={(a, v) => a === 'x' ? setManualX(v) : setManualY(v)} onManualCommit={handleManualCommit}
-                selectedPathIds={selectedPathIds} onSelectionChange={setSelectedPathIds}
+                manualX={session.manualX} manualY={session.manualY} onManualChange={(a, v) => a === 'x' ? session.setManualX(v) : session.setManualY(v)} onManualCommit={session.handleManualCommit}
+                // FIX: Added missing setIsInputFocused prop required by PositioningEditorWorkspace
+                setIsInputFocused={session.setIsInputFocused}
+                selectedPathIds={session.selectedPathIds} onSelectionChange={session.setSelectedPathIds}
             />
 
             {isReusePanelOpen && (
@@ -375,13 +174,13 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = ({
                         <button onClick={() => setIsReusePanelOpen(false)}><CloseIcon className="w-5 h-5"/></button>
                     </div>
                     <div className="flex-grow overflow-y-auto pr-1 grid grid-cols-2 gap-3">
-                        {reuseSources.length > 0 ? reuseSources.map(s => <ReusePreviewCard key={s.unicode} baseChar={s} markChar={markChar} onClick={() => handleReuse(s)} glyphDataMap={glyphDataMap} strokeThickness={settings.strokeThickness} markPositioningMap={markPositioningMap} glyphVersion={glyphVersion} displayLabel={s.name} />) : <div className="col-span-2 text-center text-gray-500 italic py-4">{t('noCompleteSources')}</div>}
+                        {reuseSources.length > 0 ? reuseSources.map(s => <ReusePreviewCard key={s.unicode} baseChar={s} markChar={props.markChar} onClick={() => handleReuse(s)} glyphDataMap={props.glyphDataMap} strokeThickness={props.settings.strokeThickness} markPositioningMap={props.markPositioningMap} glyphVersion={props.glyphVersion} displayLabel={s.name} />) : <div className="col-span-2 text-center text-gray-500 italic py-4">{t('noCompleteSources')}</div>}
                     </div>
                  </div>
             )}
             
-            <UnsavedChangesModal isOpen={isUnsavedModalOpen} onClose={() => setIsUnsavedModalOpen(false)} onSave={() => {handleSave(markPaths); if(pendingNavigation) handleNavigationAttempt(pendingNavigation);}} onDiscard={() => {if(pendingNavigation) { if (pendingNavigation === 'back') onClose(); else if (pendingNavigation === 'prev') onNavigate(currentIndex! - 1); else if (pendingNavigation === 'next') onNavigate(currentIndex! + 1); } setIsUnsavedModalOpen(false);}} />
-            <Modal isOpen={isResetConfirmOpen} onClose={() => setIsResetConfirmOpen(false)} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={() => { onReset(baseChar, markChar, targetLigature); setIsResetConfirmOpen(false); }} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: targetLigature.name })}</p></Modal>
+            <UnsavedChangesModal isOpen={session.isUnsavedModalOpen} onClose={() => session.setIsUnsavedModalOpen(false)} onSave={() => {session.handleSave(); if(session.pendingNavigation) session.handleNavigationAttempt(session.pendingNavigation);}} onDiscard={() => {if(session.pendingNavigation) { if (session.pendingNavigation === 'back') props.onClose(); else if (session.pendingNavigation === 'prev') props.onNavigate(props.currentIndex! - 1); else if (session.pendingNavigation === 'next') props.onNavigate(props.currentIndex! + 1); } session.setIsUnsavedModalOpen(false);}} />
+            <Modal isOpen={isResetConfirmOpen} onClose={() => setIsResetConfirmOpen(false)} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={() => { props.onReset(props.baseChar, props.markChar, props.targetLigature); setIsResetConfirmOpen(false); }} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: props.targetLigature.name })}</p></Modal>
         </div>
     );
 };

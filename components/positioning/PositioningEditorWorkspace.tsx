@@ -1,3 +1,4 @@
+
 import React from 'react';
 import PositioningCanvas from '../PositioningCanvas';
 import PositioningToolbar from '../PositioningToolbar';
@@ -29,6 +30,7 @@ interface PositioningEditorWorkspaceProps {
     manualY: string;
     onManualChange: (axis: 'x' | 'y', value: string) => void;
     onManualCommit: () => void;
+    setIsInputFocused: (focused: boolean) => void;
 
     // Selection Props
     selectedPathIds: Set<string>;
@@ -64,7 +66,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     isLinked, onToggleLink, handleSelectSibling, markAttachmentRules, positioningRules,
     characterSets, groups, isStripExpanded, setIsStripExpanded, activeAttachmentClass,
     hasDualContext, activeClassType, onToggleContext, isLargeScreen,
-    manualX, manualY, onManualChange, onManualCommit
+    manualX, manualY, onManualChange, onManualCommit, setIsInputFocused
 }) => {
     return (
         <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative h-full">
@@ -90,6 +92,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                                     manualY={manualY}
                                     onManualChange={onManualChange}
                                     onManualCommit={onManualCommit}
+                                    setIsInputFocused={setIsInputFocused}
                                     canEdit={canEdit}
                                 />
                             </div>
@@ -133,6 +136,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                             manualY={manualY}
                             onManualChange={onManualChange}
                             onManualCommit={onManualCommit}
+                            setIsInputFocused={setIsInputFocused}
                             canEdit={canEdit}
                         />
                     </div>

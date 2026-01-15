@@ -14,6 +14,7 @@ interface PositioningToolbarProps {
   manualY: string;
   onManualChange: (axis: 'x' | 'y', value: string) => void;
   onManualCommit: () => void;
+  setIsInputFocused: (focused: boolean) => void;
   canEdit: boolean;
 }
 
@@ -47,8 +48,9 @@ const CoordinateInput: React.FC<{
     value: string;
     onChange: (v: string) => void;
     onCommit: () => void;
+    onFocus: (focused: boolean) => void;
     disabled: boolean;
-}> = ({ axis, value, onChange, onCommit, disabled }) => {
+}> = ({ axis, value, onChange, onCommit, onFocus, disabled }) => {
     const [localValue, setLocalValue] = useState(value);
 
     // Sync from parent if externally changed (e.g. on drag)
@@ -62,10 +64,17 @@ const CoordinateInput: React.FC<{
             <input
                 type="text"
                 value={localValue}
-                onChange={(e) => setLocalValue(e.target.value)}
+                onChange={(e) => {
+                    const val = e.target.value;
+                    setLocalValue(val);
+                    onChange(val);
+                    onCommit(); // Live Update
+                }}
+                onFocus={() => onFocus(true)}
                 onBlur={() => {
                     onChange(localValue);
                     onCommit();
+                    onFocus(false);
                 }}
                 onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -83,7 +92,7 @@ const CoordinateInput: React.FC<{
 
 const PositioningToolbar: React.FC<PositioningToolbarProps> = ({ 
     onReuseClick, pageTool, onToggleTool, onZoom, orientation = 'vertical', 
-    reuseDisabled = false, manualX, manualY, onManualChange, onManualCommit, canEdit 
+    reuseDisabled = false, manualX, manualY, onManualChange, onManualCommit, canEdit, setIsInputFocused
 }) => {
   const { t } = useLocale();
   const isVertical = orientation === 'vertical';
@@ -124,8 +133,8 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({
       <div className={`${isVertical ? 'h-px w-full my-1' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
       <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2`}>
-          <CoordinateInput axis="x" value={manualX} onChange={v => onManualChange('x', v)} onCommit={onManualCommit} disabled={!canEdit} />
-          <CoordinateInput axis="y" value={manualY} onChange={v => onManualChange('y', v)} onCommit={onManualCommit} disabled={!canEdit} />
+          <CoordinateInput axis="x" value={manualX} onChange={v => onManualChange('x', v)} onCommit={onManualCommit} onFocus={setIsInputFocused} disabled={!canEdit} />
+          <CoordinateInput axis="y" value={manualY} onChange={v => onManualChange('y', v)} onCommit={onManualCommit} onFocus={setIsInputFocused} disabled={!canEdit} />
       </div>
     </div>
   );
