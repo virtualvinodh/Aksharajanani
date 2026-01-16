@@ -1,4 +1,3 @@
-
 import React from 'react';
 import PositioningCanvas from '../PositioningCanvas';
 import PositioningToolbar from '../PositioningToolbar';
@@ -69,60 +68,63 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     manualX, manualY, onManualChange, onManualCommit, setIsInputFocused
 }) => {
     return (
-        <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative h-full">
+        <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative min-h-0">
             <div className="flex-1 flex flex-col items-center justify-center w-full h-full overflow-hidden relative">
                 
-                {/* Hero Canvas Area: Standardized across all editors */}
-                <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-4 sm:p-12 overflow-hidden relative">
+                {/* Hero Canvas Area: Explicit flex-1 and min-h-0 to allow correct height resolution */}
+                <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-4 sm:p-8 overflow-hidden relative">
                     
-                    {/* The Relative Wrapper ensuring coordinate system for the toolbar */}
-                    <div className="relative">
-                        
-                        {/* Morphic Toolbar: Vertically docked on desktop, anchored to the left of the centered hero area */}
-                        {isLargeScreen && !isStripExpanded && (
-                            <div className="absolute right-full mr-6 top-0 z-30 animate-fade-in-up">
-                                <PositioningToolbar 
-                                    orientation="vertical"
-                                    onReuseClick={onReuseClick} 
-                                    pageTool={pageTool} 
-                                    onToggleTool={onToggleTool} 
-                                    onZoom={onZoom} 
-                                    reuseDisabled={!canEdit}
-                                    manualX={manualX}
-                                    manualY={manualY}
-                                    onManualChange={onManualChange}
-                                    onManualCommit={onManualCommit}
-                                    setIsInputFocused={setIsInputFocused}
+                    {/* Centering wrapper that fills available space */}
+                    <div className="relative w-full h-full flex items-center justify-center">
+                        {/* The item forced to be square based on available parent height */}
+                        <div className="relative h-full max-h-full aspect-square flex items-center justify-center max-w-full">
+                            
+                            {/* Toolbar: Anchored to the left of the square container */}
+                            {isLargeScreen && !isStripExpanded && (
+                                <div className="absolute right-full mr-6 top-0 z-30 animate-fade-in-up">
+                                    <PositioningToolbar 
+                                        orientation="vertical"
+                                        onReuseClick={onReuseClick} 
+                                        pageTool={pageTool} 
+                                        onToggleTool={onToggleTool} 
+                                        onZoom={onZoom} 
+                                        reuseDisabled={!canEdit}
+                                        manualX={manualX}
+                                        manualY={manualY}
+                                        onManualChange={onManualChange}
+                                        onManualCommit={onManualCommit}
+                                        setIsInputFocused={setIsInputFocused}
+                                        canEdit={canEdit}
+                                    />
+                                </div>
+                            )}
+
+                            <div 
+                                className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 w-full h-full"
+                            >
+                                <PositioningCanvas
+                                    width={DRAWING_CANVAS_SIZE} 
+                                    height={DRAWING_CANVAS_SIZE}
+                                    markPaths={markPaths}
+                                    basePaths={basePaths}
+                                    onPathsChange={onPathsChange} 
+                                    metrics={metrics} 
+                                    tool={pageTool} 
+                                    zoom={zoom} 
+                                    setZoom={setZoom} 
+                                    viewOffset={viewOffset} 
+                                    setViewOffset={setViewOffset}
+                                    settings={settings} 
+                                    movementConstraint={movementConstraint}
                                     canEdit={canEdit}
+                                    character={targetLigature}
                                 />
                             </div>
-                        )}
-
-                        <div 
-                            className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 max-h-full max-w-full aspect-square"
-                        >
-                            <PositioningCanvas
-                                width={DRAWING_CANVAS_SIZE} 
-                                height={DRAWING_CANVAS_SIZE}
-                                markPaths={markPaths}
-                                basePaths={basePaths}
-                                onPathsChange={onPathsChange} 
-                                metrics={metrics} 
-                                tool={pageTool} 
-                                zoom={zoom} 
-                                setZoom={setZoom} 
-                                viewOffset={viewOffset} 
-                                setViewOffset={setViewOffset}
-                                settings={settings} 
-                                movementConstraint={movementConstraint}
-                                canEdit={canEdit}
-                                character={targetLigature}
-                            />
                         </div>
                     </div>
                 </div>
 
-                {/* Mobile Toolbar: Anchored for ergonomic thumb usage */}
+                {/* Mobile Toolbar */}
                 {!isLargeScreen && (
                     <div className="flex-shrink-0 w-full z-20 p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-center shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
                         <PositioningToolbar 
@@ -142,7 +144,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                     </div>
                 )}
 
-                {/* Morphic Sibling Strip: Floats at the bottom, matching the Drawing Modal dependent strip style */}
+                {/* Morphic Sibling Strip */}
                 {showStrip && (
                     <div className="w-full max-w-5xl mx-auto flex-shrink-0 z-20 transition-all duration-300 px-2 pb-2">
                         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -163,7 +165,6 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                                 characterSets={characterSets}
                                 groups={groups}
                                 isExpanded={isStripExpanded}
-                                // FIX: Use the correct prop name setIsStripExpanded instead of the non-existent setIsExpanded
                                 setIsExpanded={setIsStripExpanded}
                                 activeClass={activeAttachmentClass}
                                 hasDualContext={hasDualContext}

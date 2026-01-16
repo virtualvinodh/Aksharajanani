@@ -1,11 +1,9 @@
-
 import React, { useMemo, forwardRef, useCallback } from 'react';
 import { Character } from '../types';
-import CharacterCard from './CharacterCard';
+import UnifiedCard from './UnifiedCard';
 import { useLocale } from '../contexts/LocaleContext';
 import { AddIcon, SwitchScriptIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
-import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { VirtuosoGrid } from 'react-virtuoso';
 
@@ -39,7 +37,6 @@ const GridFooter = () => <div className="col-span-full h-24" />; // Extra paddin
 const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectCharacter, onAddGlyph, onAddBlock }) => {
   const { t } = useLocale();
   const { settings } = useSettings();
-  const { glyphDataMap } = useGlyphData();
   const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, filterMode, searchQuery } = useLayout();
   
   const showHidden = settings?.showHiddenGlyphs ?? false;
@@ -49,8 +46,6 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
       .filter(char => !char.hidden || showHidden)
       .map(char => ({ type: 'char', data: char }));
       
-    // Only show Add buttons if we are viewing "None" (Standard Mode) AND not searching
-    // In "Completed", "Incomplete", or "All" (Flat list) modes, these are distracting.
     if (filterMode === 'none' && !searchQuery) {
         items.push({ type: 'addGlyph' });
         items.push({ type: 'addBlock' });
@@ -60,9 +55,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
   }, [characters, showHidden, filterMode, searchQuery]);
 
   const toggleSelection = useCallback((character: Character) => {
-      if (!character.unicode) return;
+      if (character.unicode === undefined) return;
       
-      // If we are toggling, we implicitly enter selection mode if not already active
       if (!isMetricsSelectionMode) {
           setIsMetricsSelectionMode(true);
       }
@@ -84,10 +78,9 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
       
       if (item.type === 'char') {
           return (
-            <CharacterCard
-                key={item.data.unicode}
+            <UnifiedCard
+                key={item.data.unicode || item.data.name}
                 character={item.data}
-                glyphData={glyphDataMap.get(item.data.unicode!)}
                 onSelect={onSelectCharacter}
                 isSelectionMode={isMetricsSelectionMode}
                 isSelected={item.data.unicode !== undefined && metricsSelection.has(item.data.unicode)}
@@ -96,7 +89,6 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
           );
       }
       
-      // Ghost Button Styling for Progressive Discovery
       const ghostButtonClass = "relative w-full h-full rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 aspect-square h-full border border-transparent text-gray-400 dark:text-gray-600 hover:bg-white dark:hover:bg-gray-800 hover:border-indigo-200 dark:hover:border-indigo-800 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm";
       
       if (item.type === 'addGlyph') {
@@ -125,7 +117,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({ characters, onSelectChara
           );
       }
       return null;
-  }, [gridItems, glyphDataMap, onSelectCharacter, isMetricsSelectionMode, metricsSelection, toggleSelection, onAddGlyph, t, onAddBlock]);
+  }, [gridItems, onSelectCharacter, isMetricsSelectionMode, metricsSelection, toggleSelection, onAddGlyph, t, onAddBlock]);
 
   const gridComponents = useMemo(() => ({
     List: ListContainer,

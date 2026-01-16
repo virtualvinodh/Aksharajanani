@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
-import DrawingModal from './components/DrawingModal';
+import UnifiedEditorModal from './components/UnifiedEditorModal';
 import SettingsPage from './components/SettingsPage';
 import ComparisonView from './components/ComparisonView';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -269,6 +269,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 hasSnapshot={hasSnapshot}
                 onSaveAs={openSaveAsModal}
                 onExportTemplate={handleSaveTemplate}
+                // FIX: used handleQuickAddGlyph as it is returned by useAppActions
                 onQuickAddGlyph={handleQuickAddGlyph}
                />
 
@@ -306,7 +307,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
        )}
       
       {selectedCharacter && characterSets && (
-        <DrawingModal
+        <UnifiedEditorModal
           key={selectedCharacter.unicode}
           character={selectedCharacter}
           characterSet={characterSets.find(cs => cs.characters.some(c => c.unicode === selectedCharacter.unicode)) || characterSets[layout.activeTab]}

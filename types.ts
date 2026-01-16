@@ -62,6 +62,8 @@ export interface Character {
   glyphClass?: 'base' | 'ligature' | 'mark';
   composite?: string[];
   link?: string[];
+  position?: [string, string]; // [BaseName, MarkName] for virtual assembly
+  kern?: [string, string];     // [LeftName, RightName] for virtual assembly
   sourceLink?: string[]; // To remember original link after unlinking
   compositeTransform?: ComponentTransform[];
   isCustom?: boolean;
@@ -158,6 +160,20 @@ export interface AppSettings {
 
 export type KerningMap = Map<string, number>;
 export type MarkPositioningMap = Map<string, Point>;
+
+// FIX: Added UnifiedRenderContext interface to types.ts to resolve import errors in components.
+export interface UnifiedRenderContext {
+    glyphDataMap: Map<number, GlyphData>;
+    allCharsByName: Map<string, Character>;
+    markPositioningMap?: MarkPositioningMap;
+    kerningMap?: KerningMap;
+    characterSets?: CharacterSet[];
+    groups?: Record<string, string[]>;
+    metrics?: FontMetrics;
+    markAttachmentRules?: MarkAttachmentRules | null;
+    strokeThickness: number;
+    positioningRules?: PositioningRules[] | null;
+}
 
 export interface ProjectData {
   projectId?: number;

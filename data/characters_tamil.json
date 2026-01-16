@@ -68,8 +68,8 @@
 {
   "nameKey": "halfCons",
   "characters": [
-    { "unicode": 57345, "name": "க்", "glyphClass": "ligature", "link": ["க", "்"] },
-    { "unicode": 57346, "name": "ங்", "glyphClass": "ligature", "link": ["ங", "்"]  },
+    { "unicode": 57345, "name": "க்", "glyphClass": "ligature", "position": ["க", "்"] },
+    { "unicode": 57346, "name": "ங்", "glyphClass": "ligature", "kern": ["ங", "ங"]  },
     { "unicode": 57347, "name": "ச்", "glyphClass": "ligature", "link": ["ச", "்"]  },
     { "unicode": 57348, "name": "ஞ்", "glyphClass": "ligature", "link": ["ஞ", "்"]  },
     { "unicode": 57349, "name": "ட்", "glyphClass": "ligature", "link": ["ட", "்"]  },

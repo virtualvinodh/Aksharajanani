@@ -1,5 +1,4 @@
-
-import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings, ComponentTransform } from '../types';
+import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings, ComponentTransform, PositioningRules, UnifiedRenderContext } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { DRAWING_CANVAS_SIZE } from '../constants';
@@ -7,6 +6,8 @@ import { deepClone } from '../utils/cloneUtils';
 import { expandMembers } from './groupExpansionService';
 
 declare var paper: any;
+// FIX: Declared UnicodeProperties as it is loaded from a global script.
+declare var UnicodeProperties: any;
 
 // A single, persistent paper.js instance to avoid memory churn.
 // Exported to be reused by hooks and other services.
@@ -248,7 +249,7 @@ export const getAccurateGlyphBBox = (data: Path[] | GlyphData, strokeThickness: 
 
         if (path.type === 'dot') {
             const center = path.points[0];
-            const radius = path.points.length > 1 ? VEC.len(VEC.sub(path.points[1], center)) : strokeThickness / 2;
+            const radius = strokeThickness > 0 ? VEC.len(VEC.sub(path.points.length > 1 ? path.points[1] : path.points[0], center)) : strokeThickness / 2;
             minX = Math.min(minX, center.x - radius);
             maxX = Math.max(maxX, center.x + radius);
             minY = Math.min(minY, center.y - radius);
@@ -270,6 +271,7 @@ export const getAccurateGlyphBBox = (data: Path[] | GlyphData, strokeThickness: 
                 pMinX = Math.min(pMinX, point.x);
                 pMaxX = Math.max(pMaxX, point.x);
                 pMinY = Math.min(pMinY, point.y);
+                // FIX: Removed reference to undefined 'pBaseLineY'.
                 pMaxY = Math.max(pMaxY, point.y);
             });
 
@@ -695,7 +697,7 @@ export const generateCompositeGlyphData = ({
         if (xShift !== 0 || yShift !== 0) {
             transformed = transformed.map((p: Path) => ({
                 ...p,
-                points: p.points.map((pt: Point) => ({ x: pt.x + xShift, y: pt.y + yShift })),
+                points: p.points.map((pt: Point) => ({ x: pt.x + xShift, y: pt.y + xShift })),
                 segmentGroups: p.segmentGroups ? p.segmentGroups.map((group: Segment[]) => group.map(seg => ({ ...seg, point: { x: seg.point.x + xShift, y: seg.point.y + yShift } }))) : undefined
             }));
         }
@@ -840,4 +842,171 @@ export const updateComponentInPaths = (
     );
 
     return [...otherPaths, ...transformedNewPaths];
+};
+
+/**
+ * Master path resolver for any character item.
+ * Assembles virtual syllables or kerning pairs based on their 'position' or 'kern' properties.
+ */
+export const getUnifiedPaths = (item: Character, ctx: UnifiedRenderContext): Path[] => {
+    // 1. Positioned Syllable Branch
+    if (item.position && item.position.length === 2) {
+        const baseName = item.position[0];
+        const markName = item.position[1];
+        const baseChar = ctx.allCharsByName.get(baseName);
+        const markChar = ctx.allCharsByName.get(markName);
+        
+        if (!baseChar || !markChar) return [];
+
+        const baseGlyph = ctx.glyphDataMap.get(baseChar.unicode!);
+        const markGlyph = ctx.glyphDataMap.get(markChar.unicode!);
+
+        if (!isGlyphDrawn(baseGlyph) && !isGlyphDrawn(markGlyph)) return [];
+
+        let offset = ctx.markPositioningMap?.get(`${baseChar.unicode}-${markChar.unicode}`);
+        
+        if (!offset && ctx.metrics) {
+            const baseBbox = getAccurateGlyphBBox(baseGlyph?.paths || [], ctx.strokeThickness);
+            const markBbox = getAccurateGlyphBBox(markGlyph?.paths || [], ctx.strokeThickness);
+            
+            // Extract movement constraint if rule exists
+            let constraint: 'horizontal' | 'vertical' | 'none' = 'none';
+            const rule = ctx.positioningRules?.find(r => 
+                expandMembers(r.base, ctx.groups || {}, ctx.characterSets).includes(baseChar.name) && 
+                expandMembers(r.mark, ctx.groups || {}, ctx.characterSets).includes(markChar.name)
+            );
+            if (rule?.movement === 'horizontal' || rule?.movement === 'vertical') {
+                constraint = rule.movement;
+            }
+
+            offset = calculateDefaultMarkOffset(
+                baseChar, markChar, baseBbox, markBbox, 
+                ctx.markAttachmentRules || null, ctx.metrics, 
+                ctx.characterSets, false, ctx.groups || {}, 
+                constraint
+            );
+        }
+
+        const combined: Path[] = [];
+        if (baseGlyph) combined.push(...baseGlyph.paths);
+        if (markGlyph) {
+            const dx = offset?.x || 0;
+            const dy = offset?.y || 0;
+            const shiftedMark = deepClone(markGlyph.paths).map(p => ({
+                ...p,
+                points: p.points.map(pt => ({ x: pt.x + dx, y: pt.y + dy })),
+                segmentGroups: p.segmentGroups?.map(g => g.map(s => ({
+                    ...s,
+                    point: { x: s.point.x + dx, y: s.point.y + dy }
+                })))
+            }));
+            combined.push(...shiftedMark);
+        }
+        return combined;
+    }
+
+    // 2. Kerned Pair Branch
+    if (item.kern && item.kern.length === 2) {
+        const leftName = item.kern[0];
+        const rightName = item.kern[1];
+        const leftChar = ctx.allCharsByName.get(leftName);
+        const rightChar = ctx.allCharsByName.get(rightName);
+
+        if (!leftChar || !rightChar || !ctx.metrics) return [];
+
+        const leftGlyph = ctx.glyphDataMap.get(leftChar.unicode!);
+        const rightGlyph = ctx.glyphDataMap.get(rightChar.unicode!);
+
+        if (!isGlyphDrawn(leftGlyph) || !isGlyphDrawn(rightGlyph)) return [];
+
+        const lBox = getAccurateGlyphBBox(leftGlyph!.paths, ctx.strokeThickness);
+        const rBox = getAccurateGlyphBBox(rightGlyph!.paths, ctx.strokeThickness);
+
+        if (!lBox || !rBox) return [];
+
+        const kernVal = ctx.kerningMap?.get(`${leftChar.unicode}-${rightChar.unicode}`) || 0;
+        const rsbL = leftChar.rsb ?? ctx.metrics.defaultRSB;
+        const lsbR = rightChar.lsb ?? ctx.metrics.defaultLSB;
+        
+        // Math: Total shift for the right character content
+        const shiftX = (lBox.x + lBox.width) + rsbL + kernVal + lsbR - rBox.x;
+
+        const combined: Path[] = [...leftGlyph!.paths];
+        const shiftedRight = deepClone(rightGlyph!.paths).map(p => ({
+            ...p,
+            points: p.points.map(pt => ({ x: pt.x + shiftX, y: pt.y })),
+            segmentGroups: p.segmentGroups?.map(g => g.map(s => ({
+                ...s,
+                point: { x: s.point.x + shiftX, y: s.point.y }
+            })))
+        }));
+        combined.push(...shiftedRight);
+        return combined;
+    }
+
+    // 3. Standard Glyph Branch (incl. Link/Composite)
+    const glyph = ctx.glyphDataMap.get(item.unicode!);
+    return glyph?.paths || [];
+};
+
+/**
+ * Calculate universal fitting transform for any set of paths.
+ * Returns scale and translation to fit the content within targetSize.
+ */
+export const calculateUnifiedTransform = (
+    paths: Path[], 
+    targetSize: number, 
+    strokeThickness: number, 
+    options?: { character?: Character, metrics?: FontMetrics }
+) => {
+    const bbox = getAccurateGlyphBBox(paths, strokeThickness);
+    
+    // Fallback: standard 10% design-to-preview scale
+    let scale = targetSize / DRAWING_CANVAS_SIZE;
+    let tx = 0;
+    let ty = 0;
+
+    if (bbox && bbox.width > 0 && bbox.height > 0) {
+        const PADDING = targetSize * 0.1;
+        const availableWidth = targetSize - (PADDING * 2);
+        const availableHeight = targetSize - (PADDING * 2);
+        
+        const fitScaleX = availableWidth / bbox.width;
+        const fitScaleY = availableHeight / bbox.height;
+        const fitScale = Math.min(fitScaleX, fitScaleY);
+        
+        // Shrink if huge, otherwise maintain standard to keep consistency
+        if (fitScale < scale) scale = fitScale;
+
+        // Horizontal Center
+        const contentCenterX = bbox.x + bbox.width / 2;
+        tx = (targetSize / 2) - (contentCenterX * scale);
+
+        // Vertical Centering Logic
+        let shouldVerticallyCenter = true;
+        const char = options?.character;
+
+        if (char?.glyphClass === 'mark' || char?.kern) {
+            shouldVerticallyCenter = false;
+        } else if (char?.unicode && typeof UnicodeProperties !== 'undefined') {
+            try {
+                const cat = UnicodeProperties.getCategory(char.unicode);
+                if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {
+                    shouldVerticallyCenter = false;
+                }
+            } catch (e) {}
+        }
+
+        if (shouldVerticallyCenter) {
+            const contentCenterY = bbox.y + bbox.height / 2;
+            ty = (targetSize / 2) - (contentCenterY * scale);
+        } else {
+            // Keep baseline relative position
+            ty = (targetSize - (DRAWING_CANVAS_SIZE * scale)) / 2;
+        }
+    } else {
+        ty = (targetSize - (DRAWING_CANVAS_SIZE * scale)) / 2;
+    }
+
+    return { scale, tx, ty };
 };
