@@ -19,6 +19,8 @@ import ImageControlPanel from './ImageControlPanel';
 // Positioning Profile Components
 import PositioningEditorHeader from './positioning/PositioningEditorHeader';
 import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace';
+import ReusePreviewCard from './ReusePreviewCard';
+import Modal from './Modal';
 
 // Kerning Profile Components
 import KerningEditorHeader from './kerning/KerningEditorHeader';
@@ -35,7 +37,7 @@ import { usePositioningSession } from '../hooks/positioning/usePositioningSessio
 import { useKerningSession } from '../hooks/kerning/useKerningSession';
 
 import { isGlyphDrawn } from '../utils/glyphUtils';
-import { DRAWING_CANVAS_SIZE } from '../constants';
+import { DRAWING_CANVAS_SIZE, CloseIcon } from '../constants';
 import { VEC } from '../utils/vectorUtils';
 import { expandMembers } from '../services/groupExpansionService';
 import { deepClone } from '../utils/cloneUtils';
@@ -63,7 +65,7 @@ const UnifiedEditorModal: React.FC<any> = ({
   const groups = rulesState.fontRules?.groups || {};
 
   const modalRef = useRef<HTMLDivElement>(null);
-  const kerningContainerRef = useRef<HTMLDivElement>(null); // Stable ref for size monitoring
+  const kerningContainerRef = useRef<HTMLDivElement>(null);
   const [animationClass, setAnimationClass] = useState('');
   const animationTimeoutRef = useRef<number | null>(null);
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
@@ -104,8 +106,12 @@ const UnifiedEditorModal: React.FC<any> = ({
   const [tracerImageSrc, setTracerImageSrc] = useState<string | null>(null);
   const [calligraphyAngle, setCalligraphyAngle] = useState<45 | 30 | 15>(45);
 
-  // 3. Profile-Specific Sessions
-  
+  // Positioning Profile Specific UI State
+  const [posPageTool, setPosPageTool] = useState<'select' | 'pan'>('select');
+  const [isPosPropertiesOpen, setIsPosPropertiesOpen] = useState(false);
+  const [isPosReuseOpen, setIsPosReuseOpen] = useState(false);
+  const [isPosResetConfirmOpen, setIsPosResetConfirmOpen] = useState(false);
+
   // --- DRAWING SESSION ---
   const drawingSession = useGlyphEditSession({
       character, glyphData, allGlyphData, allCharacterSets, settings, metrics, markAttachmentRules,
@@ -163,7 +169,8 @@ const UnifiedEditorModal: React.FC<any> = ({
   // --- POSITIONING SESSION ---
   const posBaseChar = useMemo(() => character.position ? allCharsByName.get(character.position[0]) : null, [character, allCharsByName]);
   const posMarkChar = useMemo(() => character.position ? allCharsByName.get(character.position[1]) : null, [character, allCharsByName]);
-  
+  const pairIdentifier = character.position ? `${posBaseChar?.unicode}-${posMarkChar?.unicode}` : '';
+
   const handlePositioningNavigate = useCallback((idx: number) => {
     if (idx >= 0 && idx < visibleCharactersForNav.length) {
         onNavigate(visibleCharactersForNav[idx]);
@@ -193,6 +200,56 @@ const UnifiedEditorModal: React.FC<any> = ({
     else positioningSession.setManualY(value);
   }, [positioningSession]);
 
+  const handlePositioningZoom = (factor: number) => {
+      const newZoom = Math.max(0.1, Math.min(10, positioningSession.zoom * factor));
+      const center = DRAWING_CANVAS_SIZE / 2;
+      positioningSession.setViewOffset({
+          x: center - (center - positioningSession.viewOffset.x) * (newZoom / positioningSession.zoom),
+          y: center - (center - positioningSession.viewOffset.y) * (newZoom / positioningSession.zoom)
+      });
+      positioningSession.setZoom(newZoom);
+  };
+
+  const handlePositioningReset = () => {
+      const key = `${posBaseChar?.unicode}-${posMarkChar?.unicode}`;
+      const newMap = new Map(markPositioningMap);
+      newMap.delete(key);
+      positioningDispatch({ type: 'SET_MAP', payload: newMap });
+      if (character.unicode) {
+          glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode: character.unicode } });
+      }
+      setIsPosResetConfirmOpen(false);
+      showNotification(t('positionResetSuccess', { name: character.name }), 'success');
+  };
+
+  const reuseSources = useMemo(() => {
+    if (profile !== 'positioning' || !posMarkChar) return [];
+    const sources: Character[] = [];
+    const seen = new Set<number>();
+    allCharacterSets.forEach(set => set.characters.forEach(c => {
+        if (c.unicode !== undefined && c.glyphClass !== 'mark' && c.unicode !== posBaseChar?.unicode && markPositioningMap.has(`${c.unicode}-${posMarkChar.unicode}`)) {
+            if (!seen.has(c.unicode)) { sources.push(c); seen.add(c.unicode); }
+        }
+    }));
+    return sources;
+  }, [allCharacterSets, markPositioningMap, posBaseChar, posMarkChar, profile]);
+
+  const handlePositioningReuse = (sourceBase: Character) => {
+      const sourceKey = `${sourceBase.unicode}-${posMarkChar?.unicode}`;
+      const sourceOffset = markPositioningMap.get(sourceKey);
+      if (!sourceOffset) return;
+      const moveX = sourceOffset.x - positioningSession.currentOffset.x;
+      const moveY = sourceOffset.y - positioningSession.currentOffset.y;
+      const newPaths = positioningSession.markPaths.map(p => ({
+          ...p,
+          points: p.points.map(pt => ({ x: pt.x + moveX, y: pt.y + moveY })),
+          segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + moveX, y: seg.point.y + moveY }}))) : undefined
+      }));
+      positioningSession.handlePathsChange(newPaths);
+      setIsPosReuseOpen(false);
+      showNotification(t('positionsCopied'), 'success');
+  };
+
   const [isStripExpanded, setIsStripExpanded] = useState(false);
 
   // Class Sibling logic for Positioning Strip
@@ -200,13 +257,6 @@ const UnifiedEditorModal: React.FC<any> = ({
     if (positioningSession.activeAttachmentClass && positioningSession.activeClassType) {
          const members = expandMembers(positioningSession.activeAttachmentClass.members, groups, allCharacterSets);
          const siblings: any[] = [];
-         
-         // Helper to find all ligatures for the current positioning rule
-         const relevantRules = positioningRules?.filter(rule => 
-            expandMembers(rule.base, groups, allCharacterSets).includes(posBaseChar?.name || character.name) ||
-            expandMembers(rule.mark, groups, allCharacterSets).includes(posMarkChar?.name || character.name)
-         );
-
          members.forEach(memberName => {
              let sBase = posBaseChar || character;
              let sMark = posMarkChar || character;
@@ -217,10 +267,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                 const c = allCharsByName.get(memberName);
                 if (c) sBase = c;
              }
-             
              if (sBase.unicode === undefined || sMark.unicode === undefined) return;
-             
-             // Find corresponding ligature character if it exists
              const pairName = sBase.name + sMark.name;
              const lig = allCharsByName.get(pairName) || { name: pairName, unicode: sBase.unicode + sMark.unicode + 1000000 };
              siblings.push({ base: sBase, mark: sMark, ligature: lig });
@@ -228,7 +275,7 @@ const UnifiedEditorModal: React.FC<any> = ({
          return siblings;
     }
     return [];
-  }, [positioningSession.activeAttachmentClass, positioningSession.activeClassType, posBaseChar, posMarkChar, character, groups, allCharacterSets, allCharsByName, positioningRules]);
+  }, [positioningSession.activeAttachmentClass, positioningSession.activeClassType, posBaseChar, posMarkChar, character, groups, allCharacterSets, allCharsByName]);
 
   const handleToggleLink = () => {
     const newIsLinked = !positioningSession.isLinked;
@@ -277,24 +324,6 @@ const UnifiedEditorModal: React.FC<any> = ({
       onClose: () => triggerClose(onClose),
       onNavigate: handleKerningNavigate
   });
-
-  // SIZE MONITORING: Specifically for Kerning Profile to ensure canvas dimensions are populated
-  useEffect(() => {
-    if (profile !== 'kerning' || !kerningContainerRef.current) return;
-    
-    const container = kerningContainerRef.current;
-    const updateSize = () => {
-        const rect = container.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-            kerningSession.setContainerSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
-        }
-    };
-    
-    updateSize();
-    const ro = new ResizeObserver(updateSize);
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [profile, character.unicode, kerningSession.setContainerSize]);
 
   // 4. Global Shortcuts & UI State
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -354,6 +383,11 @@ const UnifiedEditorModal: React.FC<any> = ({
   const renderHeader = () => {
     switch(profile) {
         case 'positioning':
+            const isGsubPair = !!positioningRules?.find(r => 
+                expandMembers(r.base, groups, allCharacterSets).includes(posBaseChar?.name || '') && 
+                expandMembers(r.mark, groups, allCharacterSets).includes(posMarkChar?.name || '')
+            )?.gsub;
+
             return (
                 <PositioningEditorHeader 
                     targetLigature={character} prevPair={prevCharacter} nextPair={nextCharacter}
@@ -361,11 +395,11 @@ const UnifiedEditorModal: React.FC<any> = ({
                     activeAttachmentClass={positioningSession.activeAttachmentClass}
                     isLinked={positioningSession.isLinked} isPivot={positioningSession.isPivot}
                     canEdit={positioningSession.canEdit} isPositioned={markPositioningMap.has(pairIdentifier)}
-                    onResetRequest={() => setIsDeleteConfirmOpen(true)} isGsubPair={true}
-                    isPropertiesPanelOpen={false} setIsPropertiesPanelOpen={() => {}}
+                    onResetRequest={() => setIsPosResetConfirmOpen(true)} isGsubPair={isGsubPair}
+                    isPropertiesPanelOpen={isPosPropertiesOpen} setIsPropertiesPanelOpen={setIsPosPropertiesOpen}
                     lsb={positioningSession.lsb} setLsb={positioningSession.setLsb} rsb={positioningSession.rsb} setRsb={positioningSession.setRsb}
                     metrics={metrics} isAutosaveEnabled={settings.isAutosaveEnabled} onSaveRequest={() => positioningSession.handleSave()}
-                    isLargeScreen={isLargeScreen} isStripExpanded={false}
+                    isLargeScreen={isLargeScreen} isStripExpanded={isStripExpanded}
                 />
             );
         case 'kerning':
@@ -403,78 +437,105 @@ const UnifiedEditorModal: React.FC<any> = ({
     switch(profile) {
         case 'positioning':
             return (
-                <PositioningEditorWorkspace 
-                    markPaths={positioningSession.markPaths} basePaths={positioningSession.basePaths} targetLigature={character}
-                    onPathsChange={positioningSession.handlePathsChange}
-                    pageTool="select" onToggleTool={() => {}} 
-                    zoom={positioningSession.zoom} setZoom={positioningSession.setZoom}
-                    viewOffset={positioningSession.viewOffset} setViewOffset={positioningSession.setViewOffset}
-                    onZoom={(f) => {}} onReuseClick={() => {}}
-                    canEdit={positioningSession.canEdit}
-                    movementConstraint={positioningSession.movementConstraint as any}
-                    settings={settings} metrics={metrics}
-                    manualX={positioningSession.manualX} manualY={positioningSession.manualY}
-                    onManualChange={handlePositioningManualChange} onManualCommit={positioningSession.handleManualCommit}
-                    setIsInputFocused={positioningSession.setIsInputFocused}
-                    selectedPathIds={positioningSession.selectedPathIds} onSelectionChange={positioningSession.setSelectedPathIds}
-                    showStrip={!!positioningSession.activeAttachmentClass} classSiblings={classSiblings} activePair={{ base: posBaseChar || character, mark: posMarkChar || character, ligature: character }} 
-                    pivotChar={positioningSession.isPivot ? (positioningSession.activeAttachmentClass?.name ? null : (posMarkChar || character)) : (positioningSession.pivotName ? allCharsByName.get(positioningSession.pivotName) : null)}
-                    glyphDataMap={allGlyphData}
-                    anchorDelta={VEC.sub(positioningSession.currentOffset, positioningSession.alignmentOffset)} isLinked={positioningSession.isLinked} onToggleLink={handleToggleLink}
-                    handleSelectSibling={(p: any) => onNavigate(p.ligature)} markAttachmentRules={markAttachmentRules} positioningRules={positioningRules}
-                    characterSets={allCharacterSets} groups={groups} isStripExpanded={isStripExpanded} setIsStripExpanded={setIsStripExpanded}
-                    activeAttachmentClass={positioningSession.activeAttachmentClass} hasDualContext={positioningSession.hasDualContext} activeClassType={positioningSession.activeClassType} onToggleContext={positioningSession.setOverrideClassType}
-                    isLargeScreen={isLargeScreen}
-                />
+                <div className="flex-grow flex flex-col h-full overflow-hidden relative">
+                    <PositioningEditorWorkspace 
+                        markPaths={positioningSession.markPaths} basePaths={positioningSession.basePaths} targetLigature={character}
+                        onPathsChange={positioningSession.handlePathsChange}
+                        pageTool={posPageTool} onToggleTool={() => setPosPageTool(t => t === 'select' ? 'pan' : 'select')} 
+                        zoom={positioningSession.zoom} setZoom={positioningSession.setZoom}
+                        viewOffset={positioningSession.viewOffset} setViewOffset={positioningSession.setViewOffset}
+                        onZoom={handlePositioningZoom} onReuseClick={() => setIsPosReuseOpen(!isPosReuseOpen)}
+                        canEdit={positioningSession.canEdit}
+                        movementConstraint={positioningSession.movementConstraint as any}
+                        settings={settings} metrics={metrics}
+                        manualX={positioningSession.manualX} manualY={positioningSession.manualY}
+                        onManualChange={handlePositioningManualChange} onManualCommit={positioningSession.handleManualCommit}
+                        setIsInputFocused={positioningSession.setIsInputFocused}
+                        selectedPathIds={positioningSession.selectedPathIds} onSelectionChange={positioningSession.setSelectedPathIds}
+                        showStrip={!!positioningSession.activeAttachmentClass} classSiblings={classSiblings} activePair={{ base: posBaseChar || character, mark: posMarkChar || character, ligature: character }} 
+                        pivotChar={positioningSession.isPivot ? (positioningSession.activeAttachmentClass?.name ? null : (posMarkChar || character)) : (positioningSession.pivotName ? allCharsByName.get(positioningSession.pivotName) : null)}
+                        glyphDataMap={allGlyphData}
+                        anchorDelta={VEC.sub(positioningSession.currentOffset, positioningSession.alignmentOffset)} isLinked={positioningSession.isLinked} onToggleLink={handleToggleLink}
+                        handleSelectSibling={(p: any) => onNavigate(p.ligature)} markAttachmentRules={markAttachmentRules} positioningRules={positioningRules}
+                        characterSets={allCharacterSets} groups={groups} isStripExpanded={isStripExpanded} setIsStripExpanded={setIsStripExpanded}
+                        activeAttachmentClass={positioningSession.activeAttachmentClass} hasDualContext={positioningSession.hasDualContext} activeClassType={positioningSession.activeClassType} onToggleContext={positioningSession.setOverrideClassType}
+                        isLargeScreen={isLargeScreen}
+                    />
+
+                    {isPosReuseOpen && (
+                        <div className="absolute top-4 left-4 z-30 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-80 max-h-[500px] flex flex-col animate-fade-in-up">
+                            <div className="flex justify-between items-center mb-4">
+                                <h4 className="font-bold text-gray-900 dark:text-white">{t('copyPositionFrom')}</h4>
+                                <button onClick={() => setIsPosReuseOpen(false)}><CloseIcon className="w-5 h-5"/></button>
+                            </div>
+                            <div className="flex-grow overflow-y-auto pr-1 grid grid-cols-2 gap-3">
+                                {reuseSources.length > 0 ? reuseSources.map(s => (
+                                    <ReusePreviewCard 
+                                        key={s.unicode} baseChar={s} markChar={posMarkChar!} 
+                                        onClick={() => handlePositioningReuse(s)} 
+                                        glyphDataMap={allGlyphData} strokeThickness={settings.strokeThickness} 
+                                        markPositioningMap={markPositioningMap} glyphVersion={glyphVersion} 
+                                        displayLabel={s.name} 
+                                    />
+                                )) : <div className="col-span-2 text-center text-gray-500 italic py-4">{t('noCompleteSources')}</div>}
+                            </div>
+                        </div>
+                    )}
+
+                    <Modal isOpen={isPosResetConfirmOpen} onClose={() => setIsPosResetConfirmOpen(false)} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsPosResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={handlePositioningReset} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: character.name })}</p></Modal>
+                </div>
             );
         case 'kerning':
             return (
-                <KerningEditorWorkspace 
-                    isLargeScreen={isLargeScreen}
-                    containerRef={kerningContainerRef} // USE THE STABLE REF
-                    onZoom={kerningSession.setZoom}
-                    kernValue={kerningSession.kernValue}
-                    onKernChange={(e) => kerningSession.setKernValue(e.target.value)}
-                    onKernFocus={kerningSession.setIsKernFocused}
-                    onKernHover={kerningSession.setIsKernHovered}
-                    isKernDirty={kerningSession.isDirty}
-                    xDistValue={kerningSession.xDistValue}
-                    onXDistChange={(e) => kerningSession.setXDistValue(e.target.value)}
-                    onXDistCommit={kerningSession.handleXDistCommit}
-                    isXDistFocused={kerningSession.isXDistFocused}
-                    isXDistHovered={kerningSession.isXDistHovered}
-                    onXDistFocus={kerningSession.setIsXDistFocused}
-                    onXDistHover={kerningSession.setIsXDistHovered}
-                    xDistInputRef={useRef(null)}
-                >
-                     <div 
-                        className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800"
-                        style={{ 
-                            width: kerningSession.canvasDisplaySize.width || 800, 
-                            height: kerningSession.canvasDisplaySize.height || 533 
-                        }}
+                <div className="flex-grow flex flex-col h-full min-h-0 overflow-hidden">
+                    <KerningEditorWorkspace 
+                        isLargeScreen={isLargeScreen}
+                        containerRef={kerningContainerRef}
+                        setContainerSize={kerningSession.setContainerSize}
+                        onZoom={kerningSession.setZoom}
+                        kernValue={kerningSession.kernValue}
+                        onKernChange={(e) => kerningSession.setKernValue(e.target.value)}
+                        onKernFocus={kerningSession.setIsKernFocused}
+                        onKernHover={kerningSession.setIsKernHovered}
+                        isKernDirty={kerningSession.isDirty}
+                        xDistValue={kerningSession.xDistValue}
+                        onXDistChange={(e) => kerningSession.setXDistValue(e.target.value)}
+                        onXDistCommit={kerningSession.handleXDistCommit}
+                        isXDistFocused={kerningSession.isXDistFocused}
+                        isXDistHovered={kerningSession.isXDistHovered}
+                        onXDistFocus={kerningSession.setIsXDistFocused}
+                        onXDistHover={kerningSession.setIsXDistHovered}
+                        xDistInputRef={useRef(null)}
                     >
-                        <KerningCanvas
-                            width={kerningSession.canvasDisplaySize.width || 800}
-                            height={kerningSession.canvasDisplaySize.height || 533}
-                            leftChar={kernLeftChar!}
-                            rightChar={kernRightChar!}
-                            glyphDataMap={allGlyphData}
-                            kernValue={kerningSession.kernValue}
-                            onKernChange={kerningSession.setKernValue}
-                            metrics={metrics}
-                            tool="select"
-                            zoom={kerningSession.zoom}
-                            setZoom={kerningSession.setZoom}
-                            viewOffset={kerningSession.viewOffset}
-                            setViewOffset={kerningSession.setViewOffset}
-                            settings={settings}
-                            baseScale={kerningSession.baseScale}
-                            strokeThickness={settings.strokeThickness}
-                            showMeasurement={kerningSession.showMeasurement}
-                        />
-                    </div>
-                </KerningEditorWorkspace>
+                         <div 
+                            className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800"
+                            style={{ 
+                                width: kerningSession.canvasDisplaySize.width || 800, 
+                                height: kerningSession.canvasDisplaySize.height || 533 
+                            }}
+                        >
+                            <KerningCanvas
+                                width={kerningSession.canvasDisplaySize.width || 800}
+                                height={kerningSession.canvasDisplaySize.height || 533}
+                                leftChar={kernLeftChar!}
+                                rightChar={kernRightChar!}
+                                glyphDataMap={allGlyphData}
+                                kernValue={kerningSession.kernValue}
+                                onKernChange={kerningSession.setKernValue}
+                                metrics={metrics}
+                                tool="select"
+                                zoom={kerningSession.zoom}
+                                setZoom={kerningSession.setZoom}
+                                viewOffset={kerningSession.viewOffset}
+                                setViewOffset={kerningSession.setViewOffset}
+                                settings={settings}
+                                baseScale={kerningSession.baseScale}
+                                strokeThickness={settings.strokeThickness}
+                                showMeasurement={kerningSession.showMeasurement}
+                            />
+                        </div>
+                    </KerningEditorWorkspace>
+                </div>
             );
         default:
             return (
@@ -504,10 +565,6 @@ const UnifiedEditorModal: React.FC<any> = ({
             );
     }
   };
-
-  const posBaseUni = posBaseChar?.unicode;
-  const posMarkUni = posMarkChar?.unicode;
-  const pairIdentifier = character.position ? `${posBaseUni}-${posMarkUni}` : '';
 
   return (
     <div ref={modalRef} className={`fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col ${animationClass}`}>
