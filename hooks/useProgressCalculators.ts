@@ -31,12 +31,17 @@ export const useProgressCalculators = ({
     const { settings } = useSettings();
     const showHidden = settings?.showHiddenGlyphs ?? false;
 
+    /**
+     * Drawing Progress:
+     * Calculates percentage of glyphs drawn relative to the total glyphs defined in the script.
+     */
     const drawingProgress = useMemo(() => {
         if (!characterSets) return { completed: 0, total: 0 };
         
         const allDrawableChars = characterSets.flatMap(cs => cs.characters)
             .filter(c => c.unicode !== 8205 && c.unicode !== 8204)
-             .filter(c => !c.hidden || showHidden); ;
+            .filter(c => !c.hidden || showHidden);
+        
         const totalDrawableChars = allDrawableChars.length;
         
         const drawnGlyphCount = allDrawableChars.filter(char => {
@@ -46,14 +51,18 @@ export const useProgressCalculators = ({
         return { completed: drawnGlyphCount, total: totalDrawableChars };
     }, [glyphDataMap, characterSets, glyphVersion, showHidden]);
 
+    /**
+     * Positioning Progress (Absolute Scope):
+     * Calculates percentage of positioned pairs relative to ALL pairs defined by script rules,
+     * regardless of whether component glyphs have been drawn yet.
+     */
     const positioningProgress = useMemo(() => {
         if (!positioningRules || !characterSets) return { completed: 0, total: 0 };
         
         const groups = fontRules?.groups || {};
         const allRequiredPairs = new Set<string>();
-        const drawnPairs = new Set<string>();
 
-        // Names in the standard grid to exclude from positioning logic
+        // Names in the standard grid to exclude from positioning logic (prevent redundancy)
         const standardNames = new Set(
             characterSets
                 .filter(s => s.nameKey !== 'dynamicLigatures')
@@ -70,19 +79,14 @@ export const useProgressCalculators = ({
                     const baseChar = allCharsByName.get(baseName);
                     const markChar = allCharsByName.get(markName);
                     
-                    // Only count pair if both characters exist in the font
                     if (baseChar && markChar && baseChar.unicode !== undefined && markChar.unicode !== undefined) {
-                        // EXCLUSION LOGIC: Calculate target name and check grid
                         const ligName = rule.ligatureMap?.[baseName]?.[markName] || (baseName + markName);
                         
+                        // We only count it as a "requirement" if it's not already 
+                        // a standalone character in the main grid.
                         if (!standardNames.has(ligName)) {
                             const key = `${baseChar.unicode}-${markChar.unicode}`;
                             allRequiredPairs.add(key);
-                            
-                            // REVERT: Only count as "Drawn" (Eligible for progress total) if components are drawn
-                            if (isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
-                                drawnPairs.add(key);
-                            }
                         }
                     }
                 }
@@ -90,23 +94,25 @@ export const useProgressCalculators = ({
         }
         
         let completedCount = 0;
-        drawnPairs.forEach(key => {
+        allRequiredPairs.forEach(key => {
             if (markPositioningMap.has(key)) {
                 completedCount++;
             }
         });
         
-        return { completed: completedCount, total: drawnPairs.size };
-    }, [markPositioningMap, positioningRules, fontRules, characterSets, allCharsByName, glyphDataMap, glyphVersion]);
+        return { completed: completedCount, total: allRequiredPairs.size };
+    }, [markPositioningMap, positioningRules, fontRules, characterSets, allCharsByName]);
 
+    /**
+     * Kerning Progress (Absolute Scope):
+     * Calculates percentage of kerned pairs relative to ALL recommended pairs in the script.
+     */
     const kerningProgress = useMemo(() => {
         if (!recommendedKerning || !characterSets) return { completed: 0, total: 0 };
         
         const groups = fontRules?.groups || {};
         const allRecommendedPairs = new Set<string>();
-        const drawnPairs = new Set<string>();
 
-        // Names in the standard grid to exclude
         const standardNames = new Set(
             characterSets
                 .filter(s => s.nameKey !== 'dynamicLigatures')
@@ -124,15 +130,9 @@ export const useProgressCalculators = ({
                     const rightChar = allCharsByName.get(rightName);
                     
                     if (leftChar && rightChar && leftChar.unicode !== undefined && rightChar.unicode !== undefined) {
-                        // REDUNDANCY CHECK: left.name + right.name
                         if (!standardNames.has(leftChar.name + rightChar.name)) {
                             const key = `${leftChar.unicode}-${rightChar.unicode}`;
                             allRecommendedPairs.add(key);
-
-                            // REVERT: Only count as "Drawn" (Eligible for progress total) if components are drawn
-                            if (isGlyphDrawn(glyphDataMap.get(leftChar.unicode)) && isGlyphDrawn(glyphDataMap.get(rightChar.unicode))) {
-                                drawnPairs.add(key);
-                            }
                         }
                     }
                 }
@@ -140,15 +140,19 @@ export const useProgressCalculators = ({
         }
 
         let completedCount = 0;
-        drawnPairs.forEach(key => {
+        allRecommendedPairs.forEach(key => {
             if (kerningMap.has(key)) {
                 completedCount++;
             }
         });
 
-        return { completed: completedCount, total: drawnPairs.size };
-    }, [kerningMap, recommendedKerning, allCharsByName, fontRules, characterSets, glyphDataMap, glyphVersion]);
+        return { completed: completedCount, total: allRecommendedPairs.size };
+    }, [kerningMap, recommendedKerning, allCharsByName, fontRules, characterSets]);
 
+    /**
+     * Rules Progress:
+     * Measures how many unique glyphs referenced in the GSUB/GPOS logic have been drawn.
+     */
     const rulesProgress = useMemo(() => {
         if (!fontRules || !characterSets) return { completed: 0, total: 0 };
         
@@ -164,7 +168,6 @@ export const useProgressCalculators = ({
                 const block = obj[type];
                 if (block) {
                     Object.entries(block).forEach(([key, val]) => {
-                        // Exclude group-to-group rules from "glyph drawing" progress
                         if (!key.startsWith('$') && !key.startsWith('@')) allReferencedNames.add(key);
                         
                         if (Array.isArray(val)) {
