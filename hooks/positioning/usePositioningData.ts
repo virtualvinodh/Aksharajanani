@@ -1,4 +1,3 @@
-
 import { useMemo, useCallback } from 'react';
 import { PositioningRules, Character, GlyphData, CharacterSet, AttachmentClass, MarkPositioningMap } from '../../types';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
@@ -171,7 +170,8 @@ export const usePositioningData = ({
                     const markChar = allChars.get(markName);
                     
                     if (baseChar && markChar) {
-                        if(isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
+                        // REVERT: Only add pairs if components are drawn
+                        if (isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
                             const ligature = positioningData.allLigaturesByKey.get(`${baseChar.unicode}-${markChar.unicode}`);
                             if (ligature) {
                                 // FILTER: If this ligature is already a unique character in the grid, don't show it here
@@ -275,13 +275,17 @@ export const usePositioningData = ({
 
         sourceSet.forEach(name => {
             const char = allChars.get(name);
-            if (char && !char.hidden && isGlyphDrawn(glyphDataMap.get(char.unicode))) {
+            if (char && !char.hidden) {
                 // If we are viewing by item, we only add it if there's at least one pair for it 
                 // that ISN'T in the standard grid.
                 const hasEligiblePairs = Array.from(positioningData.allLigaturesByKey.entries()).some(([key, lig]) => {
                     const [b, m] = key.split('-').map(Number);
                     if (viewMode === 'base' && b !== char.unicode) return false;
                     if (viewMode === 'mark' && m !== char.unicode) return false;
+                    
+                    // REVERT: Item must have drawn components to be visible in nav
+                    if (!isGlyphDrawn(glyphDataMap.get(b)) || !isGlyphDrawn(glyphDataMap.get(m))) return false;
+
                     return !standardGridNames.has(lig.name);
                 });
 
@@ -328,26 +332,25 @@ export const usePositioningData = ({
                      const baseChar = allChars.get(baseName);
                      const markChar = allChars.get(markName);
                      if (baseChar && markChar) {
-                         const ligature = positioningData.allLigaturesByKey.get(`${baseChar.unicode}-${markChar.unicode}`);
-                         if (ligature && !addedLigatures.has(ligature.unicode)) {
-                            // FILTER: Redundancy check
-                            if (!standardGridNames.has(ligature.name)) {
-                                allCombinations.push({ base: baseChar, mark: markChar, ligature });
-                                addedLigatures.add(ligature.unicode);
-                            }
+                         // REVERT: Combinations only show if components are drawn
+                         if (isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
+                             const ligature = positioningData.allLigaturesByKey.get(`${baseChar.unicode}-${markChar.unicode}`);
+                             if (ligature && !addedLigatures.has(ligature.unicode)) {
+                                // FILTER: Redundancy check
+                                if (!standardGridNames.has(ligature.name)) {
+                                    allCombinations.push({ base: baseChar, mark: markChar, ligature });
+                                    addedLigatures.add(ligature.unicode);
+                                }
+                             }
+                         } else {
+                             incompleteFound = true;
                          }
                      }
                 }
             }
         }
 
-        let result = allCombinations.filter(
-            ({ base, mark }) => {
-                const drawn = isGlyphDrawn(glyphDataMap.get(base.unicode)) && isGlyphDrawn(glyphDataMap.get(mark.unicode));
-                if (!drawn) incompleteFound = true;
-                return drawn;
-            }
-        );
+        let result = [...allCombinations];
         
         if (isFiltered) {
             if (filterMode === 'completed') {

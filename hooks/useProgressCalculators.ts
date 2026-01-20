@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { CharacterSet, GlyphData, KerningMap, MarkPositioningMap, RecommendedKerning, Character, PositioningRules } from '../types';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -52,6 +51,7 @@ export const useProgressCalculators = ({
         
         const groups = fontRules?.groups || {};
         const allRequiredPairs = new Set<string>();
+        const drawnPairs = new Set<string>();
 
         // Names in the standard grid to exclude from positioning logic
         const standardNames = new Set(
@@ -73,12 +73,16 @@ export const useProgressCalculators = ({
                     // Only count pair if both characters exist in the font
                     if (baseChar && markChar && baseChar.unicode !== undefined && markChar.unicode !== undefined) {
                         // EXCLUSION LOGIC: Calculate target name and check grid
-                        // Fallback naming logic matches positioningData in usePositioningData
                         const ligName = rule.ligatureMap?.[baseName]?.[markName] || (baseName + markName);
                         
                         if (!standardNames.has(ligName)) {
                             const key = `${baseChar.unicode}-${markChar.unicode}`;
                             allRequiredPairs.add(key);
+                            
+                            // REVERT: Only count as "Drawn" (Eligible for progress total) if components are drawn
+                            if (isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
+                                drawnPairs.add(key);
+                            }
                         }
                     }
                 }
@@ -86,20 +90,21 @@ export const useProgressCalculators = ({
         }
         
         let completedCount = 0;
-        allRequiredPairs.forEach(key => {
+        drawnPairs.forEach(key => {
             if (markPositioningMap.has(key)) {
                 completedCount++;
             }
         });
         
-        return { completed: completedCount, total: allRequiredPairs.size };
-    }, [markPositioningMap, positioningRules, fontRules, characterSets, allCharsByName]);
+        return { completed: completedCount, total: drawnPairs.size };
+    }, [markPositioningMap, positioningRules, fontRules, characterSets, allCharsByName, glyphDataMap, glyphVersion]);
 
     const kerningProgress = useMemo(() => {
         if (!recommendedKerning || !characterSets) return { completed: 0, total: 0 };
         
         const groups = fontRules?.groups || {};
         const allRecommendedPairs = new Set<string>();
+        const drawnPairs = new Set<string>();
 
         // Names in the standard grid to exclude
         const standardNames = new Set(
@@ -119,11 +124,14 @@ export const useProgressCalculators = ({
                     const rightChar = allCharsByName.get(rightName);
                     
                     if (leftChar && rightChar && leftChar.unicode !== undefined && rightChar.unicode !== undefined) {
-                        // Only count if characters are actually drawn/valid
-                        if (isGlyphDrawn(glyphDataMap.get(leftChar.unicode)) && isGlyphDrawn(glyphDataMap.get(rightChar.unicode))) {
-                            // REDUNDANCY CHECK: left.name + right.name
-                            if (!standardNames.has(leftChar.name + rightChar.name)) {
-                                allRecommendedPairs.add(`${leftChar.unicode}-${rightChar.unicode}`);
+                        // REDUNDANCY CHECK: left.name + right.name
+                        if (!standardNames.has(leftChar.name + rightChar.name)) {
+                            const key = `${leftChar.unicode}-${rightChar.unicode}`;
+                            allRecommendedPairs.add(key);
+
+                            // REVERT: Only count as "Drawn" (Eligible for progress total) if components are drawn
+                            if (isGlyphDrawn(glyphDataMap.get(leftChar.unicode)) && isGlyphDrawn(glyphDataMap.get(rightChar.unicode))) {
+                                drawnPairs.add(key);
                             }
                         }
                     }
@@ -132,58 +140,68 @@ export const useProgressCalculators = ({
         }
 
         let completedCount = 0;
-        allRecommendedPairs.forEach(key => {
+        drawnPairs.forEach(key => {
             if (kerningMap.has(key)) {
                 completedCount++;
             }
         });
 
-        return { completed: completedCount, total: allRecommendedPairs.size };
+        return { completed: completedCount, total: drawnPairs.size };
     }, [kerningMap, recommendedKerning, allCharsByName, fontRules, characterSets, glyphDataMap, glyphVersion]);
 
     const rulesProgress = useMemo(() => {
-        if (!fontRules || !allCharsByName) {
-            return { completed: 0, total: 0 };
-        }
+        if (!fontRules || !characterSets) return { completed: 0, total: 0 };
         
-        const groups = fontRules.groups || {};
-        const requiredRawNames = new Set<string>();
-        
-        const parseRuleValue = (value: any) => {
-            if (typeof value === 'string') value.split(',').forEach(name => requiredRawNames.add(name.trim()));
-            else if (Array.isArray(value)) value.forEach(parseRuleValue);
-        };
-        const parseContextualRule = (ruleValue: any) => {
-            if (ruleValue.replace) parseRuleValue(ruleValue.replace);
-            if (ruleValue.left) parseRuleValue(ruleValue.left);
-            if (ruleValue.right) parseRuleValue(ruleValue.right);
-        };
-        const scriptTag = Object.keys(fontRules).find(key => key !== 'groups');
+        const scriptTag = Object.keys(fontRules).find(key => key !== 'groups' && key !== 'lookups');
         if (!scriptTag) return { completed: 0, total: 0 };
-        const scriptRules = fontRules[scriptTag];
-        for (const featureTag in scriptRules) {
-            const feature = scriptRules[featureTag];
-            if (feature.liga) for (const ligName in feature.liga) { requiredRawNames.add(ligName); parseRuleValue(feature.liga[ligName]); }
-            if (feature.single) for (const outputName in feature.single) { requiredRawNames.add(outputName); parseRuleValue(feature.single[outputName]); }
-            if (feature.multi) for (const outputString in feature.multi) { parseRuleValue(outputString); parseRuleValue(feature.multi[outputString]); }
-            if (feature.context) for (const replacementName in feature.context) { requiredRawNames.add(replacementName); parseContextualRule(feature.context[replacementName]); }
-            if (feature.dist?.simple) for (const charName in feature.dist.simple) requiredRawNames.add(charName);
-            if (feature.dist?.contextual) (feature.dist.contextual as any[]).forEach(rule => { if (rule.target) requiredRawNames.add(rule.target); if (rule.left) parseRuleValue(rule.left); if (rule.right) parseRuleValue(rule.right); });
-        }
-        
-        // Expand any groups found in the rules
-        const expandedGlyphNames = expandMembers(Array.from(requiredRawNames), groups, characterSets || []);
-        
-        const total = expandedGlyphNames.length;
-        let completed = 0;
-        
-        expandedGlyphNames.forEach(name => {
+
+        const allReferencedNames = new Set<string>();
+        const groups = fontRules.groups || {};
+
+        const collect = (obj: any) => {
+            if (!obj) return;
+            ['liga', 'context', 'single', 'multiple', 'dist'].forEach(type => {
+                const block = obj[type];
+                if (block) {
+                    Object.entries(block).forEach(([key, val]) => {
+                        // Exclude group-to-group rules from "glyph drawing" progress
+                        if (!key.startsWith('$') && !key.startsWith('@')) allReferencedNames.add(key);
+                        
+                        if (Array.isArray(val)) {
+                            val.forEach((v: any) => {
+                                if (typeof v === 'string' && !v.startsWith('$') && !v.startsWith('@')) {
+                                    allReferencedNames.add(v);
+                                }
+                            });
+                        } else if (typeof val === 'object' && val !== null) {
+                            ['replace', 'left', 'right'].forEach(field => {
+                                if (Array.isArray((val as any)[field])) {
+                                    (val as any)[field].forEach((v: string) => {
+                                        if (!v.startsWith('$') && !v.startsWith('@')) allReferencedNames.add(v);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        };
+
+        const scriptData = fontRules[scriptTag];
+        if (scriptData) Object.values(scriptData).forEach(collect);
+        if (fontRules.lookups) Object.values(fontRules.lookups).forEach(collect);
+
+        const names = Array.from(allReferencedNames);
+        const total = names.length;
+        if (total === 0) return { completed: 0, total: 0 };
+
+        const completed = names.filter(name => {
             const char = allCharsByName.get(name);
-            if (char && isGlyphDrawn(glyphDataMap.get(char.unicode))) completed++;
-        });
-        
+            return char && char.unicode !== undefined && isGlyphDrawn(glyphDataMap.get(char.unicode));
+        }).length;
+
         return { completed, total };
-    }, [fontRules, allCharsByName, glyphDataMap, glyphVersion, characterSets]);
+    }, [fontRules, characterSets, allCharsByName, glyphDataMap, glyphVersion]);
 
     return {
         drawingProgress,

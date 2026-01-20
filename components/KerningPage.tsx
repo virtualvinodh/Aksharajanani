@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { RecommendedKerning } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -73,10 +72,13 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                             // FILTER: If this pair is already in the grid, skip it
                             if (standardGridNames.has(pairName)) return;
 
-                            const key = `${lChar.unicode}-${rChar.unicode}`;
-                            if (!seen.has(key)) {
-                                pairs.push({ left: lChar, right: rChar });
-                                seen.add(key);
+                            // REVERT: Only include drawn pairs in recommended list
+                            if (isGlyphDrawn(lChar.unicode) && isGlyphDrawn(rChar.unicode)) {
+                                const key = `${lChar.unicode}-${rChar.unicode}`;
+                                if (!seen.has(key)) {
+                                    pairs.push({ left: lChar, right: rChar });
+                                    seen.add(key);
+                                }
                             }
                         }
                     });
@@ -107,7 +109,10 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                         if (l && r) {
                             const pairName = l.name + r.name;
                             if (!standardGridNames.has(pairName)) {
-                                combined.push({ left: l, right: r });
+                                // REVERT: Only include drawn pairs in generated list
+                                if (isGlyphDrawn(l.unicode) && isGlyphDrawn(r.unicode)) {
+                                    combined.push({ left: l, right: r });
+                                }
                             }
                         }
                     }
@@ -115,11 +120,11 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             }
             return combined.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
         }
-    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, kerningMap, allCharsByUnicode, standardGridNames]);
+    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, kerningMap, allCharsByUnicode, standardGridNames, isGlyphDrawn]);
 
-    // 2. Filter list by drawing status and search query
+    // 2. Filter list by search query and saved status
     const filteredPairs = useMemo(() => {
-        let result = allPairsInContext.filter(p => isGlyphDrawn(p.left.unicode) && isGlyphDrawn(p.right.unicode));
+        let result = [...allPairsInContext];
         
         if (filterMode === 'completed') {
             result = result.filter(p => kerningMap.has(`${p.left.unicode}-${p.right.unicode}`));
@@ -144,7 +149,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             }
         }
         return result;
-    }, [allPairsInContext, filterMode, kerningMap, searchQuery, isGlyphDrawn]);
+    }, [allPairsInContext, filterMode, kerningMap, searchQuery]);
 
     // Deep Link Handler
     useEffect(() => {
