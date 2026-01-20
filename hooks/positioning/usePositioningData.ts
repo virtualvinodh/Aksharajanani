@@ -46,6 +46,17 @@ export const usePositioningData = ({
     const isSearching = searchQuery.trim().length > 0;
     const isFiltered = filterMode !== 'none' || isSearching;
 
+    // Identified standard grid names to avoid showing auto-assembled duplicates
+    const standardGridNames = useMemo(() => {
+        if (!characterSets) return new Set<string>();
+        return new Set(
+            characterSets
+                .filter(s => s.nameKey !== 'dynamicLigatures')
+                .flatMap(s => s.characters)
+                .map(c => c.name)
+        );
+    }, [characterSets]);
+
     const positioningData = useMemo(() => {
         const newLigaturesByKey = new Map<string, Character>();
         let virtualPuaCounter = 0x100000;
@@ -163,7 +174,10 @@ export const usePositioningData = ({
                         if(isGlyphDrawn(glyphDataMap.get(baseChar.unicode)) && isGlyphDrawn(glyphDataMap.get(markChar.unicode))) {
                             const ligature = positioningData.allLigaturesByKey.get(`${baseChar.unicode}-${markChar.unicode}`);
                             if (ligature) {
-                                pairs.push({ base: baseChar, mark: markChar, ligature });
+                                // FILTER: If this ligature is already a unique character in the grid, don't show it here
+                                if (!standardGridNames.has(ligature.name)) {
+                                    pairs.push({ base: baseChar, mark: markChar, ligature });
+                                }
                             }
                         } else {
                             incompleteFound = true;
@@ -176,7 +190,7 @@ export const usePositioningData = ({
 
         return { groups: groupsList, hasIncomplete: incompleteFound };
 
-    }, [positioningRules, groups, characterSets, allChars, glyphDataMap, positioningData.allLigaturesByKey]);
+    }, [positioningRules, groups, characterSets, allChars, glyphDataMap, positioningData.allLigaturesByKey, standardGridNames]);
     
     const activeRuleGroup = useMemo(() => 
         ruleGroups.find(g => g.id === selectedRuleGroupId),
@@ -262,12 +276,23 @@ export const usePositioningData = ({
         sourceSet.forEach(name => {
             const char = allChars.get(name);
             if (char && !char.hidden && isGlyphDrawn(glyphDataMap.get(char.unicode))) {
-                items.set(char.unicode, char);
+                // If we are viewing by item, we only add it if there's at least one pair for it 
+                // that ISN'T in the standard grid.
+                const hasEligiblePairs = Array.from(positioningData.allLigaturesByKey.entries()).some(([key, lig]) => {
+                    const [b, m] = key.split('-').map(Number);
+                    if (viewMode === 'base' && b !== char.unicode) return false;
+                    if (viewMode === 'mark' && m !== char.unicode) return false;
+                    return !standardGridNames.has(lig.name);
+                });
+
+                if (hasEligiblePairs) {
+                    items.set(char.unicode, char);
+                }
             }
         });
 
         return Array.from(items.values()).sort((a, b) => a.unicode - b.unicode);
-    }, [positioningRules, allChars, viewMode, glyphDataMap, isFiltered, groups, characterSets]);
+    }, [positioningRules, allChars, viewMode, glyphDataMap, isFiltered, groups, characterSets, standardGridNames, positioningData.allLigaturesByKey]);
 
     const activeItem = navItems[activeTab];
 
@@ -305,8 +330,11 @@ export const usePositioningData = ({
                      if (baseChar && markChar) {
                          const ligature = positioningData.allLigaturesByKey.get(`${baseChar.unicode}-${markChar.unicode}`);
                          if (ligature && !addedLigatures.has(ligature.unicode)) {
-                            allCombinations.push({ base: baseChar, mark: markChar, ligature });
-                            addedLigatures.add(ligature.unicode);
+                            // FILTER: Redundancy check
+                            if (!standardGridNames.has(ligature.name)) {
+                                allCombinations.push({ base: baseChar, mark: markChar, ligature });
+                                addedLigatures.add(ligature.unicode);
+                            }
                          }
                      }
                 }
@@ -358,7 +386,7 @@ export const usePositioningData = ({
             }
         }
         return { combinations: result, hasIncomplete: incompleteFound };
-    }, [activeItem, positioningRules, viewMode, allChars, positioningData.allLigaturesByKey, glyphDataMap, isFiltered, filterMode, markPositioningMap, searchQuery, isSearching, groups, characterSets]);
+    }, [activeItem, positioningRules, viewMode, allChars, positioningData.allLigaturesByKey, glyphDataMap, isFiltered, filterMode, markPositioningMap, searchQuery, isSearching, groups, characterSets, standardGridNames]);
 
     const hasIncompleteData = viewMode === 'rules' ? rulesHaveIncomplete : gridHasIncomplete;
 
@@ -374,6 +402,6 @@ export const usePositioningData = ({
         navItems, 
         activeItem, 
         displayedCombinations,
-        hasIncompleteData // Export the flag
+        hasIncompleteData 
     };
 };

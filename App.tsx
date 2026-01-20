@@ -204,7 +204,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
     return <div className="h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex items-center justify-center p-4"><h1 className="text-2xl font-semibold animate-pulse">{t('loadingScript')}...</h1></div>;
   }
 
-  const hasPositioning = positioningRules && positioningRules.length > 0;
+  const hasPositioning = positioningProgress.total > 0;
   const hasKerning = recommendedKerning !== null;
   
   return (
@@ -240,6 +240,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 onLoadProject={handleLoadProject}
                 onImportGlyphsClick={() => layout.openModal('importGlyphs')}
                 onAddGlyphClick={(options) => layout.openModal('addGlyph', options)}
+                onAddBlock={() => layout.openModal('addBlock')}
                 onExportClick={startExportProcess}
                 onTestClick={handleTestClick}
                 onCreatorClick={handleCreatorClick}

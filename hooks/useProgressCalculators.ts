@@ -48,14 +48,22 @@ export const useProgressCalculators = ({
     }, [glyphDataMap, characterSets, glyphVersion, showHidden]);
 
     const positioningProgress = useMemo(() => {
-        if (!positioningRules) return { completed: 0, total: 0 };
+        if (!positioningRules || !characterSets) return { completed: 0, total: 0 };
         
         const groups = fontRules?.groups || {};
         const allRequiredPairs = new Set<string>();
+
+        // Names in the standard grid to exclude from positioning logic
+        const standardNames = new Set(
+            characterSets
+                .filter(s => s.nameKey !== 'dynamicLigatures')
+                .flatMap(s => s.characters)
+                .map(c => c.name)
+        );
         
         for (const rule of positioningRules) {
-            const ruleBases = expandMembers(rule.base, groups, characterSets || []);
-            const ruleMarks = expandMembers(rule.mark || [], groups, characterSets || []);
+            const ruleBases = expandMembers(rule.base, groups, characterSets);
+            const ruleMarks = expandMembers(rule.mark || [], groups, characterSets);
             
             for (const baseName of ruleBases) {
                 for (const markName of ruleMarks) {
@@ -64,8 +72,14 @@ export const useProgressCalculators = ({
                     
                     // Only count pair if both characters exist in the font
                     if (baseChar && markChar && baseChar.unicode !== undefined && markChar.unicode !== undefined) {
-                        const key = `${baseChar.unicode}-${markChar.unicode}`;
-                        allRequiredPairs.add(key);
+                        // EXCLUSION LOGIC: Calculate target name and check grid
+                        // Fallback naming logic matches positioningData in usePositioningData
+                        const ligName = rule.ligatureMap?.[baseName]?.[markName] || (baseName + markName);
+                        
+                        if (!standardNames.has(ligName)) {
+                            const key = `${baseChar.unicode}-${markChar.unicode}`;
+                            allRequiredPairs.add(key);
+                        }
                     }
                 }
             }
