@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { RecommendedKerning } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -38,6 +39,17 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         return isGlyphDrawnUtil(glyphDataMap.get(unicode));
     }, [glyphDataMap, glyphVersion]);
 
+    // Names in the standard grid to exclude from kerning logic
+    const standardGridNames = useMemo(() => {
+        if (!characterSets) return new Set<string>();
+        return new Set(
+            characterSets
+                .filter(s => s.nameKey !== 'dynamicLigatures')
+                .flatMap(s => s.characters)
+                .map(c => c.name)
+        );
+    }, [characterSets]);
+
     // 1. Expand all possible pairs based on rules
     const allPairsInContext = useMemo(() => {
         if (!characterSets) return [];
@@ -57,6 +69,10 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                         const lChar = allCharsByName.get(lName);
                         const rChar = allCharsByName.get(rName);
                         if (lChar?.unicode !== undefined && rChar?.unicode !== undefined) {
+                            const pairName = lChar.name + rChar.name;
+                            // FILTER: If this pair is already in the grid, skip it
+                            if (standardGridNames.has(pairName)) return;
+
                             const key = `${lChar.unicode}-${rChar.unicode}`;
                             if (!seen.has(key)) {
                                 pairs.push({ left: lChar, right: rChar });
@@ -75,7 +91,12 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                     const [lId, rId] = key.split('-').map(Number);
                     const l = allCharsByUnicode.get(lId);
                     const r = allCharsByUnicode.get(rId);
-                    if (l && r) combined.push({ left: l, right: r });
+                    if (l && r) {
+                         const pairName = l.name + r.name;
+                         if (!standardGridNames.has(pairName)) {
+                            combined.push({ left: l, right: r });
+                         }
+                    }
                 });
             } else if (selectedLeftChars.size > 0 && selectedRightChars.size > 0) {
                 // Generator Mode: Cross product
@@ -83,13 +104,18 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                     for (const rId of selectedRightChars) {
                         const l = allCharsByUnicode.get(lId);
                         const r = allCharsByUnicode.get(rId);
-                        if (l && r) combined.push({ left: l, right: r });
+                        if (l && r) {
+                            const pairName = l.name + r.name;
+                            if (!standardGridNames.has(pairName)) {
+                                combined.push({ left: l, right: r });
+                            }
+                        }
                     }
                 }
             }
             return combined.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
         }
-    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, kerningMap, allCharsByUnicode]);
+    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, kerningMap, allCharsByUnicode, standardGridNames]);
 
     // 2. Filter list by drawing status and search query
     const filteredPairs = useMemo(() => {

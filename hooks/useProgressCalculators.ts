@@ -101,6 +101,14 @@ export const useProgressCalculators = ({
         const groups = fontRules?.groups || {};
         const allRecommendedPairs = new Set<string>();
 
+        // Names in the standard grid to exclude
+        const standardNames = new Set(
+            characterSets
+                .filter(s => s.nameKey !== 'dynamicLigatures')
+                .flatMap(s => s.characters)
+                .map(c => c.name)
+        );
+
         for (const [leftRule, rightRule] of recommendedKerning) {
             const lefts = expandMembers([leftRule], groups, characterSets);
             const rights = expandMembers([rightRule], groups, characterSets);
@@ -111,10 +119,12 @@ export const useProgressCalculators = ({
                     const rightChar = allCharsByName.get(rightName);
                     
                     if (leftChar && rightChar && leftChar.unicode !== undefined && rightChar.unicode !== undefined) {
-                        // Only count if characters are actually drawn/valid, 
-                        // matching the logic that we only show pairs for drawn glyphs.
+                        // Only count if characters are actually drawn/valid
                         if (isGlyphDrawn(glyphDataMap.get(leftChar.unicode)) && isGlyphDrawn(glyphDataMap.get(rightChar.unicode))) {
-                            allRecommendedPairs.add(`${leftChar.unicode}-${rightChar.unicode}`);
+                            // REDUNDANCY CHECK: left.name + right.name
+                            if (!standardNames.has(leftChar.name + rightChar.name)) {
+                                allRecommendedPairs.add(`${leftChar.unicode}-${rightChar.unicode}`);
+                            }
                         }
                     }
                 }

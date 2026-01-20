@@ -205,7 +205,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   }
 
   const hasPositioning = positioningProgress.total > 0;
-  const hasKerning = recommendedKerning !== null;
+  // If total recommended pairs (filtered by redundancy) is 0, hide tab
+  const hasKerning = kerningProgress.total > 0;
   
   return (
     <div className="h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
