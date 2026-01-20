@@ -38,6 +38,12 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         return isGlyphDrawnUtil(glyphDataMap.get(unicode));
     }, [glyphDataMap, glyphVersion]);
 
+    // RESET SELECTIONS ON TAB CHANGE
+    useEffect(() => {
+        setSelectedLeftChars(new Set());
+        setSelectedRightChars(new Set());
+    }, [mode]);
+
     // Names in the standard grid to exclude from kerning logic
     const standardGridNames = useMemo(() => {
         if (!characterSets) return new Set<string>();
@@ -56,7 +62,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
 
         if (mode === 'recommended') {
             if (!recommendedKerning) return [];
-            const pairs: { left: any, right: any }[] = [];
+            let pairs: { left: any, right: any }[] = [];
             const seen = new Set<string>();
             
             recommendedKerning.forEach(([leftRule, rightRule]) => {
@@ -69,10 +75,10 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                         const rChar = allCharsByName.get(rName);
                         if (lChar?.unicode !== undefined && rChar?.unicode !== undefined) {
                             const pairName = lChar.name + rChar.name;
-                            // FILTER: If this pair is already in the grid, skip it
+                            // FILTER: Redundancy check
                             if (standardGridNames.has(pairName)) return;
 
-                            // REVERT: Only include drawn pairs in recommended list
+                            // Only include drawn pairs in recommended list
                             if (isGlyphDrawn(lChar.unicode) && isGlyphDrawn(rChar.unicode)) {
                                 const key = `${lChar.unicode}-${rChar.unicode}`;
                                 if (!seen.has(key)) {
@@ -84,6 +90,15 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                     });
                 });
             });
+
+            // FILTER: If side panels have selections, filter the recommended list
+            if (selectedLeftChars.size > 0) {
+                pairs = pairs.filter(p => selectedLeftChars.has(p.left.unicode));
+            }
+            if (selectedRightChars.size > 0) {
+                pairs = pairs.filter(p => selectedRightChars.has(p.right.unicode));
+            }
+
             return pairs;
         } else {
             const combined: { left: any, right: any }[] = [];
@@ -109,7 +124,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                         if (l && r) {
                             const pairName = l.name + r.name;
                             if (!standardGridNames.has(pairName)) {
-                                // REVERT: Only include drawn pairs in generated list
+                                // Only include drawn pairs in generated list
                                 if (isGlyphDrawn(l.unicode) && isGlyphDrawn(r.unicode)) {
                                     combined.push({ left: l, right: r });
                                 }

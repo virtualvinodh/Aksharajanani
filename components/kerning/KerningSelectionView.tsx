@@ -88,20 +88,24 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
         setIsResetVisibleConfirmOpen(false);
     };
 
+    // Determine titles based on mode
+    const leftTitle = mode === 'recommended' ? "kerningFilterLeftChars" : "kerningSelectLeftChars";
+    const rightTitle = mode === 'recommended' ? "kerningFilterRightChars" : "kerningSelectRightChars";
+
     return (
         <div className="w-full h-full flex flex-col">
             <div className="flex flex-1 overflow-hidden">
                 {isLargeScreen && (
                     <div className="w-64 flex-shrink-0 h-full border-r dark:border-gray-700">
-                        <CharacterSelectionPanel title="kerningSelectLeftChars" characters={drawnCharacters} selectedChars={selectedLeftChars} onSelectionChange={(u, s) => setSelectedLeftChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedLeftChars(new Set())} />
+                        <CharacterSelectionPanel title={leftTitle} characters={drawnCharacters} selectedChars={selectedLeftChars} onSelectionChange={(u, s) => setSelectedLeftChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedLeftChars(new Set())} />
                     </div>
                 )}
                 
                 <main className="flex-1 flex flex-col overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
                     {!isLargeScreen && (
                         <div className="p-4 space-y-4 border-b dark:border-gray-700">
-                             <CharacterSelectionRow title="kerningSelectLeftChars" characters={drawnCharacters} selectedChars={selectedLeftChars} onSelectionChange={(u, s) => setSelectedLeftChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedLeftChars(new Set())} />
-                             <CharacterSelectionRow title="kerningSelectRightChars" characters={drawnCharacters} selectedChars={selectedRightChars} onSelectionChange={(u, s) => setSelectedRightChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedRightChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedRightChars(new Set())} />
+                             <CharacterSelectionRow title={leftTitle} characters={drawnCharacters} selectedChars={selectedLeftChars} onSelectionChange={(u, s) => setSelectedLeftChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedLeftChars(new Set())} />
+                             <CharacterSelectionRow title={rightTitle} characters={drawnCharacters} selectedChars={selectedRightChars} onSelectionChange={(u, s) => setSelectedRightChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedRightChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedRightChars(new Set())} />
                         </div>
                     )}
 
@@ -133,7 +137,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
 
                 {isLargeScreen && (
                     <div className="w-64 flex-shrink-0 h-full border-l dark:border-gray-700">
-                        <CharacterSelectionPanel title="kerningSelectRightChars" characters={drawnCharacters} selectedChars={selectedRightChars} onSelectionChange={(u, s) => setSelectedRightChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedRightChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedRightChars(new Set())} />
+                        <CharacterSelectionPanel title={rightTitle} characters={drawnCharacters} selectedChars={selectedRightChars} onSelectionChange={(u, s) => setSelectedRightChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedRightChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedRightChars(new Set())} />
                     </div>
                 )}
             </div>
