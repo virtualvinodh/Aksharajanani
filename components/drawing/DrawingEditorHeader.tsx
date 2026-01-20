@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet, ComponentTransform } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -77,15 +76,12 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = ({
               <LeftArrowIcon />
           </button>
           <div className="text-center">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
                 {character.name}
               </h2>
-              <div className="flex justify-center mt-1 gap-1">
-                {isLocked && <span className="text-[9px] font-bold uppercase bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">Linked</span>}
-                {settings.showUnicodeValues && character.unicode !== undefined && (
-                   <span className="text-gray-500 dark:text-gray-400 text-[10px] font-mono">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</span>
-                )}
-              </div>
+              {settings.showUnicodeValues && character.unicode !== undefined && (
+                 <p className="text-gray-500 dark:text-gray-400 text-[10px] font-mono leading-none mt-1">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
+              )}
           </div>
            <button
               onClick={() => onNavigate(nextCharacter!)}

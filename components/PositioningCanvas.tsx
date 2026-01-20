@@ -39,35 +39,58 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
 
         ctx.clearRect(0, 0, width, height);
 
-        // Draw Grid
-        ctx.strokeStyle = theme === 'dark' ? 'rgba(74, 85, 104, 0.5)' : 'rgba(209, 213, 219, 0.7)';
-        ctx.lineWidth = 1; 
-        const gridSize = 50; 
-        const scaledGridSize = gridSize * zoom;
-        const xStart = viewOffset.x % scaledGridSize; 
-        for (let x = xStart; x < width; x += scaledGridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
-        const yStart = viewOffset.y % scaledGridSize; 
-        for (let y = yStart; y < height; y += scaledGridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
-
         ctx.save();
         ctx.translate(viewOffset.x, viewOffset.y);
         ctx.scale(zoom, zoom);
 
         const logicalViewX = -viewOffset.x / zoom;
         const logicalViewWidth = width / zoom;
+        const logicalViewY = -viewOffset.y / zoom;
+        const logicalViewHeight = height / zoom;
 
-        // Draw Guides
+        // --- Snapped High-DPI Grid ---
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(74, 85, 104, 0.4)' : 'rgba(209, 213, 219, 0.5)';
+        ctx.lineWidth = Math.max(1.0, 1.2 / zoom); 
+        const gridSize = 50;
+        
+        const xMin = Math.floor(logicalViewX / gridSize) * gridSize;
+        const xMax = Math.ceil((logicalViewX + logicalViewWidth) / gridSize) * gridSize;
+        const yMin = Math.floor(logicalViewY / gridSize) * gridSize;
+        const yMax = Math.ceil((logicalViewY + logicalViewHeight) / gridSize) * gridSize;
+
+        for (let x = xMin; x <= xMax; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, yMin);
+            ctx.lineTo(x, yMax);
+            ctx.stroke();
+        }
+        for (let y = yMin; y <= yMax; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(xMin, y);
+            ctx.lineTo(xMax, y);
+            ctx.stroke();
+        }
+
+        // --- High Visibility Guide Lines ---
+        const guideWidth = 20000;
+        const guideStart = -10000;
+        
         ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
-        ctx.lineWidth = 1 / zoom;
-        ctx.setLineDash([8 / zoom, 6 / zoom]);
+        // Enforce baseline density for mobile
+        ctx.lineWidth = Math.max(1.8, 2.2 / zoom); 
+        
+        // Topline (Dashed)
+        ctx.setLineDash([12 / zoom, 8 / zoom]);
         ctx.beginPath();
-        ctx.moveTo(logicalViewX, metrics.topLineY);
-        ctx.lineTo(logicalViewX + logicalViewWidth, metrics.topLineY);
+        ctx.moveTo(guideStart, metrics.topLineY);
+        ctx.lineTo(guideStart + guideWidth, metrics.topLineY);
         ctx.stroke();
+        
+        // Baseline (Solid)
         ctx.beginPath();
         ctx.setLineDash([]);
-        ctx.moveTo(logicalViewX, metrics.baseLineY);
-        ctx.lineTo(logicalViewX + logicalViewWidth, metrics.baseLineY);
+        ctx.moveTo(guideStart, metrics.baseLineY);
+        ctx.lineTo(guideStart + guideWidth, metrics.baseLineY);
         ctx.stroke();
 
         // Render Base (Background)
@@ -84,16 +107,6 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
             color: markColor 
         });
 
-        // Highlight if selected/draggable
-        if (tool === 'select' && canEdit) {
-            ctx.strokeStyle = '#6366F1'; 
-            ctx.lineWidth = 1 / zoom; 
-            ctx.setLineDash([4 / zoom, 4 / zoom]);
-            // Simplified selection box for the mark group
-            const markBbox = (markPaths.length > 0) ? (canvasRef.current && (markPaths as any)._bbox || null) : null;
-            // Note: In real use, we'd calculate bbox here or pass it in.
-        }
-
         ctx.restore();
     }, [width, height, markPaths, basePaths, zoom, viewOffset, theme, metrics, settings, isDragging, tool, canEdit]);
 
@@ -109,7 +122,7 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
             ref={canvasRef}
             width={width}
             height={height}
-            className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 max-w-full max-h-full block mx-auto shadow-inner"
+            className="bg-white dark:bg-gray-900 max-w-full max-h-full block mx-auto shadow-inner"
             style={{ touchAction: 'none', cursor: getCursor() }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}

@@ -53,17 +53,24 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
         if (!lBox || !rBox) return;
 
         const finalScale = baseScale * zoom;
-        const tx = (width / 2) - (750 * finalScale) + viewOffset.x;
-        const ty = (height / 2) - (500 * finalScale) + viewOffset.y;
+        
+        // Centering origin: Middle of the canvas
+        const cx = width / 2;
+        const cy = height / 2;
+        
+        // Logical center in font units for the viewport calculation is (750, 500)
+        // Shift tx/ty to match the session's coordinate logic
+        const tx = cx + viewOffset.x;
+        const ty = cy + viewOffset.y;
 
-        // Grid
+        // --- Snapped High-DPI Grid ---
         ctx.strokeStyle = theme === 'dark' ? 'rgba(74, 85, 104, 0.3)' : 'rgba(209, 213, 219, 0.4)';
-        ctx.lineWidth = 1; 
+        ctx.lineWidth = Math.max(1, 0.8 / zoom); 
         const gridSize = 50; 
         const scaledGridSize = gridSize * finalScale;
-        const xStart = (width / 2 + viewOffset.x) % scaledGridSize; 
+        const xStart = tx % scaledGridSize; 
         for (let x = xStart; x < width; x += scaledGridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
-        const yStart = (height / 2 + viewOffset.y) % scaledGridSize; 
+        const yStart = ty % scaledGridSize; 
         for (let y = yStart; y < height; y += scaledGridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
 
         const rsbL = leftChar.rsb ?? metrics.defaultRSB;
@@ -72,13 +79,15 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
         const rightTranslateX = lBox.x + lBox.width + rsbL + kernNum + lsbR - rBox.x;
 
         ctx.save();
+        // Transformation stack: Translate to viewport offset, apply scale, then translate to match logical 0,0
         ctx.translate(tx, ty);
         ctx.scale(finalScale, finalScale);
+        ctx.translate(-750, -500); // Shift so logical (750, 500) is the pivot
 
         // Guides
         ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
-        ctx.lineWidth = 1.5 / finalScale; 
-        ctx.setLineDash([8 / finalScale, 6 / finalScale]);
+        ctx.lineWidth = Math.max(2.0, 2.5 / zoom); 
+        ctx.setLineDash([12 / zoom, 8 / zoom]);
         ctx.beginPath(); ctx.moveTo(-500, metrics.topLineY); ctx.lineTo(2000, metrics.topLineY); ctx.stroke();
         ctx.beginPath(); ctx.setLineDash([]); ctx.moveTo(-500, metrics.baseLineY); ctx.lineTo(2000, metrics.baseLineY); ctx.stroke();
 
@@ -101,9 +110,9 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
                 const x2 = rSub.xHeight.minX + rightTranslateX;
                 const ym = (metrics.topLineY + metrics.baseLineY) / 2;
                 const dist = Math.abs(x2 - x1);
-                const arrowSize = Math.min(8 / finalScale, dist / 3);
+                const arrowSize = Math.min(12 / zoom, dist / 3);
                 ctx.strokeStyle = '#14b8a6'; 
-                ctx.lineWidth = 2 / finalScale; 
+                ctx.lineWidth = 3 / zoom; 
                 ctx.beginPath();
                 ctx.moveTo(x1, ym); ctx.lineTo(x2, ym);
                 if (dist > arrowSize * 2) {

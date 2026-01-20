@@ -57,9 +57,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
         return () => ro.disconnect();
     }, [updateSize]);
 
-    // FIX: Centered Zoom Action
-    // Since the KerningCanvas is rendered relative to the screen center,
-    // we just need to scale the pixel displacement (viewOffset) to keep the center fixed.
+    // Centered Zoom Action
     const handleZoomAction = useCallback((factor: number) => {
         const oldZoom = session.zoom;
         const newZoom = Math.max(0.1, Math.min(10, oldZoom * factor));
@@ -107,7 +105,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 xDistInputRef={xDistInputRef} 
             >
                 <div 
-                    className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 transition-all duration-300"
+                    className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800"
                     style={{ 
                         width: session.canvasDisplaySize.width || '80vw', 
                         height: session.canvasDisplaySize.height || '60vh'

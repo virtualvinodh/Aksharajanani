@@ -1,7 +1,7 @@
 import React from 'react';
 import { Character, AppSettings } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, TrashIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, TrashIcon } from '../../contexts/../constants';
 
 interface KerningEditorHeaderProps {
     pair: { left: Character, right: Character };
@@ -48,7 +48,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                 
                 <div className="text-center px-2">
                     <h2 
-                        className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-xs" 
+                        className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-xs leading-tight" 
                         style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}
                     >
                         {pair.left.name} + {pair.right.name}

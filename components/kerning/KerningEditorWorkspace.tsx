@@ -1,3 +1,4 @@
+
 import React from 'react';
 import KerningToolbar from '../KerningToolbar';
 
@@ -31,13 +32,19 @@ const KerningEditorWorkspace: React.FC<KerningEditorWorkspaceProps> = ({
     return (
         <main className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative min-h-0 h-full w-full">
             <div className="flex-1 flex flex-col items-center w-full h-full overflow-hidden relative min-h-0">
+                {/* Centering container */}
                 <div 
                     ref={containerRef}
                     className="flex-1 w-full flex flex-col items-center justify-center min-h-0 relative px-4" 
                 >
-                    <div className="flex items-center justify-center h-full w-full max-w-full relative">
+                    {/* 
+                        Anchor container: This div wraps the children (the canvas card). 
+                        By NOT using w-full here, right-full on the toolbar will anchor 
+                        correctly to the side of the card.
+                    */}
+                    <div className="relative flex items-center justify-center">
                         {isLargeScreen && (
-                            <div className="absolute right-full mr-6 top-1/2 -translate-y-1/2 z-30 animate-fade-in-up">
+                            <div className="absolute right-full mr-6 top-6 z-30">
                                 <KerningToolbar 
                                     orientation="vertical"
                                     onZoom={onZoom}

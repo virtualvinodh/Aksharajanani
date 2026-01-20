@@ -41,6 +41,7 @@ export const useKerningSession = ({
     const [isKernHovered, setIsKernHovered] = useState(false);
 
     const debounceTimeout = useRef<number | null>(null);
+    const didInitialFit = useRef<string | null>(null);
 
     // --- Viewport Scaling Logic ---
     useEffect(() => {
@@ -57,6 +58,56 @@ export const useKerningSession = ({
         setCanvasDisplaySize({ width: finalWidth, height: finalHeight });
         setBaseScale(finalWidth / 1500); // 1500 is the logical width for 1.5 ratio (1000 height)
     }, [containerSize]);
+
+    // --- Autofit Logic ---
+    useEffect(() => {
+        const pairKey = `${pair.left.unicode}-${pair.right.unicode}`;
+        if (didInitialFit.current === pairKey || canvasDisplaySize.width === 0) return;
+
+        const leftGlyph = glyphDataMap.get(pair.left.unicode!);
+        const rightGlyph = glyphDataMap.get(pair.right.unicode!);
+        if (!leftGlyph || !rightGlyph) return;
+
+        const lBox = getAccurateGlyphBBox(leftGlyph.paths, strokeThickness);
+        const rBox = getAccurateGlyphBBox(rightGlyph.paths, strokeThickness);
+        if (!lBox || !rBox) return;
+
+        const rsbL = pair.left.rsb ?? metrics.defaultRSB;
+        const lsbR = pair.right.lsb ?? metrics.defaultLSB;
+        const kernNum = parseInt(kernValue, 10) || 0;
+        
+        // Logical X translation for the right glyph
+        const rightTranslateX = (lBox.x + lBox.width) + rsbL + kernNum + lsbR - rBox.x;
+
+        // Combined visual bounds in font units
+        const combinedMinX = lBox.x;
+        const combinedMaxX = rBox.x + rBox.width + rightTranslateX;
+        const combinedMinY = Math.min(lBox.y, rBox.y);
+        const combinedMaxY = Math.max(lBox.y + lBox.height, rBox.y + rBox.height);
+
+        const combinedWidth = combinedMaxX - combinedMinX;
+        const combinedHeight = combinedMaxY - combinedMinY;
+
+        // Target: Fit this box into the canvas with padding
+        const PADDING = 150; // Logical font units padding
+        const availableW = 1500 - (PADDING * 2);
+        const availableH = 1000 - (PADDING * 2);
+
+        const fitZoom = Math.min(availableW / combinedWidth, availableH / combinedHeight, 1.5);
+        
+        const contentCenterX = combinedMinX + combinedWidth / 2;
+        const contentCenterY = combinedMinY + combinedHeight / 2;
+
+        // Calculate offset to place contentCenter at the logical center of the viewport (750, 500)
+        // Note: viewOffset is applied on top of the base centering in KerningCanvas
+        setZoom(fitZoom);
+        setViewOffset({
+            x: (750 - contentCenterX) * baseScale * fitZoom,
+            y: (500 - contentCenterY) * baseScale * fitZoom
+        });
+
+        didInitialFit.current = pairKey;
+    }, [pair, glyphDataMap, strokeThickness, metrics, canvasDisplaySize, baseScale]);
 
     // --- Core Interaction Handlers ---
     const handleKernValueChange = useCallback((val: string) => {
@@ -120,6 +171,7 @@ export const useKerningSession = ({
     useEffect(() => {
         setKernValue(String(initialValue));
         setIsDirty(false);
+        // We don't reset didInitialFit here because it's handled by the key check in the effect
     }, [initialValue, pair]);
 
     useEffect(() => {

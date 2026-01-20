@@ -9,7 +9,14 @@
     }
   },
   {
-    "positioning": []
+    "positioning": [
+      {
+        "base": ["$consonants"],
+        "mark": ["்"],
+        "gpos": "blwm",
+        "gsub": "haln"
+      }
+    ]
   },
   {
     "markAttachment": {

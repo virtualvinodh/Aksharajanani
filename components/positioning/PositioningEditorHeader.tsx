@@ -59,28 +59,28 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                 
                 <div className="text-center">
                     <h2 
-                        className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white" 
+                        className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight" 
                         style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}
                     >
                         {targetLigature.name}
                     </h2>
-                    <div className="flex justify-center mt-1">
-                        {activeAttachmentClass && (
-                            isLinked ? (
+                    {activeAttachmentClass && (
+                        <div className="flex justify-center items-center mt-1 gap-1.5 leading-none">
+                            {isLinked ? (
                                 isPivot ? 
-                                <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                                    Class Leader
+                                <span className="text-[9px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                    Leader
                                 </span> : 
-                                <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full dark:bg-blue-900/20 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                                <span className="text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full dark:bg-blue-900/20 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
                                     Synced
                                 </span>
                             ) : (
-                                <span className="text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full dark:bg-orange-900/20 dark:text-orange-300 border border-orange-100 dark:border-orange-800">
+                                <span className="text-[9px] font-bold uppercase tracking-wider bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full dark:bg-orange-900/20 dark:text-orange-300 border border-orange-100 dark:border-orange-800">
                                     Exception
                                 </span>
-                            )
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
                 </div>
                 
                 <button 

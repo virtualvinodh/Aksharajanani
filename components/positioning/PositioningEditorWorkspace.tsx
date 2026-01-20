@@ -1,3 +1,4 @@
+
 import React from 'react';
 import PositioningCanvas from '../PositioningCanvas';
 import PositioningToolbar from '../PositioningToolbar';
@@ -70,18 +71,11 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     return (
         <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative min-h-0">
             <div className="flex-1 flex flex-col items-center justify-center w-full h-full overflow-hidden relative">
-                
-                {/* Hero Canvas Area: Explicit flex-1 and min-h-0 to allow correct height resolution */}
-                <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-4 sm:p-8 overflow-hidden relative">
-                    
-                    {/* Centering wrapper that fills available space */}
+                <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center overflow-hidden relative">
                     <div className="relative w-full h-full flex items-center justify-center">
-                        {/* The item forced to be square based on available parent height */}
-                        <div className="relative h-full max-h-full aspect-square flex items-center justify-center max-w-full">
-                            
-                            {/* Toolbar: Anchored to the left of the square container */}
+                        <div className="relative h-[92%] max-h-full aspect-square flex items-center justify-center max-w-full">
                             {isLargeScreen && !isStripExpanded && (
-                                <div className="absolute right-full mr-6 top-0 z-30 animate-fade-in-up">
+                                <div className="absolute right-full mr-6 top-6 z-30">
                                     <PositioningToolbar 
                                         orientation="vertical"
                                         onReuseClick={onReuseClick} 
@@ -124,7 +118,6 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                     </div>
                 </div>
 
-                {/* Mobile Toolbar */}
                 {!isLargeScreen && (
                     <div className="flex-shrink-0 w-full z-20 p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-center shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
                         <PositioningToolbar 
@@ -144,9 +137,8 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                     </div>
                 )}
 
-                {/* Morphic Sibling Strip */}
                 {showStrip && (
-                    <div className="w-full max-w-5xl mx-auto flex-shrink-0 z-20 transition-all duration-300 px-2 pb-2">
+                    <div className="w-full max-w-5xl mx-auto flex-shrink-0 z-20 px-2 pb-2">
                         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                             <ClassPreviewStrip 
                                 siblings={classSiblings}
@@ -175,7 +167,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                     </div>
                 )}
             </div>
-        </main>
+        </div>
     );
 };
 

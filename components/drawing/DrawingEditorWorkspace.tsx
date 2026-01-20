@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import DrawingCanvas from '../DrawingCanvas';
 import DrawingToolbar from '../DrawingToolbar';
@@ -105,20 +106,16 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
         props.setViewOffset(newOffset);
     };
 
-    const mainContentClasses = `flex-grow transition-opacity duration-150 ${props.isTransitioning ? 'opacity-0' : 'opacity-100'} flex flex-col items-center bg-gray-50 dark:bg-gray-950/20 overflow-hidden relative h-full`;
+    const mainContentClasses = `flex-grow flex flex-col items-center bg-gray-100 dark:bg-gray-950/20 overflow-hidden relative h-full`;
 
     return (
         <main className={mainContentClasses}>
             <div className="flex-1 flex flex-col items-center justify-center w-full h-full min-h-0 relative">
-                {/* Hero Canvas Area */}
-                <div className="flex-1 w-full min-h-0 flex items-center justify-center p-4 lg:p-8 overflow-hidden relative">
-                    
-                    {/* Centering wrapper that takes full size */}
+                <div className="flex-1 w-full min-h-0 flex items-center justify-center overflow-hidden relative">
                     <div className="relative w-full h-full flex items-center justify-center">
-                        {/* Aspect square child forced to grow to h-full but constrained by width */}
-                        <div className="relative h-full max-h-full aspect-square flex items-center justify-center max-w-full">
+                        <div className="relative h-[92%] max-h-full aspect-square flex items-center justify-center max-w-full group">
                             {props.isLargeScreen && (
-                                <div className="absolute right-full mr-6 top-0 z-30 animate-fade-in-up">
+                                <div className="absolute right-full mr-6 top-6 z-30">
                                     <DrawingToolbar
                                         character={props.character} currentTool={props.currentTool} setCurrentTool={props.setCurrentTool} 
                                         settings={props.settings} isLargeScreen={true}
@@ -134,7 +131,7 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
 
                             <div 
                                 ref={canvasContainerRef}
-                                className="rounded-xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 w-full h-full shadow-2xl"
+                                className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 w-full h-full"
                             >
                                 {activeSelectionBBox && (
                                     <ContextualToolbar 
@@ -163,7 +160,6 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
                     </div>
                 </div>
 
-                {/* Relationship Strips */}
                 <div className="w-full max-w-5xl px-4 pb-4 flex flex-col gap-1 flex-shrink-0 z-20">
                     {props.sourceGlyphs.length > 0 && (
                         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -187,7 +183,6 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
                 </div>
             </div>
 
-            {/* Mobile Toolbar */}
             {!props.isLargeScreen && (
                 <div className="flex-shrink-0 w-full z-20 p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-center shadow-lg">
                     <DrawingToolbar

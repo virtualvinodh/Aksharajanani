@@ -22,7 +22,7 @@ const UnifiedEditorModal: React.FC<any> = ({
     settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, 
     onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange 
 }) => {
-  const { modalOriginRect, showNotification } = useLayout();
+  const { showNotification } = useLayout();
   const { 
     allCharsByName, positioningRules, recommendedKerning, 
     markAttachmentClasses, baseAttachmentClasses, dispatch: characterDispatch 
@@ -32,10 +32,6 @@ const UnifiedEditorModal: React.FC<any> = ({
   const { version: glyphVersion, dispatch: glyphDataDispatch } = useGlyphDataContext();
   const { state: rulesState } = useRules();
   const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
-
-  const modalRef = useRef<HTMLDivElement>(null);
-  const [animationClass, setAnimationClass] = useState('');
-  const animationTimeoutRef = useRef<number | null>(null);
 
   const profile = useMemo<EditorProfile>(() => {
     if (character.position) return 'positioning';
@@ -53,27 +49,6 @@ const UnifiedEditorModal: React.FC<any> = ({
       else if (target === 'next' && nextCharacter) onNavigate(nextCharacter);
       else if (typeof target === 'object') onNavigate(target);
   }, [onNavigate, prevCharacter, nextCharacter]);
-
-  const triggerClose = useCallback((postAnimationCallback: () => void) => {
-    if (modalOriginRect) {
-        setAnimationClass('animate-modal-exit');
-        animationTimeoutRef.current = window.setTimeout(() => { setAnimationClass(''); postAnimationCallback(); }, 300);
-    } else {
-        postAnimationCallback();
-    }
-  }, [modalOriginRect]);
-
-  useLayoutEffect(() => {
-    if (modalOriginRect && modalRef.current) {
-        const modalEl = modalRef.current;
-        modalEl.style.setProperty('--modal-origin-x', `${modalOriginRect.left + modalOriginRect.width / 2}px`);
-        modalEl.style.setProperty('--modal-origin-y', `${modalOriginRect.top + modalOriginRect.height / 2}px`);
-        modalEl.style.setProperty('--modal-scale-x', (modalOriginRect.width / window.innerWidth).toFixed(5));
-        modalEl.style.setProperty('--modal-scale-y', (modalOriginRect.height / window.innerHeight).toFixed(5));
-        setAnimationClass('animate-modal-enter');
-        animationTimeoutRef.current = window.setTimeout(() => setAnimationClass(''), 300);
-    }
-  }, [modalOriginRect]);
 
   const allLigaturesByKey = useMemo(() => {
       const map = new Map<string, Character>();
@@ -184,9 +159,9 @@ const UnifiedEditorModal: React.FC<any> = ({
                         const newMap = new Map(kerningMap);
                         newMap.delete(key);
                         kerningDispatch({ type: 'SET_MAP', payload: newMap });
-                        triggerClose(onClose);
+                        onClose();
                     }}
-                    onClose={() => triggerClose(onClose)}
+                    onClose={() => onClose()}
                     onNavigate={(dir) => handlePageNavigate(dir)}
                     hasPrev={!!prevCharacter}
                     hasNext={!!nextCharacter}
@@ -208,7 +183,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                     glyphDataMap={allGlyphData}
                     markPositioningMap={markPositioningMap}
                     onSave={handlePositioningSave}
-                    onClose={() => triggerClose(onClose)}
+                    onClose={() => onClose()}
                     onReset={(b, m, l) => {
                         const key = `${b.unicode}-${m.unicode}`;
                         const newMap = new Map(markPositioningMap);
@@ -239,7 +214,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                     characterSet={characterSet}
                     glyphData={glyphData}
                     onSave={onSave}
-                    onClose={() => triggerClose(onClose)}
+                    onClose={() => onClose()}
                     onDelete={onDelete}
                     onNavigate={onNavigate}
                     settings={settings}
@@ -258,7 +233,7 @@ const UnifiedEditorModal: React.FC<any> = ({
   };
 
   return (
-    <div ref={modalRef} className={`fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col ${animationClass}`}>
+    <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col">
         <div className="flex-1 min-h-0 h-full w-full overflow-hidden flex flex-col">
             {renderActivePage()}
         </div>

@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -230,11 +231,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     
     ctx.clearRect(0, 0, width, height);
     
-    ctx.strokeStyle = theme === 'dark' ? 'rgba(74, 85, 104, 0.5)' : 'rgba(209, 213, 219, 0.7)';
-    ctx.lineWidth = 1; const gridSize = 50; const scaledGridSize = gridSize * zoom;
-    const xStart = viewOffset.x % scaledGridSize; for (let x = xStart; x < width; x += scaledGridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
-    const yStart = viewOffset.y % scaledGridSize; for (let y = yStart; y < height; y += scaledGridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
-    
     ctx.save();
     ctx.translate(viewOffset.x, viewOffset.y);
     ctx.scale(zoom, zoom);
@@ -243,6 +239,29 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const logicalViewWidth = width / zoom;
     const logicalViewY = -viewOffset.y / zoom;
     const logicalViewHeight = height / zoom;
+
+    // --- Responsive Grid ---
+    ctx.strokeStyle = theme === 'dark' ? 'rgba(74, 85, 104, 0.4)' : 'rgba(209, 213, 219, 0.5)';
+    ctx.lineWidth = Math.max(1.0, 1.2 / zoom); 
+    const gridSize = 50;
+    
+    const xMin = Math.floor(logicalViewX / gridSize) * gridSize;
+    const xMax = Math.ceil((logicalViewX + logicalViewWidth) / gridSize) * gridSize;
+    const yMin = Math.floor(logicalViewY / gridSize) * gridSize;
+    const yMax = Math.ceil((logicalViewY + logicalViewHeight) / gridSize) * gridSize;
+
+    for (let x = xMin; x <= xMax; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, yMin);
+        ctx.lineTo(x, yMax);
+        ctx.stroke();
+    }
+    for (let y = yMin; y <= yMax; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(xMin, y);
+        ctx.lineTo(xMax, y);
+        ctx.stroke();
+    }
 
     if (bgImageObject && imageTransform) {
         ctx.save();
@@ -255,7 +274,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }
 
     // GHOST HINT LOGIC
-    // We only show the hint if GridOutlines is ON AND the glyph was empty on load.
     if (settings.showGridOutlines && !isInitiallyDrawn) {
       const textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)';
       const guideFontFamily = getComputedStyle(document.documentElement).getPropertyValue('--guide-font-family').trim() || 'sans-serif';
@@ -265,32 +283,43 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       ctx.fillText(currentCharacter.name, 500, metrics.baseLineY);
     }
     
+    // --- Responsive Guide Lines ---
+    const guideWidth = 20000; 
+    const guideStart = -10000;
+    
     ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
-    ctx.lineWidth = 1 / zoom;
-    ctx.setLineDash([8 / zoom, 6 / zoom]);
+    // Ensure visibility on high-DPI and when zoomed out
+    ctx.lineWidth = Math.max(1.8, 2.2 / zoom); 
+    
+    // Topline (Dashed)
+    ctx.setLineDash([12 / zoom, 8 / zoom]);
     ctx.beginPath();
-    ctx.moveTo(logicalViewX, metrics.topLineY);
-    ctx.lineTo(logicalViewX + logicalViewWidth, metrics.topLineY);
+    ctx.moveTo(guideStart, metrics.topLineY);
+    ctx.lineTo(guideStart + guideWidth, metrics.topLineY);
     ctx.stroke();
+    
+    // Baseline (Solid)
     ctx.beginPath();
     ctx.setLineDash([]);
-    ctx.moveTo(logicalViewX, metrics.baseLineY);
-    ctx.lineTo(logicalViewX + logicalViewWidth, metrics.baseLineY);
+    ctx.moveTo(guideStart, metrics.baseLineY);
+    ctx.lineTo(guideStart + guideWidth, metrics.baseLineY);
     ctx.stroke();
 
+    // Additional Script-Specific Guides
     if (metrics.superTopLineY || metrics.subBaseLineY) {
-        ctx.strokeStyle = theme === 'dark' ? '#6366f1' : '#a5b4fc'; 
-        ctx.setLineDash([8 / zoom, 6 / zoom]);
+        ctx.strokeStyle = theme === 'dark' ? '#A5B4FC' : '#818CF8'; 
+        ctx.setLineDash([10 / zoom, 8 / zoom]);
+        ctx.lineWidth = Math.max(1.2, 1.5 / zoom);
         if (metrics.superTopLineY) {
             ctx.beginPath();
-            ctx.moveTo(logicalViewX, metrics.superTopLineY);
-            ctx.lineTo(logicalViewX + logicalViewWidth, metrics.superTopLineY);
+            ctx.moveTo(guideStart, metrics.superTopLineY);
+            ctx.lineTo(guideStart + guideWidth, metrics.superTopLineY);
             ctx.stroke();
         }
         if (metrics.subBaseLineY) {
             ctx.beginPath();
-            ctx.moveTo(logicalViewX, metrics.subBaseLineY);
-            ctx.lineTo(logicalViewX + logicalViewWidth, metrics.subBaseLineY);
+            ctx.moveTo(guideStart, metrics.subBaseLineY);
+            ctx.lineTo(guideStart + guideWidth, metrics.subBaseLineY);
             ctx.stroke();
         }
     }
@@ -306,27 +335,27 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         const lsbX = glyphBBox.x - lsbInPixels;
         const rsbX = glyphBBox.x + glyphBBox.width + rsbInPixels;
 
-        ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-        ctx.lineWidth = 1 / zoom; 
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)';
+        ctx.lineWidth = Math.max(1.0, 1.0 / zoom); 
         ctx.beginPath(); 
-        ctx.moveTo(glyphBBox.x, logicalViewY); ctx.lineTo(glyphBBox.x, logicalViewY + logicalViewHeight); ctx.stroke();
+        ctx.moveTo(glyphBBox.x, guideStart); ctx.lineTo(glyphBBox.x, guideStart + guideWidth); ctx.stroke();
         ctx.beginPath(); 
-        ctx.moveTo(glyphBBox.x + glyphBBox.width, logicalViewY); ctx.lineTo(glyphBBox.x + glyphBBox.width, logicalViewY + logicalViewHeight); ctx.stroke();
+        ctx.moveTo(glyphBBox.x + glyphBBox.width, guideStart); ctx.lineTo(glyphBBox.x + glyphBBox.width, guideStart + guideWidth); ctx.stroke();
 
         const isLsbActive = hoveredMetric === 'lsb' || draggingMetric === 'lsb';
-        ctx.strokeStyle = isLsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.4)' : 'rgba(217, 119, 6, 0.5)');
-        ctx.lineWidth = (isLsbActive ? 2.5 : 1.5) / zoom;
-        ctx.setLineDash(isLsbActive ? [] : [6 / zoom, 4 / zoom]);
+        ctx.strokeStyle = isLsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.5)' : 'rgba(217, 119, 6, 0.6)');
+        ctx.lineWidth = (isLsbActive ? 4 : 2) / zoom;
+        ctx.setLineDash(isLsbActive ? [] : [8 / zoom, 6 / zoom]);
         ctx.beginPath(); 
-        ctx.moveTo(lsbX, logicalViewY); ctx.lineTo(lsbX, logicalViewY + logicalViewHeight); 
+        ctx.moveTo(lsbX, guideStart); ctx.lineTo(lsbX, guideStart + guideWidth); 
         ctx.stroke();
 
         const isRsbActive = hoveredMetric === 'rsb' || draggingMetric === 'rsb';
-        ctx.strokeStyle = isRsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.4)' : 'rgba(217, 119, 6, 0.5)');
-        ctx.lineWidth = (isRsbActive ? 2.5 : 1.5) / zoom;
-        ctx.setLineDash(isRsbActive ? [] : [6 / zoom, 4 / zoom]);
+        ctx.strokeStyle = isRsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.5)' : 'rgba(217, 119, 6, 0.6)');
+        ctx.lineWidth = (isRsbActive ? 4 : 2) / zoom;
+        ctx.setLineDash(isRsbActive ? [] : [8 / zoom, 6 / zoom]);
         ctx.beginPath(); 
-        ctx.moveTo(rsbX, logicalViewY); ctx.lineTo(rsbX, logicalViewY + logicalViewHeight); 
+        ctx.moveTo(rsbX, guideStart); ctx.lineTo(rsbX, guideStart + guideWidth); 
         ctx.stroke();
 
         if (draggingMetric) {
@@ -336,21 +365,21 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0); 
             const screenX = (activeX * zoom) + viewOffset.x;
-            const screenY = (glyphBBox.y * zoom) + viewOffset.y - 20;
+            const screenY = (glyphBBox.y * zoom) + viewOffset.y - 30;
             const text = `${label}: ${Math.round(activeVal)}`;
-            ctx.font = 'bold 12px sans-serif';
-            const textWidth = ctx.measureText(text).width + 12;
+            ctx.font = 'bold 14px sans-serif';
+            const textWidth = ctx.measureText(text).width + 16;
             ctx.fillStyle = theme === 'dark' ? '#1f2937' : '#ffffff';
-            ctx.strokeStyle = '#d1d5db';
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#6366f1';
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.roundRect(screenX - textWidth/2, screenY - 20, textWidth, 24, 4);
+            ctx.roundRect(screenX - textWidth/2, screenY - 20, textWidth, 30, 6);
             ctx.fill();
             ctx.stroke();
             ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#111827';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(text, screenX, screenY - 8);
+            ctx.fillText(text, screenX, screenY - 5);
             ctx.restore();
         }
     }
@@ -434,7 +463,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       ref={canvasRef}
       width={width}
       height={height}
-      className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 max-w-full max-h-full block mx-auto"
+      className="bg-white dark:bg-gray-900 max-w-full max-h-full block mx-auto shadow-inner"
       style={{ touchAction: 'none', cursor: getCursor() }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
