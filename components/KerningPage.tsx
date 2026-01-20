@@ -56,12 +56,13 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
     }, [characterSets]);
 
     // 1. Expand all possible pairs based on rules
-    const allPairsInContext = useMemo(() => {
-        if (!characterSets) return [];
+    const { allPairsInContext, hasHiddenRecommended } = useMemo(() => {
+        let hasHidden = false;
+        if (!characterSets) return { allPairsInContext: [], hasHiddenRecommended: false };
         const groups = rulesState.fontRules?.groups || {};
 
         if (mode === 'recommended') {
-            if (!recommendedKerning) return [];
+            if (!recommendedKerning) return { allPairsInContext: [], hasHiddenRecommended: false };
             let pairs: { left: any, right: any }[] = [];
             const seen = new Set<string>();
             
@@ -85,6 +86,9 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                                     pairs.push({ left: lChar, right: rChar });
                                     seen.add(key);
                                 }
+                            } else {
+                                // One or both of the components in a valid recommended rule are undrawn
+                                hasHidden = true;
                             }
                         }
                     });
@@ -99,7 +103,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                 pairs = pairs.filter(p => selectedRightChars.has(p.right.unicode));
             }
 
-            return pairs;
+            return { allPairsInContext: pairs, hasHiddenRecommended: hasHidden };
         } else {
             const combined: { left: any, right: any }[] = [];
             if (selectedLeftChars.size === 0 && selectedRightChars.size === 0) {
@@ -133,7 +137,8 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                     }
                 }
             }
-            return combined.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
+            const sorted = combined.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
+            return { allPairsInContext: sorted, hasHiddenRecommended: false };
         }
     }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, kerningMap, allCharsByUnicode, standardGridNames, isGlyphDrawn]);
 
@@ -217,6 +222,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             selectedLeftChars={selectedLeftChars} setSelectedLeftChars={setSelectedLeftChars}
             selectedRightChars={selectedRightChars} setSelectedRightChars={setSelectedRightChars}
             mode={mode} showRecommendedLabel={showRecommendedLabel}
+            hasHiddenRecommended={hasHiddenRecommended}
         />
     );
 };

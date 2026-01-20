@@ -24,13 +24,15 @@ interface KerningSelectionViewProps {
     setSelectedRightChars: React.Dispatch<React.SetStateAction<Set<number>>>;
     mode: 'recommended' | 'all';
     showRecommendedLabel: boolean;
+    hasHiddenRecommended?: boolean;
 }
 
 const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({ 
-    filteredPairs, onEditPair, selectedLeftChars, setSelectedLeftChars, selectedRightChars, setSelectedRightChars, mode, showRecommendedLabel 
+    filteredPairs, onEditPair, selectedLeftChars, setSelectedLeftChars, selectedRightChars, setSelectedRightChars, mode, showRecommendedLabel,
+    hasHiddenRecommended
 }) => {
     const { t } = useLocale();
-    const { showNotification } = useLayout();
+    const { showNotification, filterMode, searchQuery } = useLayout();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
     const { characterSets } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
@@ -88,6 +90,9 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
         setIsResetVisibleConfirmOpen(false);
     };
 
+    const isSearching = searchQuery.trim().length > 0;
+    const isFiltered = filterMode !== 'none' || isSearching;
+
     // Determine titles based on mode
     const leftTitle = mode === 'recommended' ? "kerningFilterLeftChars" : "kerningSelectLeftChars";
     const rightTitle = mode === 'recommended' ? "kerningFilterRightChars" : "kerningSelectRightChars";
@@ -102,6 +107,12 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
                 )}
                 
                 <main className="flex-1 flex flex-col overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
+                    {mode === 'recommended' && hasHiddenRecommended && !isFiltered && (
+                        <div className="flex-shrink-0 m-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">
+                            {t('kerningShowOnlyComplete')}
+                        </div>
+                    )}
+
                     {!isLargeScreen && (
                         <div className="p-4 space-y-4 border-b dark:border-gray-700">
                              <CharacterSelectionRow title={leftTitle} characters={drawnCharacters} selectedChars={selectedLeftChars} onSelectionChange={(u, s) => setSelectedLeftChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedLeftChars(new Set())} />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning, FilterMode } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -67,7 +66,7 @@ const WorkspaceTab: React.FC<{
     progress: Progress;
 }> = React.memo(({ workspaceId, label, icon, showUnsavedIndicator = false, onWorkspaceChange, activeWorkspace, progress }) => {
     const isActive = activeWorkspace === workspaceId;
-    const isComplete = progress.total > 0 ? progress.completed >= progress.total : true;
+    const isComplete = progress.total > 0 && progress.completed >= progress.total;
     const showCompletion = workspaceId !== 'metrics' && isComplete;
 
     return (

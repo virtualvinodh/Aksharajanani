@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect } from 'react';
 import KerningPage from './KerningPage';
 import { RecommendedKerning } from '../types';
@@ -61,13 +57,15 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
                     </button>
                 </nav>
             </div>
-             <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <ProgressIndicator
-                    completed={kerningProgress.completed}
-                    total={kerningProgress.total}
-                    progressTextKey={progressTextKey}
-                />
-            </div>
+             {kerningProgress.total > 0 && (
+                <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <ProgressIndicator
+                        completed={kerningProgress.completed}
+                        total={kerningProgress.total}
+                        progressTextKey={progressTextKey}
+                    />
+                </div>
+            )}
             <div className="flex-grow overflow-y-auto">
                 <KerningPage 
                     recommendedKerning={recommendedKerning}

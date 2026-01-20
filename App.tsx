@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import UnifiedEditorModal from './components/UnifiedEditorModal';
@@ -107,7 +106,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       handleCheckNameExists,
       handleAddBlock,
       handleImportGlyphs,
-      startExportProcess,
       handleSaveToDB,
       handleTestClick,
       testPageFont,
@@ -116,7 +114,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       handleRestoreSnapshot,
       hasSnapshot,
       openSaveAsModal,
-      handleCreatorClick
+      handleCreatorClick,
+      startExportProcess
   } = appActions;
 
   useEffect(() => {
@@ -205,8 +204,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   }
 
   const hasPositioning = positioningProgress.total > 0;
-  // If total recommended pairs (filtered by redundancy) is 0, hide tab
-  const hasKerning = kerningProgress.total > 0;
+  // Unlock Kerning tab once at least two glyphs are drawn, allowing manual spacing even if the script has no rules.
+  const hasKerning = drawingProgress.completed >= 2;
   
   return (
     <div className="h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
