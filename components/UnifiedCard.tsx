@@ -61,6 +61,12 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
 
   // 2. Resolve Paths using the Unified Service
   const { paths, isDrawn } = useMemo(() => {
+    // If it's a virtual character but not fully available, don't render anything on the canvas.
+    // This prevents misleading partial renderings of complex syllables or pairs.
+    if (!isAvailable && (character.position || character.kern)) {
+        return { paths: [], isDrawn: false };
+    }
+
     const ctx: UnifiedRenderContext = {
         glyphDataMap,
         allCharsByName,
@@ -80,7 +86,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
     const hasPaths = resolvedPaths.length > 0 && resolvedPaths.some(p => p.points.length > 0 || (p.segmentGroups && p.segmentGroups.length > 0));
 
     return { paths: resolvedPaths, isDrawn: hasPaths };
-  }, [character, glyphDataMap, glyphVersion, allCharsByName, markPositioningMap, kerningMap, characterSets, groups, metrics, markAttachmentRules, positioningRules, settings?.strokeThickness]);
+  }, [character, isAvailable, glyphDataMap, glyphVersion, allCharsByName, markPositioningMap, kerningMap, characterSets, groups, metrics, markAttachmentRules, positioningRules, settings?.strokeThickness]);
 
   // 3. Interaction Logic
   const handleClick = (e: React.MouseEvent) => {
