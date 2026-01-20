@@ -1,87 +1,58 @@
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
-import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, TransformState, ComponentTransform, PositioningRules, AttachmentClass } from '../types';
-import { useLocale } from '../contexts/LocaleContext';
-import { useMediaQuery } from '../hooks/useMediaQuery';
-import { useClipboard } from '../contexts/ClipboardContext';
+
+import React, { useState, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
+import { Character, GlyphData, FontMetrics, AppSettings, CharacterSet, MarkAttachmentRules, Point } from '../types';
 import { useLayout } from '../contexts/LayoutContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 import { useKerning } from '../contexts/KerningContext';
 import { usePositioning } from '../contexts/PositioningContext';
 import { useRules } from '../contexts/RulesContext';
-
-// Drawing Profile Components
-import DrawingEditorHeader from './drawing/DrawingEditorHeader';
-import DrawingEditorWorkspace from './drawing/DrawingEditorWorkspace';
-import DrawingConfirmationStack from './drawing/DrawingConfirmationStack';
-import ImageControlPanel from './ImageControlPanel';
-
-// Positioning Profile Components
-import PositioningEditorHeader from './positioning/PositioningEditorHeader';
-import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace';
-import ReusePreviewCard from './ReusePreviewCard';
-import Modal from './Modal';
-
-// Kerning Profile Components
-import KerningEditorHeader from './kerning/KerningEditorHeader';
-import KerningEditorWorkspace from './kerning/KerningEditorWorkspace';
-import KerningCanvas from './KerningCanvas';
-
-// Shared Hooks
-import { useGlyphEditSession } from '../hooks/drawing/useGlyphEditSession';
-import { useDrawingShortcuts } from '../hooks/drawing/useDrawingShortcuts';
-import { useImportLogic } from '../hooks/drawing/useImportLogic';
-import { useCanvasOperations } from '../hooks/drawing/useCanvasOperations';
-import { useGlyphConstruction } from '../hooks/drawing/useGlyphConstruction';
-import { usePositioningSession } from '../hooks/positioning/usePositioningSession';
-import { useKerningSession } from '../hooks/kerning/useKerningSession';
-
-import { isGlyphDrawn } from '../utils/glyphUtils';
-import { DRAWING_CANVAS_SIZE, CloseIcon } from '../constants';
-import { VEC } from '../utils/vectorUtils';
 import { expandMembers } from '../services/groupExpansionService';
-import { deepClone } from '../utils/cloneUtils';
+import { updatePositioningAndCascade } from '../services/positioningService';
+
+// Specialized Editor Pages
+import DrawingModal from './DrawingModal';
+import PositioningEditorPage from './PositioningEditorPage';
+import KerningEditorPage from './KerningEditorPage';
 
 type EditorProfile = 'drawing' | 'positioning' | 'kerning';
 
 const UnifiedEditorModal: React.FC<any> = ({ 
     character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, 
     settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, 
-    onUnlockGlyph, onRelinkGlyph, onUpdateDependencies 
+    onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange 
 }) => {
-  const { t } = useLocale();
-  const { showNotification, modalOriginRect } = useLayout();
-  const { clipboard, dispatch: clipboardDispatch } = useClipboard();
+  const { modalOriginRect, showNotification } = useLayout();
   const { 
-    dispatch: characterDispatch, allCharsByName, positioningRules, 
-    markAttachmentClasses, setMarkAttachmentClasses, 
-    baseAttachmentClasses, setBaseAttachmentClasses,
-    allCharsByUnicode 
+    allCharsByName, positioningRules, recommendedKerning, 
+    markAttachmentClasses, baseAttachmentClasses, dispatch: characterDispatch 
   } = useProject();
   const { kerningMap, dispatch: kerningDispatch } = useKerning();
   const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
-  const { dispatch: glyphDataDispatch, version: glyphVersion } = useGlyphDataContext();
+  const { version: glyphVersion, dispatch: glyphDataDispatch } = useGlyphDataContext();
   const { state: rulesState } = useRules();
-  const groups = rulesState.fontRules?.groups || {};
+  const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
 
   const modalRef = useRef<HTMLDivElement>(null);
-  const kerningContainerRef = useRef<HTMLDivElement>(null);
   const [animationClass, setAnimationClass] = useState('');
   const animationTimeoutRef = useRef<number | null>(null);
-  const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
-  // 1. Determine Profile
   const profile = useMemo<EditorProfile>(() => {
     if (character.position) return 'positioning';
     if (character.kern) return 'kerning';
     return 'drawing';
   }, [character]);
 
-  // 2. Shared Navigation Context
-  const visibleCharactersForNav = useMemo(() => characterSet.characters.filter((c: any) => !c.hidden), [characterSet]);
+  const visibleCharactersForNav = useMemo(() => characterSet?.characters.filter((c: any) => !c.hidden) || [], [characterSet]);
   const currentIndex = visibleCharactersForNav.findIndex((c: any) => c.unicode === character.unicode);
   const prevCharacter = currentIndex > 0 ? visibleCharactersForNav[currentIndex - 1] : null;
   const nextCharacter = currentIndex < visibleCharactersForNav.length - 1 ? visibleCharactersForNav[currentIndex + 1] : null;
+
+  const handlePageNavigate = useCallback((target: Character | 'prev' | 'next') => {
+      if (target === 'prev' && prevCharacter) onNavigate(prevCharacter);
+      else if (target === 'next' && nextCharacter) onNavigate(nextCharacter);
+      else if (typeof target === 'object') onNavigate(target);
+  }, [onNavigate, prevCharacter, nextCharacter]);
 
   const triggerClose = useCallback((postAnimationCallback: () => void) => {
     if (modalOriginRect) {
@@ -91,278 +62,6 @@ const UnifiedEditorModal: React.FC<any> = ({
         postAnimationCallback();
     }
   }, [modalOriginRect]);
-
-  // Shared UI state
-  const [zoom, setZoom] = useState(1);
-  const [viewOffset, setViewOffset] = useState<Point>({ x: 0, y: 0 });
-  const [isImageSelected, setIsImageSelected] = useState(false);
-  const [currentTool, setCurrentTool] = useState<Tool>('pen');
-  const [selectedPathIds, setSelectedPathIds] = useState<Set<string>>(new Set());
-  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  const [backgroundImageOpacity, setBackgroundImageOpacity] = useState(0.5);
-  const [imageTransform, setImageTransform] = useState<ImageTransform | null>(null);
-  const [previewTransform, setPreviewTransform] = useState<TransformState | null>(null);
-  const [isTracerModalOpen, setIsTracerModalOpen] = useState(false);
-  const [tracerImageSrc, setTracerImageSrc] = useState<string | null>(null);
-  const [calligraphyAngle, setCalligraphyAngle] = useState<45 | 30 | 15>(45);
-
-  // Positioning Profile Specific UI State
-  const [posPageTool, setPosPageTool] = useState<'select' | 'pan'>('select');
-  const [isPosPropertiesOpen, setIsPosPropertiesOpen] = useState(false);
-  const [isPosReuseOpen, setIsPosReuseOpen] = useState(false);
-  const [isPosResetConfirmOpen, setIsPosResetConfirmOpen] = useState(false);
-
-  // --- DRAWING SESSION ---
-  const drawingSession = useGlyphEditSession({
-      character, glyphData, allGlyphData, allCharacterSets, settings, metrics, markAttachmentRules,
-      onSave, onNavigate, onClose: () => triggerClose(onClose)
-  });
-
-  const drawingImport = useImportLogic({
-      setBackgroundImage: (img) => setBackgroundImage(img), 
-      setImageTransform: (t) => setImageTransform(t), 
-      setTracerImageSrc: (s) => setTracerImageSrc(s), 
-      setIsTracerModalOpen: (o) => setIsTracerModalOpen(o),
-      handlePathsChange: drawingSession.handlePathsChange, 
-      setCurrentTool: (t) => setCurrentTool(t), 
-      setSelectedPathIds: (ids) => setSelectedPathIds(ids), 
-      currentPaths: drawingSession.currentPaths, 
-      metrics, showNotification, t
-  });
-
-  const drawingOps = useCanvasOperations({
-      currentPaths: drawingSession.currentPaths, handlePathsChange: drawingSession.handlePathsChange, 
-      selectedPathIds, setSelectedPathIds, clipboard, clipboardDispatch, showNotification, t,
-      strokeThickness: settings.strokeThickness, setPreviewTransform
-  });
-
-  const drawingConstruction = useGlyphConstruction({
-      character, currentPaths: drawingSession.currentPaths, allCharsByName, allGlyphData, allCharacterSets, settings, metrics, 
-      markAttachmentRules, groups, characterDispatch, glyphDataDispatch, onUpdateDependencies, 
-      handlePathsChange: drawingSession.handlePathsChange, showNotification, t
-  });
-
-  // TOOL LOCKING: Linked glyphs shouldn't allow writing
-  useEffect(() => {
-    if (profile === 'drawing' && character.link && currentTool !== 'select' && currentTool !== 'pan') {
-      setCurrentTool('select');
-    }
-  }, [character, profile]);
-
-  // Relationship Data for Drawing Mode
-  const sourceGlyphs = useMemo(() => {
-    const componentNames = character.link || character.composite;
-    if (!componentNames) return [];
-    return componentNames.map((name: any) => allCharsByName.get(name)).filter((c: any): c is Character => !!c);
-  }, [character, allCharsByName]);
-
-  const dependentGlyphs = useMemo(() => {
-    return allCharacterSets.flatMap(set => set.characters)
-        .filter(c => {
-            if (c.hidden || c.unicode === undefined) return false;
-            const components = c.link || c.composite;
-            if (!components?.includes(character.name)) return false;
-            return isGlyphDrawn(allGlyphData.get(c.unicode));
-        });
-  }, [character, allCharacterSets, allGlyphData, glyphVersion]);
-
-  // --- POSITIONING SESSION ---
-  const posBaseChar = useMemo(() => character.position ? allCharsByName.get(character.position[0]) : null, [character, allCharsByName]);
-  const posMarkChar = useMemo(() => character.position ? allCharsByName.get(character.position[1]) : null, [character, allCharsByName]);
-  const pairIdentifier = character.position ? `${posBaseChar?.unicode}-${posMarkChar?.unicode}` : '';
-
-  const handlePositioningNavigate = useCallback((idx: number) => {
-    if (idx >= 0 && idx < visibleCharactersForNav.length) {
-        onNavigate(visibleCharactersForNav[idx]);
-    }
-  }, [onNavigate, visibleCharactersForNav]);
-
-  const positioningSession = usePositioningSession({
-      baseChar: posBaseChar || character,
-      markChar: posMarkChar || character,
-      targetLigature: character,
-      glyphDataMap: allGlyphData,
-      markPositioningMap,
-      onSave: (targetLig, newGlyphData, newOffset, newBearings, isAutosave) => {
-          onSave(targetLig.unicode, newGlyphData, newBearings, undefined, { isDraft: isAutosave });
-          positioningDispatch({ type: 'SET_MAP', payload: new Map(markPositioningMap).set(`${posBaseChar?.unicode}-${posMarkChar?.unicode}`, newOffset) });
-      },
-      settings, metrics, markAttachmentRules, positioningRules, allChars: allCharsByName,
-      markAttachmentClasses, baseAttachmentClasses, characterSets: allCharacterSets, groups,
-      onClose: () => triggerClose(onClose),
-      onNavigate: handlePositioningNavigate,
-      currentIndex,
-      allPairsCount: visibleCharactersForNav.length
-  });
-
-  const handlePositioningManualChange = useCallback((axis: 'x' | 'y', value: string) => {
-    if (axis === 'x') positioningSession.setManualX(value);
-    else positioningSession.setManualY(value);
-  }, [positioningSession]);
-
-  const handlePositioningZoom = (factor: number) => {
-      const newZoom = Math.max(0.1, Math.min(10, positioningSession.zoom * factor));
-      const center = DRAWING_CANVAS_SIZE / 2;
-      positioningSession.setViewOffset({
-          x: center - (center - positioningSession.viewOffset.x) * (newZoom / positioningSession.zoom),
-          y: center - (center - positioningSession.viewOffset.y) * (newZoom / positioningSession.zoom)
-      });
-      positioningSession.setZoom(newZoom);
-  };
-
-  const handlePositioningReset = () => {
-      const key = `${posBaseChar?.unicode}-${posMarkChar?.unicode}`;
-      const newMap = new Map(markPositioningMap);
-      newMap.delete(key);
-      positioningDispatch({ type: 'SET_MAP', payload: newMap });
-      if (character.unicode) {
-          glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode: character.unicode } });
-      }
-      setIsPosResetConfirmOpen(false);
-      showNotification(t('positionResetSuccess', { name: character.name }), 'success');
-  };
-
-  const reuseSources = useMemo(() => {
-    if (profile !== 'positioning' || !posMarkChar) return [];
-    const sources: Character[] = [];
-    const seen = new Set<number>();
-    allCharacterSets.forEach(set => set.characters.forEach(c => {
-        if (c.unicode !== undefined && c.glyphClass !== 'mark' && c.unicode !== posBaseChar?.unicode && markPositioningMap.has(`${c.unicode}-${posMarkChar.unicode}`)) {
-            if (!seen.has(c.unicode)) { sources.push(c); seen.add(c.unicode); }
-        }
-    }));
-    return sources;
-  }, [allCharacterSets, markPositioningMap, posBaseChar, posMarkChar, profile]);
-
-  const handlePositioningReuse = (sourceBase: Character) => {
-      const sourceKey = `${sourceBase.unicode}-${posMarkChar?.unicode}`;
-      const sourceOffset = markPositioningMap.get(sourceKey);
-      if (!sourceOffset) return;
-      const moveX = sourceOffset.x - positioningSession.currentOffset.x;
-      const moveY = sourceOffset.y - positioningSession.currentOffset.y;
-      const newPaths = positioningSession.markPaths.map(p => ({
-          ...p,
-          points: p.points.map(pt => ({ x: pt.x + moveX, y: pt.y + moveY })),
-          segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + moveX, y: seg.point.y + moveY }}))) : undefined
-      }));
-      positioningSession.handlePathsChange(newPaths);
-      setIsPosReuseOpen(false);
-      showNotification(t('positionsCopied'), 'success');
-  };
-
-  const [isStripExpanded, setIsStripExpanded] = useState(false);
-
-  // Class Sibling logic for Positioning Strip
-  const classSiblings = useMemo(() => {
-    if (positioningSession.activeAttachmentClass && positioningSession.activeClassType) {
-         const members = expandMembers(positioningSession.activeAttachmentClass.members, groups, allCharacterSets);
-         const siblings: any[] = [];
-         members.forEach(memberName => {
-             let sBase = posBaseChar || character;
-             let sMark = posMarkChar || character;
-             if (positioningSession.activeClassType === 'mark') {
-                const c = allCharsByName.get(memberName);
-                if (c) sMark = c;
-             } else {
-                const c = allCharsByName.get(memberName);
-                if (c) sBase = c;
-             }
-             if (sBase.unicode === undefined || sMark.unicode === undefined) return;
-             const pairName = sBase.name + sMark.name;
-             const lig = allCharsByName.get(pairName) || { name: pairName, unicode: sBase.unicode + sMark.unicode + 1000000 };
-             siblings.push({ base: sBase, mark: sMark, ligature: lig });
-         });
-         return siblings;
-    }
-    return [];
-  }, [positioningSession.activeAttachmentClass, positioningSession.activeClassType, posBaseChar, posMarkChar, character, groups, allCharacterSets, allCharsByName]);
-
-  const handleToggleLink = () => {
-    const newIsLinked = !positioningSession.isLinked;
-    positioningSession.setIsLinked(newIsLinked);
-    const pairNameKey = `${(posBaseChar || character).name}-${(posMarkChar || character).name}`;
-    
-    const updateClassList = (classes: AttachmentClass[], setter: (c: AttachmentClass[]) => void) => {
-         const newClasses = deepClone(classes);
-         const cls = newClasses.find(c => expandMembers(c.members, groups, allCharacterSets).includes(positioningSession.activeClassType === 'mark' ? (posMarkChar || character).name : (posBaseChar || character).name));
-         if (cls) {
-             if (!cls.exceptPairs) cls.exceptPairs = [];
-             if (newIsLinked) cls.exceptPairs = cls.exceptPairs.filter((p: string) => p !== pairNameKey);
-             else if (!cls.exceptPairs.includes(pairNameKey)) cls.exceptPairs.push(pairNameKey);
-             setter(newClasses);
-         }
-    };
-
-    if (positioningSession.activeClassType === 'mark' && markAttachmentClasses) updateClassList(markAttachmentClasses, setMarkAttachmentClasses);
-    if (positioningSession.activeClassType === 'base' && baseAttachmentClasses) updateClassList(baseAttachmentClasses, setBaseAttachmentClasses);
-    if (newIsLinked) showNotification(t('glyphRelinkedSuccess'), "success");
-  };
-
-  // --- KERNING SESSION ---
-  const kernLeftChar = useMemo(() => character.kern ? allCharsByName.get(character.kern[0]) : null, [character, allCharsByName]);
-  const kernRightChar = useMemo(() => character.kern ? allCharsByName.get(character.kern[1]) : null, [character, allCharsByName]);
-  const kerningInitialValue = useMemo(() => {
-      if (!kernLeftChar || !kernRightChar) return 0;
-      return kerningMap.get(`${kernLeftChar.unicode}-${kernRightChar.unicode}`) || 0;
-  }, [kernLeftChar, kernRightChar, kerningMap]);
-
-  const handleKerningNavigate = useCallback((direction: 'prev' | 'next') => {
-      if (direction === 'next' && nextCharacter) onNavigate(nextCharacter);
-      if (direction === 'prev' && prevCharacter) onNavigate(prevCharacter);
-  }, [onNavigate, nextCharacter, prevCharacter]);
-
-  const kerningSession = useKerningSession({
-      pair: { left: kernLeftChar || character, right: kernRightChar || character },
-      initialValue: kerningInitialValue,
-      glyphDataMap: allGlyphData,
-      strokeThickness: settings.strokeThickness,
-      metrics, settings, recommendedKerning: [], 
-      onSave: (val) => {
-          const key = `${kernLeftChar?.unicode}-${kernRightChar?.unicode}`;
-          kerningDispatch({ type: 'SET_MAP', payload: new Map(kerningMap).set(key, val) });
-      },
-      onClose: () => triggerClose(onClose),
-      onNavigate: handleKerningNavigate
-  });
-
-  // 4. Global Shortcuts & UI State
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [isUnlockConfirmOpen, setIsUnlockConfirmOpen] = useState(false);
-  const [isRelinkConfirmOpen, setIsRelinkConfirmOpen] = useState(false);
-
-  useDrawingShortcuts({
-      onUndo: profile === 'drawing' ? drawingSession.undo : () => {},
-      onRedo: profile === 'drawing' ? drawingSession.redo : () => {},
-      onCopy: profile === 'drawing' ? drawingOps.handleCopy : () => {},
-      onCut: profile === 'drawing' ? drawingOps.handleCut : () => {},
-      onPaste: profile === 'drawing' ? drawingOps.handlePaste : () => {},
-      onDelete: profile === 'drawing' ? drawingOps.handleDeleteSelection : () => {},
-      onMoveSelection: profile === 'drawing' ? drawingOps.moveSelection : (delta) => {
-          if (profile === 'positioning') {
-              const currentX = parseFloat(positioningSession.manualX) || 0;
-              const currentY = parseFloat(positioningSession.manualY) || 0;
-              positioningSession.setManualX(String(currentX + delta.x));
-              positioningSession.setManualY(String(currentY + delta.y));
-              positioningSession.handleManualCommit(String(currentX + delta.x), String(currentY + delta.y));
-          }
-      },
-      onNavigatePrev: () => {
-          if (profile === 'drawing') drawingSession.handleNavigationAttempt(prevCharacter);
-          else if (profile === 'positioning') positioningSession.handleNavigationAttempt('prev');
-          else handleKerningNavigate('prev');
-      },
-      onNavigateNext: () => {
-          if (profile === 'drawing') drawingSession.handleNavigationAttempt(nextCharacter);
-          else if (profile === 'positioning') positioningSession.handleNavigationAttempt('next');
-          else handleKerningNavigate('next');
-      },
-      canUndo: profile === 'drawing' ? drawingSession.canUndo : false,
-      canRedo: profile === 'drawing' ? drawingSession.canRedo : false,
-      hasSelection: selectedPathIds.size > 0,
-      hasClipboard: !!clipboard,
-      canNavigatePrev: !!prevCharacter,
-      canNavigateNext: !!nextCharacter
-  });
 
   useLayoutEffect(() => {
     if (modalOriginRect && modalRef.current) {
@@ -376,191 +75,183 @@ const UnifiedEditorModal: React.FC<any> = ({
     }
   }, [modalOriginRect]);
 
-  const handleConfirmUnlock = () => { onUnlockGlyph(character.unicode!); setIsUnlockConfirmOpen(false); showNotification(t('glyphUnlockedSuccess'), 'success'); };
-  const handleConfirmRelink = () => { onRelinkGlyph(character.unicode!); drawingSession.handleRefresh(); setIsRelinkConfirmOpen(false); showNotification(t('glyphRelinkedSuccess'), 'success'); };
+  const allLigaturesByKey = useMemo(() => {
+      const map = new Map<string, Character>();
+      if (!allCharacterSets || !allCharsByName) return map;
+      
+      allCharacterSets.forEach(set => {
+          set.characters.forEach(c => {
+              if (c.position && c.position.length === 2) {
+                  const base = allCharsByName.get(c.position[0]);
+                  const mark = allCharsByName.get(c.position[1]);
+                  if (base && mark && base.unicode !== undefined && mark.unicode !== undefined) {
+                      map.set(`${base.unicode}-${mark.unicode}`, c);
+                  }
+              }
+          });
+      });
 
-  // 5. Morphic Render Logic
-  const renderHeader = () => {
-    switch(profile) {
-        case 'positioning':
-            const isGsubPair = !!positioningRules?.find(r => 
-                expandMembers(r.base, groups, allCharacterSets).includes(posBaseChar?.name || '') && 
-                expandMembers(r.mark, groups, allCharacterSets).includes(posMarkChar?.name || '')
-            )?.gsub;
+      if (positioningRules) {
+          let virtualId = 0x100000;
+          positioningRules.forEach(rule => {
+              const bases = expandMembers(rule.base, groups, allCharacterSets);
+              const marks = expandMembers(rule.mark || [], groups, allCharacterSets);
 
-            return (
-                <PositioningEditorHeader 
-                    targetLigature={character} prevPair={prevCharacter} nextPair={nextCharacter}
-                    onNavigate={(dir) => positioningSession.handleNavigationAttempt(dir as any)}
-                    activeAttachmentClass={positioningSession.activeAttachmentClass}
-                    isLinked={positioningSession.isLinked} isPivot={positioningSession.isPivot}
-                    canEdit={positioningSession.canEdit} isPositioned={markPositioningMap.has(pairIdentifier)}
-                    onResetRequest={() => setIsPosResetConfirmOpen(true)} isGsubPair={isGsubPair}
-                    isPropertiesPanelOpen={isPosPropertiesOpen} setIsPropertiesPanelOpen={setIsPosPropertiesOpen}
-                    lsb={positioningSession.lsb} setLsb={positioningSession.setLsb} rsb={positioningSession.rsb} setRsb={positioningSession.setRsb}
-                    metrics={metrics} isAutosaveEnabled={settings.isAutosaveEnabled} onSaveRequest={() => positioningSession.handleSave()}
-                    isLargeScreen={isLargeScreen} isStripExpanded={isStripExpanded}
-                />
-            );
-        case 'kerning':
-            return (
-                <KerningEditorHeader 
-                    pair={{ left: kernLeftChar!, right: kernRightChar! }}
-                    onClose={() => triggerClose(onClose)}
-                    onNavigate={handleKerningNavigate}
-                    hasPrev={!!prevCharacter} hasNext={!!nextCharacter}
-                    onAutoKern={kerningSession.handleAutoKern}
-                    isAutoKerning={kerningSession.isAutoKerning}
-                    onSave={kerningSession.handleSave}
-                    onRemove={kerningSession.handleSave} 
-                    isDirty={kerningSession.isDirty}
-                    settings={settings}
-                />
-            );
-        default:
-            return (
-                <DrawingEditorHeader
-                    character={character} glyphData={glyphData} prevCharacter={prevCharacter} nextCharacter={nextCharacter}
-                    onBackClick={() => drawingSession.handleNavigationAttempt(null)} onNavigate={drawingSession.handleNavigationAttempt}
-                    settings={settings} metrics={metrics} lsb={drawingSession.lsb} setLsb={drawingSession.setLsb} rsb={drawingSession.rsb} setRsb={drawingSession.setRsb}
-                    onDeleteClick={() => setIsDeleteConfirmOpen(true)} onClear={() => drawingSession.handlePathsChange([])} onSave={drawingSession.handleSave} 
-                    isLocked={drawingConstruction.isLocked} isComposite={drawingConstruction.isComposite} onRefresh={drawingSession.handleRefresh}
-                    allCharacterSets={allCharacterSets} onSaveConstruction={drawingConstruction.handleSaveConstruction}
-                    onUnlock={() => setIsUnlockConfirmOpen(true)} onRelink={() => setIsRelinkConfirmOpen(true)}
-                    glyphClass={drawingSession.glyphClass} setGlyphClass={drawingSession.setGlyphClass} advWidth={drawingSession.advWidth} setAdvWidth={drawingSession.setAdvWidth}
-                />
-            );
+              bases.forEach(bName => {
+                  marks.forEach(mName => {
+                      const bChar = allCharsByName.get(bName);
+                      const mChar = allCharsByName.get(mName);
+                      if (bChar && mChar && bChar.unicode !== undefined && mChar.unicode !== undefined) {
+                          const key = `${bChar.unicode}-${mChar.unicode}`;
+                          if (!map.has(key)) {
+                              map.set(key, {
+                                  name: bName + mName,
+                                  unicode: virtualId++,
+                                  position: [bName, mName],
+                                  glyphClass: 'ligature'
+                              });
+                          }
+                      }
+                  });
+              });
+          });
+      }
+      return map;
+  }, [allCharacterSets, allCharsByName, positioningRules, groups]);
+
+  const handlePositioningSave = useCallback((base: Character, mark: Character, targetLig: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => {
+    
+    const result = updatePositioningAndCascade({
+        baseChar: base,
+        markChar: mark,
+        targetLigature: targetLig,
+        newGlyphData,
+        newOffset,
+        newBearings,
+        allChars: allCharsByName,
+        allLigaturesByKey,
+        markAttachmentClasses,
+        baseAttachmentClasses,
+        markPositioningMap,
+        glyphDataMap: allGlyphData,
+        characterSets: allCharacterSets,
+        positioningRules,
+        markAttachmentRules,
+        groups,
+        strokeThickness: settings.strokeThickness,
+        metrics
+    });
+
+    positioningDispatch({ type: 'SET_MAP', payload: result.updatedMarkPositioningMap });
+    glyphDataDispatch({ type: 'SET_MAP', payload: result.updatedGlyphDataMap });
+    characterDispatch({ type: 'SET_CHARACTER_SETS', payload: result.updatedCharacterSets });
+
+    if (!isAutosave) {
+        const propagatedCount = result.updatedMarkPositioningMap.size - markPositioningMap.size - 1;
+        if (propagatedCount > 0) {
+            showNotification(`Saved and propagated to ${propagatedCount} similar pairs.`, 'success');
+        } else {
+            showNotification(`Positioning saved.`, 'success');
+        }
     }
-  };
+  }, [allCharsByName, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses, markPositioningMap, allGlyphData, allCharacterSets, positioningRules, markAttachmentRules, groups, settings.strokeThickness, metrics, positioningDispatch, glyphDataDispatch, characterDispatch, showNotification]);
 
-  const renderWorkspace = () => {
+
+  const renderActivePage = () => {
+    const pageKey = character.unicode || character.name;
+
     switch(profile) {
-        case 'positioning':
+        case 'kerning': {
+            const kernLeftChar = allCharsByName.get(character.kern[0]);
+            const kernRightChar = allCharsByName.get(character.kern[1]);
+            const key = `${kernLeftChar?.unicode}-${kernRightChar?.unicode}`;
             return (
-                <div className="flex-grow flex flex-col h-full overflow-hidden relative">
-                    <PositioningEditorWorkspace 
-                        markPaths={positioningSession.markPaths} basePaths={positioningSession.basePaths} targetLigature={character}
-                        onPathsChange={positioningSession.handlePathsChange}
-                        pageTool={posPageTool} onToggleTool={() => setPosPageTool(t => t === 'select' ? 'pan' : 'select')} 
-                        zoom={positioningSession.zoom} setZoom={positioningSession.setZoom}
-                        viewOffset={positioningSession.viewOffset} setViewOffset={positioningSession.setViewOffset}
-                        onZoom={handlePositioningZoom} onReuseClick={() => setIsPosReuseOpen(!isPosReuseOpen)}
-                        canEdit={positioningSession.canEdit}
-                        movementConstraint={positioningSession.movementConstraint as any}
-                        settings={settings} metrics={metrics}
-                        manualX={positioningSession.manualX} manualY={positioningSession.manualY}
-                        onManualChange={handlePositioningManualChange} onManualCommit={positioningSession.handleManualCommit}
-                        setIsInputFocused={positioningSession.setIsInputFocused}
-                        selectedPathIds={positioningSession.selectedPathIds} onSelectionChange={positioningSession.setSelectedPathIds}
-                        showStrip={!!positioningSession.activeAttachmentClass} classSiblings={classSiblings} activePair={{ base: posBaseChar || character, mark: posMarkChar || character, ligature: character }} 
-                        pivotChar={positioningSession.isPivot ? (positioningSession.activeAttachmentClass?.name ? null : (posMarkChar || character)) : (positioningSession.pivotName ? allCharsByName.get(positioningSession.pivotName) : null)}
-                        glyphDataMap={allGlyphData}
-                        anchorDelta={VEC.sub(positioningSession.currentOffset, positioningSession.alignmentOffset)} isLinked={positioningSession.isLinked} onToggleLink={handleToggleLink}
-                        handleSelectSibling={(p: any) => onNavigate(p.ligature)} markAttachmentRules={markAttachmentRules} positioningRules={positioningRules}
-                        characterSets={allCharacterSets} groups={groups} isStripExpanded={isStripExpanded} setIsStripExpanded={setIsStripExpanded}
-                        activeAttachmentClass={positioningSession.activeAttachmentClass} hasDualContext={positioningSession.hasDualContext} activeClassType={positioningSession.activeClassType} onToggleContext={positioningSession.setOverrideClassType}
-                        isLargeScreen={isLargeScreen}
-                    />
-
-                    {isPosReuseOpen && (
-                        <div className="absolute top-4 left-4 z-30 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-80 max-h-[500px] flex flex-col animate-fade-in-up">
-                            <div className="flex justify-between items-center mb-4">
-                                <h4 className="font-bold text-gray-900 dark:text-white">{t('copyPositionFrom')}</h4>
-                                <button onClick={() => setIsPosReuseOpen(false)}><CloseIcon className="w-5 h-5"/></button>
-                            </div>
-                            <div className="flex-grow overflow-y-auto pr-1 grid grid-cols-2 gap-3">
-                                {reuseSources.length > 0 ? reuseSources.map(s => (
-                                    <ReusePreviewCard 
-                                        key={s.unicode} baseChar={s} markChar={posMarkChar!} 
-                                        onClick={() => handlePositioningReuse(s)} 
-                                        glyphDataMap={allGlyphData} strokeThickness={settings.strokeThickness} 
-                                        markPositioningMap={markPositioningMap} glyphVersion={glyphVersion} 
-                                        displayLabel={s.name} 
-                                    />
-                                )) : <div className="col-span-2 text-center text-gray-500 italic py-4">{t('noCompleteSources')}</div>}
-                            </div>
-                        </div>
-                    )}
-
-                    <Modal isOpen={isPosResetConfirmOpen} onClose={() => setIsPosResetConfirmOpen(false)} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsPosResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={handlePositioningReset} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: character.name })}</p></Modal>
-                </div>
+                <KerningEditorPage
+                    key={pageKey}
+                    pair={{ left: kernLeftChar!, right: kernRightChar! }}
+                    initialValue={kerningMap.get(key) ?? 0}
+                    glyphDataMap={allGlyphData}
+                    strokeThickness={settings.strokeThickness}
+                    metrics={metrics}
+                    settings={settings}
+                    recommendedKerning={recommendedKerning}
+                    onSave={(val) => {
+                        const newMap = new Map(kerningMap);
+                        newMap.set(key, val);
+                        kerningDispatch({ type: 'SET_MAP', payload: newMap });
+                    }}
+                    onRemove={() => {
+                        const newMap = new Map(kerningMap);
+                        newMap.delete(key);
+                        kerningDispatch({ type: 'SET_MAP', payload: newMap });
+                        triggerClose(onClose);
+                    }}
+                    onClose={() => triggerClose(onClose)}
+                    onNavigate={(dir) => handlePageNavigate(dir)}
+                    hasPrev={!!prevCharacter}
+                    hasNext={!!nextCharacter}
+                    glyphVersion={glyphVersion}
+                />
             );
-        case 'kerning':
+        }
+
+        case 'positioning': {
+            const posBaseChar = allCharsByName.get(character.position?.[0]) || character;
+            const posMarkChar = allCharsByName.get(character.position?.[1]) || character;
+            
             return (
-                <div className="flex-grow flex flex-col h-full min-h-0 overflow-hidden">
-                    <KerningEditorWorkspace 
-                        isLargeScreen={isLargeScreen}
-                        containerRef={kerningContainerRef}
-                        setContainerSize={kerningSession.setContainerSize}
-                        onZoom={kerningSession.setZoom}
-                        kernValue={kerningSession.kernValue}
-                        onKernChange={(e) => kerningSession.setKernValue(e.target.value)}
-                        onKernFocus={kerningSession.setIsKernFocused}
-                        onKernHover={kerningSession.setIsKernHovered}
-                        isKernDirty={kerningSession.isDirty}
-                        xDistValue={kerningSession.xDistValue}
-                        onXDistChange={(e) => kerningSession.setXDistValue(e.target.value)}
-                        onXDistCommit={kerningSession.handleXDistCommit}
-                        isXDistFocused={kerningSession.isXDistFocused}
-                        isXDistHovered={kerningSession.isXDistHovered}
-                        onXDistFocus={kerningSession.setIsXDistFocused}
-                        onXDistHover={kerningSession.setIsXDistHovered}
-                        xDistInputRef={useRef(null)}
-                    >
-                         <div 
-                            className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800"
-                            style={{ 
-                                width: kerningSession.canvasDisplaySize.width || 800, 
-                                height: kerningSession.canvasDisplaySize.height || 533 
-                            }}
-                        >
-                            <KerningCanvas
-                                width={kerningSession.canvasDisplaySize.width || 800}
-                                height={kerningSession.canvasDisplaySize.height || 533}
-                                leftChar={kernLeftChar!}
-                                rightChar={kernRightChar!}
-                                glyphDataMap={allGlyphData}
-                                kernValue={kerningSession.kernValue}
-                                onKernChange={kerningSession.setKernValue}
-                                metrics={metrics}
-                                tool="select"
-                                zoom={kerningSession.zoom}
-                                setZoom={kerningSession.setZoom}
-                                viewOffset={kerningSession.viewOffset}
-                                setViewOffset={kerningSession.setViewOffset}
-                                settings={settings}
-                                baseScale={kerningSession.baseScale}
-                                strokeThickness={settings.strokeThickness}
-                                showMeasurement={kerningSession.showMeasurement}
-                            />
-                        </div>
-                    </KerningEditorWorkspace>
-                </div>
+                <PositioningEditorPage
+                    key={pageKey}
+                    baseChar={posBaseChar}
+                    markChar={posMarkChar}
+                    targetLigature={character}
+                    glyphDataMap={allGlyphData}
+                    markPositioningMap={markPositioningMap}
+                    onSave={handlePositioningSave}
+                    onClose={() => triggerClose(onClose)}
+                    onReset={(b, m, l) => {
+                        const key = `${b.unicode}-${m.unicode}`;
+                        const newMap = new Map(markPositioningMap);
+                        newMap.delete(key);
+                        positioningDispatch({ type: 'SET_MAP', payload: newMap });
+                    }}
+                    settings={settings}
+                    metrics={metrics}
+                    markAttachmentRules={markAttachmentRules}
+                    positioningRules={positioningRules}
+                    allChars={allCharsByName}
+                    onNavigate={(dir) => handlePageNavigate(dir)}
+                    hasPrev={!!prevCharacter}
+                    hasNext={!!nextCharacter}
+                    setEditingPair={(pair: any) => handlePageNavigate(pair.ligature)}
+                    characterSets={allCharacterSets}
+                    glyphVersion={glyphVersion}
+                    allLigaturesByKey={allLigaturesByKey}
+                />
             );
+        }
+
         default:
             return (
-                <DrawingEditorWorkspace 
-                    character={character} currentPaths={drawingSession.currentPaths} onPathsChange={drawingSession.handlePathsChange} metrics={metrics}
-                    currentTool={currentTool} setCurrentTool={setCurrentTool} zoom={zoom} setZoom={setZoom}
-                    viewOffset={viewOffset} setViewOffset={setViewOffset} settings={settings}
-                    allGlyphData={allGlyphData} allCharacterSets={allCharacterSets} allCharsByName={allCharsByName}
-                    lsb={drawingSession.lsb} rsb={drawingSession.rsb} onMetricsChange={(l, r) => { drawingSession.setLsb(l); drawingSession.setRsb(r); }}
-                    isLargeScreen={isLargeScreen} isTransitioning={drawingSession.isTransitioning} wasEmptyOnLoad={drawingSession.wasEmptyOnLoad}
-                    isLocked={drawingConstruction.isLocked} calligraphyAngle={calligraphyAngle} setCalligraphyAngle={setCalligraphyAngle}
-                    selectedPathIds={selectedPathIds} setSelectedPathIds={setSelectedPathIds}
-                    isImageSelected={isImageSelected} setIsImageSelected={setIsImageSelected}
-                    backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity}
-                    imageTransform={imageTransform} setImageTransform={setImageTransform}
-                    previewTransform={previewTransform} setPreviewTransform={setPreviewTransform}
-                    onApplyTransform={drawingOps.handleApplyTransform} onImageImportClick={() => drawingImport.imageImportRef.current?.click()}
-                    onSvgImportClick={() => drawingImport.svgImportRef.current?.click()} onImageTraceClick={() => drawingImport.imageTraceRef.current?.click()}
-                    undo={drawingSession.undo} redo={drawingSession.redo} canUndo={drawingSession.canUndo} canRedo={drawingSession.canRedo} handleCut={drawingOps.handleCut}
-                    handleCopy={drawingOps.handleCopy} handlePaste={drawingOps.handlePaste} clipboard={clipboard}
-                    handleGroup={drawingOps.handleGroup} handleUngroup={drawingOps.handleUngroup} canGroup={drawingOps.canGroup} canUngroup={drawingOps.canUngroup}
-                    sourceGlyphs={sourceGlyphs} dependentGlyphs={dependentGlyphs} groups={groups}
-                    handleNavigationAttempt={drawingSession.handleNavigationAttempt}
-                    markAttachmentRules={markAttachmentRules}
+                <DrawingModal
+                    key={pageKey}
+                    character={character}
+                    characterSet={characterSet}
+                    glyphData={glyphData}
+                    onSave={onSave}
+                    onClose={() => triggerClose(onClose)}
+                    onDelete={onDelete}
+                    onNavigate={onNavigate}
+                    settings={settings}
+                    metrics={metrics}
+                    allGlyphData={allGlyphData}
+                    allCharacterSets={allCharacterSets}
                     gridConfig={gridConfig}
+                    markAttachmentRules={markAttachmentRules}
+                    onUnlockGlyph={onUnlockGlyph}
+                    onRelinkGlyph={onRelinkGlyph}
+                    onUpdateDependencies={onUpdateDependencies}
+                    onEditorModeChange={onEditorModeChange}
                 />
             );
     }
@@ -568,26 +259,9 @@ const UnifiedEditorModal: React.FC<any> = ({
 
   return (
     <div ref={modalRef} className={`fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col ${animationClass}`}>
-      <input type="file" ref={drawingImport.imageImportRef} onChange={drawingImport.handleImageImport} className="hidden" accept="image/*" />
-      <input type="file" ref={drawingImport.svgImportRef} onChange={drawingImport.handleSvgImport} className="hidden" accept="image/svg+xml" />
-      <input type="file" ref={drawingImport.imageTraceRef} onChange={drawingImport.handleImageTraceFileChange} className="hidden" accept="image/*" />
-
-      {renderHeader()}
-      {renderWorkspace()}
-
-      {profile === 'drawing' && (
-        <>
-          <ImageControlPanel backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity} setBackgroundImageOpacity={setBackgroundImageOpacity} onClearImage={() => { setBackgroundImage(null); setImageTransform(null); }} />
-          <DrawingConfirmationStack 
-            isUnsavedModalOpen={drawingSession.isUnsavedModalOpen} closeUnsavedModal={drawingSession.closeUnsavedModal} confirmSave={drawingSession.confirmSave} confirmDiscard={drawingSession.confirmDiscard}
-            isDeleteConfirmOpen={isDeleteConfirmOpen} setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} onDelete={onDelete} character={character} dependentsCount={drawingConstruction.dependentsCount}
-            isUnlockConfirmOpen={isUnlockConfirmOpen} setIsUnlockConfirmOpen={setIsUnlockConfirmOpen} onUnlock={handleConfirmUnlock}
-            isRelinkConfirmOpen={isRelinkConfirmOpen} setIsRelinkConfirmOpen={setIsRelinkConfirmOpen} onRelink={handleConfirmRelink}
-            isConstructionWarningOpen={drawingConstruction.isConstructionWarningOpen} setIsConstructionWarningOpen={drawingConstruction.setIsConstructionWarningOpen} pendingConstruction={drawingConstruction.pendingConstruction} executeConstructionUpdate={drawingConstruction.executeConstructionUpdate}
-            isTracerModalOpen={isTracerModalOpen} setIsTracerModalOpen={setIsTracerModalOpen} tracerImageSrc={tracerImageSrc} handleInsertTracedSVG={drawingImport.handleInsertTracedSVG} metrics={metrics}
-          />
-        </>
-      )}
+        <div className="flex-1 min-h-0 h-full w-full overflow-hidden flex flex-col">
+            {renderActivePage()}
+        </div>
     </div>
   );
 };

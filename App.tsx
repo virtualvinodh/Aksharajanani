@@ -308,7 +308,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       
       {selectedCharacter && characterSets && (
         <UnifiedEditorModal
-          key={selectedCharacter.unicode}
+          key={selectedCharacter ? "unified-editor-modal" : "none"}
           character={selectedCharacter}
           characterSet={characterSets.find(cs => cs.characters.some(c => c.unicode === selectedCharacter.unicode)) || characterSets[layout.activeTab]}
           glyphData={glyphDataMap.get(selectedCharacter.unicode)}

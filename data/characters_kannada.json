@@ -309,7 +309,7 @@
   {
     "nameKey": "uCons",
 "characters": [
-      {  "name": "ಕು", "glyphClass": "ligature", "positioning": ["ಕ", "ು"] },
+      {  "name": "ಕು", "glyphClass": "ligature", "position": ["ಕ", "ು"] },
       { "name": "ಕ್ಷು", "glyphClass": "base", "composite": ["ಕ್ಷ", "ು"] },
       {  "name": "ಖು", "glyphClass": "ligature", "composite": ["ಖ", "ು"] },
       {  "name": "ಗು", "glyphClass": "ligature", "composite": ["ಗ", "ು"] },
@@ -353,7 +353,7 @@
     {
     "nameKey": "uuCons",
 "characters": [
-      {  "name": "ಕೂ", "glyphClass": "ligature", "positioning": ["ಕ", "ೂ"]  },
+      {  "name": "ಕೂ", "glyphClass": "ligature", "position": ["ಕ", "ೂ"]  },
       { "name": "ಕ್ಷೂ", "glyphClass": "base", "composite": ["ಕ್ಷ", "ೂ"] },
       {  "name": "ಖೂ", "glyphClass": "ligature", "composite": ["ಖ", "ೂ"] },
       {  "name": "ಗೂ", "glyphClass": "ligature", "composite": ["ಗ", "ೂ"] },

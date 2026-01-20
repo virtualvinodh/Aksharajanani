@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { DRAWING_CANVAS_SIZE } from '../constants';
@@ -24,7 +24,7 @@ interface PositioningEditorPageProps {
     targetLigature: Character;
     glyphDataMap: Map<number, GlyphData>;
     markPositioningMap: MarkPositioningMap;
-    onSave: (targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => void;
+    onSave: (base: Character, mark: Character, targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => void;
     onClose: () => void;
     onReset: (baseChar: Character, markChar: Character, targetLigature: Character) => void;
     settings: AppSettings;
@@ -32,9 +32,9 @@ interface PositioningEditorPageProps {
     markAttachmentRules: MarkAttachmentRules | null;
     positioningRules: PositioningRules[] | null;
     allChars: Map<string, Character>;
-    allPairs: { base: Character, mark: Character, ligature: Character }[];
-    currentIndex: number | null;
-    onNavigate: (newIndex: number) => void;
+    onNavigate: (direction: 'prev' | 'next') => void;
+    hasPrev: boolean;
+    hasNext: boolean;
     setEditingPair?: (pair: { base: Character, mark: Character, ligature: Character }) => void;
     characterSets: CharacterSet[];
     glyphVersion: number;
@@ -55,12 +55,12 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     const [isStripExpanded, setIsStripExpanded] = useState(false);
     const [pageTool, setPageTool] = useState<'select' | 'pan'>('select');
 
+    // session hook refactored to bubble up navigation direction
     const session = usePositioningSession({
         ...props,
         groups,
         markAttachmentClasses,
-        baseAttachmentClasses,
-        allPairsCount: props.allPairs.length
+        baseAttachmentClasses
     });
 
     const isPositioned = useMemo(() => props.markPositioningMap.has(`${props.baseChar.unicode}-${props.markChar.unicode}`), [props.markPositioningMap, props.baseChar, props.markChar]);
@@ -134,21 +134,50 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
         session.handlePathsChange(newPaths); setIsReusePanelOpen(false); showNotification(t('positionsCopied'), 'success');
     };
 
+    const handleZoomAction = useCallback((factor: number) => {
+        const oldZoom = session.zoom;
+        const newZoom = Math.max(0.1, Math.min(10, oldZoom * factor));
+        const screenCenter = 500;
+        const designPointAtCenter = {
+            x: (screenCenter - session.viewOffset.x) / oldZoom,
+            y: (screenCenter - session.viewOffset.y) / oldZoom
+        };
+        const newOffset = {
+            x: screenCenter - designPointAtCenter.x * newZoom,
+            y: screenCenter - designPointAtCenter.y * newZoom
+        };
+        session.setViewOffset(newOffset);
+        session.setZoom(newZoom);
+    }, [session]);
+
     return (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-800 animate-fade-in-up">
+        <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-900 overflow-hidden relative">
             <PositioningEditorHeader 
-                targetLigature={props.targetLigature} prevPair={props.currentIndex! > 0} nextPair={props.currentIndex! < props.allPairs.length - 1}
-                onNavigate={session.handleNavigationAttempt} activeAttachmentClass={session.activeAttachmentClass} isLinked={session.isLinked} isPivot={session.isPivot}
-                canEdit={session.canEdit} isPositioned={isPositioned} onResetRequest={() => setIsResetConfirmOpen(true)} isGsubPair={isGsubPair}
-                isPropertiesPanelOpen={isPropertiesPanelOpen} setIsPropertiesPanelOpen={setIsPropertiesPanelOpen}
-                lsb={session.lsb} setLsb={session.setLsb} rsb={session.rsb} setRsb={session.setRsb} metrics={props.metrics} isAutosaveEnabled={props.settings.isAutosaveEnabled}
-                onSaveRequest={() => session.handleSave()} isLargeScreen={isLargeScreen} isStripExpanded={isStripExpanded}
+                targetLigature={props.targetLigature} 
+                prevPair={props.hasPrev} 
+                nextPair={props.hasNext}
+                onNavigate={session.handleNavigationAttempt} 
+                activeAttachmentClass={session.activeAttachmentClass} 
+                isLinked={session.isLinked} 
+                isPivot={session.isPivot}
+                canEdit={session.canEdit} 
+                isPositioned={isPositioned} 
+                onResetRequest={() => setIsResetConfirmOpen(true)} 
+                isGsubPair={isGsubPair}
+                isPropertiesPanelOpen={isPropertiesPanelOpen} 
+                setIsPropertiesPanelOpen={setIsPropertiesPanelOpen}
+                lsb={session.lsb} setLsb={session.setLsb} rsb={session.rsb} setRsb={session.setRsb} 
+                metrics={props.metrics} 
+                isAutosaveEnabled={props.settings.isAutosaveEnabled}
+                onSaveRequest={() => session.handleSave()} 
+                isLargeScreen={isLargeScreen} 
+                isStripExpanded={isStripExpanded}
             />
 
             <PositioningEditorWorkspace 
                 markPaths={session.markPaths} basePaths={session.basePaths} targetLigature={props.targetLigature} onPathsChange={session.handlePathsChange}
                 pageTool={pageTool} onToggleTool={() => setPageTool(t => t === 'select' ? 'pan' : 'select')} zoom={session.zoom} setZoom={session.setZoom}
-                viewOffset={session.viewOffset} setViewOffset={session.setViewOffset} onZoom={(f) => { const nZ = Math.max(0.1, Math.min(10, session.zoom*f)); const c = DRAWING_CANVAS_SIZE/2; session.setViewOffset({ x: c - (c - session.viewOffset.x) * (nZ / session.zoom), y: c - (c - session.viewOffset.y) * (nZ / session.zoom) }); session.setZoom(nZ); }}
+                viewOffset={session.viewOffset} setViewOffset={session.setViewOffset} onZoom={handleZoomAction}
                 onReuseClick={() => setIsReusePanelOpen(!isReusePanelOpen)} canEdit={session.canEdit} 
                 lockedMessage={!session.canEdit ? t('This pair is synced to {pivot}. Unlink to edit this specific pair, or edit {pivot} to update the whole class.', { pivot: session.pivotName || 'Class Representative' }) : undefined}
                 movementConstraint={session.movementConstraint as 'horizontal' | 'vertical' | 'none'} settings={props.settings} metrics={props.metrics} showStrip={!!session.activeAttachmentClass}
@@ -176,7 +205,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                  </div>
             )}
             
-            <UnsavedChangesModal isOpen={session.isUnsavedModalOpen} onClose={() => session.setIsUnsavedModalOpen(false)} onSave={() => {session.handleSave(); if(session.pendingNavigation) session.handleNavigationAttempt(session.pendingNavigation);}} onDiscard={() => {if(session.pendingNavigation) { if (session.pendingNavigation === 'back') props.onClose(); else if (session.pendingNavigation === 'prev') props.onNavigate(props.currentIndex! - 1); else if (session.pendingNavigation === 'next') props.onNavigate(props.currentIndex! + 1); } session.setIsUnsavedModalOpen(false);}} />
+            <UnsavedChangesModal isOpen={session.isUnsavedModalOpen} onClose={() => session.setIsUnsavedModalOpen(false)} onSave={() => {session.handleSave(); if(session.pendingNavigation) session.handleNavigationAttempt(session.pendingNavigation);}} onDiscard={() => {if(session.pendingNavigation) { if (session.pendingNavigation === 'back') props.onClose(); else props.onNavigate(session.pendingNavigation as 'prev' | 'next'); } session.setIsUnsavedModalOpen(false);}} />
             <Modal isOpen={isResetConfirmOpen} onClose={() => setIsResetConfirmOpen(false)} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={() => { props.onReset(props.baseChar, props.markChar, props.targetLigature); setIsResetConfirmOpen(false); }} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: props.targetLigature.name })}</p></Modal>
         </div>
     );

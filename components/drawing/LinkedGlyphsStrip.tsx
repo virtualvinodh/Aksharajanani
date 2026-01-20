@@ -1,8 +1,9 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Character, GlyphData, AppSettings, CharacterSet, MarkAttachmentRules, Path } from '../../types';
+import { Virtuoso } from 'react-virtuoso';
+import { Character, GlyphData, AppSettings, CharacterSet, MarkAttachmentRules, Path, KerningMap, MarkPositioningMap, UnifiedRenderContext } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
-import { renderPaths, getAccurateGlyphBBox, generateCompositeGlyphData, updateComponentInPaths } from '../../services/glyphRenderService';
+import { renderPaths, getAccurateGlyphBBox, generateCompositeGlyphData, updateComponentInPaths, getUnifiedPaths } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 import { LeftArrowIcon, RightArrowIcon, LinkIcon, BrokenLinkIcon, FoldIcon, CloseIcon } from '../../constants';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
@@ -23,9 +24,13 @@ interface LinkedGlyphsStripProps {
     markAttachmentRules?: MarkAttachmentRules | null;
     characterSets?: CharacterSet[];
     groups?: Record<string, string[]>;
+    kerningMap?: KerningMap;
+    markPositioningMap?: MarkPositioningMap;
 }
 
 const DRAWING_CANVAS_SIZE = 1000;
+const VIRTUOSO_THRESHOLD = 30; // Switch to virtual list if items exceed this count
+
 declare var UnicodeProperties: any;
 
 const GlyphThumbnail: React.FC<{
@@ -48,17 +53,15 @@ const GlyphThumbnail: React.FC<{
         if (isGlyphDrawn(glyphData)) {
             const bbox = getAccurateGlyphBBox(glyphData!, strokeThickness);
             
-            // Standard scale: How much of the 1000px design space fits in our 'size' px box
             const standardScale = size / DRAWING_CANVAS_SIZE;
             let scale = standardScale;
             let tx = 0;
             let ty = 0;
 
             if (bbox) {
-                const PADDING = size * 0.1; // 10% padding
+                const PADDING = size * 0.1;
                 const availableDim = size - (PADDING * 2);
                 
-                // 1. Calculate Fit Scale (only shrink if too large, don't blow up small marks)
                 if (bbox.width > 0 && bbox.height > 0) {
                     const fitScaleX = availableDim / bbox.width;
                     const fitScaleY = availableDim / bbox.height;
@@ -69,12 +72,10 @@ const GlyphThumbnail: React.FC<{
                     }
                 }
 
-                // 2. Horizontal Centering (Always center content horizontally)
                 const contentCenterX = bbox.x + bbox.width / 2;
                 const canvasCenter = size / 2;
                 tx = canvasCenter - (contentCenterX * scale);
 
-                // 3. Vertical Centering Logic (Sync'd with CharacterCard)
                 let shouldVerticallyCenter = true;
 
                 if (character.glyphClass === 'mark') {
@@ -82,7 +83,6 @@ const GlyphThumbnail: React.FC<{
                 } else if (character.unicode && typeof UnicodeProperties !== 'undefined') {
                     try {
                         const cat = UnicodeProperties.getCategory(character.unicode);
-                        // Lm: Modifier, Sk: Symbol, P*: Punctuation
                         if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {
                             shouldVerticallyCenter = false;
                         }
@@ -90,11 +90,9 @@ const GlyphThumbnail: React.FC<{
                 }
 
                 if (shouldVerticallyCenter) {
-                    // Center the specific content (visual balance)
                     const contentCenterY = bbox.y + bbox.height / 2;
                     ty = canvasCenter - (contentCenterY * scale);
                 } else {
-                    // Center the frame (preserves semantic vertical offset relative to baseline)
                     ty = (size - (DRAWING_CANVAS_SIZE * scale)) / 2;
                 }
             }
@@ -125,24 +123,49 @@ const GlyphThumbnail: React.FC<{
 
 const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({ 
     title, items, glyphDataMap, settings, onSelect, variant,
-    liveSourcePaths, sourceCharacter, allCharsByName, metrics, markAttachmentRules, characterSets, groups
+    liveSourcePaths, sourceCharacter, allCharsByName, metrics, markAttachmentRules, characterSets, groups,
+    kerningMap, markPositioningMap
 }) => {
-    const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
+    const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll([items]);
     const [isExpanded, setIsExpanded] = useState(false);
+    const virtuosoRef = useRef<any>(null);
     
-    useEffect(() => {
-        checkVisibility();
-    }, [items, checkVisibility]);
+    const useVirtuoso = items.length >= VIRTUOSO_THRESHOLD && !isExpanded;
 
-    if (items.length === 0) return null;
+    const getDisplayData = useCallback((char: Character): GlyphData | undefined => {
+        // Create a rendering context that injects live data from the editor
+        const renderCtx: UnifiedRenderContext = {
+            glyphDataMap: new Proxy(glyphDataMap, {
+                get(target, prop) {
+                    if (prop === 'get') {
+                        return (key: number) => {
+                            if (key === sourceCharacter?.unicode && liveSourcePaths) {
+                                return { paths: liveSourcePaths };
+                            }
+                            return target.get(key);
+                        };
+                    }
+                    return (target as any)[prop];
+                }
+            }),
+            allCharsByName: allCharsByName!,
+            markPositioningMap: markPositioningMap!,
+            kerningMap: kerningMap!,
+            metrics: metrics!,
+            markAttachmentRules: markAttachmentRules!,
+            strokeThickness: settings.strokeThickness,
+            characterSets: characterSets!,
+            groups: groups || {}
+        };
 
-    const isSource = variant === 'sources';
+        // 1. Syllables / Kerned Pairs (Virtual Assembly)
+        if (char.position || char.kern) {
+            return { paths: getUnifiedPaths(char, renderCtx) };
+        }
 
-    // Helper to generate the correct GlyphData (including live preview logic)
-    const renderThumb = (char: Character, size: number) => {
+        // 2. Direct Drawing Link (Legacy Path Link)
         let displayData = char.unicode !== undefined ? glyphDataMap.get(char.unicode) : undefined;
         
-        // LIVE PREVIEW LOGIC
         if (variant === 'dependents' && liveSourcePaths && sourceCharacter && displayData) {
             const components = char.link || char.composite || [];
             let currentPaths = [...displayData.paths];
@@ -169,22 +192,11 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                 }
             } 
             else if (allCharsByName && metrics && characterSets) {
-                const tempMap = new Proxy(glyphDataMap, {
-                    get(target, prop, receiver) {
-                        if (prop === 'get') {
-                            return (key: number) => {
-                                if (key === sourceCharacter.unicode) return { paths: liveSourcePaths };
-                                return target.get(key);
-                            };
-                        }
-                        return Reflect.get(target, prop, receiver);
-                    }
-                });
-
+                // If the target has no paths yet, regenerate it from components
                 const liveComposite = generateCompositeGlyphData({
                     character: char,
                     allCharsByName: allCharsByName,
-                    allGlyphData: tempMap,
+                    allGlyphData: renderCtx.glyphDataMap,
                     settings: settings,
                     metrics: metrics,
                     markAttachmentRules: markAttachmentRules || null,
@@ -196,28 +208,29 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                 }
             }
         }
+        return displayData;
+    }, [glyphDataMap, liveSourcePaths, sourceCharacter, variant, settings, allCharsByName, metrics, characterSets, groups, kerningMap, markPositioningMap]);
 
-        return (
-            <GlyphThumbnail 
-                key={char.unicode || char.name}
-                character={char}
-                glyphData={displayData}
-                strokeThickness={settings.strokeThickness}
-                onClick={() => {
-                    if (isExpanded) setIsExpanded(false);
-                    onSelect(char);
-                }}
-                size={size}
-            />
-        );
-    };
+    const renderThumb = (char: Character, size: number) => (
+        <GlyphThumbnail 
+            key={char.unicode || char.name}
+            character={char}
+            glyphData={getDisplayData(char)}
+            strokeThickness={settings.strokeThickness}
+            onClick={() => {
+                if (isExpanded) setIsExpanded(false);
+                onSelect(char);
+            }}
+            size={size}
+        />
+    );
 
     const expandedView = isExpanded ? (
         <div className="fixed inset-0 z-[200] bg-white dark:bg-gray-900 flex flex-col animate-fade-in-up">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md flex-shrink-0">
                  <div className="flex items-center gap-4">
-                     <div className={`p-2 rounded-lg ${isSource ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-300'}`}>
-                        {isSource ? <LinkIcon className="w-6 h-6" /> : <BrokenLinkIcon className="w-6 h-6" />}
+                     <div className={`p-2 rounded-lg ${variant === 'sources' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-blue-300'}`}>
+                        {variant === 'sources' ? <LinkIcon className="w-6 h-6" /> : <BrokenLinkIcon className="w-6 h-6" />}
                      </div>
                      <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
@@ -246,10 +259,9 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
             {expandedView && createPortal(expandedView, document.body)}
 
             <div className="w-full max-w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center overflow-hidden rounded-b-xl mx-auto">
-                 {/* Label Column */}
                  <div className="flex flex-col items-center justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 w-20">
-                    <span className={`p-1.5 rounded-full ${isSource ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300'}`}>
-                        {isSource ? <LinkIcon className="w-4 h-4" /> : <BrokenLinkIcon className="w-4 h-4" />}
+                    <span className={`p-1.5 rounded-full ${variant === 'sources' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-blue-300'}`}>
+                        {variant === 'sources' ? <LinkIcon className="w-4 h-4" /> : <BrokenLinkIcon className="w-4 h-4" />}
                     </span>
                     <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center leading-tight">
                         {title}<br/>
@@ -264,9 +276,8 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                     </button>
                  </div>
 
-                 {/* Scrollable List */}
-                 <div className="relative flex-grow overflow-hidden flex items-center">
-                     {visibility.left && (
+                 <div className="relative flex-grow overflow-hidden flex items-center h-[72px]">
+                    {visibility.left && (
                         <button
                             onClick={() => handleScroll('left')}
                             className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-6 bg-gradient-to-r from-gray-50 via-gray-50/90 to-transparent dark:from-gray-800 dark:via-gray-800/90"
@@ -277,9 +288,24 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                         </button>
                     )}
 
-                    <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center scroll-smooth px-1 w-full">
-                        {items.map((char) => renderThumb(char, 60))}
-                    </div>
+                    {useVirtuoso ? (
+                        <Virtuoso
+                            ref={virtuosoRef}
+                            horizontal
+                            data={items}
+                            scrollerRef={scrollRef}
+                            style={{ height: 68, width: '100%' }}
+                            itemContent={(index, char) => (
+                                <div className="pr-2 py-1">
+                                    {renderThumb(char, 60)}
+                                </div>
+                            )}
+                        />
+                    ) : (
+                        <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center scroll-smooth px-1 w-full">
+                            {items.map((char) => renderThumb(char, 60))}
+                        </div>
+                    )}
 
                     {visibility.right && (
                         <button

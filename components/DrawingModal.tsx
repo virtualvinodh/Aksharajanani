@@ -13,19 +13,24 @@ import { useGlyphEditSession } from '../hooks/drawing/useGlyphEditSession';
 import { useDrawingShortcuts } from '../hooks/drawing/useDrawingShortcuts';
 import { useImportLogic } from '../hooks/drawing/useImportLogic';
 import { useCanvasOperations } from '../hooks/drawing/useCanvasOperations';
+import { useSliceTool } from '../hooks/drawing/useSliceTool';
 import { useGlyphConstruction } from '../hooks/drawing/useGlyphConstruction';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 import { useRules } from '../contexts/RulesContext';
+import { useKerning } from '../contexts/KerningContext';
+import { usePositioning } from '../contexts/PositioningContext';
 
 const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange }) => {
   const { t } = useLocale();
   const { showNotification, modalOriginRect, checkAndSetFlag } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
-  const { dispatch: characterDispatch, allCharsByName } = useProject();
+  const { dispatch: characterDispatch, allCharsByName, allCharsByUnicode } = useProject();
   const { dispatch: glyphDataDispatch } = useGlyphDataContext();
   const { state: rulesState } = useRules();
+  const { kerningMap } = useKerning();
+  const { markPositioningMap } = usePositioning();
   const groups = rulesState.fontRules?.groups || {};
 
   const [currentTool, setCurrentTool] = useState<Tool>('pen');
@@ -33,7 +38,6 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
   const [viewOffset, setViewOffset] = useState<Point>({ x: 0, y: 0 });
   const [selectedPathIds, setSelectedPathIds] = useState<Set<string>>(new Set());
   const [isImageSelected, setIsImageSelected] = useState(false);
-  const [animationClass, setAnimationClass] = useState('');
   const [calligraphyAngle, setCalligraphyAngle] = useState<45 | 30 | 15>(45);
   
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
@@ -46,23 +50,12 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
   const [isUnlockConfirmOpen, setIsUnlockConfirmOpen] = useState(false);
   const [isRelinkConfirmOpen, setIsRelinkConfirmOpen] = useState(false);
   
-  const modalRef = useRef<HTMLDivElement>(null);
-  const animationTimeoutRef = useRef<number | null>(null);
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
   
   const visibleCharactersForNav = useMemo(() => characterSet.characters.filter((c: any) => !c.hidden), [characterSet]);
   const currentIndex = visibleCharactersForNav.findIndex((c: any) => c.unicode === character.unicode);
   const prevCharacter = currentIndex > 0 ? visibleCharactersForNav[currentIndex - 1] : null;
   const nextCharacter = currentIndex < visibleCharactersForNav.length - 1 ? visibleCharactersForNav[currentIndex + 1] : null;
-
-  const triggerClose = useCallback((postAnimationCallback: () => void) => {
-    if (modalOriginRect) {
-        setAnimationClass('animate-modal-exit');
-        animationTimeoutRef.current = window.setTimeout(() => { setAnimationClass(''); postAnimationCallback(); }, 300);
-    } else {
-        postAnimationCallback();
-    }
-  }, [modalOriginRect]);
 
   const {
     currentPaths, handlePathsChange, undo, redo, canUndo, canRedo,
@@ -74,7 +67,7 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
     isUnsavedModalOpen, closeUnsavedModal, confirmSave, confirmDiscard
   } = useGlyphEditSession({
       character, glyphData, allGlyphData, allCharacterSets, settings, metrics, markAttachmentRules,
-      onSave, onNavigate, onClose: () => triggerClose(onClose)
+      onSave, onNavigate, onClose
   });
 
   const {
@@ -111,13 +104,69 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
   }, [character, allCharsByName]);
 
   const dependentGlyphs = useMemo(() => {
-      return allCharacterSets.flatMap(set => set.characters)
-          .filter(c => {
-              if (c.hidden || c.unicode === undefined) return false;
-              if (!c.link?.includes(character.name)) return false;
-              return isGlyphDrawn(allGlyphData.get(c.unicode));
-          });
-  }, [character, allCharacterSets, allGlyphData]);
+      const results: Character[] = [];
+      const seenKeys = new Set<string>();
+
+      const addChar = (char: Character) => {
+          let key = "";
+          if (char.unicode !== undefined) key = `uni-${char.unicode}`;
+          else if (char.position) key = `pos-${char.position[0]}-${char.position[1]}`;
+          else if (char.kern) key = `kern-${char.kern[0]}-${char.kern[1]}`;
+          else key = `name-${char.name}`;
+
+          if (seenKeys.has(key)) return;
+          results.push(char);
+          seenKeys.add(key);
+      };
+
+      // 1. Grid Characters (Real)
+      allCharacterSets.forEach(set => set.characters.forEach(c => {
+          if (c.hidden || c.unicode === undefined) return;
+          // Filter: only linked glyphs (live dependencies)
+          const isComponentDep = c.link?.includes(character.name);
+          // Filter: positioned glyphs (syllabic or spacing dependencies)
+          const isPairDep = c.position?.includes(character.name) || 
+                            c.kern?.includes(character.name);
+
+          if (isComponentDep || isPairDep) {
+              addChar(c);
+          }
+      }));
+
+      // 2. Positioning Map (Virtual)
+      markPositioningMap.forEach((_, key) => {
+          const [baseUni, markUni] = key.split('-').map(Number);
+          if (baseUni === character.unicode || markUni === character.unicode) {
+              const base = allCharsByUnicode.get(baseUni);
+              const mark = allCharsByUnicode.get(markUni);
+              if (base && mark) {
+                  addChar({
+                      name: `${base.name}${mark.name}`,
+                      position: [base.name, mark.name],
+                      glyphClass: 'ligature'
+                  });
+              }
+          }
+      });
+
+      // 3. Kerning Map (Virtual)
+      kerningMap.forEach((_, key) => {
+          const [leftUni, rightUni] = key.split('-').map(Number);
+          if (leftUni === character.unicode || rightUni === character.unicode) {
+              const left = allCharsByUnicode.get(leftUni);
+              const right = allCharsByUnicode.get(rightUni);
+              if (left && right) {
+                  addChar({
+                      name: `${left.name}${right.name}`,
+                      kern: [left.name, right.name],
+                      glyphClass: 'ligature'
+                  });
+              }
+          }
+      });
+
+      return results;
+  }, [character, allCharacterSets, markPositioningMap, kerningMap, allCharsByUnicode]);
 
   useDrawingShortcuts({
       onUndo: undo, onRedo: redo, onCopy: handleCopy, onCut: handleCut, onPaste: handlePaste,
@@ -127,19 +176,6 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
       canUndo, canRedo, hasSelection: selectedPathIds.size > 0, hasClipboard: !!clipboard,
       canNavigatePrev: !!prevCharacter, canNavigateNext: !!nextCharacter
   });
-
-  useLayoutEffect(() => {
-    if (modalOriginRect && modalRef.current) {
-        const modalEl = modalRef.current;
-        modalEl.style.setProperty('--modal-origin-x', `${modalOriginRect.left + modalOriginRect.width / 2}px`);
-        modalEl.style.setProperty('--modal-origin-y', `${modalOriginRect.top + modalOriginRect.height / 2}px`);
-        modalEl.style.setProperty('--modal-scale-x', (modalOriginRect.width / window.innerWidth).toFixed(5));
-        modalEl.style.setProperty('--modal-scale-y', (modalOriginRect.height / window.innerHeight).toFixed(5));
-        setAnimationClass('animate-modal-enter');
-        animationTimeoutRef.current = window.setTimeout(() => setAnimationClass(''), 300);
-    }
-    return () => { if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current); };
-  }, [modalOriginRect]);
 
   const handleConfirmUnlock = () => { onUnlockGlyph(character.unicode!); setIsUnlockConfirmOpen(false); showNotification(t('glyphUnlockedSuccess'), 'success'); };
   const handleConfirmRelink = () => { onRelinkGlyph(character.unicode!); handleRefresh(); setIsRelinkConfirmOpen(false); showNotification(t('glyphRelinkedSuccess'), 'success'); };
@@ -159,7 +195,7 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
   }, []);
 
   return (
-    <div ref={modalRef} className={`fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col ${animationClass}`}>
+    <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-900 overflow-hidden">
       <input type="file" ref={imageImportRef} onChange={handleImageImport} className="hidden" accept="image/*" />
       <input type="file" ref={svgImportRef} onChange={handleSvgImport} className="hidden" accept="image/svg+xml" />
       <input type="file" ref={imageTraceRef} onChange={handleImageTraceFileChange} className="hidden" accept="image/*" />
@@ -197,6 +233,8 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
         handleNavigationAttempt={handleNavigationAttempt}
         markAttachmentRules={markAttachmentRules}
         gridConfig={gridConfig}
+        kerningMap={kerningMap}
+        markPositioningMap={markPositioningMap}
       />
 
       <ImageControlPanel backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity} setBackgroundImageOpacity={setBackgroundImageOpacity} onClearImage={() => { setBackgroundImage(null); setImageTransform(null); }} />

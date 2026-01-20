@@ -125,7 +125,8 @@ export const usePositioningActions = ({
             markPositioningMap, glyphDataMap, characterSets, positioningRules,
             markAttachmentRules,
             groups,
-            strokeThickness: settings.strokeThickness
+            strokeThickness: settings.strokeThickness,
+            metrics // CRITICAL: Pass real metrics here
         });
     
         const propagatedCount = result.updatedMarkPositioningMap.size - markPositioningMap.size - 1;
@@ -147,7 +148,8 @@ export const usePositioningActions = ({
                     positioningRules,
                     markAttachmentRules,
                     groups,
-                    strokeThickness: settings.strokeThickness
+                    strokeThickness: settings.strokeThickness,
+                    metrics // CRITICAL: Pass real metrics here
                 });
     
                 positioningDispatch({ type: 'SET_MAP', payload: reapplyResult.updatedMarkPositioningMap });
@@ -174,7 +176,7 @@ export const usePositioningActions = ({
     }, [
         characterSets, allChars, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses,
         markPositioningMap, glyphDataMap, positioningRules, positioningDispatch, glyphDataDispatch,
-        characterDispatch, showNotification, t, groups, markAttachmentRules, settings
+        characterDispatch, showNotification, t, groups, markAttachmentRules, settings, metrics
     ]);
 
     const handleConfirmPosition = useCallback((base: Character, mark: Character, ligature: Character) => {
@@ -261,7 +263,8 @@ export const usePositioningActions = ({
                 positioningRules,
                 markAttachmentRules,
                 groups,
-                strokeThickness: settings.strokeThickness
+                strokeThickness: settings.strokeThickness,
+                metrics // CRITICAL
             });
             
             tempMarkPositioningMap = result.updatedMarkPositioningMap;
@@ -358,18 +361,7 @@ export const usePositioningActions = ({
             const key = `${combo.base.unicode}-${combo.mark.unicode}`;
             if (markPositioningMap.has(key)) {
                 newMarkPositioningMap.delete(key);
-                const relevantRule = positioningRules?.find(rule => 
-                    // Using expandMembers here might be heavy if called in loop, but groups is typically small.
-                    // For safety, we could pass expandMembers from hook. But simple check is safer.
-                    // Assuming groups structure is accessible.
-                    // Optimization: We rely on the fact that if a ligature exists in glyphDataMap for this combo,
-                    // it was likely created by a GSUB rule.
-                    combo.ligature.unicode
-                );
-
                 if (combo.ligature.unicode && newGlyphDataMap.has(combo.ligature.unicode)) {
-                     // Check if it's a dynamic ligature (GSUB) vs just positioning
-                     // If we have glyph data for it, it's likely a GSUB result we want to clear.
                      newGlyphDataMap.delete(combo.ligature.unicode);
                 }
                 resetCount++;

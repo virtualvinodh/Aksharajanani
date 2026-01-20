@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
-import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning, Point } from '../types';
+import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning } from '../types';
 import KerningEditorHeader from './kerning/KerningEditorHeader';
 import KerningEditorWorkspace from './kerning/KerningEditorWorkspace';
 import KerningCanvas from './KerningCanvas';
@@ -31,24 +31,49 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
 
     const session = useKerningSession(props);
 
-    // Initial Resize Capture
+    const updateSize = useCallback(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const w = container.offsetWidth;
+        const h = container.offsetHeight;
+
+        if (w > 0 && h > 0) {
+            session.setContainerSize({ width: w, height: h });
+        }
+    }, [session.setContainerSize]);
+
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
-        const updateSize = () => {
-            const rect = container.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-                session.setContainerSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
-            }
-        };
+
         updateSize();
-        const ro = new ResizeObserver(updateSize);
+        
+        const ro = new ResizeObserver(() => {
+            requestAnimationFrame(updateSize);
+        });
         ro.observe(container);
+        
         return () => ro.disconnect();
-    }, [session.setContainerSize]);
+    }, [updateSize]);
+
+    // FIX: Centered Zoom Action
+    // Since the KerningCanvas is rendered relative to the screen center,
+    // we just need to scale the pixel displacement (viewOffset) to keep the center fixed.
+    const handleZoomAction = useCallback((factor: number) => {
+        const oldZoom = session.zoom;
+        const newZoom = Math.max(0.1, Math.min(10, oldZoom * factor));
+        const scaleRatio = newZoom / oldZoom;
+
+        session.setViewOffset({
+            x: session.viewOffset.x * scaleRatio,
+            y: session.viewOffset.y * scaleRatio
+        });
+        session.setZoom(newZoom);
+    }, [session]);
 
     return (
-        <div className="flex flex-col h-full w-full bg-white dark:bg-gray-800 animate-fade-in-up">
+        <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-800 min-h-0 overflow-hidden">
             <KerningEditorHeader 
                 pair={props.pair} 
                 onClose={props.onClose} 
@@ -66,7 +91,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
             <KerningEditorWorkspace 
                 isLargeScreen={isLargeScreen}
                 containerRef={containerRef}
-                onZoom={session.setZoom} 
+                onZoom={handleZoomAction} 
                 kernValue={session.kernValue} 
                 onKernChange={(e) => session.setKernValue(e.target.value)} 
                 onKernFocus={session.setIsKernFocused} 
@@ -82,19 +107,22 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 xDistInputRef={xDistInputRef} 
             >
                 <div 
-                    className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800"
-                    style={{ width: session.canvasDisplaySize.width, height: session.canvasDisplaySize.height }}
+                    className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 transition-all duration-300"
+                    style={{ 
+                        width: session.canvasDisplaySize.width || '80vw', 
+                        height: session.canvasDisplaySize.height || '60vh'
+                    }}
                 >
                     <KerningCanvas
-                        width={session.canvasDisplaySize.width}
-                        height={session.canvasDisplaySize.height}
+                        width={session.canvasDisplaySize.width || 800}
+                        height={session.canvasDisplaySize.height || 533}
                         leftChar={props.pair.left}
                         rightChar={props.pair.right}
                         glyphDataMap={props.glyphDataMap}
                         kernValue={session.kernValue}
                         onKernChange={session.setKernValue}
                         metrics={props.metrics}
-                        tool="select" // Editor page is always interactive
+                        tool="select" 
                         zoom={session.zoom}
                         setZoom={session.setZoom}
                         viewOffset={session.viewOffset}

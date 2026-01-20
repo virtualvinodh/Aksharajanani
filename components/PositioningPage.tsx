@@ -182,7 +182,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         savePositioningUpdate(editingPair.base, editingPair.mark, targetLigature, newGlyphData, newOffset, newBearings, isAutosave);
     };
 
-    const handleNavigatePair = (newIndex: number) => {
+    const handleNavigatePair = (direction: 'prev' | 'next') => {
+        if (editingIndex === null) return;
+        const newIndex = direction === 'prev' ? editingIndex - 1 : editingIndex + 1;
         if (newIndex >= 0 && newIndex < editingContextList.length) {
             setEditingPair(editingContextList[newIndex]);
             setEditingIndex(newIndex);
@@ -234,7 +236,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             if (bClass) {
                 let applies = true;
                 if (bClass.applies && !expandMembers(bClass.applies, groups, characterSets).includes(mark.name)) applies = false;
-                if (bClass.exceptions && expandMembers(bClass.exceptions, groups, characterSets).includes(mark.name)) applies = false;
+                if (bClass.exceptions && expandMembers(bClass.exceptions, groups, characterSets).includes(base.name)) applies = false;
                 
                 if (applies) {
                     if (bClass.exceptPairs?.includes(pairKey)) return true; // Exception = Independent = Eligible
@@ -317,9 +319,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 markAttachmentRules={markAttachmentRules}
                 positioningRules={positioningRules}
                 allChars={allChars}
-                allPairs={editingContextList}
-                currentIndex={editingIndex}
                 onNavigate={handleNavigatePair}
+                hasPrev={editingIndex !== null && editingIndex > 0}
+                hasNext={editingIndex !== null && editingIndex < editingContextList.length - 1}
                 characterSets={characterSets}
                 glyphVersion={glyphVersion}
                 setEditingPair={handleSetEditingPair}

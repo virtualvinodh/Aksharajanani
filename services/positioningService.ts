@@ -8,12 +8,12 @@ import {
     AttachmentClass,
     CharacterSet,
     PositioningRules,
-    AttachmentPoint,
-    MarkAttachmentRules
+    MarkAttachmentRules,
+    FontMetrics
 } from '../types';
 import { deepClone } from '../utils/cloneUtils';
 import { expandMembers } from './groupExpansionService';
-import { getAccurateGlyphBBox, getAttachmentPointCoords, resolveAttachmentRule } from './glyphRenderService';
+import { getAccurateGlyphBBox, calculateDefaultMarkOffset } from './glyphRenderService';
 import { VEC } from '../utils/vectorUtils';
 
 interface UpdatePositioningAndCascadeArgs {
@@ -33,7 +33,8 @@ interface UpdatePositioningAndCascadeArgs {
     positioningRules: PositioningRules[] | null;
     markAttachmentRules?: MarkAttachmentRules | null;
     groups?: Record<string, string[]>;
-    strokeThickness: number; // Added for accurate calculation
+    strokeThickness: number;
+    metrics: FontMetrics;
 }
 
 interface UpdatePositioningResult {
@@ -42,36 +43,6 @@ interface UpdatePositioningResult {
     updatedCharacterSets: CharacterSet[];
 }
 
-interface SyncAttachmentClassesArgs {
-    markPositioningMap: MarkPositioningMap;
-    glyphDataMap: Map<number, GlyphData>;
-    allCharsByName: Map<string, Character>;
-    allLigaturesByKey: Map<string, Character>; // "baseUni-markUni" -> LigatureChar
-    markAttachmentClasses: AttachmentClass[];
-    baseAttachmentClasses: AttachmentClass[];
-    positioningRules: PositioningRules[];
-    markAttachmentRules: MarkAttachmentRules;
-    characterSets: CharacterSet[];
-    groups: Record<string, string[]>;
-    strokeThickness: number;
-    metrics: any; 
-}
-
-// Internal helper to get anchor point based on rule definition
-const getAnchorFromRule = (
-    glyphData: GlyphData, 
-    strokeThickness: number, 
-    pointName: string, 
-    offsetX: number = 0, 
-    offsetY: number = 0
-) => {
-    const bbox = getAccurateGlyphBBox(glyphData, strokeThickness);
-    if (!bbox) return null;
-    let p = getAttachmentPointCoords(bbox, pointName as AttachmentPoint);
-    return { x: p.x + offsetX, y: p.y + offsetY };
-}
-
-
 export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArgs): UpdatePositioningResult => {
     const {
         baseChar, markChar, targetLigature, newGlyphData, newOffset, newBearings,
@@ -79,243 +50,145 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
         markPositioningMap, glyphDataMap, characterSets, positioningRules,
         markAttachmentRules,
         groups = {},
-        strokeThickness
+        strokeThickness,
+        metrics
     } = args;
 
     const newMarkPositioningMap = new Map(markPositioningMap);
     const newGlyphDataMap = new Map(glyphDataMap);
     const newLigaturesToUpdate = new Map<number, Character>();
 
-    // 1. Seed update with the manually edited pair
+    // 1. Update the manual leader
     const primaryKey = `${baseChar.unicode}-${markChar.unicode}`;
     newMarkPositioningMap.set(primaryKey, newOffset);
     
-    // Find the rule that applies to this pair (for GSUB generation)
-    const relevantRule = positioningRules?.find(rule => 
+    const leaderRule = positioningRules?.find(rule => 
         expandMembers(rule.base, groups, characterSets).includes(baseChar.name) && 
-        expandMembers(rule.mark, groups, characterSets).includes(markChar.name)
+        expandMembers(rule.mark || [], groups, characterSets).includes(markChar.name)
     );
+    const leaderConstraint = (leaderRule?.movement === 'horizontal' || leaderRule?.movement === 'vertical') ? leaderRule.movement : 'none';
     
-    // Only save glyph data for the ligature if a GSUB feature is specified in the rule.
-    if (relevantRule && relevantRule.gsub) {
+    // Update baked glyph if GSUB is requested
+    if (leaderRule && leaderRule.gsub) {
         newGlyphDataMap.set(targetLigature.unicode, newGlyphData);
         const newLigatureInfo = { ...targetLigature, ...newBearings };
-        if (newBearings.lsb === undefined) delete newLigatureInfo.lsb;
-        if (newBearings.rsb === undefined) delete newLigatureInfo.rsb;
+        if (newBearings.lsb === undefined) delete (newLigatureInfo as any).lsb;
+        if (newBearings.rsb === undefined) delete (newLigatureInfo as any).rsb;
         newLigaturesToUpdate.set(targetLigature.unicode, newLigatureInfo);
     }
-    
-    // --- ANCHOR CALCULATION FOR PROPAGATION ---
-    
+
+    // 2. Propagation Logic
     const baseGlyphOriginal = glyphDataMap.get(baseChar.unicode);
     const markGlyphOriginal = glyphDataMap.get(markChar.unicode);
     
-    // Safety check for propagation data
-    if (!baseGlyphOriginal || !markGlyphOriginal) {
-         return { updatedMarkPositioningMap: newMarkPositioningMap, updatedGlyphDataMap: newGlyphDataMap, updatedCharacterSets: characterSets };
-    }
-
-    // A. Resolve Rule for Source Pair (handling Groups)
-    const sourceRule = resolveAttachmentRule(
-        baseChar.name, 
-        markChar.name, 
-        markAttachmentRules || null, 
-        characterSets, 
-        groups
-    );
-
-    // B. Determine Anchors
-    // Default: Base TopCenter, Mark BottomCenter
-    let sourceBaseAnchorPoint = "topCenter";
-    let sourceMarkAnchorPoint = "bottomCenter";
-    let baseOffsetX = 0;
-    let baseOffsetY = 0;
-
-    if (sourceRule) {
-        sourceBaseAnchorPoint = sourceRule[0];
-        sourceMarkAnchorPoint = sourceRule[1];
-        if (sourceRule[2]) baseOffsetX = parseFloat(sourceRule[2]);
-        if (sourceRule[3]) baseOffsetY = parseFloat(sourceRule[3]);
-    }
-
-    const sourceBaseAnchorRelative = getAnchorFromRule(baseGlyphOriginal, strokeThickness, sourceBaseAnchorPoint, baseOffsetX, baseOffsetY);
-    const sourceMarkAnchorRelative = getAnchorFromRule(markGlyphOriginal, strokeThickness, sourceMarkAnchorPoint);
-    
-    if (sourceBaseAnchorRelative && sourceMarkAnchorRelative) {
-        // C. Calculate the "Effective Joint" (Target Visual Delta)
-        // TargetAnchorDelta = AnchorWorld(Mark) - AnchorWorld(Base)
-        //                   = (Offset + AnchorRel(Mark)) - AnchorRel(Base)
+    if (baseGlyphOriginal && markGlyphOriginal) {
+        const baseBbox = getAccurateGlyphBBox(baseGlyphOriginal.paths, strokeThickness);
+        const markBbox = getAccurateGlyphBBox(markGlyphOriginal.paths, strokeThickness);
         
-        const targetAnchorDelta = VEC.sub(
-            VEC.add(newOffset, sourceMarkAnchorRelative),
-            sourceBaseAnchorRelative
+        const leaderDefaultOffset = calculateDefaultMarkOffset(
+            baseChar, markChar, baseBbox, markBbox, 
+            markAttachmentRules || null, metrics, 
+            characterSets, false, groups, leaderConstraint
         );
-        
+
+        const userDelta = VEC.sub(newOffset, leaderDefaultOffset);
         const currentPairKey = `${baseChar.name}-${markChar.name}`;
 
-        // 2. Gather all marks that should be affected by this change
+        // Find relevant classes
         const marksToUpdate = new Set<Character>([markChar]);
         if (markAttachmentClasses) {
-            const attachmentClass = markAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(markChar.name));
-            if (attachmentClass) {
-                let shouldApply = true;
-                
-                // CRITICAL: If the current pair is an exception, do NOT propagate to others.
-                if (attachmentClass.exceptPairs && attachmentClass.exceptPairs.includes(currentPairKey)) {
-                    shouldApply = false;
-                }
-
-                if (attachmentClass.exceptions && expandMembers(attachmentClass.exceptions, groups, characterSets).includes(baseChar.name)) shouldApply = false;
-                if (attachmentClass.applies && !expandMembers(attachmentClass.applies, groups, characterSets).includes(baseChar.name)) shouldApply = false;
-
-                if (shouldApply) {
-                    expandMembers(attachmentClass.members, groups, characterSets).forEach(otherMarkName => {
-                        const pairId = `${baseChar.name}-${otherMarkName}`;
-                        // Don't update other exceptions
-                        if (attachmentClass.exceptPairs && attachmentClass.exceptPairs.includes(pairId)) return;
-                        
-                        const otherMarkChar = allChars.get(otherMarkName);
-                        if (otherMarkChar) marksToUpdate.add(otherMarkChar);
+            const mCls = markAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(markChar.name));
+            if (mCls && !(mCls.exceptPairs && mCls.exceptPairs.includes(currentPairKey))) {
+                const appliesToBase = (!mCls.exceptions || !expandMembers(mCls.exceptions, groups, characterSets).includes(baseChar.name)) &&
+                                       (!mCls.applies || expandMembers(mCls.applies, groups, characterSets).includes(baseChar.name));
+                if (appliesToBase) {
+                    expandMembers(mCls.members, groups, characterSets).forEach(name => {
+                        const char = allChars.get(name);
+                        if (char && !(mCls.exceptPairs && mCls.exceptPairs.includes(`${baseChar.name}-${name}`))) {
+                            marksToUpdate.add(char);
+                        }
                     });
                 }
             }
         }
 
-        // 3. Gather all bases that should be affected
         const basesToUpdate = new Set<Character>([baseChar]);
         if (baseAttachmentClasses) {
-            const attachmentClass = baseAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(baseChar.name));
-            if (attachmentClass) {
-                let shouldApply = true;
-
-                // CRITICAL: If the current pair is an exception, do NOT propagate to others.
-                if (attachmentClass.exceptPairs && attachmentClass.exceptPairs.includes(currentPairKey)) {
-                    shouldApply = false;
-                }
-
-                if (attachmentClass.exceptions && expandMembers(attachmentClass.exceptions, groups, characterSets).includes(markChar.name)) shouldApply = false;
-                if (attachmentClass.applies && !expandMembers(attachmentClass.applies, groups, characterSets).includes(markChar.name)) shouldApply = false;
-
-                if (shouldApply) {
-                    expandMembers(attachmentClass.members, groups, characterSets).forEach(otherBaseName => {
-                        const pairId = `${otherBaseName}-${markChar.name}`;
-                        // Don't update other exceptions
-                        if (attachmentClass.exceptPairs && attachmentClass.exceptPairs.includes(pairId)) return;
-
-                        const otherBaseChar = allChars.get(otherBaseName);
-                        if (otherBaseChar) basesToUpdate.add(otherBaseChar);
+            const bCls = baseAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(baseChar.name));
+            if (bCls && !(bCls.exceptPairs && bCls.exceptPairs.includes(currentPairKey))) {
+                const appliesToMark = (!bCls.exceptions || !expandMembers(bCls.exceptions, groups, characterSets).includes(markChar.name)) &&
+                                      (!bCls.applies || expandMembers(bCls.applies, groups, characterSets).includes(markChar.name));
+                if (appliesToMark) {
+                    expandMembers(bCls.members, groups, characterSets).forEach(name => {
+                        const char = allChars.get(name);
+                        if (char && !(bCls.exceptPairs && bCls.exceptPairs.includes(`${name}-${markChar.name}`))) {
+                            basesToUpdate.add(char);
+                        }
                     });
                 }
             }
         }
 
-        // 4. Perform Cascade with Anchor Math
+        // Apply Delta to all siblings
         basesToUpdate.forEach(currentBase => {
             marksToUpdate.forEach(currentMark => {
                 if (currentBase.unicode === baseChar.unicode && currentMark.unicode === markChar.unicode) return;
 
                 const key = `${currentBase.unicode}-${currentMark.unicode}`;
+                const siblingBaseGlyph = glyphDataMap.get(currentBase.unicode);
+                const siblingMarkGlyph = glyphDataMap.get(currentMark.unicode);
 
-                const currentBaseGlyph = glyphDataMap.get(currentBase.unicode);
-                const currentMarkGlyph = glyphDataMap.get(currentMark.unicode);
+                if (!siblingBaseGlyph || !siblingMarkGlyph) return;
 
-                if (!currentBaseGlyph || !currentMarkGlyph) return;
-
-                // Resolve Rule for this specific sibling pair (handling groups!)
-                const siblingRule = resolveAttachmentRule(
-                    currentBase.name, 
-                    currentMark.name, 
-                    markAttachmentRules || null, 
-                    characterSets, 
-                    groups
+                // Resolve specific constraint for this sibling
+                const siblingRule = positioningRules?.find(rule => 
+                    expandMembers(rule.base, groups, characterSets).includes(currentBase.name) && 
+                    expandMembers(rule.mark || [], groups, characterSets).includes(currentMark.name)
                 );
-
-                let siblingBasePoint = "topCenter";
-                let siblingMarkPoint = "bottomCenter";
-                let sBaseOffX = 0;
-                let sBaseOffY = 0;
-
-                if (siblingRule) {
-                    siblingBasePoint = siblingRule[0];
-                    siblingMarkPoint = siblingRule[1];
-                    if (siblingRule[2]) sBaseOffX = parseFloat(siblingRule[2]);
-                    if (siblingRule[3]) sBaseOffY = parseFloat(siblingRule[3]);
-                }
-
-                // Calculate Anchors for Sibling using correct stroke thickness
-                const currentBaseAnchor = getAnchorFromRule(currentBaseGlyph, strokeThickness, siblingBasePoint, sBaseOffX, sBaseOffY);
-                const currentMarkAnchor = getAnchorFromRule(currentMarkGlyph, strokeThickness, siblingMarkPoint);
                 
-                if (!currentBaseAnchor || !currentMarkAnchor) return;
+                const siblingConstraint = (siblingRule?.movement === 'horizontal' || siblingRule?.movement === 'vertical') ? siblingRule.movement : 'none';
+                const sBaseBbox = getAccurateGlyphBBox(siblingBaseGlyph.paths, strokeThickness);
+                const sMarkBbox = getAccurateGlyphBBox(siblingMarkGlyph.paths, strokeThickness);
 
-                // Calculate Sibling Offset
-                // SiblingOffset = targetAnchorDelta + SiblingBaseAnchor - SiblingMarkAnchor
-                const siblingOffset = VEC.sub(
-                    VEC.add(targetAnchorDelta, currentBaseAnchor),
-                    currentMarkAnchor
+                const siblingDefaultOffset = calculateDefaultMarkOffset(
+                    currentBase, currentMark, sBaseBbox, sMarkBbox,
+                    markAttachmentRules || null, metrics,
+                    characterSets, false, groups, siblingConstraint
                 );
 
+                const siblingFinalOffset = VEC.add(siblingDefaultOffset, userDelta);
+                
+                // 1. Commit to GPOS map (Always, ensures grid highlights)
+                newMarkPositioningMap.set(key, siblingFinalOffset);
+
+                // 2. Commit to baked paths (GSUB) only if a rule exists and it has gsub property
                 const ligature = allLigaturesByKey.get(key);
-                if (ligature) {
-                    newMarkPositioningMap.set(key, siblingOffset);
-
-                    const cascadeRule = positioningRules?.find(rule => 
-                        expandMembers(rule.base, groups, characterSets).includes(currentBase.name) && 
-                        expandMembers(rule.mark, groups, characterSets).includes(currentMark.name)
-                    );
-
-                    if (cascadeRule && cascadeRule.gsub) {
-                        const transformedMarkPaths = deepClone(currentMarkGlyph.paths).map((p: Path) => ({
-                            ...p,
-                            points: p.points.map((pt: Point) => ({ x: pt.x + siblingOffset.x, y: pt.y + siblingOffset.y })),
-                            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: { x: seg.point.x + siblingOffset.x, y: seg.point.y + siblingOffset.y } }))) : undefined
-                        }));
-                        const combinedPaths = [...currentBaseGlyph.paths, ...transformedMarkPaths];
-                        newGlyphDataMap.set(ligature.unicode, { paths: combinedPaths });
-                        newLigaturesToUpdate.set(ligature.unicode, ligature);
-                    }
+                if (ligature && siblingRule?.gsub) {
+                    const transformedMarkPaths = deepClone(siblingMarkGlyph.paths).map((p: Path) => ({
+                        ...p,
+                        points: p.points.map((pt: Point) => ({ x: pt.x + siblingFinalOffset.x, y: pt.y + siblingFinalOffset.y })),
+                        segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: { x: seg.point.x + siblingFinalOffset.x, y: seg.point.y + siblingFinalOffset.y } }))) : undefined
+                    }));
+                    newGlyphDataMap.set(ligature.unicode, { paths: [...siblingBaseGlyph.paths, ...transformedMarkPaths] });
+                    newLigaturesToUpdate.set(ligature.unicode, ligature);
                 }
             });
         });
-
     }
-
-    // 5. Update Character Sets (Same as before)
-    const ligatureExistsMap = new Map<number, boolean>();
-    newLigaturesToUpdate.forEach(lig => ligatureExistsMap.set(lig.unicode, false));
 
     const updatedSets = characterSets.map(set => ({
         ...set,
         characters: set.characters.map(char => {
             if (newLigaturesToUpdate.has(char.unicode)) {
-                ligatureExistsMap.set(char.unicode, true);
                 const updatedLigature = newLigaturesToUpdate.get(char.unicode)!;
                 const updatedChar = { ...char, ...updatedLigature };
-                if (updatedChar.lsb === undefined) delete updatedChar.lsb;
-                if (updatedChar.rsb === undefined) delete updatedChar.rsb;
+                if (updatedChar.lsb === undefined) delete (updatedChar as any).lsb;
+                if (updatedChar.rsb === undefined) delete (updatedChar as any).rsb;
                 return updatedChar;
             }
             return char;
         })
     }));
-
-    const DYNAMIC_LIGATURES_KEY = 'dynamicLigatures';
-    let dynamicSet = updatedSets.find(s => s.nameKey === DYNAMIC_LIGATURES_KEY);
-    if (!dynamicSet) {
-        dynamicSet = { nameKey: DYNAMIC_LIGATURES_KEY, characters: [] };
-        updatedSets.push(dynamicSet);
-    }
-    
-    newLigaturesToUpdate.forEach((ligature, unicode) => {
-        if (!ligatureExistsMap.get(unicode)) {
-            if (!dynamicSet!.characters.some(c => c.unicode === ligature.unicode)) {
-                const newLigatureWithBearings = { ...ligature };
-                if (newLigatureWithBearings.lsb === undefined) delete newLigatureWithBearings.lsb;
-                if (newLigatureWithBearings.rsb === undefined) delete newLigatureWithBearings.rsb;
-                dynamicSet!.characters.push(newLigatureWithBearings);
-            }
-        }
-    });
 
     return {
         updatedMarkPositioningMap: newMarkPositioningMap,
@@ -324,198 +197,6 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
     };
 };
 
-/**
- * Sweeps through all defined classes and ensures all members are synchronized.
- * Uses an effective leader (first linked member) as the source of truth.
- */
-export const syncAttachmentClasses = (args: SyncAttachmentClassesArgs): UpdatePositioningResult => {
-    const {
-        markPositioningMap, glyphDataMap, allCharsByName, allLigaturesByKey,
-        markAttachmentClasses, baseAttachmentClasses,
-        positioningRules, markAttachmentRules, characterSets, groups, strokeThickness
-    } = args;
-
-    const newMarkPositioningMap = new Map(markPositioningMap);
-    const newGlyphDataMap = new Map(glyphDataMap);
-    const newLigaturesToUpdate = new Map<number, Character>();
-    
-    // Quick Lookup for Char Objects by ID
-    const idToChar = new Map<number, Character>();
-    for (const c of allCharsByName.values()) {
-        if (c.unicode !== undefined) idToChar.set(c.unicode, c);
-    }
-
-    const applySync = (classDef: AttachmentClass, type: 'mark' | 'base') => {
-        const members = expandMembers(classDef.members, groups, characterSets);
-        const memberChars = members.map(name => allCharsByName.get(name)).filter(c => c && c.unicode !== undefined);
-        const memberIds = new Set(memberChars.map(c => c!.unicode!));
-
-        const pivotToPositionedMembers = new Map<number, number[]>();
-
-        for (const key of newMarkPositioningMap.keys()) {
-            const [baseId, markId] = key.split('-').map(Number);
-            const memberId = type === 'mark' ? markId : baseId;
-            const pivotId = type === 'mark' ? baseId : markId;
-
-            if (memberIds.has(memberId)) {
-                if (!pivotToPositionedMembers.has(pivotId)) {
-                    pivotToPositionedMembers.set(pivotId, []);
-                }
-                pivotToPositionedMembers.get(pivotId)!.push(memberId);
-            }
-        }
-
-        pivotToPositionedMembers.forEach((positionedMemberIds, pivotId) => {
-            const pivotCharObj = idToChar.get(pivotId);
-            if (!pivotCharObj) return;
-
-            // --- DYNAMIC LEADER IDENTIFICATION FOR SWEEP ---
-            const validSourceMemberIds = positionedMemberIds.filter(mid => {
-                const memberChar = idToChar.get(mid);
-                if (!memberChar) return false;
-                const pairNameKey = type === 'mark' 
-                    ? `${pivotCharObj.name}-${memberChar.name}`
-                    : `${memberChar.name}-${pivotCharObj.name}`;
-                return !classDef.exceptPairs?.includes(pairNameKey);
-            });
-
-            if (validSourceMemberIds.length === 0) return;
-
-            const sourceMemberId = validSourceMemberIds[0];
-            const sourceMemberChar = memberChars.find(c => c!.unicode === sourceMemberId)!;
-            
-            const sourceKey = type === 'mark' ? `${pivotId}-${sourceMemberId}` : `${sourceMemberId}-${pivotId}`;
-            const sourceOffset = newMarkPositioningMap.get(sourceKey)!;
-
-            const baseChar = type === 'mark' ? pivotCharObj : sourceMemberChar;
-            const markChar = type === 'mark' ? sourceMemberChar : pivotCharObj;
-
-            const baseGlyph = newGlyphDataMap.get(baseChar.unicode!);
-            const markGlyph = newGlyphDataMap.get(markChar.unicode!);
-            if (!baseGlyph || !markGlyph) return;
-
-             const sourceRule = resolveAttachmentRule(
-                baseChar.name, 
-                markChar.name, 
-                markAttachmentRules, 
-                characterSets, 
-                groups
-            );
-
-            let sBasePt = "topCenter", sMarkPt = "bottomCenter", sBx = 0, sBy = 0;
-            if (sourceRule) {
-                sBasePt = sourceRule[0]; sMarkPt = sourceRule[1];
-                if (sourceRule[2]) sBx = parseFloat(sourceRule[2]);
-                if (sourceRule[3]) sBy = parseFloat(sourceRule[3]);
-            }
-
-            const srcBaseAnc = getAnchorFromRule(baseGlyph, strokeThickness, sBasePt, sBx, sBy);
-            const srcMarkAnc = getAnchorFromRule(markGlyph, strokeThickness, sMarkPt);
-
-            if (!srcBaseAnc || !srcMarkAnc) return;
-
-            const targetAnchorDelta = VEC.sub(VEC.add(sourceOffset, srcMarkAnc), srcBaseAnc);
-
-            memberChars.forEach(targetMemberChar => {
-                if (!targetMemberChar || targetMemberChar.unicode === sourceMemberId) return;
-
-                const pairNameKey = type === 'mark' 
-                    ? `${pivotCharObj!.name}-${targetMemberChar.name}`
-                    : `${targetMemberChar.name}-${pivotCharObj!.name}`;
-                
-                if (classDef.exceptPairs && classDef.exceptPairs.includes(pairNameKey)) return;
-                
-                if (type === 'mark') {
-                    if (classDef.exceptions && expandMembers(classDef.exceptions, groups, characterSets).includes(pivotCharObj!.name)) return;
-                    if (classDef.applies && !expandMembers(classDef.applies, groups, characterSets).includes(pivotCharObj!.name)) return;
-                } else {
-                    if (classDef.exceptions && expandMembers(classDef.exceptions, groups, characterSets).includes(pivotCharObj!.name)) return;
-                    if (classDef.applies && !expandMembers(classDef.applies, groups, characterSets).includes(pivotCharObj!.name)) return;
-                }
-
-                const targetKey = type === 'mark' ? `${pivotId}-${targetMemberChar.unicode}` : `${targetMemberChar.unicode}-${pivotId}`;
-                const targetLigature = allLigaturesByKey.get(targetKey);
-                
-                if (targetLigature) {
-                     const tBaseChar = type === 'mark' ? pivotCharObj! : targetMemberChar;
-                     const tMarkChar = type === 'mark' ? targetMemberChar : pivotCharObj!;
-                     
-                     const tBaseGlyph = newGlyphDataMap.get(tBaseChar.unicode!);
-                     const tMarkGlyph = newGlyphDataMap.get(tMarkChar.unicode!);
-                     if (!tBaseGlyph || !tMarkGlyph) return;
-
-                     const tRule = resolveAttachmentRule(tBaseChar.name, tMarkChar.name, markAttachmentRules, characterSets, groups);
-                     let tbPt = "topCenter", tmPt = "bottomCenter", tbx = 0, tby = 0;
-                     if (tRule) {
-                         tbPt = tRule[0]; tmPt = tRule[1];
-                         if (tRule[2]) tbx = parseFloat(tRule[2]);
-                         if (tRule[3]) tby = parseFloat(tRule[3]);
-                     }
-                     
-                     const tBaseAnc = getAnchorFromRule(tBaseGlyph, strokeThickness, tbPt, tbx, tby);
-                     const tMarkAnc = getAnchorFromRule(tMarkGlyph, strokeThickness, tmPt);
-                     
-                     if (tBaseAnc && tMarkAnc) {
-                         const newTargetOffset = VEC.sub(VEC.add(targetAnchorDelta, tBaseAnc), tMarkAnc);
-                         newMarkPositioningMap.set(targetKey, newTargetOffset);
-
-                         const gsubRule = positioningRules.find(r => 
-                            expandMembers(r.base, groups, characterSets).includes(tBaseChar.name) && 
-                            expandMembers(r.mark, groups, characterSets).includes(tMarkChar.name)
-                         );
-
-                         if (gsubRule && gsubRule.gsub) {
-                             const transformedMarkPaths = deepClone(tMarkGlyph.paths).map((p: Path) => ({
-                                ...p,
-                                points: p.points.map((pt: Point) => ({ x: pt.x + newTargetOffset.x, y: pt.y + newTargetOffset.y })),
-                                segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: { x: seg.point.x + newTargetOffset.x, y: seg.point.y + newTargetOffset.y } }))) : undefined
-                            }));
-                            const combinedPaths = [...tBaseGlyph.paths, ...transformedMarkPaths];
-                            newGlyphDataMap.set(targetLigature.unicode, { paths: combinedPaths });
-                            newLigaturesToUpdate.set(targetLigature.unicode, targetLigature);
-                         }
-                     }
-                }
-            });
-        });
-    };
-
-    markAttachmentClasses.forEach(cls => applySync(cls, 'mark'));
-    baseAttachmentClasses.forEach(cls => applySync(cls, 'base'));
-
-    const ligatureExistsMap = new Map<number, boolean>();
-    newLigaturesToUpdate.forEach(lig => ligatureExistsMap.set(lig.unicode, false));
-
-    const updatedSets = characterSets.map(set => ({
-        ...set,
-        characters: set.characters.map(char => {
-            if (newLigaturesToUpdate.has(char.unicode)) {
-                ligatureExistsMap.set(char.unicode, true);
-                const updatedLigature = newLigaturesToUpdate.get(char.unicode)!;
-                return { ...char, ...updatedLigature };
-            }
-            return char;
-        })
-    }));
-
-    const DYNAMIC_LIGATURES_KEY = 'dynamicLigatures';
-    let dynamicSet = updatedSets.find(s => s.nameKey === DYNAMIC_LIGATURES_KEY);
-    if (!dynamicSet) {
-        dynamicSet = { nameKey: DYNAMIC_LIGATURES_KEY, characters: [] };
-        updatedSets.push(dynamicSet);
-    }
-    
-    newLigaturesToUpdate.forEach((ligature, unicode) => {
-        if (!ligatureExistsMap.get(unicode)) {
-            if (!dynamicSet!.characters.some(c => c.unicode === ligature.unicode)) {
-                dynamicSet!.characters.push({ ...ligature });
-            }
-        }
-    });
-
-    return {
-        updatedMarkPositioningMap: newMarkPositioningMap,
-        updatedGlyphDataMap: newGlyphDataMap,
-        updatedCharacterSets: updatedSets
-    };
+export const syncAttachmentClasses = (args: any): UpdatePositioningResult => {
+    return updatePositioningAndCascade(args);
 };

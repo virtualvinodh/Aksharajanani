@@ -3,7 +3,7 @@ import DrawingCanvas from '../DrawingCanvas';
 import DrawingToolbar from '../DrawingToolbar';
 import LinkedGlyphsStrip from './LinkedGlyphsStrip';
 import ContextualToolbar from '../ContextualToolbar';
-import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, TransformState, ComponentTransform, MarkAttachmentRules } from '../../types';
+import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, TransformState, ComponentTransform, MarkAttachmentRules, KerningMap, MarkPositioningMap } from '../../types';
 import { DRAWING_CANVAS_SIZE } from '../../constants';
 import { getAccurateGlyphBBox } from '../../services/glyphRenderService';
 
@@ -63,6 +63,8 @@ interface DrawingEditorWorkspaceProps {
     handleNavigationAttempt: (char: Character | null) => void;
     markAttachmentRules: MarkAttachmentRules | null;
     gridConfig: { characterNameSize: number };
+    kerningMap: KerningMap;
+    markPositioningMap: MarkPositioningMap;
 }
 
 const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) => {
@@ -178,6 +180,7 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
                                 onSelect={props.handleNavigationAttempt} variant="dependents" liveSourcePaths={props.currentPaths}
                                 sourceCharacter={props.character} allCharsByName={props.allCharsByName} metrics={props.metrics}
                                 markAttachmentRules={props.markAttachmentRules} characterSets={props.allCharacterSets} groups={props.groups}
+                                kerningMap={props.kerningMap} markPositioningMap={props.markPositioningMap}
                             />
                         </div>
                     )}
