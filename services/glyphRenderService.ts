@@ -666,10 +666,10 @@ export const generateCompositeGlyphData = ({
     const transformComponentPaths = (paths: Path[], charDef: Character, componentIndex: number): Path[] => {
         const transformConfig = charDef.compositeTransform;
         
-        // Use normalized helper to get structured data
-        const { scale, x, y, mode } = normalizeTransform(transformConfig, componentIndex);
+        // MODIFICATION: Only retrieve scale. Ignore X/Y here.
+        const { scale } = normalizeTransform(transformConfig, componentIndex);
 
-        if (scale === 1.0 && x === 0 && y === 0) return paths;
+        if (scale === 1.0) return paths;
 
         const componentBbox = getAccurateGlyphBBox(paths, settings.strokeThickness);
         if (!componentBbox) return paths;
@@ -691,18 +691,7 @@ export const generateCompositeGlyphData = ({
             }))) : undefined
         }));
 
-        // Apply Translation (X/Y)
-        const xShift = x || 0;
-        const yShift = y || 0;
-
-        if (xShift !== 0 || yShift !== 0) {
-            transformed = transformed.map((p: Path) => ({
-                ...p,
-                points: p.points.map((pt: Point) => ({ x: pt.x + xShift, y: pt.y + yShift })),
-                segmentGroups: p.segmentGroups ? p.segmentGroups.map((group: Segment[]) => group.map(seg => ({ ...seg, point: { x: seg.point.x + xShift, y: seg.point.y + yShift } }))) : undefined
-            }));
-        }
-
+        // MODIFICATION: Removed X/Y translation application.
         return transformed;
     };
 
@@ -712,12 +701,26 @@ export const generateCompositeGlyphData = ({
         const rawPaths = deepClone(glyph.paths);
         const transformedPaths = transformComponentPaths(rawPaths, character, index);
         const bbox = getAccurateGlyphBBox(transformedPaths, settings.strokeThickness);
-        return { char, paths: transformedPaths, bbox };
+
+        // MODIFICATION: Capture manual transform config
+        const { x, y, mode } = normalizeTransform(character.compositeTransform, index);
+        return { char, paths: transformedPaths, bbox, manualTransform: { x: x || 0, y: y || 0, mode } };
     });
     
     if (transformedComponents.length === 0 || !transformedComponents[0]) return null;
 
-    let accumulatedPaths: Path[] = transformedComponents[0].paths.map(p => ({ ...p, id: generateId(), groupId: 'component-0' }));
+    // Base Component (Index 0)
+    // Apply manual shift immediately
+    let baseComp = transformedComponents[0];
+    let baseOffset = { x: baseComp.manualTransform.x, y: baseComp.manualTransform.y };
+
+    let accumulatedPaths: Path[] = baseComp.paths.map(p => ({ 
+        ...p, 
+        id: generateId(), 
+        groupId: 'component-0',
+        points: p.points.map(pt => VEC.add(pt, baseOffset)),
+        segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: VEC.add(seg.point, baseOffset) }))) : undefined
+    }));
 
     for (let i = 1; i < transformedComponents.length; i++) {
         const baseComponent = transformedComponents[i - 1];
@@ -726,24 +729,22 @@ export const generateCompositeGlyphData = ({
         const markBbox = markComponent.bbox;
         if (!markBbox) continue;
 
-        let offset: Point;
-        
-        // Get transform info for CURRENT component
-        const { mode } = normalizeTransform(character.compositeTransform, i);
+        let autoOffset: Point;
+        const { mode, x, y } = markComponent.manualTransform;
     
         if (mode === 'touching') {
             const prevBbox = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
             
             if (prevBbox) {
                 const targetX = prevBbox.x + prevBbox.width;
-                offset = { x: targetX - markBbox.x, y: 0 };
+                // Move mark so its minX aligns with targetX
+                autoOffset = { x: targetX - markBbox.x, y: 0 };
             } else {
-                offset = { x: 0, y: 0 };
+                autoOffset = { x: 0, y: 0 };
             }
         } else if (mode === 'absolute') {
              // Absolute means we don't calculate relative offset.
-             // The local transform (x/y) was already applied in transformComponentPaths.
-             offset = { x: 0, y: 0 };
+             autoOffset = { x: 0, y: 0 };
         } else {
             // Relative (Default)
             let baseBboxForOffset: BoundingBox | null;
@@ -752,7 +753,7 @@ export const generateCompositeGlyphData = ({
             baseBboxForOffset = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
             
             // Pass characterSets for group expansion within offset calculation
-            offset = calculateDefaultMarkOffset(
+            autoOffset = calculateDefaultMarkOffset(
                 baseComponent.char,
                 markComponent.char,
                 baseBboxForOffset,
@@ -765,12 +766,15 @@ export const generateCompositeGlyphData = ({
             );
         }
 
+        // Combine Auto + Manual
+        const finalOffset = { x: autoOffset.x + x, y: autoOffset.y + y };
+
         const finalMarkPaths = markComponent.paths.map((p: Path) => ({
             ...p,
             id: generateId(),
             groupId: `component-${i}`,
-            points: p.points.map((pt: Point) => VEC.add(pt, offset)),
-            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: VEC.add(seg.point, offset) }))) : undefined
+            points: p.points.map((pt: Point) => VEC.add(pt, finalOffset)),
+            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: VEC.add(seg.point, finalOffset) }))) : undefined
         }));
 
         accumulatedPaths.push(...finalMarkPaths);
