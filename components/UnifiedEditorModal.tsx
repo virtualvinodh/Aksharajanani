@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
-import { Character, GlyphData, FontMetrics, AppSettings, CharacterSet, MarkAttachmentRules, Point, Path } from '../types';
+import { Character, GlyphData, FontMetrics, AppSettings, CharacterSet, MarkAttachmentRules, Point, Path, ComponentTransform } from '../types';
 import { useLayout } from '../contexts/LayoutContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
@@ -8,8 +8,9 @@ import { usePositioning } from '../contexts/PositioningContext';
 import { useRules } from '../contexts/RulesContext';
 import { expandMembers } from '../services/groupExpansionService';
 import { updatePositioningAndCascade } from '../services/positioningService';
-import { getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../services/glyphRenderService';
+import { getAccurateGlyphBBox, calculateDefaultMarkOffset, generateCompositeGlyphData } from '../services/glyphRenderService';
 import { deepClone } from '../utils/cloneUtils';
+import { isGlyphDrawn } from '../utils/glyphUtils';
 
 // Specialized Editor Pages
 import DrawingModal from './DrawingModal';
@@ -40,10 +41,47 @@ const UnifiedEditorModal: React.FC<any> = ({
     return 'drawing';
   }, [character]);
 
-  const visibleCharactersForNav = useMemo(() => characterSet?.characters.filter((c: any) => !c.hidden) || [], [characterSet]);
+  // Helper to determine if a glyph is "Available" (i.e. not disabled in the grid)
+  // Standard glyphs are always available. Virtual glyphs (Pos/Kern) need their components drawn.
+  const isCharNavigable = useCallback((c: Character) => {
+    if (c.hidden) return false;
+
+    // Positioning Pair Logic
+    if (c.position) {
+        const base = allCharsByName.get(c.position[0]);
+        const mark = allCharsByName.get(c.position[1]);
+        if (!base || !mark || base.unicode === undefined || mark.unicode === undefined) return false;
+        
+        // Both components must be drawn
+        const baseDrawn = isGlyphDrawn(allGlyphData.get(base.unicode));
+        const markDrawn = isGlyphDrawn(allGlyphData.get(mark.unicode));
+        return baseDrawn && markDrawn;
+    }
+
+    // Kerning Pair Logic
+    if (c.kern) {
+        const left = allCharsByName.get(c.kern[0]);
+        const right = allCharsByName.get(c.kern[1]);
+        if (!left || !right || left.unicode === undefined || right.unicode === undefined) return false;
+
+        // Both components must be drawn
+        const leftDrawn = isGlyphDrawn(allGlyphData.get(left.unicode));
+        const rightDrawn = isGlyphDrawn(allGlyphData.get(right.unicode));
+        return leftDrawn && rightDrawn;
+    }
+
+    // Standard Glyph
+    return true;
+  }, [allCharsByName, allGlyphData]);
+
+  const visibleCharactersForNav = useMemo(() => {
+      if (!characterSet?.characters) return [];
+      return characterSet.characters.filter(isCharNavigable);
+  }, [characterSet, isCharNavigable]);
+
   const currentIndex = visibleCharactersForNav.findIndex((c: any) => c.unicode === character.unicode);
   const prevCharacter = currentIndex > 0 ? visibleCharactersForNav[currentIndex - 1] : null;
-  const nextCharacter = currentIndex < visibleCharactersForNav.length - 1 ? visibleCharactersForNav[currentIndex + 1] : null;
+  const nextCharacter = currentIndex !== -1 && currentIndex < visibleCharactersForNav.length - 1 ? visibleCharactersForNav[currentIndex + 1] : null;
 
   const handlePageNavigate = useCallback((target: Character | 'prev' | 'next') => {
       if (target === 'prev' && prevCharacter) onNavigate(prevCharacter);
@@ -158,6 +196,78 @@ const UnifiedEditorModal: React.FC<any> = ({
     
     handlePositioningSave(base, mark, ligature, newGlyphData, offset, newBearings, true);
   }, [allGlyphData, metrics, allCharacterSets, settings, positioningRules, groups, markAttachmentRules, handlePositioningSave]);
+  
+  const handleConvertToComposite = useCallback((newTransforms: ComponentTransform[]) => {
+      const components = character.position || character.kern;
+      if (!components || !character.unicode) return;
+      
+      const newChar = { ...character };
+      delete newChar.position;
+      delete newChar.kern;
+      
+      newChar.composite = components;
+      newChar.compositeTransform = newTransforms;
+      newChar.glyphClass = 'ligature';
+      
+      // 1. Clear Rule Map
+      if (character.position) {
+           const base = allCharsByName.get(components[0]);
+           const mark = allCharsByName.get(components[1]);
+           if (base && mark) {
+               const key = `${base.unicode}-${mark.unicode}`;
+               const newMap = new Map(markPositioningMap);
+               newMap.delete(key);
+               positioningDispatch({ type: 'SET_MAP', payload: newMap });
+           }
+      } else if (character.kern) {
+           const left = allCharsByName.get(components[0]);
+           const right = allCharsByName.get(components[1]);
+           if (left && right) {
+               const key = `${left.unicode}-${right.unicode}`;
+               const newMap = new Map(kerningMap);
+               newMap.delete(key);
+               kerningDispatch({ type: 'SET_MAP', payload: newMap });
+           }
+      }
+      
+      // 2. Generate and Set Glyph Data immediately
+      const compositeData = generateCompositeGlyphData({ 
+          character: newChar, 
+          allCharsByName, 
+          allGlyphData, 
+          settings, 
+          metrics, 
+          markAttachmentRules, 
+          allCharacterSets, 
+          groups 
+      });
+      if (compositeData) {
+          glyphDataDispatch({ type: 'SET_GLYPH', payload: { unicode: newChar.unicode, data: compositeData } });
+      }
+
+      // 3. Update Character Definition
+      characterDispatch({
+          type: 'UPDATE_CHARACTER_SETS',
+          payload: (prevSets: CharacterSet[] | null) => {
+              if (!prevSets) return null;
+              return prevSets.map(set => ({
+                  ...set,
+                  characters: set.characters.map(c => {
+                      if (c.unicode === newChar.unicode) {
+                          return newChar;
+                      }
+                      return c;
+                  })
+              }));
+          }
+      });
+      
+      // 4. Force update of the selected character in LayoutContext to reflect schema change immediately
+      onNavigate(newChar);
+
+      showNotification("Converted to standard composite glyph.", "success");
+
+  }, [character, markPositioningMap, kerningMap, allCharsByName, allGlyphData, settings, metrics, markAttachmentRules, allCharacterSets, groups, positioningDispatch, kerningDispatch, glyphDataDispatch, characterDispatch, showNotification, onNavigate]);
 
   const renderActivePage = () => {
     const pageKey = character.unicode || character.name;
@@ -189,11 +299,14 @@ const UnifiedEditorModal: React.FC<any> = ({
                         onClose();
                     }}
                     onClose={() => onClose()}
+                    onDelete={() => onDelete(character.unicode)}
                     onNavigate={(dir) => handlePageNavigate(dir)}
                     hasPrev={!!prevCharacter}
                     hasNext={!!nextCharacter}
                     glyphVersion={glyphVersion}
                     isKerned={kerningMap.has(key)}
+                    allCharacterSets={allCharacterSets}
+                    onConvertToComposite={handleConvertToComposite}
                 />
             );
         }
@@ -213,6 +326,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                     onSave={handlePositioningSave}
                     onConfirmPosition={handleConfirmPosition}
                     onClose={() => onClose()}
+                    onDelete={() => onDelete(character.unicode)}
                     onReset={(b, m, l) => {
                         const key = `${b.unicode}-${m.unicode}`;
                         const newMap = new Map(markPositioningMap);
@@ -231,6 +345,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                     characterSets={allCharacterSets}
                     glyphVersion={glyphVersion}
                     allLigaturesByKey={allLigaturesByKey}
+                    onConvertToComposite={handleConvertToComposite}
                 />
             );
         }

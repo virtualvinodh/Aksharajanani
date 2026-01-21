@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { DRAWING_CANVAS_SIZE } from '../constants';
-import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Point, PositioningRules, CharacterSet } from '../types';
+import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Point, PositioningRules, CharacterSet, ComponentTransform } from '../types';
 import ReusePreviewCard from './ReusePreviewCard';
 import UnsavedChangesModal from './UnsavedChangesModal';
 import { useMediaQuery } from '../hooks/useMediaQuery';
@@ -39,6 +39,7 @@ interface PositioningEditorPageProps {
     characterSets: CharacterSet[];
     glyphVersion: number;
     allLigaturesByKey: Map<string, Character>;
+    onConvertToComposite?: (newTransforms: ComponentTransform[]) => void;
 }
 
 const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
@@ -53,6 +54,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
     const [isStripExpanded, setIsStripExpanded] = useState(false);
+    const [isDetachConfirmOpen, setIsDetachConfirmOpen] = useState(false);
     const [pageTool, setPageTool] = useState<'select' | 'pan'>('select');
 
     // session hook refactored to bubble up navigation direction
@@ -149,6 +151,16 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
         session.setViewOffset(newOffset);
         session.setZoom(newZoom);
     }, [session]);
+    
+    const handleDetach = () => {
+        if (!props.onConvertToComposite) return;
+        const transforms: ComponentTransform[] = [
+            { scale: 1, x: 0, y: 0, mode: 'relative' }, // Base
+            { scale: 1, x: session.currentOffset.x, y: session.currentOffset.y, mode: 'relative' } // Mark
+        ];
+        props.onConvertToComposite(transforms);
+        setIsDetachConfirmOpen(false);
+    };
 
     return (
         <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-900 overflow-hidden relative">
@@ -174,6 +186,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 isStripExpanded={isStripExpanded}
                 isDirty={session.hasUnsavedChanges}
                 onConfirmPosition={() => props.onConfirmPosition(props.baseChar, props.markChar, props.targetLigature)}
+                onDetach={props.onConvertToComposite ? () => setIsDetachConfirmOpen(true) : undefined}
             />
 
             <PositioningEditorWorkspace 
@@ -209,6 +222,15 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
             
             <UnsavedChangesModal isOpen={session.isUnsavedModalOpen} onClose={() => session.setIsUnsavedModalOpen(false)} onSave={() => {session.handleSave(); if(session.pendingNavigation) session.handleNavigationAttempt(session.pendingNavigation);}} onDiscard={() => {if(session.pendingNavigation) { if (session.pendingNavigation === 'back') props.onClose(); else props.onNavigate(session.pendingNavigation as 'prev' | 'next'); } session.setIsUnsavedModalOpen(false);}} />
             <Modal isOpen={isResetConfirmOpen} onClose={() => setIsResetConfirmOpen(false)} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={() => { props.onReset(props.baseChar, props.markChar, props.targetLigature); setIsResetConfirmOpen(false); }} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: props.targetLigature.name })}</p></Modal>
+            
+            <Modal 
+                isOpen={isDetachConfirmOpen} 
+                onClose={() => setIsDetachConfirmOpen(false)} 
+                title="Detach Rule?" 
+                footer={<><button onClick={() => setIsDetachConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={handleDetach} className="px-4 py-2 bg-indigo-600 text-white rounded">Detach & Edit</button></>}
+            >
+                <p>This will convert the positioning rule into a static composite glyph. It will no longer update automatically if the rule changes, but you will be able to edit the paths manually.</p>
+            </Modal>
         </div>
     );
 };

@@ -1,3 +1,4 @@
+
 export interface Point {
   x: number;
   y: number;
@@ -65,6 +66,7 @@ export interface Character {
   position?: [string, string]; // [BaseName, MarkName] for virtual assembly
   kern?: [string, string];     // [LeftName, RightName] for virtual assembly
   sourceLink?: string[]; // To remember original link after unlinking
+  sourceLinkType?: 'position' | 'link'; // To remember if it was a position pair or standard link
   compositeTransform?: ComponentTransform[];
   isCustom?: boolean;
   advWidth?: number | string;

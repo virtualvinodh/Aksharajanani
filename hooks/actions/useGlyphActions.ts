@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -8,7 +9,7 @@ import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { Character, GlyphData, Path, Point, CharacterSet } from '../../types';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
-import { generateCompositeGlyphData, updateComponentInPaths } from '../../services/glyphRenderService';
+import { generateCompositeGlyphData, updateComponentInPaths, getAccurateGlyphBBox } from '../../services/glyphRenderService';
 import { VEC } from '../../utils/vectorUtils';
 import * as dbService from '../../services/dbService';
 import { deepClone } from '../../utils/cloneUtils';
@@ -562,12 +563,35 @@ export const useGlyphActions = (
 
     const handleUnlockGlyph = useCallback((unicode: number) => {
         const charToUnlock = allCharsByUnicode.get(unicode);
-        if (!charToUnlock || !charToUnlock.link) return;
+        if (!charToUnlock) return;
+        
+        // Determine the type of link to preserve correct history
+        let sourceType: 'position' | 'link' | undefined;
+        let components: string[] | undefined;
+        
+        if (charToUnlock.position) {
+            sourceType = 'position';
+            components = charToUnlock.position;
+        } else if (charToUnlock.link) {
+            sourceType = 'link';
+            components = charToUnlock.link;
+        }
+
+        if (!components) return;
     
         const unlockedChar = { ...charToUnlock };
-        unlockedChar.composite = unlockedChar.link;
-        unlockedChar.sourceLink = unlockedChar.link;
+        
+        // Convert to editable composite
+        unlockedChar.composite = components;
+        
+        // Save history
+        unlockedChar.sourceLink = components;
+        if (sourceType) {
+            unlockedChar.sourceLinkType = sourceType;
+        }
+        
         delete unlockedChar.link;
+        delete unlockedChar.position; // Important if it was a position pair
     
         if (layout.selectedCharacter?.unicode === unicode) {
             layout.selectCharacter(unlockedChar);
@@ -588,9 +612,62 @@ export const useGlyphActions = (
         if (!charToRelink || !charToRelink.sourceLink) return;
 
         const relinkedChar = { ...charToRelink };
-        relinkedChar.link = relinkedChar.sourceLink;
+        
+        // --- SMART RELINK LOGIC ---
+        // Restore based on stored type if available, otherwise assume standard link
+        const targetType = relinkedChar.sourceLinkType || 'link';
+        
+        if (targetType === 'position') {
+            // Restore as Position Pair
+            relinkedChar.position = relinkedChar.sourceLink as [string, string];
+            
+            // Critical Step: Capture current visual offsets for the GPOS map
+            // We need to reverse-engineer the position from the current compositeTransform if possible,
+            // or simply use the current bounding box delta if no transforms are explicit.
+            
+            // If the glyph is currently a composite with manual transforms, we can try to extract the delta.
+            // Assuming index 0 is base and index 1 is mark (standard for position pairs)
+            const currentGlyph = glyphDataMap.get(unicode);
+            const baseCompName = relinkedChar.sourceLink[0];
+            const markCompName = relinkedChar.sourceLink[1];
+            
+            if (currentGlyph && settings && metrics && characterSets) {
+                // Calculate where the components ARE visually in the manual edit
+                // Since 'composite' glyphs bake paths into a single array when edited manually in some modes,
+                // retrieving exact coordinates might be complex if they were merged.
+                // However, if it's still a 'composite' type (not raw drawing), we might have transforms.
+                
+                let detectedOffset: Point | null = null;
+                
+                // Check explicit transforms first
+                if (relinkedChar.compositeTransform && relinkedChar.compositeTransform.length > 1) {
+                    const baseT = relinkedChar.compositeTransform[0];
+                    const markT = relinkedChar.compositeTransform[1];
+                    // Calculate relative offset
+                    const x = (markT.x || 0) - (baseT.x || 0);
+                    const y = (markT.y || 0) - (baseT.y || 0);
+                    detectedOffset = { x, y };
+                } 
+                // Fallback: If drawn manually, we can't easily guess. 
+                // We'll rely on the existing markPositioningMap entry if it exists, or recalculate default.
+                
+                if (detectedOffset) {
+                    // Update Map with the detected position from manual edits
+                    const key = `${allCharsByName.get(baseCompName)?.unicode}-${allCharsByName.get(markCompName)?.unicode}`;
+                    positioningDispatch({ type: 'SET_MAP', payload: new Map(markPositioningMap).set(key, detectedOffset) });
+                }
+            }
+
+        } else {
+            // Restore as Standard Link
+            relinkedChar.link = relinkedChar.sourceLink;
+        }
+
+        // Cleanup history
         delete relinkedChar.sourceLink;
+        delete relinkedChar.sourceLinkType;
         delete relinkedChar.composite;
+        delete relinkedChar.compositeTransform; // Clear manual transforms as we revert to rule/link logic
 
         if (layout.selectedCharacter?.unicode === unicode) {
             layout.selectCharacter(relinkedChar);
@@ -598,30 +675,42 @@ export const useGlyphActions = (
 
         characterDispatch({ type: 'RELINK_GLYPH', payload: { unicode } });
         
-        if (relinkedChar.link && settings && metrics && characterSets) {
-            const compositeData = generateCompositeGlyphData({
-                character: relinkedChar,
-                allCharsByName,
-                allGlyphData: glyphDataMap,
-                settings,
-                metrics,
-                markAttachmentRules,
-                allCharacterSets: characterSets,
-                groups
-            });
-            
-            if (compositeData) {
-                // OPTIMIZED: Use SET_GLYPH
-                glyphDataDispatch({ type: 'SET_GLYPH', payload: { unicode, data: compositeData } });
-            } else {
+        // Regenerate visuals
+        if (settings && metrics && characterSets) {
+            if (targetType === 'position') {
+                // For Position pairs, we trigger the positioning update service logic implicitly
+                // via generateCompositeGlyphData which now handles 'position' property too via getUnifiedPaths logic?
+                // Actually generateCompositeGlyphData handles 'link'/'composite'. 
+                // Positioned glyphs are generated dynamically. 
+                // We should probably clear the static glyph data so the dynamic renderer takes over.
                 glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
+            } else {
+                // For Standard Links, regenerate the composite
+                const compositeData = generateCompositeGlyphData({
+                    character: relinkedChar,
+                    allCharsByName,
+                    allGlyphData: glyphDataMap,
+                    settings,
+                    metrics,
+                    markAttachmentRules,
+                    allCharacterSets: characterSets,
+                    groups
+                });
+                
+                if (compositeData) {
+                    glyphDataDispatch({ type: 'SET_GLYPH', payload: { unicode, data: compositeData } });
+                } else {
+                    glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
+                }
             }
         } else {
             glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
         }
 
-        if (relinkedChar.link) {
-            relinkedChar.link.forEach(compName => {
+        // Restore dependencies
+        const targetList = relinkedChar.link || relinkedChar.position;
+        if (targetList) {
+            targetList.forEach(compName => {
                 const componentChar = allCharsByName.get(compName);
                 if (componentChar?.unicode !== undefined) {
                     if (!dependencyMap.current.has(componentChar.unicode)) {
@@ -631,11 +720,11 @@ export const useGlyphActions = (
                 }
             });
         }
-    }, [characterDispatch, glyphDataDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap, groups]);
+    }, [characterDispatch, glyphDataDispatch, positioningDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap, groups, markPositioningMap]);
     
     const handleUpdateDependencies = useCallback((unicode: number, newLinkComponents: string[] | null) => {
         const currentChar = allCharsByUnicode.get(unicode);
-        const oldComponents = currentChar?.link || currentChar?.composite;
+        const oldComponents = currentChar?.link || currentChar?.composite || currentChar?.position;
 
         if (oldComponents) {
             oldComponents.forEach(compName => {

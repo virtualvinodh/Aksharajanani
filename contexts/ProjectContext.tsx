@@ -186,11 +186,20 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                     return prev.map(set => ({
                         ...set,
                         characters: set.characters.map(char => {
-                            if (char.unicode === action.payload.unicode && char.link) {
+                            if (char.unicode === action.payload.unicode) {
                                 const newChar = { ...char };
-                                newChar.composite = newChar.link;
-                                newChar.sourceLink = newChar.link;
-                                delete newChar.link;
+                                // Determine the type of link being broken
+                                if (newChar.position) {
+                                    newChar.sourceLink = newChar.position;
+                                    newChar.sourceLinkType = 'position';
+                                    newChar.composite = newChar.position; // Convert to editable composite
+                                    delete newChar.position;
+                                } else if (newChar.link) {
+                                    newChar.sourceLink = newChar.link;
+                                    newChar.sourceLinkType = 'link';
+                                    newChar.composite = newChar.link; // Convert to editable composite
+                                    delete newChar.link;
+                                }
                                 return newChar;
                             }
                             return char;
@@ -206,8 +215,15 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                         characters: set.characters.map(char => {
                             if (char.unicode === action.payload.unicode && char.sourceLink) {
                                 const newChar = { ...char };
-                                newChar.link = newChar.sourceLink;
+                                // Check stored type to decide restoration target
+                                if (newChar.sourceLinkType === 'position') {
+                                    newChar.position = newChar.sourceLink as [string, string];
+                                } else {
+                                    // Default to standard link if type is 'link' or missing (legacy)
+                                    newChar.link = newChar.sourceLink;
+                                }
                                 delete newChar.sourceLink;
+                                delete newChar.sourceLinkType;
                                 delete newChar.composite;
                                 return newChar;
                             }

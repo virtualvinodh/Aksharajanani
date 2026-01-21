@@ -1,11 +1,13 @@
-import React from 'react';
-import { Character, AppSettings } from '../../types';
+import React, {useState, useRef, useEffect} from 'react';
+import { Character, AppSettings, CharacterSet } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon, PropertiesIcon, TrashIcon, MoreIcon, BrokenLinkIcon } from '../../constants';
+import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
 
 interface KerningEditorHeaderProps {
     pair: { left: Character, right: Character };
     onClose: () => void;
+    onDelete: () => void;
     onNavigate: (direction: 'prev' | 'next') => void;
     hasPrev: boolean;
     hasNext: boolean;
@@ -16,12 +18,31 @@ interface KerningEditorHeaderProps {
     isDirty: boolean;
     settings: AppSettings;
     isKerned: boolean;
+    allCharacterSets: CharacterSet[];
+    character: Character; // The virtual character for this pair
+    onDetach?: () => void;
 }
 
 const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
-    pair, onClose, onNavigate, hasPrev, hasNext, onAutoKern, isAutoKerning, onSave, onRemove, isDirty, settings, isKerned
+    pair, onClose, onDelete, onNavigate, hasPrev, hasNext, onAutoKern, isAutoKerning, onSave, onRemove, isDirty, settings, isKerned,
+    allCharacterSets, character, onDetach
 }) => {
     const { t } = useLocale();
+    const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
+    const moreMenuRef = useRef<HTMLDivElement>(null);
+    const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+          if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+            setIsMoreMenuOpen(false);
+          }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+          document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     const navButtonClass = "p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all";
     
@@ -44,7 +65,6 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
             }
             return null;
         } else {
-            // Manual Save Mode
             if (!isKerned && !isDirty) {
                  return (
                     <button 
@@ -69,7 +89,6 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                     </button>
                 );
             }
-            // Kerned and not dirty
             return (
                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 font-semibold rounded-lg cursor-default">
                     <SaveIcon />
@@ -81,7 +100,6 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
 
     return (
         <header className="bg-gray-50 dark:bg-gray-800 p-4 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0 z-20 shadow-sm">
-            {/* Left: Back */}
             <div className="flex-1 flex justify-start">
                 <button 
                     onClick={onClose} 
@@ -92,7 +110,6 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                 </button>
             </div>
 
-            {/* Center: Navigation & Identity */}
             <div className="flex-1 flex items-center gap-2 sm:gap-4 justify-center">
                 <button onClick={() => onNavigate('prev')} disabled={!hasPrev} className={navButtonClass}>
                     <LeftArrowIcon />
@@ -112,7 +129,6 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                 </button>
             </div>
 
-            {/* Right: Actions */}
             <div className="flex-1 flex items-center justify-end gap-2">
                 {renderActionButton()}
                 
@@ -130,6 +146,17 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                     <span className="hidden xl:inline font-semibold">{autoLabel}</span>
                 </button>
                 
+                {onDetach && (
+                    <button 
+                        onClick={onDetach}
+                        className="flex items-center gap-2 px-3 py-2 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 font-semibold rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-all active:scale-95 shadow-sm border border-orange-200 dark:border-orange-800"
+                        title="Detach and Convert to Composite Glyph"
+                    >
+                        <BrokenLinkIcon />
+                        <span className="hidden xl:inline">Detach</span>
+                    </button>
+                )}
+
                 <button 
                     onClick={onRemove} 
                     title={t('reset')} 
@@ -139,7 +166,44 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                     <UndoIcon />
                     <span className="hidden xl:inline font-semibold">{t('reset')}</span>
                 </button>
+                
+                {/* Properties Button - Always Visible */}
+                <button 
+                    onClick={() => setIsPropertiesPanelOpen(prev => !prev)}
+                    className={`p-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ${isPropertiesPanelOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                    title={t('glyphProperties')}
+                >
+                    <PropertiesIcon />
+                </button>
+                
+                {/* MORE MENU - Visible on All Screens */}
+                <div ref={moreMenuRef} className="relative">
+                    <button
+                        onClick={() => setIsMoreMenuOpen(prev => !prev)}
+                        className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                        title={t('more')}
+                    >
+                        <MoreIcon />
+                    </button>
+                    {isMoreMenuOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 z-50">
+                            <button onClick={() => { onDelete(); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                                <TrashIcon /> <span>{t('deleteGlyph')}</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
+             {isPropertiesPanelOpen && (
+                <GlyphPropertiesPanel 
+                    lsb={undefined} setLsb={()=>{}} 
+                    rsb={undefined} setRsb={()=>{}}
+                    metrics={{} as any} 
+                    onClose={() => setIsPropertiesPanelOpen(false)}
+                    character={character}
+                    allCharacterSets={allCharacterSets}
+                />
+            )}
         </header>
     );
 };
