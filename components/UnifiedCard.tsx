@@ -42,7 +42,6 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   const groups = rulesState.fontRules?.groups || {};
 
   // 1. Determine Availability
-  // Virtual glyphs (Positioned/Kerned) require both components to be drawn to be "Available"
   const isAvailable = useMemo(() => {
     if (character.position) {
         const base = allCharsByName.get(character.position[0]);
@@ -59,10 +58,25 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
     return true; // Standard glyphs are always available to open/draw
   }, [character, allCharsByName, glyphDataMap, glyphVersion]);
 
+  // New "Manually Set" logic
+  const isManuallySet = useMemo(() => {
+    if (character.position) {
+        const base = allCharsByName.get(character.position[0]);
+        const mark = allCharsByName.get(character.position[1]);
+        if (!base || !mark || base.unicode === undefined || mark.unicode === undefined) return false;
+        return markPositioningMap.has(`${base.unicode}-${mark.unicode}`);
+    }
+    if (character.kern) {
+        const left = allCharsByName.get(character.kern[0]);
+        const right = allCharsByName.get(character.kern[1]);
+        if (!left || !right || left.unicode === undefined || right.unicode === undefined) return false;
+        return kerningMap.has(`${left.unicode}-${right.unicode}`);
+    }
+    return true; // Standard glyphs are always "manually set" in this context
+  }, [character, markPositioningMap, kerningMap, allCharsByName]);
+
   // 2. Resolve Paths using the Unified Service
   const { paths, isDrawn } = useMemo(() => {
-    // If it's a virtual character but not fully available, don't render anything on the canvas.
-    // This prevents misleading partial renderings of complex syllables or pairs.
     if (!isAvailable && (character.position || character.kern)) {
         return { paths: [], isDrawn: false };
     }
@@ -81,8 +95,6 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
     };
 
     const resolvedPaths = getUnifiedPaths(character, ctx);
-    
-    // Check if the result has actual visual content
     const hasPaths = resolvedPaths.length > 0 && resolvedPaths.some(p => p.points.length > 0 || (p.segmentGroups && p.segmentGroups.length > 0));
 
     return { paths: resolvedPaths, isDrawn: hasPaths };
@@ -112,7 +124,6 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
 
     ctx.clearRect(0, 0, PREVIEW_CANVAS_SIZE, PREVIEW_CANVAS_SIZE);
 
-    // Use the Universal Fitter service
     const { scale, tx, ty } = calculateUnifiedTransform(paths, PREVIEW_CANVAS_SIZE, settings.strokeThickness, {
         character,
         metrics: metrics || undefined
@@ -144,7 +155,10 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
       stateClasses = "bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-500 opacity-70 cursor-pointer";
   } else if (!isDrawn) {
       stateClasses = "bg-white dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-indigo-500 hover:border-solid opacity-90 cursor-pointer";
+  } else if (!isManuallySet) { // New "Ready for Review" state
+      stateClasses = "bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-500 dark:border-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/40 hover:border-blue-600 cursor-pointer";
   } else {
+      // Style for drawn & confirmed glyphs
       stateClasses = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer";
   }
 

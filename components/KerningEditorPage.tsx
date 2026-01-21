@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning } from '../types';
 import KerningEditorHeader from './kerning/KerningEditorHeader';
@@ -22,6 +21,7 @@ interface KerningEditorPageProps {
     hasPrev: boolean;
     hasNext: boolean;
     glyphVersion: number;
+    isKerned: boolean;
 }
 
 const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
@@ -84,6 +84,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 onRemove={props.onRemove} 
                 isDirty={session.isDirty} 
                 settings={props.settings} 
+                isKerned={props.isKerned}
             />
             
             <KerningEditorWorkspace 

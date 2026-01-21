@@ -192,6 +192,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         const pair = filteredPairs[editingIndex];
         if (!pair) { setEditingIndex(null); return null; }
         const key = `${pair.left.unicode}-${pair.right.unicode}`;
+        const isKerned = kerningMap.has(key);
         return (
             <KerningEditorPage
                 pair={pair} initialValue={kerningMap.get(key) ?? 0}
@@ -203,14 +204,17 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                     kerningDispatch({ type: 'SET_MAP', payload: newMap });
                 }}
                 onRemove={() => {
+                    // This function is for the 'Reset' button. It sets the value to 0.
                     const newMap = new Map(kerningMap);
-                    newMap.delete(key);
+                    newMap.set(key, 0);
                     kerningDispatch({ type: 'SET_MAP', payload: newMap });
-                    setEditingIndex(null);
+                    // By not calling setEditingIndex(null), the modal stays open.
+                    // The editor will re-render with the new value from the context.
                 }}
                 onClose={() => setEditingIndex(null)} onNavigate={handleNavigate}
                 hasPrev={editingIndex > 0} hasNext={editingIndex < filteredPairs.length - 1}
                 glyphVersion={glyphVersion}
+                isKerned={isKerned}
             />
         );
     }

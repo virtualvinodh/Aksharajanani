@@ -1,6 +1,5 @@
-
 import React, { useState, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
-import { Character, GlyphData, FontMetrics, AppSettings, CharacterSet, MarkAttachmentRules, Point } from '../types';
+import { Character, GlyphData, FontMetrics, AppSettings, CharacterSet, MarkAttachmentRules, Point, Path } from '../types';
 import { useLayout } from '../contexts/LayoutContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
@@ -9,6 +8,8 @@ import { usePositioning } from '../contexts/PositioningContext';
 import { useRules } from '../contexts/RulesContext';
 import { expandMembers } from '../services/groupExpansionService';
 import { updatePositioningAndCascade } from '../services/positioningService';
+import { getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../services/glyphRenderService';
+import { deepClone } from '../utils/cloneUtils';
 
 // Specialized Editor Pages
 import DrawingModal from './DrawingModal';
@@ -131,6 +132,32 @@ const UnifiedEditorModal: React.FC<any> = ({
     }
   }, [allCharsByName, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses, markPositioningMap, allGlyphData, allCharacterSets, positioningRules, markAttachmentRules, groups, settings.strokeThickness, metrics, positioningDispatch, glyphDataDispatch, characterDispatch, showNotification]);
 
+  const handleConfirmPosition = useCallback((base: Character, mark: Character, ligature: Character) => {
+    const baseGlyph = allGlyphData.get(base.unicode);
+    const markGlyph = allGlyphData.get(mark.unicode);
+    if (!baseGlyph || !markGlyph || !metrics || !allCharacterSets || !settings) return;
+
+    const rule = positioningRules?.find(r => 
+        expandMembers(r.base, groups, allCharacterSets).includes(base.name) && 
+        expandMembers(r.mark, groups, allCharacterSets).includes(mark.name)
+    );
+    const constraint = (rule && (rule.movement === 'horizontal' || rule.movement === 'vertical')) ? rule.movement : 'none';
+
+    const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, settings.strokeThickness);
+    const markBbox = getAccurateGlyphBBox(markGlyph.paths, settings.strokeThickness);
+    const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, allCharacterSets, false, groups, constraint);
+
+    const transformedMarkPaths = deepClone(markGlyph.paths).map((p: Path) => ({
+        ...p,
+        points: p.points.map((pt: Point) => ({ x: pt.x + offset.x, y: pt.y + offset.y })),
+        segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + offset.x, y: seg.point.y + offset.y } }))) : undefined
+    }));
+    const combinedPaths = [...baseGlyph.paths, ...transformedMarkPaths];
+    const newGlyphData = { paths: combinedPaths };
+    const newBearings = { lsb: ligature.lsb, rsb: ligature.rsb };
+    
+    handlePositioningSave(base, mark, ligature, newGlyphData, offset, newBearings, true);
+  }, [allGlyphData, metrics, allCharacterSets, settings, positioningRules, groups, markAttachmentRules, handlePositioningSave]);
 
   const renderActivePage = () => {
     const pageKey = character.unicode || character.name;
@@ -166,6 +193,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                     hasPrev={!!prevCharacter}
                     hasNext={!!nextCharacter}
                     glyphVersion={glyphVersion}
+                    isKerned={kerningMap.has(key)}
                 />
             );
         }
@@ -183,6 +211,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                     glyphDataMap={allGlyphData}
                     markPositioningMap={markPositioningMap}
                     onSave={handlePositioningSave}
+                    onConfirmPosition={handleConfirmPosition}
                     onClose={() => onClose()}
                     onReset={(b, m, l) => {
                         const key = `${b.unicode}-${m.unicode}`;

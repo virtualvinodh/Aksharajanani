@@ -1,7 +1,7 @@
 import React from 'react';
 import { Character, AppSettings } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, TrashIcon } from '../../contexts/../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon } from '../../constants';
 
 interface KerningEditorHeaderProps {
     pair: { left: Character, right: Character };
@@ -15,10 +15,11 @@ interface KerningEditorHeaderProps {
     onRemove: () => void;
     isDirty: boolean;
     settings: AppSettings;
+    isKerned: boolean;
 }
 
 const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
-    pair, onClose, onNavigate, hasPrev, hasNext, onAutoKern, isAutoKerning, onSave, onRemove, isDirty, settings
+    pair, onClose, onNavigate, hasPrev, hasNext, onAutoKern, isAutoKerning, onSave, onRemove, isDirty, settings, isKerned
 }) => {
     const { t } = useLocale();
 
@@ -26,6 +27,57 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
     
     const useKerningTerm = settings.editorMode === 'advanced' || settings.preferKerningTerm;
     const autoLabel = useKerningTerm ? t('autoKern') : "Auto-space";
+
+    const renderActionButton = () => {
+        if (settings.isAutosaveEnabled) {
+            if (!isKerned) {
+                return (
+                    <button 
+                        onClick={onSave} 
+                        title="Accept Default" 
+                        className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
+                    >
+                        <CheckIcon />
+                        <span className="hidden xl:inline font-semibold">Accept</span>
+                    </button>
+                );
+            }
+            return null;
+        } else {
+            // Manual Save Mode
+            if (!isKerned && !isDirty) {
+                 return (
+                    <button 
+                        onClick={onSave} 
+                        title="Accept Default Value" 
+                        className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
+                    >
+                        <CheckIcon />
+                        <span className="hidden xl:inline font-semibold">Accept Value</span>
+                    </button>
+                );
+            }
+            if (isDirty) {
+                 return (
+                    <button 
+                        onClick={onSave} 
+                        title={t('save')} 
+                        className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
+                    >
+                        <SaveIcon />
+                        <span className="hidden xl:inline font-semibold">Save Changes</span>
+                    </button>
+                );
+            }
+            // Kerned and not dirty
+            return (
+                 <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 font-semibold rounded-lg cursor-default">
+                    <SaveIcon />
+                    <span className="hidden xl:inline">Saved</span>
+                </div>
+            );
+        }
+    };
 
     return (
         <header className="bg-gray-50 dark:bg-gray-800 p-4 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0 z-20 shadow-sm">
@@ -62,6 +114,8 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
 
             {/* Right: Actions */}
             <div className="flex-1 flex items-center justify-end gap-2">
+                {renderActionButton()}
+                
                 <button 
                     onClick={onAutoKern} 
                     disabled={isAutoKerning} 
@@ -76,25 +130,14 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                     <span className="hidden xl:inline font-semibold">{autoLabel}</span>
                 </button>
                 
-                {!settings.isAutosaveEnabled && (
-                    <button 
-                        onClick={onSave} 
-                        title={t('save')} 
-                        disabled={!isDirty} 
-                        className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 transition-all active:scale-95 shadow-md"
-                    >
-                        <SaveIcon />
-                        <span className="hidden xl:inline font-semibold">{t('save')}</span>
-                    </button>
-                )}
-                
                 <button 
                     onClick={onRemove} 
-                    title={t('removeKerning')} 
-                    className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 shadow-sm"
+                    title={t('reset')} 
+                    disabled={!isKerned}
+                    className="flex items-center gap-2 px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-yellow-400 transition-all active:scale-95 shadow-sm"
                 >
-                    <TrashIcon />
-                    <span className="hidden xl:inline font-semibold">{t('delete')}</span>
+                    <UndoIcon />
+                    <span className="hidden xl:inline font-semibold">{t('reset')}</span>
                 </button>
             </div>
         </header>

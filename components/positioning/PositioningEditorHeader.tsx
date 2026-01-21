@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Character, FontMetrics } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, PropertiesIcon, SaveIcon, LinkIcon, BrokenLinkIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, PropertiesIcon, SaveIcon, LinkIcon, BrokenLinkIcon, RefreshIcon, CheckIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
 
 interface PositioningEditorHeaderProps {
@@ -27,15 +27,70 @@ interface PositioningEditorHeaderProps {
     onSaveRequest: () => void;
     isLargeScreen: boolean;
     isStripExpanded: boolean;
+    isDirty: boolean;
+    onConfirmPosition: () => void;
 }
 
 const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
     targetLigature, prevPair, nextPair, onNavigate, activeAttachmentClass, isLinked, isPivot,
     canEdit, isPositioned, onResetRequest, isGsubPair, isPropertiesPanelOpen, 
     setIsPropertiesPanelOpen, lsb, setLsb, rsb, setRsb, metrics, isAutosaveEnabled, 
-    onSaveRequest, isLargeScreen, isStripExpanded
+    onSaveRequest, isLargeScreen, isStripExpanded, isDirty, onConfirmPosition
 }) => {
     const { t } = useLocale();
+
+    const renderActionButton = () => {
+        if (!canEdit) return null;
+
+        if (isAutosaveEnabled) {
+            if (!isPositioned) {
+                return (
+                    <button 
+                        onClick={onConfirmPosition} 
+                        title="Accept Default Position"
+                        className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
+                    >
+                        <CheckIcon />
+                        <span className="hidden xl:inline font-semibold">Accept</span>
+                    </button>
+                );
+            }
+            return null; // Autosave handles saves of dirty states
+        } else {
+            // Manual Save Mode
+            if (!isPositioned && !isDirty) {
+                return (
+                    <button 
+                        onClick={onConfirmPosition} 
+                        title="Accept Default Position"
+                        className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
+                    >
+                        <CheckIcon />
+                        <span className="hidden xl:inline font-semibold">Accept Position</span>
+                    </button>
+                );
+            }
+            if (isDirty) {
+                return (
+                    <button 
+                        onClick={onSaveRequest} 
+                        className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
+                        title={t('save')}
+                    >
+                        <SaveIcon />
+                        <span className="hidden xl:inline font-semibold">Save Changes</span>
+                    </button>
+                );
+            }
+            // Positioned and not dirty
+            return (
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 font-semibold rounded-lg cursor-default">
+                    <SaveIcon />
+                    <span className="hidden xl:inline">Saved</span>
+                </div>
+            );
+        }
+    };
 
     return (
         <header className="bg-gray-50 dark:bg-gray-800 p-4 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0 z-20 shadow-sm">
@@ -93,6 +148,8 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
             </div>
 
             <div className="flex-1 flex justify-end items-center gap-2">
+                {renderActionButton()}
+                
                 <button 
                     onClick={onResetRequest} 
                     disabled={!isPositioned} 
@@ -122,17 +179,6 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                             />
                         )}
                     </div>
-                )}
-                
-                {!isAutosaveEnabled && (
-                    <button 
-                        onClick={onSaveRequest} 
-                        className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
-                        title={t('save')}
-                    >
-                        <SaveIcon />
-                        <span className="hidden xl:inline font-semibold">{t('save')}</span>
-                    </button>
                 )}
             </div>
         </header>

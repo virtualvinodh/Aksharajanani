@@ -107,6 +107,15 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
       const results: Character[] = [];
       const seenKeys = new Set<string>();
 
+      // Optimization: Create a lookup map for virtual pairs
+      const virtualPairMap = new Map<string, Character>();
+      allCharacterSets.forEach(set => {
+          set.characters.forEach(c => {
+              if (c.position) virtualPairMap.set(`pos-${c.position[0]}-${c.position[1]}`, c);
+              if (c.kern) virtualPairMap.set(`kern-${c.kern[0]}-${c.kern[1]}`, c);
+          });
+      });
+
       const addChar = (char: Character) => {
           let key = "";
           if (char.unicode !== undefined) key = `uni-${char.unicode}`;
@@ -122,9 +131,7 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
       // 1. Grid Characters (Real)
       allCharacterSets.forEach(set => set.characters.forEach(c => {
           if (c.hidden || c.unicode === undefined) return;
-          // Filter: only linked glyphs (live dependencies)
           const isComponentDep = c.link?.includes(character.name);
-          // Filter: positioned glyphs (syllabic or spacing dependencies)
           const isPairDep = c.position?.includes(character.name) || 
                             c.kern?.includes(character.name);
 
@@ -140,11 +147,17 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
               const base = allCharsByUnicode.get(baseUni);
               const mark = allCharsByUnicode.get(markUni);
               if (base && mark) {
-                  addChar({
-                      name: `${base.name}${mark.name}`,
-                      position: [base.name, mark.name],
-                      glyphClass: 'ligature'
-                  });
+                  const virtualKey = `pos-${base.name}-${mark.name}`;
+                  const existingChar = virtualPairMap.get(virtualKey);
+                  if (existingChar) {
+                      addChar(existingChar);
+                  } else {
+                      addChar({
+                          name: `${base.name}${mark.name}`,
+                          position: [base.name, mark.name],
+                          glyphClass: 'ligature'
+                      });
+                  }
               }
           }
       });
@@ -156,11 +169,17 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
               const left = allCharsByUnicode.get(leftUni);
               const right = allCharsByUnicode.get(rightUni);
               if (left && right) {
-                  addChar({
-                      name: `${left.name}${right.name}`,
-                      kern: [left.name, right.name],
-                      glyphClass: 'ligature'
-                  });
+                  const virtualKey = `kern-${left.name}-${right.name}`;
+                  const existingChar = virtualPairMap.get(virtualKey);
+                  if (existingChar) {
+                      addChar(existingChar);
+                  } else {
+                      addChar({
+                          name: `${left.name}${right.name}`,
+                          kern: [left.name, right.name],
+                          glyphClass: 'ligature'
+                      });
+                  }
               }
           }
       });

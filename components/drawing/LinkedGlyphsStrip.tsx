@@ -6,7 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths, getAccurateGlyphBBox, generateCompositeGlyphData, updateComponentInPaths, getUnifiedPaths } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 import { LeftArrowIcon, RightArrowIcon, LinkIcon, BrokenLinkIcon, FoldIcon, CloseIcon } from '../../constants';
-import { isGlyphDrawn } from '../../utils/glyphUtils';
+import { isGlyphDrawn as isDrawnUtil } from '../../utils/glyphUtils';
 
 interface LinkedGlyphsStripProps {
     title: string;
@@ -35,88 +35,108 @@ declare var UnicodeProperties: any;
 
 const GlyphThumbnail: React.FC<{
     character: Character;
-    glyphData: GlyphData | undefined;
+    displayResult: { displayData: GlyphData | undefined, isAvailable: boolean };
     strokeThickness: number;
     onClick: () => void;
     size?: number; 
-}> = React.memo(({ character, glyphData, strokeThickness, onClick, size = 60 }) => {
+}> = React.memo(({ character, displayResult, strokeThickness, onClick, size = 60 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
+    const { displayData, isAvailable } = displayResult;
+
+    const isDrawn = isDrawnUtil(displayData);
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
-        if (!ctx || !canvas) return;
+        if (!canvas || !isAvailable || !isDrawn) return;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
         ctx.clearRect(0, 0, size, size);
 
-        if (isGlyphDrawn(glyphData)) {
-            const bbox = getAccurateGlyphBBox(glyphData!, strokeThickness);
+        const bbox = getAccurateGlyphBBox(displayData!, strokeThickness);
+        
+        const standardScale = size / DRAWING_CANVAS_SIZE;
+        let scale = standardScale;
+        let tx = 0;
+        let ty = 0;
+
+        if (bbox) {
+            const PADDING = size * 0.1;
+            const availableDim = size - (PADDING * 2);
             
-            const standardScale = size / DRAWING_CANVAS_SIZE;
-            let scale = standardScale;
-            let tx = 0;
-            let ty = 0;
-
-            if (bbox) {
-                const PADDING = size * 0.1;
-                const availableDim = size - (PADDING * 2);
+            if (bbox.width > 0 && bbox.height > 0) {
+                const fitScaleX = availableDim / bbox.width;
+                const fitScaleY = availableDim / bbox.height;
+                const fitScale = Math.min(fitScaleX, fitScaleY);
                 
-                if (bbox.width > 0 && bbox.height > 0) {
-                    const fitScaleX = availableDim / bbox.width;
-                    const fitScaleY = availableDim / bbox.height;
-                    const fitScale = Math.min(fitScaleX, fitScaleY);
-                    
-                    if (fitScale < standardScale) {
-                        scale = fitScale;
-                    }
-                }
-
-                const contentCenterX = bbox.x + bbox.width / 2;
-                const canvasCenter = size / 2;
-                tx = canvasCenter - (contentCenterX * scale);
-
-                let shouldVerticallyCenter = true;
-
-                if (character.glyphClass === 'mark') {
-                    shouldVerticallyCenter = false;
-                } else if (character.unicode && typeof UnicodeProperties !== 'undefined') {
-                    try {
-                        const cat = UnicodeProperties.getCategory(character.unicode);
-                        if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {
-                            shouldVerticallyCenter = false;
-                        }
-                    } catch (e) { }
-                }
-
-                if (shouldVerticallyCenter) {
-                    const contentCenterY = bbox.y + bbox.height / 2;
-                    ty = canvasCenter - (contentCenterY * scale);
-                } else {
-                    ty = (size - (DRAWING_CANVAS_SIZE * scale)) / 2;
+                if (fitScale < standardScale) {
+                    scale = fitScale;
                 }
             }
 
-            ctx.save();
-            ctx.translate(tx, ty);
-            ctx.scale(scale, scale);
-            
-            renderPaths(ctx, glyphData!.paths, {
-                strokeThickness,
-                color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
-            });
-            ctx.restore();
+            const contentCenterX = bbox.x + bbox.width / 2;
+            const canvasCenter = size / 2;
+            tx = canvasCenter - (contentCenterX * scale);
+
+            let shouldVerticallyCenter = true;
+
+            if (character.glyphClass === 'mark') {
+                shouldVerticallyCenter = false;
+            } else if (character.unicode && typeof UnicodeProperties !== 'undefined') {
+                try {
+                    const cat = UnicodeProperties.getCategory(character.unicode);
+                    if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {
+                        shouldVerticallyCenter = false;
+                    }
+                } catch (e) { }
+            }
+
+            if (shouldVerticallyCenter) {
+                const contentCenterY = bbox.y + bbox.height / 2;
+                ty = canvasCenter - (contentCenterY * scale);
+            } else {
+                ty = (size - (DRAWING_CANVAS_SIZE * scale)) / 2;
+            }
         }
-    }, [glyphData, strokeThickness, theme, size, character]);
+
+        ctx.save();
+        ctx.translate(tx, ty);
+        ctx.scale(scale, scale);
+        
+        renderPaths(ctx, displayData!.paths, {
+            strokeThickness,
+            color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
+        });
+        ctx.restore();
+    }, [displayData, strokeThickness, theme, size, character, isAvailable, isDrawn]);
+
+    const effectiveOnClick = isAvailable ? onClick : () => {};
+    const containerClasses = `flex-shrink-0 flex flex-col items-center justify-center bg-white dark:bg-gray-800 border rounded-lg shadow-sm transition-all p-1 group
+        ${!isAvailable 
+            ? 'opacity-50 grayscale cursor-not-allowed border-gray-200 dark:border-gray-700' 
+            : 'cursor-pointer hover:ring-2 hover:ring-indigo-500 border-gray-200 dark:border-gray-700'}`;
 
     return (
         <div 
-            onClick={onClick}
+            onClick={effectiveOnClick}
             style={{ width: size, height: size }}
-            className="flex-shrink-0 flex flex-col items-center justify-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all p-1 group"
+            className={containerClasses}
             title={character.name}
         >
-            <canvas ref={canvasRef} width={size} height={size} />
+            {isAvailable && isDrawn ? (
+                <canvas ref={canvasRef} width={size} height={size} />
+            ) : (
+                 <div className="w-full h-full flex items-center justify-center">
+                    <span 
+                        className="text-gray-300 dark:text-gray-600 font-bold text-2xl truncate"
+                        style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}
+                    >
+                        {character.name}
+                    </span>
+                </div>
+            )}
         </div>
     );
 });
@@ -132,8 +152,8 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
     
     const useVirtuoso = items.length >= VIRTUOSO_THRESHOLD && !isExpanded;
 
-    const getDisplayData = useCallback((char: Character): GlyphData | undefined => {
-        // Create a rendering context that injects live data from the editor
+    const getDisplayData = useCallback((char: Character): { displayData: GlyphData | undefined, isAvailable: boolean } => {
+        // Build the render context that injects live data from the editor for real-time previews.
         const renderCtx: UnifiedRenderContext = {
             glyphDataMap: new Proxy(glyphDataMap, {
                 get(target, prop) {
@@ -158,64 +178,39 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
             groups: groups || {}
         };
 
-        // 1. Syllables / Kerned Pairs (Virtual Assembly)
-        if (char.position || char.kern) {
-            return { paths: getUnifiedPaths(char, renderCtx) };
-        }
-
-        // 2. Direct Drawing Link (Legacy Path Link)
-        let displayData = char.unicode !== undefined ? glyphDataMap.get(char.unicode) : undefined;
-        
-        if (variant === 'dependents' && liveSourcePaths && sourceCharacter && displayData) {
-            const components = char.link || char.composite || [];
-            let currentPaths = [...displayData.paths];
-            let pathsModified = false;
-
-            if (currentPaths.length > 0) {
-                components.forEach((compName, index) => {
-                    if (compName === sourceCharacter.name) {
-                        const updated = updateComponentInPaths(
-                            currentPaths,
-                            index,
-                            liveSourcePaths,
-                            settings.strokeThickness,
-                            char.compositeTransform
-                        );
-                        if (updated) {
-                            currentPaths = updated;
-                            pathsModified = true;
-                        }
-                    }
+        // Availability check: Sources are always available. Dependents must have all their sources drawn.
+        let isAvailable = true;
+        if (variant === 'dependents') {
+            const sourceNames = char.link || char.composite || char.position || char.kern;
+            if (sourceNames && allCharsByName) {
+                isAvailable = (sourceNames as string[]).every((name: string) => {
+                    const sourceChar = allCharsByName.get(name);
+                    if (!sourceChar || sourceChar.unicode === undefined) return false;
+                    // For live updates, check against the proxy map.
+                    return isDrawnUtil(renderCtx.glyphDataMap.get(sourceChar.unicode));
                 });
-                if (pathsModified) {
-                    displayData = { paths: currentPaths };
-                }
-            } 
-            else if (allCharsByName && metrics && characterSets) {
-                // If the target has no paths yet, regenerate it from components
-                const liveComposite = generateCompositeGlyphData({
-                    character: char,
-                    allCharsByName: allCharsByName,
-                    allGlyphData: renderCtx.glyphDataMap,
-                    settings: settings,
-                    metrics: metrics,
-                    markAttachmentRules: markAttachmentRules || null,
-                    allCharacterSets: characterSets,
-                    groups: groups || {}
-                });
-                if (liveComposite) {
-                    displayData = liveComposite;
-                }
             }
         }
-        return displayData;
-    }, [glyphDataMap, liveSourcePaths, sourceCharacter, variant, settings, allCharsByName, metrics, characterSets, groups, kerningMap, markPositioningMap]);
+
+        if (!isAvailable) {
+            return { displayData: undefined, isAvailable: false };
+        }
+        
+        // If available, compute the paths using the unified renderer.
+        const resolvedPaths = getUnifiedPaths(char, renderCtx);
+        const hasPaths = resolvedPaths.length > 0 && resolvedPaths.some(p => p.points.length > 0 || (p.segmentGroups && p.segmentGroups.length > 0));
+
+        return { displayData: hasPaths ? { paths: resolvedPaths } : undefined, isAvailable: true };
+    }, [
+        glyphDataMap, liveSourcePaths, sourceCharacter, variant, settings, allCharsByName, 
+        metrics, characterSets, groups, kerningMap, markPositioningMap, markAttachmentRules
+    ]);
 
     const renderThumb = (char: Character, size: number) => (
         <GlyphThumbnail 
             key={char.unicode || char.name}
             character={char}
-            glyphData={getDisplayData(char)}
+            displayResult={getDisplayData(char)}
             strokeThickness={settings.strokeThickness}
             onClick={() => {
                 if (isExpanded) setIsExpanded(false);

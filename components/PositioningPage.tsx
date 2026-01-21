@@ -314,6 +314,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 glyphDataMap={glyphDataMap}
                 markPositioningMap={markPositioningMap}
                 onSave={handleSavePair}
+                onConfirmPosition={handleConfirmPosition}
                 onClose={() => { setEditingPair(null); setEditingIndex(null); }}
                 onReset={handleResetSinglePair}
                 settings={settings}

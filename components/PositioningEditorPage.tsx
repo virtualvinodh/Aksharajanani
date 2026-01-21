@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -16,7 +15,7 @@ import { CloseIcon } from '../constants';
 import { VEC } from '../utils/vectorUtils';
 import { usePositioningSession } from '../hooks/positioning/usePositioningSession';
 import { deepClone } from '../utils/cloneUtils';
-import { expandMembers } from '../services/groupExpansionService';
+import { expandMembers } from '../../services/groupExpansionService';
 
 interface PositioningEditorPageProps {
     baseChar: Character;
@@ -25,6 +24,7 @@ interface PositioningEditorPageProps {
     glyphDataMap: Map<number, GlyphData>;
     markPositioningMap: MarkPositioningMap;
     onSave: (base: Character, mark: Character, targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => void;
+    onConfirmPosition: (base: Character, mark: Character, ligature: Character) => void;
     onClose: () => void;
     onReset: (baseChar: Character, markChar: Character, targetLigature: Character) => void;
     settings: AppSettings;
@@ -172,6 +172,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 onSaveRequest={() => session.handleSave()} 
                 isLargeScreen={isLargeScreen} 
                 isStripExpanded={isStripExpanded}
+                isDirty={session.hasUnsavedChanges}
+                onConfirmPosition={() => props.onConfirmPosition(props.baseChar, props.markChar, props.targetLigature)}
             />
 
             <PositioningEditorWorkspace 

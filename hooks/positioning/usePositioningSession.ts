@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { 
     Character, GlyphData, Point, Path, AppSettings, FontMetrics, 
@@ -220,22 +219,25 @@ export const usePositioningSession = ({
         }
     }, [settings.isAutosaveEnabled, handleSave, glyphDataMap, markChar.unicode, settings.strokeThickness]);
 
+    const hasPathChanges = JSON.stringify(markPaths) !== JSON.stringify(initialMarkPaths);
+    const hasBearingChanges = lsb !== targetLigature.lsb || rsb !== targetLigature.rsb;
+    const hasUnsavedChanges = hasPathChanges || hasBearingChanges;
+
     const handleNavigationAttempt = useCallback((direction: 'prev' | 'next' | 'back') => {
-        const hasChanges = JSON.stringify(markPaths) !== JSON.stringify(initialMarkPaths) || lsb !== targetLigature.lsb || rsb !== targetLigature.rsb;
         const proceed = () => { 
             if (direction === 'back') onClose(); 
             else onNavigate(direction); 
         };
         if (settings.isAutosaveEnabled) { 
-            if (hasChanges) handleSave(currentOffset, false); 
+            if (hasUnsavedChanges) handleSave(currentOffset, false); 
             proceed(); 
         }
-        else if (hasChanges) { 
+        else if (hasUnsavedChanges) { 
             setPendingNavigation(direction); 
             setIsUnsavedModalOpen(true); 
         }
         else proceed();
-    }, [settings.isAutosaveEnabled, markPaths, initialMarkPaths, lsb, rsb, targetLigature, onClose, onNavigate, handleSave, currentOffset]);
+    }, [settings.isAutosaveEnabled, hasUnsavedChanges, onClose, onNavigate, handleSave, currentOffset]);
 
     const handleManualCommit = (xOverride?: string, yOverride?: string) => {
         const inputX = parseFloat(xOverride ?? manualX), inputY = parseFloat(yOverride ?? manualY);
@@ -278,6 +280,8 @@ export const usePositioningSession = ({
         handlePathsChange, handleSave, handleNavigationAttempt, handleManualCommit,
         pivotName, isPivot, activeAttachmentClass, activeClassType, hasDualContext, setOverrideClassType,
         canEdit: !activeAttachmentClass || !isLinked || isPivot,
-        movementConstraint
+        movementConstraint,
+// FIX: Added 'hasUnsavedChanges' to the returned object.
+        hasUnsavedChanges
     };
 };
