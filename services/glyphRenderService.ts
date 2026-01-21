@@ -1,3 +1,4 @@
+
 import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings, ComponentTransform, PositioningRules, UnifiedRenderContext } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -697,7 +698,7 @@ export const generateCompositeGlyphData = ({
         if (xShift !== 0 || yShift !== 0) {
             transformed = transformed.map((p: Path) => ({
                 ...p,
-                points: p.points.map((pt: Point) => ({ x: pt.x + xShift, y: pt.y + xShift })),
+                points: p.points.map((pt: Point) => ({ x: pt.x + xShift, y: pt.y + yShift })),
                 segmentGroups: p.segmentGroups ? p.segmentGroups.map((group: Segment[]) => group.map(seg => ({ ...seg, point: { x: seg.point.x + xShift, y: seg.point.y + yShift } }))) : undefined
             }));
         }

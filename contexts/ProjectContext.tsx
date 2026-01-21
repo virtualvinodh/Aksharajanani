@@ -4,7 +4,7 @@ import {
     GlyphData, KerningMap, CharacterSet, Path, 
     ProjectData, ScriptConfig, AppSettings, FontMetrics, Character,
     PositioningRules, MarkAttachmentRules, AttachmentClass, RecommendedKerning,
-    GuideFont
+    GuideFont, ComponentTransform
 } from '../types';
 
 // --- Types moved from CharacterContext ---
@@ -16,7 +16,7 @@ type CharacterAction =
     | { type: 'UPDATE_CHARACTER_METADATA', payload: { unicode: number, lsb?: number, rsb?: number, glyphClass?: Character['glyphClass'], advWidth?: number | string } }
     | { type: 'UPDATE_CHARACTER_BEARINGS', payload: { unicode: number, lsb?: number, rsb?: number } }
     | { type: 'ADD_CHARACTERS', payload: { characters: Character[], activeTabNameKey: string } }
-    | { type: 'UNLINK_GLYPH', payload: { unicode: number } }
+    | { type: 'UNLINK_GLYPH', payload: { unicode: number, transforms?: ComponentTransform[] } }
     | { type: 'RELINK_GLYPH', payload: { unicode: number } }
     | { type: 'RESET' };
 
@@ -188,18 +188,30 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                         characters: set.characters.map(char => {
                             if (char.unicode === action.payload.unicode) {
                                 const newChar = { ...char };
+                                
                                 // Determine the type of link being broken
                                 if (newChar.position) {
                                     newChar.sourceLink = newChar.position;
                                     newChar.sourceLinkType = 'position';
-                                    newChar.composite = newChar.position; // Convert to editable composite
+                                    newChar.composite = newChar.position; 
                                     delete newChar.position;
+                                } else if (newChar.kern) {
+                                    newChar.sourceLink = newChar.kern;
+                                    newChar.sourceLinkType = 'kern';
+                                    newChar.composite = newChar.kern;
+                                    delete newChar.kern;
                                 } else if (newChar.link) {
                                     newChar.sourceLink = newChar.link;
                                     newChar.sourceLinkType = 'link';
-                                    newChar.composite = newChar.link; // Convert to editable composite
+                                    newChar.composite = newChar.link; 
                                     delete newChar.link;
                                 }
+
+                                // Apply optional visual transforms passed from the hook calculation
+                                if (action.payload.transforms) {
+                                    newChar.compositeTransform = action.payload.transforms;
+                                }
+                                
                                 return newChar;
                             }
                             return char;
@@ -218,6 +230,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                                 // Check stored type to decide restoration target
                                 if (newChar.sourceLinkType === 'position') {
                                     newChar.position = newChar.sourceLink as [string, string];
+                                } else if (newChar.sourceLinkType === 'kern') {
+                                    newChar.kern = newChar.sourceLink as [string, string];
                                 } else {
                                     // Default to standard link if type is 'link' or missing (legacy)
                                     newChar.link = newChar.sourceLink;
@@ -225,6 +239,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                                 delete newChar.sourceLink;
                                 delete newChar.sourceLinkType;
                                 delete newChar.composite;
+                                delete newChar.compositeTransform; // Clear manual edits
                                 return newChar;
                             }
                             return char;

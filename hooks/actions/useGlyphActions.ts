@@ -7,13 +7,14 @@ import { usePositioning } from '../../contexts/PositioningContext';
 import { useKerning } from '../../contexts/KerningContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { Character, GlyphData, Path, Point, CharacterSet } from '../../types';
+import { Character, GlyphData, Path, Point, CharacterSet, ComponentTransform } from '../../types';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
-import { generateCompositeGlyphData, updateComponentInPaths, getAccurateGlyphBBox } from '../../services/glyphRenderService';
+import { generateCompositeGlyphData, updateComponentInPaths, getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../../services/glyphRenderService';
 import { VEC } from '../../utils/vectorUtils';
 import * as dbService from '../../services/dbService';
 import { deepClone } from '../../utils/cloneUtils';
 import { useRules } from '../../contexts/RulesContext';
+import { expandMembers } from '../../services/groupExpansionService';
 
 declare var UnicodeProperties: any;
 
@@ -37,7 +38,7 @@ export const useGlyphActions = (
     const { t } = useLocale();
     const layout = useLayout();
     // MIGRATION: Replaced useCharacter with useProject
-    const { characterSets, allCharsByUnicode, allCharsByName, dispatchCharacterAction: characterDispatch, markAttachmentRules } = useProject();
+    const { characterSets, allCharsByUnicode, allCharsByName, dispatchCharacterAction: characterDispatch, markAttachmentRules, positioningRules } = useProject();
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
     const { settings, metrics, dispatch: settingsDispatch } = useSettings();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
@@ -565,13 +566,99 @@ export const useGlyphActions = (
         const charToUnlock = allCharsByUnicode.get(unicode);
         if (!charToUnlock) return;
         
-        // Determine the type of link to preserve correct history
-        let sourceType: 'position' | 'link' | undefined;
+        let sourceType: 'position' | 'link' | 'kern' | undefined;
         let components: string[] | undefined;
+        let transforms: ComponentTransform[] | undefined;
         
+        // Determine the type of link to preserve correct history
         if (charToUnlock.position) {
             sourceType = 'position';
             components = charToUnlock.position;
+
+            // FIX: Calculate transforms to preserve visual positioning for Positioned Pairs
+            if (settings && metrics && glyphDataMap && components.length === 2) {
+                const baseName = components[0];
+                const markName = components[1];
+                const baseChar = allCharsByName.get(baseName);
+                const markChar = allCharsByName.get(markName);
+
+                if (baseChar?.unicode !== undefined && markChar?.unicode !== undefined) {
+                    const baseGlyph = glyphDataMap.get(baseChar.unicode);
+                    const markGlyph = glyphDataMap.get(markChar.unicode);
+
+                    if (isGlyphDrawn(baseGlyph) && isGlyphDrawn(markGlyph)) {
+                        const pairKey = `${baseChar.unicode}-${markChar.unicode}`;
+                        
+                        // 1. Try to get manual offset
+                        let offset = markPositioningMap.get(pairKey);
+
+                        // 2. If no manual offset, calculate default
+                        if (!offset) {
+                             const baseBbox = getAccurateGlyphBBox(baseGlyph!.paths, settings.strokeThickness);
+                             const markBbox = getAccurateGlyphBBox(markGlyph!.paths, settings.strokeThickness);
+                             
+                             // Resolve constraint
+                             let constraint: 'horizontal' | 'vertical' | 'none' = 'none';
+                             const rule = positioningRules?.find(r => 
+                                expandMembers(r.base, groups, characterSets).includes(baseChar.name) && 
+                                expandMembers(r.mark || [], groups, characterSets).includes(markChar.name)
+                             );
+                             if (rule?.movement === 'horizontal' || rule?.movement === 'vertical') {
+                                 constraint = rule.movement;
+                             }
+
+                             offset = calculateDefaultMarkOffset(
+                                baseChar, markChar, baseBbox, markBbox,
+                                markAttachmentRules, metrics,
+                                characterSets, false, groups, constraint
+                             );
+                        }
+                        
+                        if (offset) {
+                            transforms = [
+                                { scale: 1, x: 0, y: 0, mode: 'relative' },
+                                { scale: 1, x: offset.x, y: offset.y, mode: 'relative' }
+                            ];
+                        }
+                    }
+                }
+            }
+        } else if (charToUnlock.kern) {
+            sourceType = 'kern';
+            components = charToUnlock.kern;
+            
+            // Calculate transforms to preserve visual layout for kerning pair
+            if (settings && metrics && glyphDataMap) {
+                const leftName = components[0];
+                const rightName = components[1];
+                const leftChar = allCharsByName.get(leftName);
+                const rightChar = allCharsByName.get(rightName);
+                
+                if (leftChar?.unicode !== undefined && rightChar?.unicode !== undefined) {
+                    const leftGlyph = glyphDataMap.get(leftChar.unicode);
+                    const rightGlyph = glyphDataMap.get(rightChar.unicode);
+                    
+                    if (isGlyphDrawn(leftGlyph) && isGlyphDrawn(rightGlyph)) {
+                        const lBox = getAccurateGlyphBBox(leftGlyph!.paths, settings.strokeThickness);
+                        const rBox = getAccurateGlyphBBox(rightGlyph!.paths, settings.strokeThickness);
+                        
+                        if (lBox && rBox) {
+                            const pairKey = `${leftChar.unicode}-${rightChar.unicode}`;
+                            const kernVal = kerningMap.get(pairKey) || 0;
+                            const rsbL = leftChar.rsb ?? metrics.defaultRSB;
+                            const lsbR = rightChar.lsb ?? metrics.defaultLSB;
+                            
+                            // Visual Shift X logic from renderer
+                            const shiftX = (lBox.x + lBox.width) + rsbL + kernVal + lsbR - rBox.x;
+                            
+                            transforms = [
+                                { scale: 1, x: 0, y: 0, mode: 'relative' },
+                                { scale: 1, x: shiftX, y: 0, mode: 'relative' }
+                            ];
+                        }
+                    }
+                }
+            }
         } else if (charToUnlock.link) {
             sourceType = 'link';
             components = charToUnlock.link;
@@ -583,6 +670,9 @@ export const useGlyphActions = (
         
         // Convert to editable composite
         unlockedChar.composite = components;
+        if (transforms) {
+            unlockedChar.compositeTransform = transforms;
+        }
         
         // Save history
         unlockedChar.sourceLink = components;
@@ -592,12 +682,14 @@ export const useGlyphActions = (
         
         delete unlockedChar.link;
         delete unlockedChar.position; // Important if it was a position pair
+        delete unlockedChar.kern;
     
         if (layout.selectedCharacter?.unicode === unicode) {
             layout.selectCharacter(unlockedChar);
         }
         
-        characterDispatch({ type: 'UNLINK_GLYPH', payload: { unicode } });
+        // Pass optional transforms to reducer to set initial state correctly
+        characterDispatch({ type: 'UNLINK_GLYPH', payload: { unicode, transforms } });
     
         dependencyMap.current.forEach((dependents, key) => {
             if (dependents.has(unicode)) {
@@ -605,58 +697,72 @@ export const useGlyphActions = (
             }
         });
     
-    }, [characterDispatch, allCharsByUnicode, dependencyMap, layout]);
+    }, [characterDispatch, allCharsByUnicode, dependencyMap, layout, allCharsByName, glyphDataMap, kerningMap, settings, metrics, markPositioningMap, markAttachmentRules, characterSets, groups, positioningRules]);
 
     const handleRelinkGlyph = useCallback((unicode: number) => {
         const charToRelink = allCharsByUnicode.get(unicode);
         if (!charToRelink || !charToRelink.sourceLink) return;
 
         const relinkedChar = { ...charToRelink };
-        
-        // --- SMART RELINK LOGIC ---
-        // Restore based on stored type if available, otherwise assume standard link
         const targetType = relinkedChar.sourceLinkType || 'link';
         
         if (targetType === 'position') {
             // Restore as Position Pair
             relinkedChar.position = relinkedChar.sourceLink as [string, string];
             
-            // Critical Step: Capture current visual offsets for the GPOS map
-            // We need to reverse-engineer the position from the current compositeTransform if possible,
-            // or simply use the current bounding box delta if no transforms are explicit.
-            
-            // If the glyph is currently a composite with manual transforms, we can try to extract the delta.
-            // Assuming index 0 is base and index 1 is mark (standard for position pairs)
+            // Extract offsets from manual edit to save back to map
             const currentGlyph = glyphDataMap.get(unicode);
             const baseCompName = relinkedChar.sourceLink[0];
             const markCompName = relinkedChar.sourceLink[1];
             
-            if (currentGlyph && settings && metrics && characterSets) {
-                // Calculate where the components ARE visually in the manual edit
-                // Since 'composite' glyphs bake paths into a single array when edited manually in some modes,
-                // retrieving exact coordinates might be complex if they were merged.
-                // However, if it's still a 'composite' type (not raw drawing), we might have transforms.
+            if (relinkedChar.compositeTransform && relinkedChar.compositeTransform.length > 1) {
+                const baseT = relinkedChar.compositeTransform[0];
+                const markT = relinkedChar.compositeTransform[1];
+                const x = (markT.x || 0) - (baseT.x || 0);
+                const y = (markT.y || 0) - (baseT.y || 0);
                 
-                let detectedOffset: Point | null = null;
-                
-                // Check explicit transforms first
-                if (relinkedChar.compositeTransform && relinkedChar.compositeTransform.length > 1) {
-                    const baseT = relinkedChar.compositeTransform[0];
-                    const markT = relinkedChar.compositeTransform[1];
-                    // Calculate relative offset
-                    const x = (markT.x || 0) - (baseT.x || 0);
-                    const y = (markT.y || 0) - (baseT.y || 0);
-                    detectedOffset = { x, y };
-                } 
-                // Fallback: If drawn manually, we can't easily guess. 
-                // We'll rely on the existing markPositioningMap entry if it exists, or recalculate default.
-                
-                if (detectedOffset) {
-                    // Update Map with the detected position from manual edits
-                    const key = `${allCharsByName.get(baseCompName)?.unicode}-${allCharsByName.get(markCompName)?.unicode}`;
-                    positioningDispatch({ type: 'SET_MAP', payload: new Map(markPositioningMap).set(key, detectedOffset) });
-                }
+                const key = `${allCharsByName.get(baseCompName)?.unicode}-${allCharsByName.get(markCompName)?.unicode}`;
+                positioningDispatch({ type: 'SET_MAP', payload: new Map(markPositioningMap).set(key, { x, y }) });
             }
+
+        } else if (targetType === 'kern') {
+             // Restore as Kerning Pair
+             relinkedChar.kern = relinkedChar.sourceLink as [string, string];
+
+             // Reverse-engineer the kerning value from the manual transform
+             if (relinkedChar.compositeTransform && relinkedChar.compositeTransform.length > 1 && settings && metrics) {
+                 const leftName = relinkedChar.sourceLink[0];
+                 const rightName = relinkedChar.sourceLink[1];
+                 const leftChar = allCharsByName.get(leftName);
+                 const rightChar = allCharsByName.get(rightName);
+                 
+                 if (leftChar?.unicode !== undefined && rightChar?.unicode !== undefined) {
+                     const leftGlyph = glyphDataMap.get(leftChar.unicode);
+                     const rightGlyph = glyphDataMap.get(rightChar.unicode);
+                     
+                     if (isGlyphDrawn(leftGlyph) && isGlyphDrawn(rightGlyph)) {
+                        const lBox = getAccurateGlyphBBox(leftGlyph!.paths, settings.strokeThickness);
+                        const rBox = getAccurateGlyphBBox(rightGlyph!.paths, settings.strokeThickness);
+                        
+                        if (lBox && rBox) {
+                            const baseT = relinkedChar.compositeTransform[0];
+                            const markT = relinkedChar.compositeTransform[1];
+                            const currentShiftX = (markT.x || 0) - (baseT.x || 0);
+                            
+                            const rsbL = leftChar.rsb ?? metrics.defaultRSB;
+                            const lsbR = rightChar.lsb ?? metrics.defaultLSB;
+                            
+                            // Formula: shiftX = (lBox.x + lBox.width) + rsbL + kernVal + lsbR - rBox.x
+                            // KernVal = shiftX - (lBox.x + lBox.width) - rsbL - lsbR + rBox.x
+                            
+                            const calculatedKern = Math.round(currentShiftX - (lBox.x + lBox.width) - rsbL - lsbR + rBox.x);
+                            
+                            const key = `${leftChar.unicode}-${rightChar.unicode}`;
+                            kerningDispatch({ type: 'SET_MAP', payload: new Map(kerningMap).set(key, calculatedKern) });
+                        }
+                     }
+                 }
+             }
 
         } else {
             // Restore as Standard Link
@@ -677,12 +783,9 @@ export const useGlyphActions = (
         
         // Regenerate visuals
         if (settings && metrics && characterSets) {
-            if (targetType === 'position') {
-                // For Position pairs, we trigger the positioning update service logic implicitly
-                // via generateCompositeGlyphData which now handles 'position' property too via getUnifiedPaths logic?
-                // Actually generateCompositeGlyphData handles 'link'/'composite'. 
-                // Positioned glyphs are generated dynamically. 
-                // We should probably clear the static glyph data so the dynamic renderer takes over.
+            if (targetType === 'position' || targetType === 'kern') {
+                // For Position/Kern pairs, we rely on the dynamic renderer (getUnifiedPaths) via the unified card/editor.
+                // We clear the static data so the dynamic logic takes over.
                 glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode } });
             } else {
                 // For Standard Links, regenerate the composite
@@ -708,7 +811,7 @@ export const useGlyphActions = (
         }
 
         // Restore dependencies
-        const targetList = relinkedChar.link || relinkedChar.position;
+        const targetList = relinkedChar.link || relinkedChar.position || relinkedChar.kern;
         if (targetList) {
             targetList.forEach(compName => {
                 const componentChar = allCharsByName.get(compName);
@@ -720,11 +823,11 @@ export const useGlyphActions = (
                 }
             });
         }
-    }, [characterDispatch, glyphDataDispatch, positioningDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap, groups, markPositioningMap]);
+    }, [characterDispatch, glyphDataDispatch, positioningDispatch, kerningDispatch, allCharsByUnicode, allCharsByName, dependencyMap, layout, settings, metrics, markAttachmentRules, characterSets, glyphDataMap, groups, markPositioningMap, kerningMap]);
     
     const handleUpdateDependencies = useCallback((unicode: number, newLinkComponents: string[] | null) => {
         const currentChar = allCharsByUnicode.get(unicode);
-        const oldComponents = currentChar?.link || currentChar?.composite || currentChar?.position;
+        const oldComponents = currentChar?.link || currentChar?.composite || currentChar?.position || currentChar?.kern;
 
         if (oldComponents) {
             oldComponents.forEach(compName => {

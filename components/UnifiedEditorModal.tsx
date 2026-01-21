@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, CharacterSet, MarkAttachmentRules, Point, Path, ComponentTransform } from '../types';
 import { useLayout } from '../contexts/LayoutContext';
@@ -202,6 +203,16 @@ const UnifiedEditorModal: React.FC<any> = ({
       if (!components || !character.unicode) return;
       
       const newChar = { ...character };
+
+      // Save source link info for "Relink" capability
+      if (character.position) {
+          newChar.sourceLink = character.position;
+          newChar.sourceLinkType = 'position';
+      } else if (character.kern) {
+          newChar.sourceLink = character.kern;
+          newChar.sourceLinkType = 'kern';
+      }
+
       delete newChar.position;
       delete newChar.kern;
       
