@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -156,7 +157,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
         if (!props.onConvertToComposite) return;
         const transforms: ComponentTransform[] = [
             { scale: 1, x: 0, y: 0, mode: 'relative' }, // Base
-            { scale: 1, x: session.currentOffset.x, y: session.currentOffset.y, mode: 'relative' } // Mark
+            { scale: 1, x: session.currentOffset.x, y: session.currentOffset.y, mode: 'absolute' } // Mark
         ];
         props.onConvertToComposite(transforms);
         setIsDetachConfirmOpen(false);

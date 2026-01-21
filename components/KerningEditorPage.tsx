@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning, CharacterSet, ComponentTransform } from '../types';
 import KerningEditorHeader from './kerning/KerningEditorHeader';
@@ -99,7 +100,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 
                 const transforms: ComponentTransform[] = [
                     { scale: 1, x: 0, y: 0, mode: 'relative' },
-                    { scale: 1, x: rightTranslateX, y: 0, mode: 'relative' }
+                    { scale: 1, x: rightTranslateX, y: 0, mode: 'absolute' }
                 ];
                 
                 props.onConvertToComposite(transforms);

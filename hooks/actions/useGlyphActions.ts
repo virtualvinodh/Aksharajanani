@@ -617,7 +617,7 @@ export const useGlyphActions = (
                         if (offset) {
                             transforms = [
                                 { scale: 1, x: 0, y: 0, mode: 'relative' },
-                                { scale: 1, x: offset.x, y: offset.y, mode: 'relative' }
+                                { scale: 1, x: offset.x, y: offset.y, mode: 'absolute' }
                             ];
                         }
                     }
@@ -653,7 +653,7 @@ export const useGlyphActions = (
                             
                             transforms = [
                                 { scale: 1, x: 0, y: 0, mode: 'relative' },
-                                { scale: 1, x: shiftX, y: 0, mode: 'relative' }
+                                { scale: 1, x: shiftX, y: 0, mode: 'absolute' }
                             ];
                         }
                     }
