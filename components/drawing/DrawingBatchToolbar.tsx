@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
-import { TransformIcon, SettingsIcon, CompareIcon, TrashIcon, CloseIcon, BatchIcon } from '../../constants';
+import { TransformIcon, SettingsIcon, CompareIcon, TrashIcon, CloseIcon, CheckCircleIcon } from '../../constants';
 
 interface DrawingBatchToolbarProps {
     selectionSize: number;
@@ -13,6 +12,8 @@ interface DrawingBatchToolbarProps {
     onCompare: () => void;
     onDelete: () => void;
     onClose: () => void;
+    showAccept?: boolean;
+    onAccept?: () => void;
 }
 
 const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
@@ -36,6 +37,17 @@ const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
 
                 {/* Main Actions Section */}
                 <div className="flex flex-wrap items-center justify-center gap-2 flex-grow">
+                    {props.showAccept && (
+                        <button 
+                            onClick={props.onAccept} 
+                            disabled={props.selectionSize === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold text-sm rounded-xl hover:bg-green-700 disabled:opacity-30 transition-all shadow-md active:scale-95"
+                        >
+                            <CheckCircleIcon className="w-4 h-4" />
+                            <span className="hidden lg:inline">{t('acceptAllDefaults')}</span>
+                        </button>
+                    )}
+                    
                     <button 
                         onClick={props.onTransform} 
                         disabled={props.selectionSize === 0}
