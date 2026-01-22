@@ -74,7 +74,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     calligraphyAngle: calligraphyAngle as 45 | 30 | 15,
     lsb, rsb, onMetricsChange, metrics,
     disableAutoFit,
-    disableTransformations, lockedMessage, transformMode, movementConstraint
+    disableTransformations, lockedMessage, transformMode, movementConstraint,
+    currentCharacter
   });
 
   const drawControlPoints = useCallback((ctx: CanvasRenderingContext2D, pathsToDraw: Path[], focusedId: string | null, selectedPoint: DraggedPointInfo | null) => {
@@ -335,6 +336,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         const lsbX = glyphBBox.x - lsbInPixels;
         const rsbX = glyphBBox.x + glyphBBox.width + rsbInPixels;
 
+        // Content BBox
         ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)';
         ctx.lineWidth = Math.max(1.0, 1.0 / zoom); 
         ctx.beginPath(); 
@@ -342,45 +344,50 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.beginPath(); 
         ctx.moveTo(glyphBBox.x + glyphBBox.width, guideStart); ctx.lineTo(glyphBBox.x + glyphBBox.width, guideStart + guideWidth); ctx.stroke();
 
-        const isLsbActive = hoveredMetric === 'lsb' || draggingMetric === 'lsb';
-        ctx.strokeStyle = isLsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.5)' : 'rgba(217, 119, 6, 0.6)');
-        ctx.lineWidth = (isLsbActive ? 4 : 2) / zoom;
-        ctx.setLineDash(isLsbActive ? [] : [8 / zoom, 6 / zoom]);
-        ctx.beginPath(); 
-        ctx.moveTo(lsbX, guideStart); ctx.lineTo(lsbX, guideStart + guideWidth); 
-        ctx.stroke();
+        // Check for non-spacing
+        const isNonSpacing = currentCharacter.advWidth === 0 || currentCharacter.advWidth === '0';
 
-        const isRsbActive = hoveredMetric === 'rsb' || draggingMetric === 'rsb';
-        ctx.strokeStyle = isRsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.5)' : 'rgba(217, 119, 6, 0.6)');
-        ctx.lineWidth = (isRsbActive ? 4 : 2) / zoom;
-        ctx.setLineDash(isRsbActive ? [] : [8 / zoom, 6 / zoom]);
-        ctx.beginPath(); 
-        ctx.moveTo(rsbX, guideStart); ctx.lineTo(rsbX, guideStart + guideWidth); 
-        ctx.stroke();
-
-        if (draggingMetric) {
-            const activeX = draggingMetric === 'lsb' ? lsbX : rsbX;
-            const activeVal = draggingMetric === 'lsb' ? lsbVal : rsbVal;
-            const label = draggingMetric === 'lsb' ? 'LSB' : 'RSB';
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, 0, 0); 
-            const screenX = (activeX * zoom) + viewOffset.x;
-            const screenY = (glyphBBox.y * zoom) + viewOffset.y - 30;
-            const text = `${label}: ${Math.round(activeVal)}`;
-            ctx.font = 'bold 14px sans-serif';
-            const textWidth = ctx.measureText(text).width + 16;
-            ctx.fillStyle = theme === 'dark' ? '#1f2937' : '#ffffff';
-            ctx.strokeStyle = '#6366f1';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.roundRect(screenX - textWidth/2, screenY - 20, textWidth, 30, 6);
-            ctx.fill();
+        if (!isNonSpacing) {
+            const isLsbActive = hoveredMetric === 'lsb' || draggingMetric === 'lsb';
+            ctx.strokeStyle = isLsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.5)' : 'rgba(217, 119, 6, 0.6)');
+            ctx.lineWidth = (isLsbActive ? 4 : 2) / zoom;
+            ctx.setLineDash(isLsbActive ? [] : [8 / zoom, 6 / zoom]);
+            ctx.beginPath(); 
+            ctx.moveTo(lsbX, guideStart); ctx.lineTo(lsbX, guideStart + guideWidth); 
             ctx.stroke();
-            ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#111827';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(text, screenX, screenY - 5);
-            ctx.restore();
+
+            const isRsbActive = hoveredMetric === 'rsb' || draggingMetric === 'rsb';
+            ctx.strokeStyle = isRsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.5)' : 'rgba(217, 119, 6, 0.6)');
+            ctx.lineWidth = (isRsbActive ? 4 : 2) / zoom;
+            ctx.setLineDash(isRsbActive ? [] : [8 / zoom, 6 / zoom]);
+            ctx.beginPath(); 
+            ctx.moveTo(rsbX, guideStart); ctx.lineTo(rsbX, guideStart + guideWidth); 
+            ctx.stroke();
+
+            if (draggingMetric) {
+                const activeX = draggingMetric === 'lsb' ? lsbX : rsbX;
+                const activeVal = draggingMetric === 'lsb' ? lsbVal : rsbVal;
+                const label = draggingMetric === 'lsb' ? 'LSB' : 'RSB';
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0); 
+                const screenX = (activeX * zoom) + viewOffset.x;
+                const screenY = (glyphBBox.y * zoom) + viewOffset.y - 30;
+                const text = `${label}: ${Math.round(activeVal)}`;
+                ctx.font = 'bold 14px sans-serif';
+                const textWidth = ctx.measureText(text).width + 16;
+                ctx.fillStyle = theme === 'dark' ? '#1f2937' : '#ffffff';
+                ctx.strokeStyle = '#6366f1';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(screenX - textWidth/2, screenY - 20, textWidth, 30, 6);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#111827';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, screenX, screenY - 5);
+                ctx.restore();
+            }
         }
     }
 

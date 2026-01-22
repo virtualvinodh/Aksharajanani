@@ -855,6 +855,16 @@ export const updateComponentInPaths = (
  */
 export const getUnifiedPaths = (item: Character, ctx: UnifiedRenderContext): Path[] => {
     
+    // PRIORITY CHECK: If there is actual drawing data for this glyph, and it's NOT a live link, use the actual data.
+    // This fixes the issue where Composite glyphs ignored manual edits in the UnifiedCard.
+    if (item.unicode !== undefined && !item.link) {
+        const directData = ctx.glyphDataMap.get(item.unicode);
+        // We use the utility to check if it's actually drawn (has points)
+        if (isGlyphDrawn(directData)) {
+            return directData!.paths;
+        }
+    }
+    
     // NEW: Handle standard linked glyphs by dynamically baking them from components.
     if (item.link || item.composite) {
         // We use generateCompositeGlyphData which accepts the full context (including proxies).
@@ -897,7 +907,7 @@ export const getUnifiedPaths = (item: Character, ctx: UnifiedRenderContext): Pat
             let constraint: 'horizontal' | 'vertical' | 'none' = 'none';
             const rule = ctx.positioningRules?.find(r => 
                 expandMembers(r.base, ctx.groups || {}, ctx.characterSets).includes(baseChar.name) && 
-                expandMembers(r.mark, ctx.groups || {}, ctx.characterSets).includes(markChar.name)
+                expandMembers(r.mark || [], ctx.groups || {}, ctx.characterSets).includes(markChar.name)
             );
             if (rule?.movement === 'horizontal' || rule?.movement === 'vertical') {
                 constraint = rule.movement;

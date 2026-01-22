@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Point, Path, Tool, AppSettings, ImageTransform, Segment } from '../types';
 import { VEC } from '../utils/vectorUtils';
@@ -24,7 +25,8 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const {
         canvasRef, initialPaths, onPathsChange, tool, onToolChange, zoom, setZoom, viewOffset,
         setViewOffset, settings, onSelectionChange, 
-        lsb, rsb, onMetricsChange, metrics, disableAutoFit = false
+        lsb, rsb, onMetricsChange, metrics, disableAutoFit = false,
+        currentCharacter
     } = props;
     
     const [isDrawing, setIsDrawing] = useState(false);
@@ -282,15 +284,21 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         }
 
         if (!isDrawing && glyphBBox && metrics) {
-            const PIXELS_PER_FONT_UNIT = 1000 / metrics.unitsPerEm;
-            const lsbVal = lsb ?? metrics.defaultLSB;
-            const rsbVal = rsb ?? metrics.defaultRSB;
-            const lsbX = glyphBBox.x - (lsbVal * PIXELS_PER_FONT_UNIT);
-            const rsbX = glyphBBox.x + glyphBBox.width + (rsbVal * PIXELS_PER_FONT_UNIT);
-            const HIT_TOLERANCE = 8 / zoomRef.current;
-            if (Math.abs(point.x - lsbX) < HIT_TOLERANCE) setHoveredMetric('lsb');
-            else if (Math.abs(point.x - rsbX) < HIT_TOLERANCE) setHoveredMetric('rsb');
-            else setHoveredMetric(null);
+            const isNonSpacing = currentCharacter && (currentCharacter.advWidth === 0 || currentCharacter.advWidth === '0');
+            
+            if (!isNonSpacing) {
+                const PIXELS_PER_FONT_UNIT = 1000 / metrics.unitsPerEm;
+                const lsbVal = lsb ?? metrics.defaultLSB;
+                const rsbVal = rsb ?? metrics.defaultRSB;
+                const lsbX = glyphBBox.x - (lsbVal * PIXELS_PER_FONT_UNIT);
+                const rsbX = glyphBBox.x + glyphBBox.width + (rsbVal * PIXELS_PER_FONT_UNIT);
+                const HIT_TOLERANCE = 8 / zoomRef.current;
+                if (Math.abs(point.x - lsbX) < HIT_TOLERANCE) setHoveredMetric('lsb');
+                else if (Math.abs(point.x - rsbX) < HIT_TOLERANCE) setHoveredMetric('rsb');
+                else setHoveredMetric(null);
+            } else {
+                setHoveredMetric(null);
+            }
         }
 
         if (draggingMetric) return;
@@ -305,7 +313,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
             case 'eraser': eraserTool.move(point); break;
             case 'slice': sliceTool.move(point); break;
         }
-    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, sliceTool, isDrawing, draggingMetric, glyphBBox, metrics, lsb, rsb, onMetricsChange]);
+    }, [tool, panTool, penTool, shapeTool, curveTool, selectTool, editTool, eraserTool, sliceTool, isDrawing, draggingMetric, glyphBBox, metrics, lsb, rsb, onMetricsChange, currentCharacter]);
 
     const endInteraction = useCallback(() => {
         isPinchingRef.current = false;

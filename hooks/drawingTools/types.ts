@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Point, Path, Tool, AppSettings, ImageTransform } from '../../types';
+import { Point, Path, Tool, AppSettings, ImageTransform, Character } from '../../types';
 import { BoundingBox } from '../../services/glyphRenderService';
 
 export const generateId = () => `${Date.now()}-${Math.random()}`;
@@ -63,11 +63,11 @@ export interface UseDrawingCanvasProps {
     onMetricsChange?: (lsb: number, rsb: number) => void;
     metrics?: any; // FontMetrics
     disableAutoFit?: boolean;
-    // FIX: Added missing properties to resolve destructuring errors in tool hooks
     disableTransformations?: boolean;
     lockedMessage?: string;
     transformMode?: 'all' | 'move-only';
     movementConstraint?: 'horizontal' | 'vertical' | 'none';
+    currentCharacter?: Character;
 }
 
 export interface ToolHookProps extends UseDrawingCanvasProps {
