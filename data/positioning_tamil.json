@@ -9,16 +9,6 @@
     }
   },
   {
-    "positioning": [
-      {
-        "base": ["$consonants"],
-        "mark": ["்"],
-        "gpos": "blwm",
-        "gsub": "haln"
-      }
-    ]
-  },
-  {
     "markAttachment": {
       "க":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
       "ங":  {  "ீ": ["topRight", "bottomCenter"],  "்": ["topCenter", "bottomCenter", "0", "-50"] },
