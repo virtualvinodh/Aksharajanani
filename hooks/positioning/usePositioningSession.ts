@@ -1,3 +1,4 @@
+
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { 
     Character, GlyphData, Point, Path, AppSettings, FontMetrics, 
@@ -31,7 +32,7 @@ interface UsePositioningSessionProps {
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
     onClose: () => void;
-    onNavigate: (direction: 'prev' | 'next') => void;
+    onNavigate: (target: 'prev' | 'next' | Character) => void;
 }
 
 export const usePositioningSession = ({
@@ -87,7 +88,7 @@ export const usePositioningSession = ({
     const [manualY, setManualY] = useState<string>('0');
     const [isInputFocused, setIsInputFocused] = useState(false);
     const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
-    const [pendingNavigation, setPendingNavigation] = useState<'prev' | 'next' | 'back' | null>(null);
+    const [pendingNavigation, setPendingNavigation] = useState<'prev' | 'next' | 'back' | Character | null>(null);
 
     const autosaveTimeout = useRef<number | null>(null);
     const lastPairIdentifierRef = useRef<string | null>(null);
@@ -223,17 +224,17 @@ export const usePositioningSession = ({
     const hasBearingChanges = lsb !== targetLigature.lsb || rsb !== targetLigature.rsb;
     const hasUnsavedChanges = hasPathChanges || hasBearingChanges;
 
-    const handleNavigationAttempt = useCallback((direction: 'prev' | 'next' | 'back') => {
+    const handleNavigationAttempt = useCallback((target: Character | 'prev' | 'next' | 'back') => {
         const proceed = () => { 
-            if (direction === 'back') onClose(); 
-            else onNavigate(direction); 
+            if (target === 'back') onClose(); 
+            else onNavigate(target); 
         };
         if (settings.isAutosaveEnabled) { 
             if (hasUnsavedChanges) handleSave(currentOffset, false); 
             proceed(); 
         }
         else if (hasUnsavedChanges) { 
-            setPendingNavigation(direction); 
+            setPendingNavigation(target); 
             setIsUnsavedModalOpen(true); 
         }
         else proceed();
@@ -268,6 +269,15 @@ export const usePositioningSession = ({
         }
     };
 
+    const confirmDiscard = useCallback(() => {
+        if (pendingNavigation) {
+            if (pendingNavigation === 'back') onClose();
+            else onNavigate(pendingNavigation);
+        }
+        setIsUnsavedModalOpen(false);
+        setPendingNavigation(null);
+    }, [pendingNavigation, onClose, onNavigate]);
+
     return {
         markPaths, basePaths: baseGlyph?.paths || [], currentOffset, alignmentOffset,
         zoom, setZoom, viewOffset, setViewOffset,
@@ -281,7 +291,7 @@ export const usePositioningSession = ({
         pivotName, isPivot, activeAttachmentClass, activeClassType, hasDualContext, setOverrideClassType,
         canEdit: !activeAttachmentClass || !isLinked || isPivot,
         movementConstraint,
-// FIX: Added 'hasUnsavedChanges' to the returned object.
-        hasUnsavedChanges
+        hasUnsavedChanges,
+        confirmDiscard
     };
 };

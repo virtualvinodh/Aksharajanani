@@ -3,6 +3,7 @@ import React from 'react';
 import PositioningCanvas from '../PositioningCanvas';
 import PositioningToolbar from '../PositioningToolbar';
 import ClassPreviewStrip from './ClassPreviewStrip';
+import LinkedGlyphsStrip from '../drawing/LinkedGlyphsStrip';
 import { Character, GlyphData, Path, Point, FontMetrics, MarkAttachmentRules, PositioningRules, CharacterSet, AttachmentClass } from '../../types';
 import { DRAWING_CANVAS_SIZE } from '../../constants';
 
@@ -57,6 +58,10 @@ interface PositioningEditorWorkspaceProps {
     activeClassType: 'mark' | 'base' | null;
     onToggleContext: (type: 'mark' | 'base') => void;
     isLargeScreen: boolean;
+    
+    // Source Fallback Props
+    sourceGlyphs: Character[];
+    onSelectCharacter: (char: Character) => void;
 }
 
 const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
@@ -66,7 +71,8 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     isLinked, onToggleLink, handleSelectSibling, markAttachmentRules, positioningRules,
     characterSets, groups, isStripExpanded, setIsStripExpanded, activeAttachmentClass,
     hasDualContext, activeClassType, onToggleContext, isLargeScreen,
-    manualX, manualY, onManualChange, onManualCommit, setIsInputFocused
+    manualX, manualY, onManualChange, onManualCommit, setIsInputFocused,
+    sourceGlyphs, onSelectCharacter
 }) => {
     return (
         <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative min-h-0">
@@ -137,9 +143,9 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                     </div>
                 )}
 
-                {showStrip && (
-                    <div className="w-full max-w-5xl mx-auto flex-shrink-0 z-20 px-2 pb-2">
-                        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="w-full max-w-5xl mx-auto flex-shrink-0 z-20 px-2 pb-2">
+                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        {showStrip ? (
                             <ClassPreviewStrip 
                                 siblings={classSiblings}
                                 activePair={activePair}
@@ -163,11 +169,22 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                                 activeClassType={activeClassType}
                                 onToggleContext={onToggleContext}
                             />
-                        </div>
+                        ) : (
+                            <LinkedGlyphsStrip
+                                title="Sources"
+                                items={sourceGlyphs}
+                                glyphDataMap={glyphDataMap}
+                                settings={settings}
+                                onSelect={onSelectCharacter}
+                                variant="sources"
+                                // Optional props for live preview in the strip if sources are edited elsewhere
+                                // For now we rely on glyphDataMap updates
+                            />
+                        )}
                     </div>
-                )}
+                </div>
             </div>
-        </div>
+        </main>
     );
 };
 

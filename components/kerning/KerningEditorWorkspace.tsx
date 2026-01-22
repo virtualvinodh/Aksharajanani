@@ -1,6 +1,8 @@
 
 import React from 'react';
 import KerningToolbar from '../KerningToolbar';
+import LinkedGlyphsStrip from '../drawing/LinkedGlyphsStrip';
+import { Character, GlyphData, AppSettings } from '../../types';
 
 interface KerningEditorWorkspaceProps {
     isLargeScreen: boolean;
@@ -22,12 +24,19 @@ interface KerningEditorWorkspaceProps {
     onXDistHover: (hovered: boolean) => void;
     xDistInputRef: React.RefObject<HTMLInputElement>;
     children?: React.ReactNode;
+    
+    // Source Strip Props
+    sourceGlyphs: Character[];
+    onSelectCharacter: (char: Character) => void;
+    glyphDataMap: Map<number, GlyphData>;
+    settings: AppSettings;
 }
 
 const KerningEditorWorkspace: React.FC<KerningEditorWorkspaceProps> = ({
     isLargeScreen, containerRef, onZoom, kernValue, onKernChange, onKernFocus, onKernHover, 
     isKernDirty, xDistValue, onXDistChange, onXDistCommit, isXDistFocused, isXDistHovered, 
-    onXDistFocus, onXDistHover, xDistInputRef, children
+    onXDistFocus, onXDistHover, xDistInputRef, children,
+    sourceGlyphs, onSelectCharacter, glyphDataMap, settings
 }) => {
     return (
         <main className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative min-h-0 h-full w-full">
@@ -89,6 +98,19 @@ const KerningEditorWorkspace: React.FC<KerningEditorWorkspaceProps> = ({
                         />
                     </div>
                 )}
+                
+                <div className="w-full max-w-5xl mx-auto flex-shrink-0 z-20 px-2 pb-2">
+                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <LinkedGlyphsStrip
+                            title="Sources"
+                            items={sourceGlyphs}
+                            glyphDataMap={glyphDataMap}
+                            settings={settings}
+                            onSelect={onSelectCharacter}
+                            variant="sources"
+                        />
+                    </div>
+                </div>
             </div>
         </main>
     );

@@ -14,7 +14,7 @@ interface UseKerningSessionProps {
     recommendedKerning: RecommendedKerning[] | null;
     onSave: (value: number) => void;
     onClose: () => void;
-    onNavigate: (direction: 'prev' | 'next') => void;
+    onNavigate: (direction: 'prev' | 'next' | Character) => void;
 }
 
 export const useKerningSession = ({
@@ -181,6 +181,28 @@ export const useKerningSession = ({
         return () => { if (debounceTimeout.current) clearTimeout(debounceTimeout.current); };
     }, [kernValue, isDirty, settings.isAutosaveEnabled, handleSave]);
 
+    const handleNavigationAttempt = useCallback((target: Character | 'prev' | 'next') => {
+        if (settings.isAutosaveEnabled && isDirty) {
+             handleSave();
+        }
+        // In simple/manual save mode, dirty state is handled by modal in header if navigated away?
+        // Actually KerningEditorHeader handles dirty state before calling onNavigate/onClose.
+        // But clicking a glyph in the strip is a direct navigation request.
+        
+        // If we are dirty and NOT autosave, we should ideally prompt.
+        // For now, we will auto-save on strip navigation to keep it fluid, 
+        // mirroring the Drawing workspace behavior for linked glyphs.
+        if (isDirty) {
+            handleSave();
+        }
+        
+        if (target === 'prev' || target === 'next') {
+            onNavigate(target);
+        } else {
+            onNavigate(target);
+        }
+    }, [isDirty, handleSave, onNavigate, settings.isAutosaveEnabled]);
+
     return {
         kernValue, setKernValue: handleKernValueChange,
         xDistValue, setXDistValue, handleXDistCommit,
@@ -189,6 +211,7 @@ export const useKerningSession = ({
         containerSize, setContainerSize, canvasDisplaySize, baseScale,
         isXDistFocused, setIsXDistFocused, isXDistHovered, setIsXDistHovered,
         isKernFocused, setIsKernFocused, isKernHovered, setIsKernHovered,
-        showMeasurement: isXDistFocused || isXDistHovered || isKernFocused || isKernHovered
+        showMeasurement: isXDistFocused || isXDistHovered || isKernFocused || isKernHovered,
+        handleNavigationAttempt
     };
 };

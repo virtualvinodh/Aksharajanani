@@ -33,7 +33,7 @@ interface PositioningEditorPageProps {
     markAttachmentRules: MarkAttachmentRules | null;
     positioningRules: PositioningRules[] | null;
     allChars: Map<string, Character>;
-    onNavigate: (direction: 'prev' | 'next') => void;
+    onNavigate: (target: 'prev' | 'next' | Character) => void;
     hasPrev: boolean;
     hasNext: boolean;
     setEditingPair?: (pair: { base: Character, mark: Character, ligature: Character }) => void;
@@ -57,6 +57,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     const [isStripExpanded, setIsStripExpanded] = useState(false);
     const [isDetachConfirmOpen, setIsDetachConfirmOpen] = useState(false);
     const [pageTool, setPageTool] = useState<'select' | 'pan'>('select');
+
+    const sourceGlyphs = useMemo(() => [props.baseChar, props.markChar], [props.baseChar, props.markChar]);
 
     // session hook refactored to bubble up navigation direction
     const session = usePositioningSession({
@@ -207,6 +209,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 manualX={session.manualX} manualY={session.manualY} onManualChange={(a, v) => a === 'x' ? session.setManualX(v) : session.setManualY(v)} onManualCommit={session.handleManualCommit}
                 setIsInputFocused={session.setIsInputFocused}
                 selectedPathIds={session.selectedPathIds} onSelectionChange={session.setSelectedPathIds}
+                sourceGlyphs={sourceGlyphs}
+                onSelectCharacter={session.handleNavigationAttempt}
             />
 
             {isReusePanelOpen && (
@@ -221,7 +225,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                  </div>
             )}
             
-            <UnsavedChangesModal isOpen={session.isUnsavedModalOpen} onClose={() => session.setIsUnsavedModalOpen(false)} onSave={() => {session.handleSave(); if(session.pendingNavigation) session.handleNavigationAttempt(session.pendingNavigation);}} onDiscard={() => {if(session.pendingNavigation) { if (session.pendingNavigation === 'back') props.onClose(); else props.onNavigate(session.pendingNavigation as 'prev' | 'next'); } session.setIsUnsavedModalOpen(false);}} />
+            <UnsavedChangesModal isOpen={session.isUnsavedModalOpen} onClose={() => session.setIsUnsavedModalOpen(false)} onSave={() => {session.handleSave(); if(session.pendingNavigation) session.handleNavigationAttempt(session.pendingNavigation);}} onDiscard={session.confirmDiscard} />
             <Modal isOpen={isResetConfirmOpen} onClose={() => setIsResetConfirmOpen(false)} title={t('confirmResetTitle')} footer={<><button onClick={() => setIsResetConfirmOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">{t('cancel')}</button><button onClick={() => { props.onReset(props.baseChar, props.markChar, props.targetLigature); setIsResetConfirmOpen(false); }} className="px-4 py-2 bg-red-600 text-white rounded">{t('reset')}</button></>}><p>{t('confirmResetSingleMessage', { name: props.targetLigature.name })}</p></Modal>
             
             <Modal 

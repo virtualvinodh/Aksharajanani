@@ -345,7 +345,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                     }}
                     onClose={() => onClose()}
                     onDelete={() => onDelete(character.unicode)}
-                    onNavigate={(dir) => handlePageNavigate(dir)}
+                    onNavigate={handlePageNavigate}
                     hasPrev={!!prevCharacter}
                     hasNext={!!nextCharacter}
                     glyphVersion={glyphVersion}
@@ -383,7 +383,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                     markAttachmentRules={markAttachmentRules}
                     positioningRules={positioningRules}
                     allChars={allCharsByName}
-                    onNavigate={(dir) => handlePageNavigate(dir)}
+                    onNavigate={handlePageNavigate}
                     hasPrev={!!prevCharacter}
                     hasNext={!!nextCharacter}
                     setEditingPair={(pair: any) => handlePageNavigate(pair.ligature)}

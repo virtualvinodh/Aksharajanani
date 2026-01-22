@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning, CharacterSet, ComponentTransform } from '../types';
 import KerningEditorHeader from './kerning/KerningEditorHeader';
 import KerningEditorWorkspace from './kerning/KerningEditorWorkspace';
@@ -22,7 +22,7 @@ interface KerningEditorPageProps {
     metrics: FontMetrics;
     settings: AppSettings;
     recommendedKerning: RecommendedKerning[] | null;
-    onNavigate: (direction: 'prev' | 'next') => void;
+    onNavigate: (target: 'prev' | 'next' | Character) => void;
     hasPrev: boolean;
     hasNext: boolean;
     glyphVersion: number;
@@ -39,6 +39,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     const [isDetachConfirmOpen, setIsDetachConfirmOpen] = useState(false);
 
     const session = useKerningSession(props);
+    const sourceGlyphs = useMemo(() => [props.pair.left, props.pair.right], [props.pair]);
 
     const updateSize = useCallback(() => {
         const container = containerRef.current;
@@ -147,6 +148,10 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 onXDistFocus={session.setIsXDistFocused} 
                 onXDistHover={session.setIsXDistHovered} 
                 xDistInputRef={xDistInputRef} 
+                sourceGlyphs={sourceGlyphs}
+                onSelectCharacter={session.handleNavigationAttempt}
+                glyphDataMap={props.glyphDataMap}
+                settings={props.settings}
             >
                 <div 
                     className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800"
