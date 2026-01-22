@@ -40,6 +40,17 @@ export const useShapeTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrent
             const finalPaths = [...currentPaths, newPath];
             setCurrentPaths(finalPaths);
             onPathsChange(finalPaths);
+        } else if (tool === 'dot' && startPoint) {
+            // Handle single click for Dot tool (no drag)
+            // This creates a dot that uses the strokeThickness as radius
+            const newPath: Path = { 
+                id: generateId(), 
+                type: 'dot', 
+                points: [startPoint] 
+            };
+            const finalPaths = [...currentPaths, newPath];
+            setCurrentPaths(finalPaths);
+            onPathsChange(finalPaths);
         }
         
         setPreviewPath(null);
