@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning, FilterMode } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -186,7 +187,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
     return (
         <>
-        <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-2 sm:p-4 flex flex-col shadow-md w-full flex-shrink-0 z-20 gap-2 sm:gap-4">
+        <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-2 sm:p-4 flex flex-col shadow-md w-full flex-shrink-0 z-50 gap-2 sm:gap-4">
             
             <div className="w-full flex flex-wrap items-center justify-between md:justify-center gap-y-2 md:gap-x-8 md:gap-y-4">
                 <div className="order-1 flex flex-1 md:flex-none items-center justify-center md:justify-center gap-3">
