@@ -5,8 +5,10 @@ import UnifiedCard from './UnifiedCard';
 import { useLocale } from '../contexts/LocaleContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
+import { useGlyphData } from '../contexts/GlyphDataContext';
 import { VirtuosoGrid, Virtuoso, VirtuosoHandle } from 'react-virtuoso';
-import { AddIcon, SwitchScriptIcon } from '../constants';
+import { AddIcon, SwitchScriptIcon, CheckCircleIcon } from '../constants';
+import { isGlyphDrawn } from '../utils/glyphUtils';
 
 interface CharacterGridProps {
   characters?: Character[]; // For Flat View
@@ -48,6 +50,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
   const { t } = useLocale();
   const { settings } = useSettings();
   const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
+  const { glyphDataMap } = useGlyphData();
   
   const toggleSelection = useCallback((character: Character) => {
       if (character.unicode === undefined) return;
@@ -116,11 +119,18 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
             itemContent={(index, group) => {
                 const visibleChars = group.characters.filter(char => !char.hidden || settings.showHiddenGlyphs);
                 
+                const isGroupComplete = visibleChars.length > 0 && visibleChars.every(char => {
+                    return isGlyphDrawn(glyphDataMap.get(char.unicode));
+                });
+
                 return (
                     <div className="pb-6" id={`section-${index}`}>
                          {/* Sticky Header */}
                         <div className="sticky top-0 z-10 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur py-2 px-6 border-b border-gray-200 dark:border-gray-700 shadow-sm mb-2 flex justify-between items-center">
-                            <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t(group.nameKey)}</h3>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t(group.nameKey)}</h3>
+                                {isGroupComplete && <CheckCircleIcon className="w-5 h-5 text-green-500 animate-pop-in" />}
+                            </div>
                             <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">{visibleChars.length}</span>
                         </div>
                         

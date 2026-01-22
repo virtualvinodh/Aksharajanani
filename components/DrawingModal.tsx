@@ -22,7 +22,12 @@ import { useRules } from '../contexts/RulesContext';
 import { useKerning } from '../contexts/KerningContext';
 import { usePositioning } from '../contexts/PositioningContext';
 
-const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange }) => {
+const DrawingModal: React.FC<any> = ({ 
+    character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, 
+    settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, 
+    onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange,
+    prevCharacter, nextCharacter 
+}) => {
   const { t } = useLocale();
   const { showNotification, modalOriginRect, checkAndSetFlag } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
@@ -52,10 +57,7 @@ const DrawingModal: React.FC<any> = ({ character, characterSet, glyphData, onSav
   
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
   
-  const visibleCharactersForNav = useMemo(() => characterSet.characters.filter((c: any) => !c.hidden), [characterSet]);
-  const currentIndex = visibleCharactersForNav.findIndex((c: any) => c.unicode === character.unicode);
-  const prevCharacter = currentIndex > 0 ? visibleCharactersForNav[currentIndex - 1] : null;
-  const nextCharacter = currentIndex < visibleCharactersForNav.length - 1 ? visibleCharactersForNav[currentIndex + 1] : null;
+  // NOTE: Removed local neighbor calculation. Now using props 'prevCharacter' and 'nextCharacter' passed from UnifiedEditorModal.
 
   const {
     currentPaths, handlePathsChange, undo, redo, canUndo, canRedo,

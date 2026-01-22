@@ -12,6 +12,7 @@ import { updatePositioningAndCascade } from '../services/positioningService';
 import { getAccurateGlyphBBox, calculateDefaultMarkOffset, generateCompositeGlyphData } from '../services/glyphRenderService';
 import { deepClone } from '../utils/cloneUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
+import { filterAndSortCharacters } from '../utils/searchUtils';
 
 // Specialized Editor Pages
 import DrawingModal from './DrawingModal';
@@ -25,7 +26,7 @@ const UnifiedEditorModal: React.FC<any> = ({
     settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, 
     onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange 
 }) => {
-  const { showNotification } = useLayout();
+  const { showNotification, filterMode, searchQuery } = useLayout();
   const { 
     allCharsByName, positioningRules, recommendedKerning, 
     markAttachmentClasses, baseAttachmentClasses, dispatch: characterDispatch 
@@ -42,47 +43,80 @@ const UnifiedEditorModal: React.FC<any> = ({
     return 'drawing';
   }, [character]);
 
-  // Helper to determine if a glyph is "Available" (i.e. not disabled in the grid)
-  // Standard glyphs are always available. Virtual glyphs (Pos/Kern) need their components drawn.
-  const isCharNavigable = useCallback((c: Character) => {
-    if (c.hidden) return false;
+  // --- Continuous Navigation Logic ---
+  const navigationList = useMemo(() => {
+      // 1. Flatten all characters from all sets
+      let chars = allCharacterSets.flatMap(s => s.characters);
+      
+      // 2. Basic Filtering (Hidden, ZWJ/ZWNJ)
+      chars = chars.filter(c => !c.hidden && c.unicode !== 8205 && c.unicode !== 8204);
 
-    // Positioning Pair Logic
-    if (c.position) {
-        const base = allCharsByName.get(c.position[0]);
-        const mark = allCharsByName.get(c.position[1]);
-        if (!base || !mark || base.unicode === undefined || mark.unicode === undefined) return false;
-        
-        // Both components must be drawn
-        const baseDrawn = isGlyphDrawn(allGlyphData.get(base.unicode));
-        const markDrawn = isGlyphDrawn(allGlyphData.get(mark.unicode));
-        return baseDrawn && markDrawn;
-    }
+      // 3. Availability Filter
+      // Ensure we don't navigate to virtual glyphs (pairs) whose components are not yet drawn.
+      chars = chars.filter(c => {
+          if (c.position) {
+              const base = allCharsByName.get(c.position[0]);
+              const mark = allCharsByName.get(c.position[1]);
+              if (!base || !mark || base.unicode === undefined || mark.unicode === undefined) return false;
+              
+              const baseDrawn = isGlyphDrawn(allGlyphData.get(base.unicode));
+              const markDrawn = isGlyphDrawn(allGlyphData.get(mark.unicode));
+              return baseDrawn && markDrawn;
+          }
+          if (c.kern) {
+              const left = allCharsByName.get(c.kern[0]);
+              const right = allCharsByName.get(c.kern[1]);
+              if (!left || !right || left.unicode === undefined || right.unicode === undefined) return false;
+              
+              const leftDrawn = isGlyphDrawn(allGlyphData.get(left.unicode));
+              const rightDrawn = isGlyphDrawn(allGlyphData.get(right.unicode));
+              return leftDrawn && rightDrawn;
+          }
+          return true; // Standard glyphs are always available
+      });
 
-    // Kerning Pair Logic
-    if (c.kern) {
-        const left = allCharsByName.get(c.kern[0]);
-        const right = allCharsByName.get(c.kern[1]);
-        if (!left || !right || left.unicode === undefined || right.unicode === undefined) return false;
+      // 4. Apply Search
+      if (searchQuery.trim().length > 0) {
+          chars = filterAndSortCharacters(chars, searchQuery);
+      }
 
-        // Both components must be drawn
-        const leftDrawn = isGlyphDrawn(allGlyphData.get(left.unicode));
-        const rightDrawn = isGlyphDrawn(allGlyphData.get(right.unicode));
-        return leftDrawn && rightDrawn;
-    }
+      // 5. Apply Filter Modes (mirroring DrawingWorkspace logic simplified)
+      if (filterMode !== 'none') {
+          chars = chars.filter(c => {
+              let isComplete = false;
+              
+              if (c.position) {
+                  const [base, mark] = c.position;
+                  const baseC = allCharsByName.get(base);
+                  const markC = allCharsByName.get(mark);
+                  if (baseC?.unicode !== undefined && markC?.unicode !== undefined) {
+                      isComplete = markPositioningMap.has(`${baseC.unicode}-${markC.unicode}`);
+                  }
+              } else if (c.kern) {
+                   const [left, right] = c.kern;
+                   const l = allCharsByName.get(left);
+                   const r = allCharsByName.get(right);
+                   if (l?.unicode !== undefined && r?.unicode !== undefined) {
+                       isComplete = kerningMap.has(`${l.unicode}-${r.unicode}`);
+                   }
+              } else if (c.unicode !== undefined) {
+                   isComplete = isGlyphDrawn(allGlyphData.get(c.unicode));
+              }
 
-    // Standard Glyph
-    return true;
-  }, [allCharsByName, allGlyphData]);
+              if (filterMode === 'completed') return isComplete;
+              if (filterMode === 'incomplete') return !isComplete;
+              if (filterMode === 'autoGenerated') return !!c.position || !!c.kern;
+              if (filterMode === 'drawn') return !c.position && !c.kern && isComplete;
+              return true;
+          });
+      }
+      
+      return chars;
+  }, [allCharacterSets, filterMode, searchQuery, allCharsByName, markPositioningMap, kerningMap, allGlyphData, glyphVersion]);
 
-  const visibleCharactersForNav = useMemo(() => {
-      if (!characterSet?.characters) return [];
-      return characterSet.characters.filter(isCharNavigable);
-  }, [characterSet, isCharNavigable]);
-
-  const currentIndex = visibleCharactersForNav.findIndex((c: any) => c.unicode === character.unicode);
-  const prevCharacter = currentIndex > 0 ? visibleCharactersForNav[currentIndex - 1] : null;
-  const nextCharacter = currentIndex !== -1 && currentIndex < visibleCharactersForNav.length - 1 ? visibleCharactersForNav[currentIndex + 1] : null;
+  const currentIndex = navigationList.findIndex(c => c.unicode === character.unicode);
+  const prevCharacter = currentIndex > 0 ? navigationList[currentIndex - 1] : null;
+  const nextCharacter = currentIndex !== -1 && currentIndex < navigationList.length - 1 ? navigationList[currentIndex + 1] : null;
 
   const handlePageNavigate = useCallback((target: Character | 'prev' | 'next') => {
       if (target === 'prev' && prevCharacter) onNavigate(prevCharacter);
@@ -372,6 +406,10 @@ const UnifiedEditorModal: React.FC<any> = ({
                     onClose={() => onClose()}
                     onDelete={onDelete}
                     onNavigate={onNavigate}
+                    // Pass calculated neighbors
+                    prevCharacter={prevCharacter}
+                    nextCharacter={nextCharacter}
+                    
                     settings={settings}
                     metrics={metrics}
                     allGlyphData={allGlyphData}
