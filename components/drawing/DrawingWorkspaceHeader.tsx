@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback } from 'react';
 import { Character, CharacterSet, GlyphData, FilterMode } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -73,6 +74,7 @@ const DrawingWorkspaceHeader: React.FC<DrawingWorkspaceHeaderProps> = (props) =>
         return () => clearTimeout(timer);
     }, [props.visibleCharacterSets, props.isFiltered, checkVisibility]);
 
+    // Scroll Active Tab into view logic
     useEffect(() => {
         if (containerRef.current && props.visibleCharacterSets.length > 0) {
             const activeElement = containerRef.current.children[props.activeTab] as HTMLElement;
@@ -83,7 +85,7 @@ const DrawingWorkspaceHeader: React.FC<DrawingWorkspaceHeaderProps> = (props) =>
     }, [props.activeTab, props.visibleCharacterSets]);
 
     return (
-        <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[60px] flex flex-col justify-center">
+        <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[60px] flex flex-col justify-center relative z-20">
             {props.isFiltered ? (
                 <div className="flex items-center justify-between px-6 py-3 bg-indigo-50/50 dark:bg-indigo-900/10 animate-fade-in-up">
                     <div className="flex items-center gap-3">
