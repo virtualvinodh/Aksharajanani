@@ -30,13 +30,14 @@ interface KerningEditorWorkspaceProps {
     onSelectCharacter: (char: Character) => void;
     glyphDataMap: Map<number, GlyphData>;
     settings: AppSettings;
+    allCharsByName: Map<string, Character>;
 }
 
 const KerningEditorWorkspace: React.FC<KerningEditorWorkspaceProps> = ({
     isLargeScreen, containerRef, onZoom, kernValue, onKernChange, onKernFocus, onKernHover, 
     isKernDirty, xDistValue, onXDistChange, onXDistCommit, isXDistFocused, isXDistHovered, 
     onXDistFocus, onXDistHover, xDistInputRef, children,
-    sourceGlyphs, onSelectCharacter, glyphDataMap, settings
+    sourceGlyphs, onSelectCharacter, glyphDataMap, settings, allCharsByName
 }) => {
     return (
         <main className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative min-h-0 h-full w-full">
@@ -108,6 +109,7 @@ const KerningEditorWorkspace: React.FC<KerningEditorWorkspaceProps> = ({
                             settings={settings}
                             onSelect={onSelectCharacter}
                             variant="sources"
+                            allCharsByName={allCharsByName}
                         />
                     </div>
                 </div>

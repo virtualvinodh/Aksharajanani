@@ -29,6 +29,7 @@ interface KerningEditorPageProps {
     isKerned: boolean;
     allCharacterSets: CharacterSet[];
     onConvertToComposite?: (newTransforms: ComponentTransform[]) => void;
+    allCharsByName: Map<string, Character>;
 }
 
 const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
@@ -152,6 +153,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 onSelectCharacter={session.handleNavigationAttempt}
                 glyphDataMap={props.glyphDataMap}
                 settings={props.settings}
+                allCharsByName={props.allCharsByName}
             >
                 <div 
                     className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800"

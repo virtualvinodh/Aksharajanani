@@ -352,6 +352,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                     isKerned={kerningMap.has(key)}
                     allCharacterSets={allCharacterSets}
                     onConvertToComposite={handleConvertToComposite}
+                    allCharsByName={allCharsByName}
                 />
             );
         }

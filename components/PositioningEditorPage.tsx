@@ -211,6 +211,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 selectedPathIds={session.selectedPathIds} onSelectionChange={session.setSelectedPathIds}
                 sourceGlyphs={sourceGlyphs}
                 onSelectCharacter={session.handleNavigationAttempt}
+                allCharsByName={props.allChars}
             />
 
             {isReusePanelOpen && (
