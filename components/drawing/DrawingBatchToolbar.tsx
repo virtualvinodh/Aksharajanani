@@ -14,6 +14,7 @@ interface DrawingBatchToolbarProps {
     onClose: () => void;
     showAccept?: boolean;
     onAccept?: () => void;
+    showTransform?: boolean;
 }
 
 const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
@@ -48,14 +49,16 @@ const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
                         </button>
                     )}
                     
-                    <button 
-                        onClick={props.onTransform} 
-                        disabled={props.selectionSize === 0}
-                        className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-bold text-sm rounded-xl hover:bg-teal-700 disabled:opacity-30 transition-all shadow-md active:scale-95"
-                    >
-                        <TransformIcon className="w-4 h-4" />
-                        <span className="hidden lg:inline">{t('transform')}</span>
-                    </button>
+                    {props.showTransform && (
+                        <button 
+                            onClick={props.onTransform} 
+                            disabled={props.selectionSize === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-bold text-sm rounded-xl hover:bg-teal-700 disabled:opacity-30 transition-all shadow-md active:scale-95"
+                        >
+                            <TransformIcon className="w-4 h-4" />
+                            <span className="hidden lg:inline">{t('transform')}</span>
+                        </button>
+                    )}
                     <button 
                         onClick={props.onProperties} 
                         disabled={props.selectionSize === 0}

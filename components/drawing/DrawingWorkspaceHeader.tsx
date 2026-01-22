@@ -15,6 +15,7 @@ interface DrawingWorkspaceHeaderProps {
     isFiltered: boolean;
     bannerText: string;
     resultCount: number;
+    actionableCount?: number;
     onAddGroup: () => void;
     onTabContextMenu: (e: React.MouseEvent | React.TouchEvent, index: number) => void;
     filterMode: FilterMode;
@@ -100,7 +101,7 @@ const DrawingWorkspaceHeader: React.FC<DrawingWorkspaceHeaderProps> = (props) =>
                                 className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors shadow-sm"
                             >
                                 <CheckCircleIcon className="w-3 h-3" />
-                                <span>{t('acceptAllDefaults')} ({props.resultCount})</span>
+                                <span>{t('acceptAllDefaults')} ({props.actionableCount ?? 0})</span>
                             </button>
                         )}
                         <div className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-black px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800">
