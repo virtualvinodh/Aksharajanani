@@ -149,7 +149,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   let stateClasses = "";
   if (!isAvailable) {
       stateClasses = "bg-gray-100 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700 opacity-40 grayscale cursor-not-allowed";
-  } else if (isSelected) {
+  } else if (isSelected && isSelectionMode) {
       stateClasses = "ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 border-transparent cursor-pointer";
   } else if (character.hidden) {
       stateClasses = "bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-500 opacity-70 cursor-pointer";
