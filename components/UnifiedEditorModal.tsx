@@ -72,6 +72,12 @@ const UnifiedEditorModal: React.FC<any> = ({
               const rightDrawn = isGlyphDrawn(allGlyphData.get(right.unicode));
               return leftDrawn && rightDrawn;
           }
+          if (c.link) {
+              return c.link.every(name => {
+                  const comp = allCharsByName.get(name);
+                  return comp && comp.unicode !== undefined && isGlyphDrawn(allGlyphData.get(comp.unicode));
+              });
+          }
           return true; // Standard glyphs are always available
       });
 

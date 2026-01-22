@@ -47,7 +47,11 @@ export const useGlyphEditSession = ({
         const prefillSource = character.link || character.composite;
         const isPrefillEnabled = settings.isPrefillEnabled !== false;
 
-        if (isPrefillEnabled && prefillSource && !initiallyDrawn) {
+        // Force regeneration if it's a Linked Glyph (to get latest component state)
+        // OR if it's a Composite/Template that hasn't been drawn yet.
+        const shouldRegenerate = (!!character.link) || (isPrefillEnabled && prefillSource && !initiallyDrawn);
+
+        if (shouldRegenerate) {
              const allCharsByName = new Map<string, Character>();
              allCharacterSets.flatMap(set => set.characters).forEach(char => allCharsByName.set(char.name, char));
 
@@ -148,6 +152,7 @@ export const useGlyphEditSession = ({
         }
 
         // 2. Existing Prefill Notification
+        // Only show if it's a template composite (not linked) and was just filled
         const isPrefilled = currentPaths.length > 0 && !isGlyphDrawn(glyphData);
         if (isPrefilled && !character.link) {
             const hasSeen = checkAndSetFlag('composite_intro');
@@ -244,7 +249,7 @@ export const useGlyphEditSession = ({
     const hasMetadataChanges = hasBearingChanges || glyphClass !== character.glyphClass || advWidth !== character.advWidth;
     const hasUnsavedChanges = hasPathChanges || hasMetadataChanges;
 
-    // --- INITIAL AUTOSAVE FOR PREFILL ---
+    // --- INITIAL AUTOSAVE FOR PREFILL OR REGENERATION ---
     useEffect(() => {
         if (settings.isAutosaveEnabled && hasUnsavedChanges) {
              if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
