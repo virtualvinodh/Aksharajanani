@@ -1,5 +1,4 @@
 
-
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Path, KerningMap, MarkPositioningMap, PositioningRules, MarkAttachmentRules, Segment } from '../types';
 import { compileFeaturesAndPatch } from './pythonFontService';
 import { generateFea } from './feaService';
@@ -58,6 +57,22 @@ const convertPaperPathToOpenType = (paperPathItem: any, otPath: any) => {
     } else { // It's a Path
         processPath(paperPathItem);
     }
+};
+
+/**
+ * Generates points for a round cap (semicircle) at the end of a stroke.
+ * Rotates the startNormal vector clockwise by 180 degrees in steps.
+ */
+const generateCap = (center: Point, radius: number, startNormal: Point, endNormal: Point, steps: number = 8): Point[] => {
+    const points: Point[] = [];
+    for (let i = 1; i < steps; i++) {
+        const t = i / steps;
+        // Rotate -180 degrees (clockwise in standard math, but creates correct winding for outlines)
+        const angle = -Math.PI * t; 
+        const vec = VEC.rotate(startNormal, angle);
+        points.push(VEC.add(center, VEC.scale(vec, radius)));
+    }
+    return points;
 };
 
 const createFont = (
@@ -299,7 +314,25 @@ const createFont = (
                 }
 
                 if (outline1.length > 0) {
-                     const outlinePoints = [...outline1, ...outline2.reverse()];
+                     // --- IMPLEMENT ROUND CAPS ---
+                     const radius = scaledThickness / 2;
+                     
+                     // Start Cap: Connects outline2[0] to outline1[0]
+                     // We calculate the normal of the very first segment for a clean cap
+                     const startDir = VEC.normalize(VEC.sub(sanitizedPolyline[1], sanitizedPolyline[0]));
+                     const startNormal = VEC.perp(startDir);
+                     
+                     // generateCap returns points for an arc from -startNormal to startNormal (relative to center)
+                     const startCap = generateCap(sanitizedPolyline[0], radius, VEC.scale(startNormal, -1), startNormal, 8);
+                     
+                     // End Cap: Connects outline1[last] to outline2[last]
+                     const endDir = VEC.normalize(VEC.sub(sanitizedPolyline[sanitizedPolyline.length - 1], sanitizedPolyline[sanitizedPolyline.length - 2]));
+                     const endNormal = VEC.perp(endDir);
+                     
+                     const endCap = generateCap(sanitizedPolyline[sanitizedPolyline.length - 1], radius, endNormal, VEC.scale(endNormal, -1), 8);
+                     
+                     const outlinePoints = [...outline1, ...endCap, ...outline2.reverse(), ...startCap];
+
                      const paperStrokePath = new paperScope.Path({
                          segments: outlinePoints.map(p => [p.x, p.y]),
                          closed: true,
@@ -525,6 +558,19 @@ export const exportToOtf = async (
             return polyline;
         };`;
         
+        // Helper function for creating round caps in the worker
+        const generateCapForWorker = `const generateCap = (center, radius, startNormal, endNormal, steps = 8) => {
+             const points = [];
+             for (let i = 1; i < steps; i++) {
+                 const t = i / steps;
+                 // Rotate -180 degrees (clockwise) to create the cap
+                 const angle = -Math.PI * t; 
+                 const vec = VEC.rotate(startNormal, angle);
+                 points.push(VEC.add(center, VEC.scale(vec, radius)));
+             }
+             return points;
+        };`;
+
         // Need to inline the outline expansion logic for the worker
         // UPDATED: Includes start/end tangent stabilization logic
         const getStrokeOutlinePointsForWorker = `
@@ -645,7 +691,7 @@ export const exportToOtf = async (
         
                 if (path.type === 'dot') {
                     const center = path.points[0];
-                    const radius = path.points.length > 1 ? VEC.len(VEC.sub(path.points[1], center)) : strokeThickness / 2;
+                    const radius = path.points.length > 1 ? VEC.len(VEC.sub(path.points.length > 1 ? path.points[1] : path.points[0], center)) : strokeThickness / 2;
                     minX = Math.min(minX, center.x - radius);
                     maxX = Math.max(maxX, center.x + radius);
                     minY = Math.min(minY, center.y - radius);
@@ -713,6 +759,7 @@ export const exportToOtf = async (
             paperScope.setup(new paper.Size(1, 1));
 
             ${VEC_DEFINITION_STRING_FOR_WORKER}
+            ${generateCapForWorker} 
             ${quadraticCurveToPolylineForWorker}
             ${curveToPolylineForWorker}
             ${getStrokeOutlinePointsForWorker}
