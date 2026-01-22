@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Character, GlyphData, UnifiedRenderContext } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -146,20 +147,42 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   const paddingClass = isCompact ? 'p-2' : 'p-2 sm:p-4';
   const baseContainerClasses = `relative rounded-lg ${paddingClass} flex flex-col items-center justify-between transition-all duration-200 aspect-square h-full group select-none overflow-hidden`;
   
+  // Mark Identification for Styling
+  const isNonSpacingMark = character.glyphClass === 'mark' && (character.advWidth === 0 || character.advWidth === '0');
+  const isSpacingMark = character.glyphClass === 'mark' && !isNonSpacingMark;
+
+  // Determine Type-Based Border Color (Applied to both drawn and undrawn states)
+  let typeBorderClass = "border-gray-200 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400"; // Default Base/Ligature
+  
+  if (isNonSpacingMark) {
+      // Muted Amber (Gold) for Non-Spacing
+      typeBorderClass = "border-amber-300 dark:border-amber-700 hover:border-amber-500 dark:hover:border-amber-500";
+  } else if (isSpacingMark) {
+      // Muted Sky Blue for Spacing Marks
+      typeBorderClass = "border-sky-300 dark:border-sky-700 hover:border-sky-500 dark:hover:border-sky-500";
+  }
+
   let stateClasses = "";
+  
   if (!isAvailable) {
+      // Disabled / Unavailable
       stateClasses = "bg-gray-100 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700 opacity-40 grayscale cursor-not-allowed";
   } else if (isSelected && isSelectionMode) {
+      // Selected State
       stateClasses = "ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 border-transparent cursor-pointer";
   } else if (character.hidden) {
-      stateClasses = "bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-500 opacity-70 cursor-pointer";
+      // Hidden State
+      stateClasses = `bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed ${typeBorderClass} opacity-70 cursor-pointer`;
   } else if (!isDrawn) {
-      stateClasses = "bg-white dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-indigo-500 hover:border-solid opacity-90 cursor-pointer";
-  } else if (!isManuallySet) { // New "Ready for Review" state
-      stateClasses = "bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-500 dark:border-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/40 hover:border-blue-600 cursor-pointer";
+      // Undrawn (Empty) State - Dashed Border with Type Color
+      stateClasses = `bg-white dark:bg-gray-800 border-2 border-dashed ${typeBorderClass} opacity-90 cursor-pointer`;
+  } else if (!isManuallySet) { 
+      // Auto-Generated / Pending Review (Blue Dashed Override)
+      // This specifically highlights virtual glyphs that need attention
+      stateClasses = "bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
   } else {
-      // Style for drawn & confirmed glyphs
-      stateClasses = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer";
+      // Drawn & Confirmed/Standard State - Solid Border with Type Color
+      stateClasses = `bg-white dark:bg-gray-800 border-2 ${typeBorderClass} cursor-pointer`;
   }
 
   const nameLength = character.name.length;

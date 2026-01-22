@@ -186,17 +186,32 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   // Added overflow-hidden to prevent spillover of wide characters
   const baseContainerClasses = `relative rounded-lg ${paddingClass} flex flex-col items-center justify-between cursor-pointer transition-all duration-200 aspect-square h-full group select-none overflow-hidden`;
   
+  // Mark Identification for Styling
+  const isNonSpacingMark = character.glyphClass === 'mark' && (character.advWidth === 0 || character.advWidth === '0');
+  const isSpacingMark = character.glyphClass === 'mark' && !isNonSpacingMark;
+
+  // Determine Type-Based Border Color (applied to both drawn and undrawn)
+  let typeBorderClass = "border-gray-200 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400"; // Default Base/Ligature
+  
+  if (isNonSpacingMark) {
+      // Muted Amber (Gold)
+      typeBorderClass = "border-amber-300 dark:border-amber-700 hover:border-amber-500 dark:hover:border-amber-500";
+  } else if (isSpacingMark) {
+      // Muted Sky Blue
+      typeBorderClass = "border-sky-300 dark:border-sky-700 hover:border-sky-500 dark:hover:border-sky-500";
+  }
+
   let stateClasses = "";
   if (isSelected) {
       stateClasses = "ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 border-transparent";
   } else if (character.hidden) {
-      stateClasses = "bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-500 opacity-70";
+      stateClasses = `bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed ${typeBorderClass} opacity-70`;
   } else if (!isDrawn) {
-      // Style for undrawn/empty glyphs
-      stateClasses = "bg-white dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-indigo-500 hover:border-solid opacity-90";
+      // Style for undrawn/empty glyphs - Dashed Border with Type Color
+      stateClasses = `bg-white dark:bg-gray-800 border-2 border-dashed ${typeBorderClass} opacity-90`;
   } else {
-      // Style for drawn glyphs
-      stateClasses = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500";
+      // Style for drawn glyphs - Solid Border with Type Color
+      stateClasses = `bg-white dark:bg-gray-800 border-2 ${typeBorderClass}`;
   }
 
   // Show name logic: Default false (hidden), show only if setting is explicitly true.
