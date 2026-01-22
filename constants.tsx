@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 // --- Canvas & Sizing Constants ---
@@ -575,5 +576,12 @@ export const ShareIcon: React.FC<{ className?: string }> = ({ className = 'h-5 w
 export const DownloadIcon: React.FC<{ className?: string }> = ({ className = 'h-5 w-5' }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+);
+// FIX: Added PuzzleIcon (Puzzle Piece Badge)
+export const PuzzleIcon: React.FC<{ className?: string }> = ({ className = 'h-5 w-5' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path d="M7 2a1 1 0 011 1v1h3a1 1 0 011-1 2 2 0 012 2v2a1 1 0 001 1h1a2 2 0 012 2v4a2 2 0 01-2 2h-1a1 1 0 00-1 1v2a2 2 0 01-2 2H8a2 2 0 01-2-2v-2a1 1 0 00-1-1H4a2 2 0 01-2-2V8a2 2 0 012-2h1a1 1 0 001-1V3a1 1 0 011-1zm6 3V3a3 3 0 00-3-3 3 3 0 00-3 3v2H4a4 4 0 00-4 4v4a4 4 0 004 4h3v2a3 3 0 003 3 3 3 0 003-3v-2h3a4 4 0 004-4V8a4 4 0 00-4-4h-3z" fillRule="evenodd" clipRule="evenodd" />
+        <path d="M10 5a1 1 0 00-1 1v1a1 1 0 01-1 1H7a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 000 2h1a3 3 0 003-3v-2a1 1 0 011-1h1a3 3 0 003-3V6a1 1 0 00-1-1z" fillRule="evenodd" clipRule="evenodd" />
     </svg>
 );

@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Character, GlyphData, UnifiedRenderContext } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths, getUnifiedPaths, calculateUnifiedTransform } from '../services/glyphRenderService';
-import { PREVIEW_CANVAS_SIZE, CheckCircleIcon, LinkIcon, KerningIcon, PositioningIcon } from '../constants';
+import { PREVIEW_CANVAS_SIZE, CheckCircleIcon, LinkIcon, KerningIcon, PositioningIcon, PuzzleIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useProject } from '../contexts/ProjectContext';
@@ -56,6 +56,13 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
         if (!left || !right) return false;
         return isDrawnCheck(glyphDataMap.get(left.unicode!)) && isDrawnCheck(glyphDataMap.get(right.unicode!));
     }
+    if (character.link) {
+        // Linked glyphs are only available if all their source components are drawn
+        return character.link.every(name => {
+            const comp = allCharsByName.get(name);
+            return comp && comp.unicode !== undefined && isDrawnCheck(glyphDataMap.get(comp.unicode));
+        });
+    }
     return true; // Standard glyphs are always available to open/draw
   }, [character, allCharsByName, glyphDataMap, glyphVersion]);
 
@@ -78,7 +85,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
 
   // 2. Resolve Paths using the Unified Service
   const { paths, isDrawn } = useMemo(() => {
-    if (!isAvailable && (character.position || character.kern)) {
+    if (!isAvailable && (character.position || character.kern || character.link)) {
         return { paths: [], isDrawn: false };
     }
 
@@ -150,6 +157,9 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   // Mark Identification for Styling
   const isNonSpacingMark = character.glyphClass === 'mark' && (character.advWidth === 0 || character.advWidth === '0');
   const isSpacingMark = character.glyphClass === 'mark' && !isNonSpacingMark;
+  
+  // Composite Identification for Badge
+  const isCompositeTemplate = character.composite && character.composite.length > 0 && !character.link && !character.position && !character.kern;
 
   // Determine Type-Based Border Color (Applied to both drawn and undrawn states)
   let typeBorderClass = "border-gray-200 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400"; // Default Base/Ligature
@@ -190,6 +200,10 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   if (nameLength > 2) ghostFontSizeClass = "text-xl sm:text-3xl";
   else if (nameLength > 1) ghostFontSizeClass = "text-3xl sm:text-5xl";
 
+  const ghostTextColor = !isAvailable 
+    ? "text-gray-400 dark:text-gray-500" 
+    : "text-gray-200 dark:text-gray-700";
+
   return (
     <div
       ref={cardRef}
@@ -214,6 +228,13 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
       {character.link && !character.position && (
           <div className="absolute top-1 left-1 p-1 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full shadow-sm z-10" title="Linked Component">
              <LinkIcon className="w-3 h-3" />
+          </div>
+      )}
+      
+      {/* Badge: Composite Template (Puzzle) - Cyan */}
+      {isCompositeTemplate && (
+           <div className="absolute top-1 left-1 p-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-full shadow-sm z-10" title="Composite Template">
+             <PuzzleIcon className="w-3 h-3" />
           </div>
       )}
 
@@ -250,7 +271,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
       ) : (
         <div className="w-full h-full flex items-center justify-center flex-col">
             <span 
-                className={`${ghostFontSizeClass} text-gray-200 dark:text-gray-700 font-bold select-none transition-colors ${isAvailable ? 'group-hover:text-gray-300 dark:group-hover:text-gray-600' : ''}`}
+                className={`${ghostFontSizeClass} ${ghostTextColor} font-bold select-none transition-colors ${isAvailable ? 'group-hover:text-gray-300 dark:group-hover:text-gray-600' : ''}`}
                 style={{
                   fontFamily: 'var(--guide-font-family)',
                   fontFeatureSettings: 'var(--guide-font-feature-settings)'

@@ -854,6 +854,25 @@ export const updateComponentInPaths = (
  * Assembles virtual syllables or kerning pairs based on their 'position' or 'kern' properties.
  */
 export const getUnifiedPaths = (item: Character, ctx: UnifiedRenderContext): Path[] => {
+    
+    // NEW: Handle standard linked glyphs by dynamically baking them from components.
+    if (item.link || item.composite) {
+        // We use generateCompositeGlyphData which accepts the full context (including proxies).
+        // This ensures that if the context has "live" data for source characters, the composite
+        // is rebuilt using that live data.
+        const compositeData = generateCompositeGlyphData({
+            character: item,
+            allCharsByName: ctx.allCharsByName,
+            allGlyphData: ctx.glyphDataMap,
+            settings: { strokeThickness: ctx.strokeThickness } as any, // Only thickness is needed for bbox calculations inside
+            metrics: ctx.metrics!,
+            markAttachmentRules: ctx.markAttachmentRules,
+            allCharacterSets: ctx.characterSets,
+            groups: ctx.groups
+        });
+        return compositeData?.paths || [];
+    }
+
     // 1. Positioned Syllable Branch
     if (item.position && item.position.length === 2) {
         const baseName = item.position[0];
@@ -949,7 +968,7 @@ export const getUnifiedPaths = (item: Character, ctx: UnifiedRenderContext): Pat
         return combined;
     }
 
-    // 3. Standard Glyph Branch (incl. Link/Composite)
+    // 3. Standard Glyph Branch (Base glyphs without links)
     const glyph = ctx.glyphDataMap.get(item.unicode!);
     return glyph?.paths || [];
 };

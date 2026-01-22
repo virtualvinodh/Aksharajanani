@@ -46,7 +46,7 @@ export const useExportActions = ({
     // State for Creator Page (mirroring Test Page pattern)
     const [creatorFont, setCreatorFont] = useState<{ blob: Blob | null, feaError: string | null }>({ blob: null, feaError: null });
 
-    const { drawingProgress } = useProgressCalculators({ 
+    const { drawingProgress, positioningProgress, kerningProgress } = useProgressCalculators({ 
         characterSets, glyphDataMap, markPositioningMap, recommendedKerning, 
         allCharsByName, fontRules, kerningMap, positioningRules, glyphVersion 
     });
@@ -196,8 +196,8 @@ export const useExportActions = ({
 
         const isIncomplete = {
             drawing: drawingProgress.completed < drawingProgress.total,
-            positioning: (positioningRules?.length ?? 0) > markPositioningMap.size,
-            kerning: (recommendedKerning?.length ?? 0) > kerningMap.size,
+            positioning: positioningProgress.completed < positioningProgress.total,
+            kerning: kerningProgress.completed < kerningProgress.total,
         };
         
         const shouldWarn = isIncomplete.drawing || isIncomplete.positioning || isIncomplete.kerning;
@@ -214,7 +214,7 @@ export const useExportActions = ({
         } else {
             onProceed();
         }
-    }, [drawingProgress, positioningRules, markPositioningMap, recommendedKerning, kerningMap, settings, layout, t]);
+    }, [drawingProgress, positioningProgress, kerningProgress, settings, layout, t]);
 
     const startExportProcess = useCallback(() => {
         const triggerAnimation = () => {

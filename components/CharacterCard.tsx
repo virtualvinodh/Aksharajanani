@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderService';
-import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon, LinkIcon } from '../constants';
+import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon, LinkIcon, PuzzleIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 
@@ -190,6 +190,9 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const isNonSpacingMark = character.glyphClass === 'mark' && (character.advWidth === 0 || character.advWidth === '0');
   const isSpacingMark = character.glyphClass === 'mark' && !isNonSpacingMark;
 
+  // Composite Identification for Badge
+  const isCompositeTemplate = character.composite && character.composite.length > 0 && !character.link;
+
   // Determine Type-Based Border Color (applied to both drawn and undrawn)
   let typeBorderClass = "border-gray-200 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400"; // Default Base/Ligature
   
@@ -246,6 +249,13 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       {character.link && (
           <div className="absolute top-1 left-1 p-1 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full shadow-sm z-10" title="Linked Glyph">
              <LinkIcon className="w-3 h-3" />
+          </div>
+      )}
+
+      {/* Composite Template Badge (Puzzle) - Cyan */}
+      {isCompositeTemplate && (
+          <div className="absolute top-1 left-1 p-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-full shadow-sm z-10" title="Composite Template">
+             <PuzzleIcon className="w-3 h-3" />
           </div>
       )}
 
