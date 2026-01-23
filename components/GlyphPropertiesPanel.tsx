@@ -338,10 +338,10 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
     <div 
       ref={panelRef} 
       className="
-        fixed inset-0 m-auto w-[90vw] h-fit max-h-[85vh] z-[100] flex flex-col gap-4 p-4
+        fixed top-20 left-0 right-0 mx-auto w-[90vw] max-h-[70vh] z-[100] flex flex-col gap-4 p-4
         bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-y-auto
         animate-pop-in
-        sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-80 sm:h-auto sm:max-h-[80vh] sm:m-0 sm:animate-fade-in-up
+        sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-80 sm:h-auto sm:max-h-[80vh] sm:mx-0 sm:animate-fade-in-up
       "
     >
       <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2 flex-shrink-0">
