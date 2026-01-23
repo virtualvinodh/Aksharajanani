@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Path, Character, GlyphData, AppSettings, FontMetrics, MarkAttachmentRules, CharacterSet } from '../../types';
+import { Path, Character, GlyphData, AppSettings, FontMetrics, MarkAttachmentRules, CharacterSet, ComponentTransform } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
@@ -94,6 +94,10 @@ export const useGlyphEditSession = ({
     const [kern, setKern] = useState<[string, string] | undefined>(character.kern);
     const [gpos, setGpos] = useState<string | undefined>(character.gpos);
     const [gsub, setGsub] = useState<string | undefined>(character.gsub);
+    // FIX: Add state for composite/link properties.
+    const [link, setLink] = useState<string[] | undefined>(character.link);
+    const [composite, setComposite] = useState<string[] | undefined>(character.composite);
+    const [compositeTransform, setCompositeTransform] = useState<ComponentTransform[] | undefined>(character.compositeTransform);
 
 
     const setLsb = (val: number | undefined) => {
@@ -185,10 +189,10 @@ export const useGlyphEditSession = ({
             }
         };
 
-        const metadata: any = { lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub };
+        const metadata: any = { lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, compositeTransform };
         
         onSave(character.unicode, { paths: pathsToSave }, metadata, onSuccess, options);
-    }, [onSave, character.unicode, currentPaths, lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub]);
+    }, [onSave, character.unicode, currentPaths, lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, compositeTransform]);
 
 
     // --- HISTORY & AUTOSAVE ---
@@ -247,7 +251,8 @@ export const useGlyphEditSession = ({
 
     // --- DIRTY STATE ---
     const hasPathChanges = JSON.stringify(currentPaths) !== JSON.stringify(initialPathsOnLoad);
-    const hasMetadataChanges = lsb !== character.lsb || rsb !== character.rsb || glyphClass !== character.glyphClass || advWidth !== character.advWidth || position !== character.position || kern !== character.kern || gpos !== character.gpos || gsub !== character.gsub;
+    // FIX: Include all metadata properties in dirty check.
+    const hasMetadataChanges = lsb !== character.lsb || rsb !== character.rsb || glyphClass !== character.glyphClass || advWidth !== character.advWidth || JSON.stringify(position) !== JSON.stringify(character.position) || JSON.stringify(kern) !== JSON.stringify(character.kern) || gpos !== character.gpos || gsub !== character.gsub || JSON.stringify(link) !== JSON.stringify(character.link) || JSON.stringify(composite) !== JSON.stringify(character.composite) || JSON.stringify(compositeTransform) !== JSON.stringify(character.compositeTransform);
     const hasUnsavedChanges = hasPathChanges || hasMetadataChanges;
 
     // --- INITIAL AUTOSAVE FOR PREFILL OR REGENERATION ---
@@ -360,6 +365,9 @@ export const useGlyphEditSession = ({
         kern, setKern,
         gpos, setGpos,
         gsub, setGsub,
+        link, setLink,
+        composite, setComposite,
+        compositeTransform, setCompositeTransform,
         isTransitioning,
         hasUnsavedChanges,
         handleSave: () => performSave(currentPaths, { isDraft: false }), 

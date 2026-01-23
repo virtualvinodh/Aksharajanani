@@ -11,10 +11,15 @@ interface SmartGlyphInputProps {
     placeholder?: string;
     className?: string;
     onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+    showSets?: boolean;
+    autoFocus?: boolean;
+    onBlur?: () => void;
+    onSelect?: (value: string) => void;
 }
 
 const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({ 
-    value, onChange, characterSets, groups, placeholder, className, onKeyDown 
+    value, onChange, characterSets, groups, placeholder, className, onKeyDown,
+    showSets = true, autoFocus, onBlur, onSelect
 }) => {
     const { t } = useLocale();
     const [isOpen, setIsOpen] = useState(false);
@@ -30,9 +35,11 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
         });
 
         // 2. Add Character Sets ($) - from characters.json structure
-        characterSets.forEach(s => {
-            opts.push({ label: `$${t(s.nameKey)} (${s.nameKey})`, value: `$${s.nameKey}`, type: 'set' });
-        });
+        if (showSets) {
+            characterSets.forEach(s => {
+                opts.push({ label: `$${t(s.nameKey)} (${s.nameKey})`, value: `$${s.nameKey}`, type: 'set' });
+            });
+        }
 
         // 3. Add Individual Characters
         characterSets.flatMap(s => s.characters).forEach(c => {
@@ -40,7 +47,7 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
         });
 
         return opts;
-    }, [groups, characterSets, t]);
+    }, [groups, characterSets, t, showSets]);
 
     const filteredOptions = useMemo(() => {
         if (!value) return options; // Show all options if no input
@@ -73,6 +80,8 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
                 value={value}
                 onChange={(e) => { onChange(e.target.value); setIsOpen(true); }}
                 onFocus={() => setIsOpen(true)}
+                onBlur={onBlur}
+                autoFocus={autoFocus}
                 onKeyDown={onKeyDown}
                 placeholder={placeholder}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow"
@@ -92,11 +101,18 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
             )}
 
             {isOpen && (
-                <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <ul 
+                    className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                    onMouseDown={(e) => e.preventDefault()}
+                >
                     {filteredOptions.length > 0 ? filteredOptions.map((opt) => (
                         <li 
                             key={opt.value + opt.type}
-                            onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                            onClick={() => { 
+                                onChange(opt.value); 
+                                if (onSelect) onSelect(opt.value);
+                                setIsOpen(false); 
+                            }}
                             className="px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between group"
                         >
                             <span 

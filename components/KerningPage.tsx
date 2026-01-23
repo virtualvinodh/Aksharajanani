@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { RecommendedKerning } from '../types';
+import { RecommendedKerning, Character } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
@@ -206,6 +207,15 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         if (!pair) { setEditingIndex(null); return null; }
         const key = `${pair.left.unicode}-${pair.right.unicode}`;
         const isKerned = kerningMap.has(key);
+        
+        // Construct a virtual character for the pair to satisfy the editor's requirement
+        const virtualName = pair.left.name + pair.right.name;
+        const character: Character = allCharsByName.get(virtualName) || {
+            name: virtualName,
+            kern: [pair.left.name, pair.right.name],
+            glyphClass: 'ligature'
+        };
+
         return (
             <KerningEditorPage
                 pair={pair} initialValue={kerningMap.get(key) ?? 0}
@@ -231,6 +241,8 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                 onDelete={handleDeletePair}
                 allCharacterSets={characterSets!}
                 allCharsByName={allCharsByName}
+                character={character}
+                showPropertiesButton={false} // HIDE properties button in Kerning Workspace
             />
         );
     }

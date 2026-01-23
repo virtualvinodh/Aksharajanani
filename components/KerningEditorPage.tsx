@@ -9,7 +9,6 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
 import Modal from './Modal';
 import { useLocale } from '../contexts/LocaleContext';
-// FIX: Import contexts to provide dispatchers to the properties panel.
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -34,6 +33,8 @@ interface KerningEditorPageProps {
     allCharacterSets: CharacterSet[];
     onConvertToComposite?: (newTransforms: ComponentTransform[]) => void;
     allCharsByName: Map<string, Character>;
+    character: Character; // The virtual/real character representing this pair
+    showPropertiesButton?: boolean; // New optional prop
 }
 
 const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
@@ -43,7 +44,17 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isDetachConfirmOpen, setIsDetachConfirmOpen] = useState(false);
 
-    // FIX: Get dispatchers and dummy functions for properties panel.
+    // Initialize local state for metrics editing (even if virtual)
+    const [lsb, setLsb] = useState<number | undefined>(props.character.lsb);
+    const [rsb, setRsb] = useState<number | undefined>(props.character.rsb);
+
+    // Sync state if character changes
+    useEffect(() => {
+        setLsb(props.character.lsb);
+        setRsb(props.character.rsb);
+    }, [props.character]);
+
+
     const { showNotification } = useLayout();
     const { dispatch: characterDispatch } = useProject();
     const { dispatch: glyphDataDispatch } = useGlyphDataContext();
@@ -143,12 +154,17 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 settings={props.settings} 
                 isKerned={props.isKerned}
                 allCharacterSets={props.allCharacterSets}
-                character={props.pair.left} // Placeholder, needs real character object for properties panel
+                character={props.character}
                 onDetach={props.onConvertToComposite ? () => setIsDetachConfirmOpen(true) : undefined}
                 onSaveConstruction={onSaveConstruction}
                 characterDispatch={characterDispatch}
                 glyphDataDispatch={glyphDataDispatch}
                 onPathsChange={onPathsChange}
+                // Metrics props
+                lsb={lsb} setLsb={setLsb}
+                rsb={rsb} setRsb={setRsb}
+                metrics={props.metrics}
+                showPropertiesButton={props.showPropertiesButton !== undefined ? props.showPropertiesButton : true}
             />
             
             <KerningEditorWorkspace 

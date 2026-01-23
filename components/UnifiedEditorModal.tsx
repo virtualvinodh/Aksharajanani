@@ -22,13 +22,13 @@ import KerningEditorPage from './KerningEditorPage';
 type EditorProfile = 'drawing' | 'positioning' | 'kerning';
 
 const UnifiedEditorModal: React.FC<any> = ({ 
-    character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, 
+    character: propCharacter, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, 
     settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, 
     onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange 
 }) => {
   const { showNotification, filterMode, searchQuery } = useLayout();
   const { 
-    allCharsByName, positioningRules, recommendedKerning, 
+    allCharsByName, allCharsByUnicode, positioningRules, recommendedKerning, 
     markAttachmentClasses, baseAttachmentClasses, dispatch: characterDispatch 
   } = useProject();
   const { kerningMap, dispatch: kerningDispatch } = useKerning();
@@ -36,6 +36,16 @@ const UnifiedEditorModal: React.FC<any> = ({
   const { version: glyphVersion, dispatch: glyphDataDispatch } = useGlyphDataContext();
   const { state: rulesState } = useRules();
   const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
+
+  // Ensure we are working with the live version of the character from ProjectContext.
+  // The prop 'character' comes from LayoutContext's selection state, which might be stale
+  // after a metadata update (e.g. applying construction changes).
+  const character = useMemo(() => {
+    if (propCharacter.unicode !== undefined) {
+        return allCharsByUnicode.get(propCharacter.unicode) || propCharacter;
+    }
+    return allCharsByName.get(propCharacter.name) || propCharacter;
+  }, [propCharacter, allCharsByUnicode, allCharsByName]);
 
   const profile = useMemo<EditorProfile>(() => {
     if (character.position) return 'positioning';
@@ -359,6 +369,7 @@ const UnifiedEditorModal: React.FC<any> = ({
                     allCharacterSets={allCharacterSets}
                     onConvertToComposite={handleConvertToComposite}
                     allCharsByName={allCharsByName}
+                    character={character} // Pass the virtual character object
                 />
             );
         }

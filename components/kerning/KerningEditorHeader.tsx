@@ -1,6 +1,6 @@
 
 import React, {useState, useRef, useEffect} from 'react';
-import { Character, AppSettings, CharacterSet, Path } from '../../types';
+import { Character, AppSettings, CharacterSet, Path, FontMetrics } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon, PropertiesIcon, TrashIcon, MoreIcon, BrokenLinkIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
@@ -23,17 +23,25 @@ interface KerningEditorHeaderProps {
     allCharacterSets: CharacterSet[];
     character: Character; // The virtual character for this pair
     onDetach?: () => void;
-    // FIX: Added missing props for GlyphPropertiesPanel.
     onSaveConstruction: (...args: any) => void;
     characterDispatch: any;
     glyphDataDispatch: (action: GlyphDataAction) => void;
     onPathsChange: (paths: Path[]) => void;
+    
+    // New Props for Properties Panel
+    lsb: number | undefined;
+    setLsb: (v: number | undefined) => void;
+    rsb: number | undefined;
+    setRsb: (v: number | undefined) => void;
+    metrics: FontMetrics;
+    showPropertiesButton?: boolean;
 }
 
 const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
     pair, onClose, onDelete, onNavigate, hasPrev, hasNext, onAutoKern, isAutoKerning, onSave, onRemove, isDirty, settings, isKerned,
     allCharacterSets, character, onDetach,
-    onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange
+    onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange,
+    lsb, setLsb, rsb, setRsb, metrics, showPropertiesButton = true
 }) => {
     const { t } = useLocale();
     const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
@@ -137,7 +145,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                 </button>
             </div>
 
-            <div className="flex-1 flex items-center justify-end gap-2">
+            <div className="flex-1 flex justify-end items-center gap-2 relative">
                 {renderActionButton()}
                 
                 <button 
@@ -175,14 +183,16 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                     <span className="hidden xl:inline font-semibold">{t('reset')}</span>
                 </button>
                 
-                {/* Properties Button - Always Visible */}
-                <button 
-                    onClick={() => setIsPropertiesPanelOpen(prev => !prev)}
-                    className={`p-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ${isPropertiesPanelOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                    title={t('glyphProperties')}
-                >
-                    <PropertiesIcon />
-                </button>
+                {/* Properties Button - Conditionally Visible */}
+                {showPropertiesButton && (
+                    <button 
+                        onClick={() => setIsPropertiesPanelOpen(prev => !prev)}
+                        className={`p-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ${isPropertiesPanelOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                        title={t('glyphProperties')}
+                    >
+                        <PropertiesIcon />
+                    </button>
+                )}
                 
                 {/* MORE MENU - Visible on All Screens */}
                 <div ref={moreMenuRef} className="relative">
@@ -201,21 +211,23 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                         </div>
                     )}
                 </div>
+                {isPropertiesPanelOpen && (
+                    <GlyphPropertiesPanel 
+                        lsb={lsb} setLsb={setLsb} 
+                        rsb={rsb} setRsb={setRsb}
+                        metrics={metrics} 
+                        onClose={() => setIsPropertiesPanelOpen(false)}
+                        character={character}
+                        allCharacterSets={allCharacterSets}
+                        onSaveConstruction={onSaveConstruction}
+                        characterDispatch={characterDispatch}
+                        glyphDataDispatch={glyphDataDispatch}
+                        onPathsChange={onPathsChange}
+                        kern={character.kern}
+                        setKern={undefined} 
+                    />
+                )}
             </div>
-             {isPropertiesPanelOpen && (
-                <GlyphPropertiesPanel 
-                    lsb={undefined} setLsb={()=>{}} 
-                    rsb={undefined} setRsb={()=>{}}
-                    metrics={{} as any} 
-                    onClose={() => setIsPropertiesPanelOpen(false)}
-                    character={character}
-                    allCharacterSets={allCharacterSets}
-                    onSaveConstruction={onSaveConstruction}
-                    characterDispatch={characterDispatch}
-                    glyphDataDispatch={glyphDataDispatch}
-                    onPathsChange={onPathsChange}
-                />
-            )}
         </header>
     );
 };
