@@ -331,20 +331,29 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   const showConstruction = !!character && !!onSaveConstruction && !!allCharacterSets;
 
   return (
+    <>
+    {/* Mobile Backdrop */}
+    <div className="fixed inset-0 bg-black/50 z-[90] sm:hidden" onClick={onClose} aria-hidden="true" />
+
     <div 
       ref={panelRef} 
-      className="fixed sm:absolute top-1/2 sm:top-full left-1/2 sm:left-auto right-auto sm:right-0 -translate-x-1/2 sm:translate-x-0 -translate-y-1/2 sm:translate-y-0 mt-0 sm:mt-2 w-[90vw] sm:w-80 max-w-[90vw] bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-[80vh] overflow-y-auto flex flex-col gap-4 animate-fade-in-up"
+      className="
+        fixed inset-0 m-auto w-[90vw] h-fit max-h-[85vh] z-[100] flex flex-col gap-4 p-4
+        bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-y-auto
+        animate-pop-in
+        sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-80 sm:h-auto sm:max-h-[80vh] sm:m-0 sm:animate-fade-in-up
+      "
     >
-      <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
+      <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2 flex-shrink-0">
         <h4 className="font-bold text-gray-900 dark:text-white">{t('glyphProperties')}</h4>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
           <CloseIcon className="w-5 h-5" />
         </button>
       </div>
       
-      {/* Metrics */}
-      {!isNonSpacing && (
-      <div className="grid grid-cols-2 gap-3">
+      {/* Metrics - Hidden for Kerning type */}
+      {!isNonSpacing && type !== 'kerning' && (
+      <div className="grid grid-cols-2 gap-3 flex-shrink-0">
           <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
                   {t('leftSpace')}
@@ -374,7 +383,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
       
       {/* Classification */}
       {setGlyphClass && (
-        <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
+        <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex-shrink-0">
             <button 
                 onClick={() => setIsClassificationExpanded(!isClassificationExpanded)}
                 className="flex items-center justify-between w-full text-xs font-bold text-gray-500 dark:text-gray-400 uppercase hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
@@ -426,7 +435,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
 
       {/* Construction */}
       {showConstruction && (
-      <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
+      <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex-shrink-0">
         <button 
             onClick={() => setIsConstructionExpanded(!isConstructionExpanded)}
             className="flex items-center justify-between w-full text-xs font-bold text-gray-500 dark:text-gray-400 uppercase hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
@@ -549,6 +558,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
       </div>
       )}
     </div>
+    </>
   );
 };
 
