@@ -188,6 +188,19 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         if (direction === 'next' && editingIndex < filteredPairs.length - 1) setEditingIndex(editingIndex + 1);
     };
 
+    // FIX: Add onDelete handler and pass it down with other required props.
+    const handleDeletePair = useCallback(() => {
+        if (editingIndex === null) return;
+        const pair = filteredPairs[editingIndex];
+        if (!pair) return;
+
+        const key = `${pair.left.unicode}-${pair.right.unicode}`;
+        const newMap = new Map(kerningMap);
+        newMap.delete(key);
+        kerningDispatch({ type: 'SET_MAP', payload: newMap });
+        setEditingIndex(null); // Close editor after delete
+    }, [editingIndex, filteredPairs, kerningMap, kerningDispatch]);
+
     if (editingIndex !== null) {
         const pair = filteredPairs[editingIndex];
         if (!pair) { setEditingIndex(null); return null; }
@@ -215,6 +228,9 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                 hasPrev={editingIndex > 0} hasNext={editingIndex < filteredPairs.length - 1}
                 glyphVersion={glyphVersion}
                 isKerned={isKerned}
+                onDelete={handleDeletePair}
+                allCharacterSets={characterSets!}
+                allCharsByName={allCharsByName}
             />
         );
     }

@@ -3,8 +3,7 @@ import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMe
 import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, TransformState, ComponentTransform } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-// FIX: Changed import to use DrawingModalHeader as per the file provided, assuming a rename from DrawingEditorHeader.
-import DrawingModalHeader from './DrawingModalHeader';
+import DrawingEditorHeader from './drawing/DrawingEditorHeader';
 import DrawingEditorWorkspace from './drawing/DrawingEditorWorkspace';
 import DrawingConfirmationStack from './drawing/DrawingConfirmationStack';
 import ImageControlPanel from './ImageControlPanel';
@@ -223,24 +222,19 @@ const DrawingModal: React.FC<any> = ({
       <input type="file" ref={svgImportRef} onChange={handleSvgImport} className="hidden" accept="image/svg+xml" />
       <input type="file" ref={imageTraceRef} onChange={handleImageTraceFileChange} className="hidden" accept="image/*" />
 
-      <DrawingModalHeader
+      <DrawingEditorHeader
         character={character} glyphData={glyphData} prevCharacter={prevCharacter} nextCharacter={nextCharacter}
         onBackClick={() => handleNavigationAttempt(null)} onNavigate={handleNavigationAttempt}
         settings={settings} metrics={metrics} lsb={lsb} setLsb={setLsb} rsb={rsb} setRsb={setRsb}
         onDeleteClick={() => setIsDeleteConfirmOpen(true)} onClear={() => handlePathsChange([])} onSave={handleSave} 
         isLocked={isLocked} isComposite={isComposite} onRefresh={handleRefresh}
-        allCharacterSets={allCharacterSets} 
-        onSaveConstruction={handleSaveConstruction}
+        allCharacterSets={allCharacterSets} onSaveConstruction={handleSaveConstruction}
         onUnlock={() => setIsUnlockConfirmOpen(true)} onRelink={() => setIsRelinkConfirmOpen(true)}
         glyphClass={glyphClass} setGlyphClass={setGlyphClass} advWidth={advWidth} setAdvWidth={setAdvWidth}
         position={position} setPosition={setPosition}
         kern={kern} setKern={setKern}
         gpos={gpos} setGpos={setGpos}
         gsub={gsub} setGsub={setGsub}
-        // Pass dispatchers and setters for direct manipulation in the panel
-        characterDispatch={characterDispatch}
-        glyphDataDispatch={glyphDataDispatch}
-        onPathsChange={handlePathsChange}
       />
 
       <DrawingEditorWorkspace 

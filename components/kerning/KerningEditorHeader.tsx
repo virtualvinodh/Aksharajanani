@@ -1,8 +1,10 @@
+
 import React, {useState, useRef, useEffect} from 'react';
-import { Character, AppSettings, CharacterSet } from '../../types';
+import { Character, AppSettings, CharacterSet, Path } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon, PropertiesIcon, TrashIcon, MoreIcon, BrokenLinkIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
+import { GlyphDataAction } from '../../contexts/GlyphDataContext';
 
 interface KerningEditorHeaderProps {
     pair: { left: Character, right: Character };
@@ -21,11 +23,17 @@ interface KerningEditorHeaderProps {
     allCharacterSets: CharacterSet[];
     character: Character; // The virtual character for this pair
     onDetach?: () => void;
+    // FIX: Added missing props for GlyphPropertiesPanel.
+    onSaveConstruction: (...args: any) => void;
+    characterDispatch: any;
+    glyphDataDispatch: (action: GlyphDataAction) => void;
+    onPathsChange: (paths: Path[]) => void;
 }
 
 const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
     pair, onClose, onDelete, onNavigate, hasPrev, hasNext, onAutoKern, isAutoKerning, onSave, onRemove, isDirty, settings, isKerned,
-    allCharacterSets, character, onDetach
+    allCharacterSets, character, onDetach,
+    onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange
 }) => {
     const { t } = useLocale();
     const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
@@ -202,6 +210,10 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                     onClose={() => setIsPropertiesPanelOpen(false)}
                     character={character}
                     allCharacterSets={allCharacterSets}
+                    onSaveConstruction={onSaveConstruction}
+                    characterDispatch={characterDispatch}
+                    glyphDataDispatch={glyphDataDispatch}
+                    onPathsChange={onPathsChange}
                 />
             )}
         </header>

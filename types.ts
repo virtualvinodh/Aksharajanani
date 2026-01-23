@@ -65,6 +65,8 @@ export interface Character {
   composite?: string[];
   link?: string[];
   position?: [string, string]; // [BaseName, MarkName] for virtual assembly
+  gpos?: string; // New: GPOS feature tag (e.g., 'abvm')
+  gsub?: string; // New: GSUB feature tag (e.g., 'liga', 'haln')
   kern?: [string, string];     // [LeftName, RightName] for virtual assembly
   sourceLink?: string[]; // To remember original link after unlinking
   sourceLinkType?: 'position' | 'link' | 'kern'; // To remember if it was a position pair, kern pair, or standard link

@@ -9,14 +9,17 @@ import UnsavedChangesModal from './UnsavedChangesModal';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import Modal from './Modal';
 import { useRules } from '../contexts/RulesContext';
+// FIX: Import useProject to get characterDispatch.
 import { useProject } from '../contexts/ProjectContext';
 import PositioningEditorHeader from './positioning/PositioningEditorHeader';
 import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace';
 import { CloseIcon } from '../constants';
 import { VEC } from '../utils/vectorUtils';
 import { usePositioningSession } from '../hooks/positioning/usePositioningSession';
-import { deepClone } from '../utils/cloneUtils';
+import { deepClone } from '../../utils/cloneUtils';
 import { expandMembers } from '../../services/groupExpansionService';
+// FIX: Import useGlyphDataContext to get glyphDataDispatch.
+import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 
 interface PositioningEditorPageProps {
     baseChar: Character;
@@ -27,6 +30,7 @@ interface PositioningEditorPageProps {
     onSave: (base: Character, mark: Character, targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => void;
     onConfirmPosition: (base: Character, mark: Character, ligature: Character) => void;
     onClose: () => void;
+    onDelete: () => void;
     onReset: (baseChar: Character, markChar: Character, targetLigature: Character) => void;
     settings: AppSettings;
     metrics: FontMetrics;
@@ -48,7 +52,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     const { showNotification } = useLayout();
     const { state: rulesState } = useRules();
     const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
-    const { markAttachmentClasses, setMarkAttachmentClasses, baseAttachmentClasses, setBaseAttachmentClasses } = useProject();
+    // FIX: Get dispatchers from context.
+    const { markAttachmentClasses, setMarkAttachmentClasses, baseAttachmentClasses, setBaseAttachmentClasses, dispatch: characterDispatch } = useProject();
+    const { dispatch: glyphDataDispatch } = useGlyphDataContext();
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
     const [isReusePanelOpen, setIsReusePanelOpen] = useState(false);
@@ -67,6 +73,12 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
         markAttachmentClasses,
         baseAttachmentClasses
     });
+
+    // FIX: Define dummy/stub functions for props required by GlyphPropertiesPanel.
+    const onSaveConstruction = useCallback(() => {
+        showNotification("Changing construction type is not supported in this editor.", "info");
+    }, [showNotification]);
+
 
     const isPositioned = useMemo(() => props.markPositioningMap.has(`${props.baseChar.unicode}-${props.markChar.unicode}`), [props.markPositioningMap, props.baseChar, props.markChar]);
     const isGsubPair = useMemo(() => {
@@ -172,6 +184,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 prevPair={props.hasPrev} 
                 nextPair={props.hasNext}
                 onNavigate={session.handleNavigationAttempt} 
+                onDelete={props.onDelete}
                 activeAttachmentClass={session.activeAttachmentClass} 
                 isLinked={session.isLinked} 
                 isPivot={session.isPivot}
@@ -190,6 +203,11 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 isDirty={session.hasUnsavedChanges}
                 onConfirmPosition={() => props.onConfirmPosition(props.baseChar, props.markChar, props.targetLigature)}
                 onDetach={props.onConvertToComposite ? () => setIsDetachConfirmOpen(true) : undefined}
+                allCharacterSets={props.characterSets}
+                onSaveConstruction={onSaveConstruction}
+                characterDispatch={characterDispatch}
+                glyphDataDispatch={glyphDataDispatch}
+                onPathsChange={session.handlePathsChange}
             />
 
             <PositioningEditorWorkspace 

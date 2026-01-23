@@ -1,8 +1,10 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Character, FontMetrics } from '../../types';
+import { Character, FontMetrics, CharacterSet, Path } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { BackIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, PropertiesIcon, SaveIcon, LinkIcon, BrokenLinkIcon, RefreshIcon, CheckIcon, TrashIcon, MoreIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
+import { GlyphDataAction } from '../../contexts/GlyphDataContext';
 
 interface PositioningEditorHeaderProps {
     targetLigature: Character;
@@ -18,7 +20,7 @@ interface PositioningEditorHeaderProps {
     onResetRequest: () => void;
     isGsubPair: boolean;
     isPropertiesPanelOpen: boolean;
-    setIsPropertiesPanelOpen: (val: boolean) => void;
+    setIsPropertiesPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
     lsb: number | undefined;
     setLsb: (val: number | undefined) => void;
     rsb: number | undefined;
@@ -31,13 +33,20 @@ interface PositioningEditorHeaderProps {
     isDirty: boolean;
     onConfirmPosition: () => void;
     onDetach?: () => void;
+    // FIX: Added missing props for GlyphPropertiesPanel.
+    allCharacterSets: CharacterSet[];
+    onSaveConstruction: (...args: any) => void;
+    characterDispatch: any;
+    glyphDataDispatch: (action: GlyphDataAction) => void;
+    onPathsChange: (paths: Path[]) => void;
 }
 
 const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
     targetLigature, prevPair, nextPair, onNavigate, onDelete, activeAttachmentClass, isLinked, isPivot,
     canEdit, isPositioned, onResetRequest, isGsubPair, isPropertiesPanelOpen, 
     setIsPropertiesPanelOpen, lsb, setLsb, rsb, setRsb, metrics, isAutosaveEnabled, 
-    onSaveRequest, isLargeScreen, isStripExpanded, isDirty, onConfirmPosition, onDetach
+    onSaveRequest, isLargeScreen, isStripExpanded, isDirty, onConfirmPosition, onDetach,
+    allCharacterSets, onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange
 }) => {
     const { t } = useLocale();
     const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -76,7 +85,7 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
         } else {
             // Manual Save Mode
             if (!isPositioned && !isDirty) {
-                return (
+                 return (
                     <button 
                         onClick={onConfirmPosition} 
                         title="Accept Default Position"
@@ -88,7 +97,7 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                 );
             }
             if (isDirty) {
-                return (
+                 return (
                     <button 
                         onClick={onSaveRequest} 
                         className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
@@ -190,13 +199,13 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
 
                 {/* Properties Button - Always Visible */}
                 <button 
-                    onClick={() => setIsPropertiesPanelOpen(prev => !prev)}
+                    onClick={() => setIsPropertiesPanelOpen(p => !p)}
                     className={`p-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ${isPropertiesPanelOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                     title={t('glyphProperties')}
                 >
                     <PropertiesIcon />
                 </button>
-
+                
                 {/* MORE MENU - Visible on All Screens */}
                 <div ref={moreMenuRef} className="relative">
                     <button
@@ -221,7 +230,12 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                     lsb={lsb} setLsb={setLsb} 
                     rsb={rsb} setRsb={setRsb} 
                     metrics={metrics} 
-                    onClose={() => setIsPropertiesPanelOpen(false)} 
+                    onClose={() => setIsPropertiesPanelOpen(p => !p)}
+                    allCharacterSets={allCharacterSets}
+                    onSaveConstruction={onSaveConstruction}
+                    characterDispatch={characterDispatch}
+                    glyphDataDispatch={glyphDataDispatch}
+                    onPathsChange={onPathsChange}
                 />
             )}
         </header>

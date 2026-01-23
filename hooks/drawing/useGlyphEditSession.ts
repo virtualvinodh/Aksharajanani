@@ -17,7 +17,7 @@ interface UseGlyphEditSessionProps {
     settings: AppSettings;
     metrics: FontMetrics;
     markAttachmentRules: MarkAttachmentRules | null;
-    onSave: (unicode: number, newGlyphData: GlyphData, newBearings: { lsb?: number, rsb?: number }, onSuccess?: () => void, options?: SaveOptions) => void;
+    onSave: (unicode: number, newGlyphData: GlyphData, newMetadata: any, onSuccess?: () => void, options?: SaveOptions) => void;
     onNavigate: (character: Character) => void;
     onClose: () => void;
 }
@@ -90,6 +90,11 @@ export const useGlyphEditSession = ({
     const [rsb, setRsbState] = useState<number | undefined>(character.rsb);
     const [glyphClass, setGlyphClassState] = useState<Character['glyphClass']>(character.glyphClass);
     const [advWidth, setAdvWidthState] = useState<number | string | undefined>(character.advWidth);
+    const [position, setPosition] = useState<[string, string] | undefined>(character.position);
+    const [kern, setKern] = useState<[string, string] | undefined>(character.kern);
+    const [gpos, setGpos] = useState<string | undefined>(character.gpos);
+    const [gsub, setGsub] = useState<string | undefined>(character.gsub);
+
 
     const setLsb = (val: number | undefined) => {
         setLsbState(val);
@@ -180,13 +185,10 @@ export const useGlyphEditSession = ({
             }
         };
 
-        // Note: The onSave callback from parent is typed to accept 'newBearings' object.
-        // We are passing expanded metadata now. The implementation in useGlyphActions.ts handles this extension.
-        // We cast to any to bypass strict type checking here as we updated the context/hook but interfaces might lag slightly.
-        const metadata: any = { lsb, rsb, glyphClass, advWidth };
+        const metadata: any = { lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub };
         
         onSave(character.unicode, { paths: pathsToSave }, metadata, onSuccess, options);
-    }, [onSave, character.unicode, currentPaths, lsb, rsb, glyphClass, advWidth]);
+    }, [onSave, character.unicode, currentPaths, lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub]);
 
 
     // --- HISTORY & AUTOSAVE ---
@@ -245,8 +247,7 @@ export const useGlyphEditSession = ({
 
     // --- DIRTY STATE ---
     const hasPathChanges = JSON.stringify(currentPaths) !== JSON.stringify(initialPathsOnLoad);
-    const hasBearingChanges = lsb !== character.lsb || rsb !== character.rsb;
-    const hasMetadataChanges = hasBearingChanges || glyphClass !== character.glyphClass || advWidth !== character.advWidth;
+    const hasMetadataChanges = lsb !== character.lsb || rsb !== character.rsb || glyphClass !== character.glyphClass || advWidth !== character.advWidth || position !== character.position || kern !== character.kern || gpos !== character.gpos || gsub !== character.gsub;
     const hasUnsavedChanges = hasPathChanges || hasMetadataChanges;
 
     // --- INITIAL AUTOSAVE FOR PREFILL OR REGENERATION ---
@@ -355,6 +356,10 @@ export const useGlyphEditSession = ({
         setGlyphClass,
         advWidth,
         setAdvWidth,
+        position, setPosition,
+        kern, setKern,
+        gpos, setGpos,
+        gsub, setGsub,
         isTransitioning,
         hasUnsavedChanges,
         handleSave: () => performSave(currentPaths, { isDraft: false }), 

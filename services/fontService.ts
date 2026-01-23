@@ -1,4 +1,5 @@
 
+
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Path, KerningMap, MarkPositioningMap, PositioningRules, MarkAttachmentRules, Segment } from '../types';
 import { compileFeaturesAndPatch } from './pythonFontService';
 import { generateFea } from './feaService';
@@ -7,6 +8,7 @@ import { curveToPolyline, quadraticCurveToPolyline, getAccurateGlyphBBox, calcul
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
 import { expandMembers } from './groupExpansionService';
+import { deepClone } from '../utils/cloneUtils';
 
 // opentype.js is loaded from a CDN in index.html and will be available on the window object.
 // This declaration informs TypeScript about the global 'opentype' variable.
@@ -94,7 +96,7 @@ const createFont = (
     const allCharactersMap = new Map<number, Character>();
     characterSets.forEach(set => {
         set.characters.forEach(char => {
-            allCharactersMap.set(char.unicode, char);
+            if(char.unicode !== undefined) allCharactersMap.set(char.unicode, char);
         });
     });
 
@@ -459,13 +461,88 @@ export const exportToOtf = async (
     
     const groups = fontRules?.groups || {};
 
-    // Create GPOS rules for default-positioned (non-interacted) mark combinations
-    // instead of creating pre-rendered GSUB ligatures for them.
+    // Bake dynamic/implicit ligatures (GSUB) before compiling font outlines
+    allCharsByUnicode.forEach(char => {
+        // Condition: Is a composite glyph that needs to be baked (not a GPOS rule) and has a unicode.
+        if (char.position && !char.gpos && char.unicode) {
+            // Don't overwrite if it's already manually drawn.
+            if (isGlyphDrawn(finalGlyphData.get(char.unicode))) {
+                return;
+            }
+    
+            const [baseName, markName] = char.position;
+            const baseChar = allCharsByName.get(baseName);
+            const markChar = allCharsByName.get(markName);
+    
+            if (!baseChar || !markChar || baseChar.unicode === undefined || markChar.unicode === undefined) return;
+    
+            const baseGlyphData = finalGlyphData.get(baseChar.unicode);
+            const markGlyphData = finalGlyphData.get(markChar.unicode);
+    
+            if (!isGlyphDrawn(baseGlyphData) || !isGlyphDrawn(markGlyphData)) return;
+    
+            // --- Offset Priority Logic ---
+            let offset: Point;
+            const key = `${baseChar.unicode}-${markChar.unicode}`;
+            
+            // Priority 1: Check for manual override from the positioning map.
+            const manualOffset = markPositioningMap.get(key);
+            if (manualOffset) {
+                offset = manualOffset;
+            } else {
+            // Priority 2: Fallback to default calculation.
+                const baseBbox = getAccurateGlyphBBox(baseGlyphData!.paths, settings.strokeThickness);
+                const markBbox = getAccurateGlyphBBox(markGlyphData!.paths, settings.strokeThickness);
+                
+                let movementConstraint: 'horizontal' | 'vertical' | 'none' = 'none';
+                if (positioningRules) {
+                     const rule = positioningRules.find(r => 
+                        expandMembers(r.base, groups, characterSets).includes(baseName) && 
+                        expandMembers(r.mark || [], groups, characterSets).includes(markName)
+                    );
+                    if (rule && (rule.movement === 'horizontal' || rule.movement === 'vertical')) {
+                        movementConstraint = rule.movement;
+                    }
+                }
+                
+                offset = calculateDefaultMarkOffset(
+                    baseChar, 
+                    markChar, 
+                    baseBbox, 
+                    markBbox, 
+                    markAttachmentRules, 
+                    metrics, 
+                    characterSets, 
+                    false, 
+                    groups,
+                    movementConstraint
+                );
+            }
+    
+            // --- Bake Geometry ---
+            const transformedMarkPaths = deepClone(markGlyphData!.paths).map((p: Path) => {
+                p.points = p.points.map(pt => VEC.add(pt, offset));
+                if (p.segmentGroups) {
+                    p.segmentGroups.forEach(group => {
+                        group.forEach(seg => {
+                            seg.point = VEC.add(seg.point, offset);
+                        });
+                    });
+                }
+                return p;
+            });
+    
+            const combinedPaths = [...deepClone(baseGlyphData!.paths), ...transformedMarkPaths];
+            finalGlyphData.set(char.unicode, { paths: combinedPaths });
+        }
+    });
+
+    // Final map for FEA generation, including manually positioned pairs.
     const finalMarkPositioningMap = new Map(markPositioningMap.entries());
+
+    // Pass 1: Calculate default positions for pairs defined in positioning.json
     if (positioningRules) {
         for (const rule of positioningRules) {
-            // JIT EXPANSION for Export
-            // Pass characterSets for group expansion
             const allPossibleMarks = expandMembers(rule.mark || [], groups, characterSets);
             const allBases = expandMembers(rule.base, groups, characterSets);
             
@@ -473,10 +550,9 @@ export const exportToOtf = async (
                 for (const markName of allPossibleMarks) {
                     const baseChar = allCharsByName.get(baseName);
                     const markChar = allCharsByName.get(markName);
-                    if (!baseChar || !markChar) continue;
+                    if (!baseChar || !markChar || baseChar.unicode === undefined || markChar.unicode === undefined) continue;
 
                     const key = `${baseChar.unicode}-${markChar.unicode}`;
-                    // If the user has not manually positioned this pair, calculate its default position for GPOS.
                     if (finalMarkPositioningMap.has(key)) continue;
 
                     const baseGlyphData = finalGlyphData.get(baseChar.unicode);
@@ -485,7 +561,6 @@ export const exportToOtf = async (
                     if (isGlyphDrawn(baseGlyphData) && isGlyphDrawn(markGlyphData)) {
                         const baseBbox = getAccurateGlyphBBox(baseGlyphData!.paths, settings.strokeThickness);
                         const markBbox = getAccurateGlyphBBox(markGlyphData!.paths, settings.strokeThickness);
-                        // Pass groups and characterSets for expansion
                         const offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
                         finalMarkPositioningMap.set(key, offset);
                     }
@@ -493,6 +568,29 @@ export const exportToOtf = async (
             }
         }
     }
+
+    // Pass 2: Calculate default positions for pairs defined *only* in characters.json
+    allCharsByUnicode.forEach(char => {
+        if (char.position && char.gpos) {
+            const [baseName, markName] = char.position;
+            const baseChar = allCharsByName.get(baseName);
+            const markChar = allCharsByName.get(markName);
+            if (!baseChar || !markChar || baseChar.unicode === undefined || markChar.unicode === undefined) return;
+
+            const key = `${baseChar.unicode}-${markChar.unicode}`;
+            if (finalMarkPositioningMap.has(key)) return;
+
+            const baseGlyphData = finalGlyphData.get(baseChar.unicode);
+            const markGlyphData = finalGlyphData.get(markChar.unicode);
+
+            if (isGlyphDrawn(baseGlyphData) && isGlyphDrawn(markGlyphData)) {
+                const baseBbox = getAccurateGlyphBBox(baseGlyphData!.paths, settings.strokeThickness);
+                const markBbox = getAccurateGlyphBBox(markGlyphData!.paths, settings.strokeThickness);
+                const offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
+                finalMarkPositioningMap.set(key, offset);
+            }
+        }
+    });
 
 
     // Stage 1: Generate base font outlines in a non-blocking Web Worker.

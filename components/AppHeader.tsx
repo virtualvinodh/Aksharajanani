@@ -24,6 +24,8 @@ interface AppHeaderProps {
     onLoadProject: () => void;
     onImportGlyphsClick: () => void;
     onAddGlyphClick: (options?: { prefillName?: string; targetSet?: string }) => void;
+    // FIX: Added onAddBlock prop to fix type error in App.tsx.
+    onAddBlock: () => void;
     onExportClick: () => void;
     onTestClick: () => void;
     onCreatorClick: () => void;

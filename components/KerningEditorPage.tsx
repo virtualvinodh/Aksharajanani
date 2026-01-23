@@ -9,6 +9,10 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
 import Modal from './Modal';
 import { useLocale } from '../contexts/LocaleContext';
+// FIX: Import contexts to provide dispatchers to the properties panel.
+import { useProject } from '../contexts/ProjectContext';
+import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
+import { useLayout } from '../contexts/LayoutContext';
 
 interface KerningEditorPageProps {
     pair: { left: Character, right: Character };
@@ -38,6 +42,17 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     const xDistInputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isDetachConfirmOpen, setIsDetachConfirmOpen] = useState(false);
+
+    // FIX: Get dispatchers and dummy functions for properties panel.
+    const { showNotification } = useLayout();
+    const { dispatch: characterDispatch } = useProject();
+    const { dispatch: glyphDataDispatch } = useGlyphDataContext();
+    const onSaveConstruction = useCallback(() => {
+        showNotification("Changing construction type is not supported here.", "info");
+    }, [showNotification]);
+    const onPathsChange = useCallback(() => {
+        showNotification("Path editing is not supported here.", "info");
+    }, [showNotification]);
 
     const session = useKerningSession(props);
     const sourceGlyphs = useMemo(() => [props.pair.left, props.pair.right], [props.pair]);
@@ -130,6 +145,10 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 allCharacterSets={props.allCharacterSets}
                 character={props.pair.left} // Placeholder, needs real character object for properties panel
                 onDetach={props.onConvertToComposite ? () => setIsDetachConfirmOpen(true) : undefined}
+                onSaveConstruction={onSaveConstruction}
+                characterDispatch={characterDispatch}
+                glyphDataDispatch={glyphDataDispatch}
+                onPathsChange={onPathsChange}
             />
             
             <KerningEditorWorkspace 

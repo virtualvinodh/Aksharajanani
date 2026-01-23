@@ -1,8 +1,11 @@
+
+
 import { Character, KerningMap, MarkPositioningMap, PositioningRules, GlyphData, FontMetrics, Path, CharacterSet } from '../types';
 import { getAccurateGlyphBBox, BoundingBox } from './glyphRenderService';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn as isGlyphDrawnUtil, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
 import { expandMembers } from './groupExpansionService';
+import { deepClone } from '../utils/cloneUtils';
 
 // --- Layer 2 Safeguard: Sanitize FEA Identifiers ---
 // Ensures class names follow the Adobe FEA spec: Alphanumeric, underscores, periods, hyphens. No spaces.
@@ -192,7 +195,52 @@ export const generateFea = (
     // --- End GDEF Table Generation ---
 
     // --- GSUB Features ---
-    const scriptData = fontRules[scriptTag];
+    const scriptData = deepClone(fontRules[scriptTag]); // Make a mutable copy
+
+    // Inject dynamic GSUB rules from characters.json (position-based)
+    allCharsByUnicode.forEach(char => {
+        // Condition: Is a composite, IS NOT GPOS, but IS GSUB
+        if (char.position && !char.gpos && char.gsub) {
+            const [baseName, markName] = char.position;
+            // Don't generate rules for undrawn components.
+            if (!isNameDrawn(baseName) || !isNameDrawn(markName)) return;
+    
+            const featureTag = char.gsub;
+            // Ensure feature and rule type exist
+            if (!scriptData[featureTag]) scriptData[featureTag] = {};
+            if (!scriptData[featureTag].liga) scriptData[featureTag].liga = {};
+    
+            // Add the rule. The existing `liga` generator expects this format.
+            scriptData[featureTag].liga[char.name] = [baseName, markName];
+        }
+    });
+    
+    // Inject dynamic GSUB rules for detached/composite glyphs
+    allCharsByUnicode.forEach(char => {
+        // Condition: Character IS a composite AND has a GSUB feature tag.
+        // This is the pattern for a detached GPOS glyph that should now act as a GSUB ligature.
+        if (char.composite && char.gsub) {
+            // This rule type is for pairs that were "detached".
+            // It's a safe assumption for any character originating from a 'position' pair.
+            if (char.composite.length !== 2) return;
+    
+            const [baseName, markName] = char.composite;
+            const featureTag = char.gsub;
+            const ligatureName = char.name;
+    
+            // CRITICAL: Reuse existing validation to avoid invalid rules.
+            if (!isNameDrawn(baseName) || !isNameDrawn(markName)) return;
+    
+            // --- Inject the rule into the temporary `scriptData` object ---
+            // Ensure the data structure is initialized.
+            if (!scriptData[featureTag]) scriptData[featureTag] = {};
+            if (!scriptData[featureTag].liga) scriptData[featureTag].liga = {};
+    
+            // Add the rule.
+            scriptData[featureTag].liga[ligatureName] = [baseName, markName];
+        }
+    });
+
     let allLookupDefinitions = '';
     const generatedLookupNames = new Set<string>();
 
@@ -476,14 +524,14 @@ export const generateFea = (
     const FONT_HEIGHT = metrics.ascender - metrics.descender;
     const scale = FONT_HEIGHT / DRAWING_CANVAS_SIZE;
 
+    const pairToGposTag = new Map<string, string>();
+
+    // Priority 1: Populate from positioning.json rules.
     if (positioningRules) {
-        const pairToGposTag = new Map<string, string>();
         positioningRules.forEach(rule => {
             if (rule.gpos) {
-                // JIT EXPANSION for generating pair tags
                 const bases = expandMembers(rule.base, groups, characterSets);
                 const marks = expandMembers(rule.mark || [], groups, characterSets);
-
                 bases.forEach(baseName => {
                     marks.forEach(markName => {
                         pairToGposTag.set(`${baseName}-${markName}`, rule.gpos!);
@@ -491,7 +539,20 @@ export const generateFea = (
                 });
             }
         });
+    }
 
+    // Priority 2: Populate with fallbacks from characters.json.
+    allCharsByUnicode.forEach(char => {
+        if (char.position && char.gpos) {
+            const [baseName, markName] = char.position;
+            const pairKey = `${baseName}-${markName}`;
+            if (!pairToGposTag.has(pairKey)) { // Only add if not already defined (priority)
+                pairToGposTag.set(pairKey, char.gpos);
+            }
+        }
+    });
+
+    if (pairToGposTag.size > 0) {
         const markClasses = new Map<string, string>(); // mark glyph name -> class name
         
         markPositioningMap.forEach((offset, key) => {
@@ -499,7 +560,6 @@ export const generateFea = (
             const baseChar = allCharsByUnicode.get(baseUnicode);
             const markChar = allCharsByUnicode.get(markUnicode);
 
-            // Check if both glyphs are drawn
             if (!baseChar || !markChar || !isGlyphDrawn(baseChar) || !isGlyphDrawn(markChar)) return;
             
             const gposTag = pairToGposTag.get(`${baseChar.name}-${markChar.name}`);
@@ -523,21 +583,13 @@ export const generateFea = (
             
             const LSB_f = baseChar.lsb ?? metrics.defaultLSB;
             
-            // Correct anchor calculation:
-            // The anchor position is relative to the base glyph's origin (0,0).
-            // The base glyph's drawing starts at its LSB. We calculate the visual distance
-            // between the left edges of the base and (positioned) mark on the canvas, scale it,
-            // and then add the base's LSB to get the anchor coordinate relative to the origin.
             const canvas_distance_x = (markBbox.x + offset.x) - baseBbox.x;
             const font_distance_x = canvas_distance_x * scale;
             const anchorX = Math.round(LSB_f + font_distance_x);
 
-            // The Y anchor is the vertical distance the mark was moved, converted to font units.
-            // Y is inverted between canvas (top-down) and font (bottom-up) coordinates.
             const anchorY = Math.round(-offset.y * scale);
             
             if (baseChar.glyphClass === 'mark') {
-                // This is a mark-to-mark attachment. The first mark must also be in a mark class.
                 if (!markClasses.has(baseGlyphName)) {
                     markClasses.set(baseGlyphName, `@mark_${baseGlyphName}`);
                 }
@@ -567,7 +619,6 @@ export const generateFea = (
         const leftChar = allCharsByUnicode.get(leftUnicode);
         const rightChar = allCharsByUnicode.get(rightUnicode);
 
-        // Check if both glyphs are drawn
         if (leftChar && rightChar && isGlyphDrawn(leftChar) && isGlyphDrawn(rightChar) && value !== 0) {
             const leftGlyph = getGlyphName(leftChar);
             const rightGlyph = getGlyphName(rightChar);

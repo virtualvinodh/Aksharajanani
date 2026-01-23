@@ -70,8 +70,8 @@
   "characters": [
     { "unicode": 57345, "name": "க்", "glyphClass": "ligature", "position": ["க", "்"], "gpos": "abvm", "gsub": "haln" },
     { "unicode": 57346, "name": "ங்", "glyphClass": "ligature", "kern": ["ங", "ங"]  },
-    { "unicode": 57347, "name": "ச்", "glyphClass": "ligature", "position": ["ச", "்"], "gpos": "abvm", "gsub": "haln"  },
-    { "unicode": 57348, "name": "ஞ்", "glyphClass": "ligature", "position": ["ஞ", "்"], "gpos": "abvm", "gsub": "haln"  },
+    { "unicode": 57347, "name": "ச்", "glyphClass": "ligature", "position": ["ச", "்"], "gsub": "haln"  },
+    { "unicode": 57348, "name": "ஞ்", "glyphClass": "ligature", "position": ["ஞ", "்"], "gpos": "abvm"  },
     { "unicode": 57349, "name": "ட்", "glyphClass": "ligature", "position": ["ட", "்"], "gpos": "abvm", "gsub": "haln"  },
     { "unicode": 57350, "name": "ண்", "glyphClass": "ligature", "position": ["ண", "்"], "gpos": "abvm", "gsub": "haln"  },
     { "unicode": 57351, "name": "த்", "glyphClass": "ligature", "position": ["த", "்"], "gpos": "abvm", "gsub": "haln"  },

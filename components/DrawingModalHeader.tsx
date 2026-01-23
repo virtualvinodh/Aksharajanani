@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet, ComponentTransform } from '../types';
+import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet, ComponentTransform, Path } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon, MoreIcon, LinkIcon, BrokenLinkIcon, RefreshIcon } from '../constants';
 import GlyphPropertiesPanel from './GlyphPropertiesPanel';
+import { GlyphDataAction } from '../contexts/GlyphDataContext';
 
 interface DrawingModalHeaderProps {
   character: Character;
@@ -34,13 +35,28 @@ interface DrawingModalHeaderProps {
   setGlyphClass?: (val: Character['glyphClass']) => void;
   advWidth?: number | string;
   setAdvWidth?: (val: number | string | undefined) => void;
+  position?: [string, string];
+  setPosition?: (val: [string, string] | undefined) => void;
+  kern?: [string, string];
+  setKern?: (val: [string, string] | undefined) => void;
+  gpos?: string;
+  setGpos?: (val: string | undefined) => void;
+  gsub?: string;
+  setGsub?: (val: string | undefined) => void;
+
+  // FIX: Added missing props required by GlyphPropertiesPanel.
+  characterDispatch: any;
+  glyphDataDispatch: (action: GlyphDataAction) => void;
+  onPathsChange: (paths: Path[]) => void;
 }
 
 const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
   character, glyphData, prevCharacter, nextCharacter, onBackClick, onNavigate,
   settings, metrics, lsb, setLsb, rsb, setRsb, onDeleteClick, onClear, onSave,
   isLocked = false, isComposite = false, onRefresh, allCharacterSets, onSaveConstruction,
-  onUnlock, onRelink, glyphClass, setGlyphClass, advWidth, setAdvWidth
+  onUnlock, onRelink, glyphClass, setGlyphClass, advWidth, setAdvWidth,
+  position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
+  characterDispatch, glyphDataDispatch, onPathsChange
 }) => {
   const { t } = useLocale();
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
@@ -241,6 +257,17 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               setGlyphClass={setGlyphClass}
               advWidth={advWidth}
               setAdvWidth={setAdvWidth}
+              position={position}
+              setPosition={setPosition}
+              kern={kern}
+              setKern={setKern}
+              gpos={gpos}
+              setGpos={setGpos}
+              gsub={gsub}
+              setGsub={setGsub}
+              characterDispatch={characterDispatch}
+              glyphDataDispatch={glyphDataDispatch}
+              onPathsChange={onPathsChange}
             />
           )}
 

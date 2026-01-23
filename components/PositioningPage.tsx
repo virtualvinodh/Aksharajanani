@@ -33,8 +33,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
 }) => {
     const { t } = useLocale();
     const { filterMode, searchQuery, showNotification, pendingNavigationTarget, setPendingNavigationTarget } = useLayout();
-    const { glyphDataMap, version: glyphVersion } = useGlyphData();
-    const { markPositioningMap } = usePositioning();
+    const { glyphDataMap, version: glyphVersion, dispatch: glyphDataDispatch } = useGlyphData();
+    const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { characterSets, allCharsByName: allChars } = useProject();
     const { settings, metrics } = useSettings();
     const { state: rulesState } = useRules();
@@ -302,6 +302,38 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     
     const showIncompleteBanner = hasIncompleteData && !isFiltered && hasVisibleContent;
 
+    // FIX: Added a delete handler for the PositioningEditorPage.
+    const handleDeletePair = useCallback(() => {
+        if (!editingPair) return;
+
+        const { base, mark, ligature } = editingPair;
+        if (ligature.unicode === undefined) return;
+
+        const key = `${base.unicode}-${mark.unicode}`;
+
+        // 1. Remove from GPOS map
+        const newPositioningMap = new Map(markPositioningMap);
+        if (newPositioningMap.has(key)) {
+            newPositioningMap.delete(key);
+            positioningDispatch({ type: 'SET_MAP', payload: newPositioningMap });
+        }
+        
+        const rule = positioningRules?.find(r => 
+            expandMembers(r.base, groups, characterSets).includes(base.name) && 
+            expandMembers(r.mark || [], groups, characterSets).includes(mark.name)
+        );
+
+        // 2. If it was a GSUB pair that was baked, clear its paths
+        if (rule?.gsub) {
+            glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode: ligature.unicode } });
+        }
+        
+        showNotification(t('positioningPairDeleted', { name: ligature.name }), 'success');
+        setEditingPair(null);
+        setEditingIndex(null);
+
+    }, [editingPair, markPositioningMap, positioningDispatch, positioningRules, groups, characterSets, glyphDataDispatch, showNotification, t]);
+
     // --- RENDER ---
     if (!settings || !metrics || !characterSets) return null;
 
@@ -316,6 +348,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 onSave={handleSavePair}
                 onConfirmPosition={handleConfirmPosition}
                 onClose={() => { setEditingPair(null); setEditingIndex(null); }}
+                onDelete={handleDeletePair}
                 onReset={handleResetSinglePair}
                 settings={settings}
                 metrics={metrics}
