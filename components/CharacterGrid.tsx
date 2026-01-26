@@ -1,6 +1,6 @@
 import React, { useMemo, forwardRef, useCallback } from 'react';
-import { Character, CharacterSet } from '../types';
-import CharacterCard from './CharacterCard';
+import { Character, CharacterSet, KerningMap, MarkPositioningMap, FontMetrics, MarkAttachmentRules, PositioningRules } from '../types';
+import UnifiedCard from './UnifiedCard';
 import { useLocale } from '../contexts/LocaleContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -8,6 +8,10 @@ import { useGlyphData } from '../contexts/GlyphDataContext';
 import { VirtuosoGrid, Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { AddIcon, SwitchScriptIcon, CheckCircleIcon } from '../constants';
 import { isGlyphDrawn } from '../utils/glyphUtils';
+import { useProject } from '../contexts/ProjectContext';
+import { useKerning } from '../contexts/KerningContext';
+import { usePositioning } from '../contexts/PositioningContext';
+import { useRules } from '../contexts/RulesContext';
 
 interface CharacterGridProps {
   characters?: Character[]; // For Flat View
@@ -31,7 +35,7 @@ const GridFooter = () => <div className="col-span-full h-24" />;
 
 const CharacterGrid: React.FC<CharacterGridProps> = ({ 
     characters, 
-    characterSets, 
+    characterSets: propCharacterSets, 
     onSelectCharacter, 
     onAddGlyph,
     onAddBlock,
@@ -41,10 +45,17 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
     variant
 }) => {
   const { t } = useLocale();
-  const { settings } = useSettings();
+  const { settings, metrics } = useSettings();
   const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
-  const { glyphDataMap } = useGlyphData();
-  
+  const { glyphDataMap, version: glyphVersion } = useGlyphData();
+  const { allCharsByName, characterSets: projectCharacterSets, markAttachmentRules, positioningRules } = useProject();
+  const { kerningMap } = useKerning();
+  const { markPositioningMap } = usePositioning();
+  const { state: rulesState } = useRules();
+  const groups = rulesState.fontRules?.groups || {};
+
+  const characterSets = propCharacterSets || projectCharacterSets;
+
   const ListContainer = useMemo(() => forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
     const gridClasses = variant === 'compact' 
         ? "grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2 p-2"
@@ -87,10 +98,9 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
             itemContent={(index) => {
                 const char = characters[index];
                 return (
-                    <CharacterCard
+                    <UnifiedCard
                         key={char.unicode || char.name}
                         character={char}
-                        glyphData={glyphDataMap.get(char.unicode)}
                         onSelect={onSelectCharacter}
                         isSelectionMode={isMetricsSelectionMode}
                         isSelected={char.unicode !== undefined && metricsSelection.has(char.unicode)}
@@ -143,10 +153,9 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                         {/* Internal Grid */}
                         <div className={gridClasses}>
                             {visibleChars.map(char => (
-                                <CharacterCard
+                                <UnifiedCard
                                     key={char.unicode || char.name}
                                     character={char}
-                                    glyphData={glyphDataMap.get(char.unicode)}
                                     onSelect={onSelectCharacter}
                                     isSelectionMode={isMetricsSelectionMode}
                                     isSelected={char.unicode !== undefined && metricsSelection.has(char.unicode)}
