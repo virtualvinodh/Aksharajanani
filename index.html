@@ -118,6 +118,36 @@
           border-radius: 0.5rem;
         }
       }
+      /* Mobile Slide Animation */
+      @keyframes slide-in-from-right {
+        from { transform: translateX(100%); }
+        to { transform: translateX(0); }
+      }
+      @keyframes slide-out-to-right {
+        from { transform: translateX(0); }
+        to { transform: translateX(100%); }
+      }
+      .animate-slide-in {
+        animation: slide-in-from-right 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      .animate-slide-out {
+        animation: slide-out-to-right 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      /* Mobile Nav Drawer Animation */
+      @keyframes slide-in-from-left {
+        from { transform: translateX(-100%); }
+        to { transform: translateX(0); }
+      }
+      @keyframes slide-out-to-left {
+        from { transform: translateX(0); }
+        to { transform: translateX(-100%); }
+      }
+      .animate-slide-in-left {
+        animation: slide-in-from-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      .animate-slide-out-left {
+        animation: slide-out-to-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
       /* Export Animation */
       @keyframes fly-in-1 {
         0% { transform: translate(-60vw, -50vh) scale(1.5) rotate(-120deg); opacity: 1; }

@@ -24,6 +24,7 @@ import ImportGlyphsModal from './components/ImportGlyphsModal';
 import SnapshotRestoreModal from './components/SnapshotRestoreModal';
 import SaveAsModal from './components/SaveAsModal';
 import CreatorPage from './components/CreatorPage';
+import MobileNavDrawer from './components/MobileNavDrawer';
 import { useLocale } from './contexts/LocaleContext';
 import { useLayout } from './contexts/LayoutContext';
 import { useGlyphData } from './contexts/GlyphDataContext';
@@ -62,13 +63,54 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const { state: rulesState } = useRules();
   
   const { fontRules, isFeaEditMode, manualFeaCode, hasUnsavedRules } = rulesState;
-  const { workspace, currentView, setCurrentView, selectedCharacter, selectCharacter, closeCharacterModal, panelLayout, setPanelLayout } = layout;
+  const { workspace, currentView, setCurrentView, selectedCharacter, selectCharacter, closeCharacterModal, panelLayout, setPanelLayout, isNavDrawerOpen, closeNavDrawer } = layout;
 
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
   const [isDonateNoticeVisible, setIsDonateNoticeVisible] = useState(false);
   const [isAnimatingExport, setIsAnimatingExport] = useState(false);
   const downloadTriggerRef = useRef<(() => void) | null>(null);
+
+  // State for mobile editor animation
+  const [editorClosing, setEditorClosing] = useState(false);
+  const [characterForModal, setCharacterForModal] = useState<Character | null>(null);
+
+  // State for mobile navigation drawer animation
+  const [isNavDrawerVisible, setNavDrawerVisible] = useState(false);
+  const [isNavDrawerAnimatingOut, setNavDrawerAnimatingOut] = useState(false);
+
+  useEffect(() => {
+    if (isNavDrawerOpen) {
+      setNavDrawerVisible(true);
+      setNavDrawerAnimatingOut(false);
+    } else {
+      setNavDrawerAnimatingOut(true);
+      const timer = setTimeout(() => {
+        setNavDrawerVisible(false);
+      }, 300); // Animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [isNavDrawerOpen]);
+
+  useEffect(() => {
+    if (selectedCharacter) {
+      setCharacterForModal(selectedCharacter);
+      setEditorClosing(false);
+    }
+  }, [selectedCharacter]);
+
+  const closeEditorWithAnimation = useCallback(() => {
+    if (!isLargeScreen) {
+        setEditorClosing(true);
+        setTimeout(() => {
+            closeCharacterModal();
+            setEditorClosing(false);
+            setCharacterForModal(null);
+        }, 300); // Animation duration
+    } else {
+        closeCharacterModal();
+    }
+  }, [isLargeScreen, closeCharacterModal]);
   
   const appActions = useAppActions({ 
       projectDataToRestore, onBackToSelection, allScripts, hasUnsavedRules,
@@ -110,7 +152,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       handleImportGlyphs,
       handleSaveToDB,
       handleTestClick,
-      testPageFont,
       creatorFont,
       handleTakeSnapshot,
       handleRestoreSnapshot,
@@ -265,7 +306,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const hasPositioning = positioningProgress.total > 0;
   const hasKerning = drawingProgress.completed >= 2;
   
-  const showEditorPanel = selectedCharacter && (panelLayout === 'split' || panelLayout === 'editor');
+  const showEditorPanel = isLargeScreen && selectedCharacter && (panelLayout === 'split' || panelLayout === 'editor');
   const RESIZER_WIDTH = isLargeScreen ? 8 : 16; // px
 
   return (
@@ -336,8 +377,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 <div 
                     className="flex-shrink-0 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50 transition-all duration-300"
                     style={{ 
-                      width: panelLayout === 'split' ? `${gridPanelWidth}px` : (panelLayout === 'grid' ? '100%' : '0px'),
-                      display: panelLayout === 'editor' ? 'none' : 'flex'
+                      width: isLargeScreen && panelLayout === 'split' ? `${gridPanelWidth}px` : (panelLayout === 'grid' || !isLargeScreen ? '100%' : '0px'),
+                      display: isLargeScreen && panelLayout === 'editor' ? 'none' : 'flex'
                     }}
                 >
                   {workspace === 'drawing' && (
@@ -400,14 +441,14 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                                 gridConfig={script.grid}
                                 clipboard={clipboard}
                                 setClipboard={(paths) => clipboardDispatch({ type: 'SET_CLIPBOARD', payload: paths })}
-                                onClose={closeCharacterModal}
+                                onClose={closeEditorWithAnimation}
                                 markAttachmentRules={markAttachmentRules}
                                 onEditorModeChange={handleEditorModeChange}
                             />
                         </aside>
                     </>
                 )}
-                 {selectedCharacter && (
+                 {isLargeScreen && selectedCharacter && (
                     <>
                         {panelLayout === 'split' && (
                              <div 
@@ -449,6 +490,45 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
               <Footer hideOnMobile={true} />
            </>
        )}
+       
+       {!isLargeScreen && characterForModal && (
+            <UnifiedEditorModal
+                key={characterForModal.unicode || "unified-editor-modal"}
+                mode="modal"
+                isClosing={editorClosing}
+                character={characterForModal}
+                characterSet={characterSets.find(cs => cs.characters.some(c => c.unicode === characterForModal.unicode)) || characterSets[layout.activeTab]}
+                glyphData={glyphDataMap.get(characterForModal.unicode)}
+                onSave={handleSaveGlyph}
+                onDelete={handleDeleteGlyph}
+                onUnlockGlyph={handleUnlockGlyph}
+                onRelinkGlyph={handleRelinkGlyph}
+                onUpdateDependencies={handleUpdateDependencies}
+                onNavigate={selectCharacter}
+                settings={settings}
+                metrics={metrics}
+                allGlyphData={glyphDataMap}
+                allCharacterSets={characterSets}
+                gridConfig={script.grid}
+                clipboard={clipboard}
+                setClipboard={(paths) => clipboardDispatch({ type: 'SET_CLIPBOARD', payload: paths })}
+                onClose={closeEditorWithAnimation}
+                markAttachmentRules={markAttachmentRules}
+                onEditorModeChange={handleEditorModeChange}
+            />
+       )}
+       
+       {!isLargeScreen && isNavDrawerVisible && (
+            <MobileNavDrawer
+                isAnimatingOut={isNavDrawerAnimatingOut}
+                onClose={closeNavDrawer}
+                characterSets={characterSets}
+                onSelectCharacter={selectCharacter}
+                onAddGlyph={(targetSet) => layout.openModal('addGlyph', { targetSet })}
+                onAddBlock={() => layout.openModal('addBlock')}
+                drawingProgress={drawingProgress}
+            />
+        )}
       
       {isDonateNoticeVisible && (
           <DonateNotice onClose={() => {
@@ -491,8 +571,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       {layout.activeModal?.name === 'testPage' && (
          <FontTestPage 
             onClose={layout.closeModal} 
-            fontBlob={testPageFont.blob} 
-            feaError={testPageFont.feaError} 
+            fontBlob={appActions.testPageFont.blob} 
+            feaError={appActions.testPageFont.feaError} 
             settings={settings} 
             onSettingsChange={(newSettings) => settingsDispatch({ type: 'SET_SETTINGS', payload: newSettings })}
             testText={testText} 

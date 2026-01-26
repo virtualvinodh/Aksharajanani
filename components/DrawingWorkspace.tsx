@@ -29,9 +29,10 @@ interface DrawingWorkspaceProps {
     onAddBlock: () => void;
     drawingProgress: { completed: number; total: number };
     isCompactView?: boolean;
+    isOverlayMode?: boolean;
 }
 
-const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSelectCharacter, onAddGlyph, onAddBlock, drawingProgress, isCompactView }) => {
+const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSelectCharacter, onAddGlyph, onAddBlock, drawingProgress, isCompactView, isOverlayMode = false }) => {
     const { t } = useLocale();
     const { 
         activeTab, setActiveTab, showNotification, 
@@ -440,7 +441,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
 
     return (
         <div className="flex flex-col h-full overflow-hidden relative">
-            {!isCompactView && (
+            {!isCompactView && !isOverlayMode && (
                 <>
                     <DrawingWorkspaceHeader 
                         visibleCharacterSets={visibleCharacterSets}
@@ -485,12 +486,12 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                         onAddBlock={onAddBlock}
                         virtuosoRef={virtuosoRef}
                         onSectionVisibilityChange={setActiveTab}
-                        variant={isCompactView ? 'compact' : 'default'}
+                        variant={isOverlayMode ? 'overlay' : (isCompactView ? 'compact' : 'default')}
                     />
                 )}
             </div>
 
-            {isMetricsSelectionMode && (
+            {isMetricsSelectionMode && !isOverlayMode && (
                 <DrawingBatchToolbar 
                     selectionSize={metricsSelection.size}
                     // Updated select visible logic to handle both modes
@@ -525,20 +526,22 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                 />
             )}
 
-            <DrawingWorkspaceDialogs 
-                modalState={modalState} setModalState={setModalState}
-                modalInputValue={modalInputValue} setModalInputValue={handleNameInput}
-                showNamingHint={showNamingHint} handleModalSubmit={handleModalSubmit}
-                isTransformOpen={isTransformOpen} setIsTransformOpen={setIsTransformOpen}
-                onBulkTransform={(sx, sy, r, fh, fv) => handleBulkTransform(metricsSelection, sx, sy, r, fh, fv, handleBatchComplete)}
-                isPropertiesOpen={isPropertiesOpen} setIsPropertiesOpen={setIsPropertiesOpen}
-                onBulkProperties={(l, r) => handleSaveMetrics(metricsSelection, l, r, handleBatchComplete)}
-                isDeleteOpen={isDeleteOpen} setIsDeleteOpen={setIsDeleteOpen}
-                onBulkDelete={() => handleBulkDelete(metricsSelection, handleBatchComplete)}
-                selectionSize={metricsSelection.size}
-            />
+            {!isOverlayMode && (
+                 <DrawingWorkspaceDialogs 
+                    modalState={modalState} setModalState={setModalState}
+                    modalInputValue={modalInputValue} setModalInputValue={handleNameInput}
+                    showNamingHint={showNamingHint} handleModalSubmit={handleModalSubmit}
+                    isTransformOpen={isTransformOpen} setIsTransformOpen={setIsTransformOpen}
+                    onBulkTransform={(sx, sy, r, fh, fv) => handleBulkTransform(metricsSelection, sx, sy, r, fh, fv, handleBatchComplete)}
+                    isPropertiesOpen={isPropertiesOpen} setIsPropertiesOpen={setIsPropertiesOpen}
+                    onBulkProperties={(l, r) => handleSaveMetrics(metricsSelection, l, r, handleBatchComplete)}
+                    isDeleteOpen={isDeleteOpen} setIsDeleteOpen={setIsDeleteOpen}
+                    onBulkDelete={() => handleBulkDelete(metricsSelection, handleBatchComplete)}
+                    selectionSize={metricsSelection.size}
+                />
+            )}
 
-            {contextMenu.isOpen && (
+            {contextMenu.isOpen && !isOverlayMode && (
                 <div ref={contextMenuRef} className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-xl rounded-lg z-[100] py-2 w-48 text-sm animate-pop-in" style={{ top: contextMenu.y, left: contextMenu.x }}>
                     <button onClick={() => { const name = visibleCharacterSets[contextMenu.index].nameKey; setModalInputValue(t(name) === name ? name : t(name)); setModalState({ type: 'rename', index: contextMenu.index, isOpen: true }); setContextMenu({ ...contextMenu, isOpen: false }); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">Edit Name</button>
                     <button onClick={() => { if (visibleCharacterSets.length <= 1) { showNotification(t('cannotDeleteLastGroup'), 'error'); } else { const s = visibleCharacterSets[contextMenu.index]; if(window.confirm(t('confirmDeleteGroup', { name: t(s.nameKey) }))) characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (p) => p ? p.filter(x => x.nameKey !== s.nameKey) : null }); } setContextMenu({ ...contextMenu, isOpen: false }); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 flex items-center gap-3">Delete Group</button>

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ScriptConfig, CharacterSet, CharacterDefinition, ProjectData, Character, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -618,6 +617,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                         </span>
                     </div>
                     <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-wide mb-2">{t('appTitle')}</h1>
+                    <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 mt-2">{t('scriptSelectionSubtitle')}</p>
                     <p  style={{ fontFamily: 'Purnavarman_1' }} className="text-xxl sm:text-2xl text-gray-700 dark:text-gray-300 mt-4 max-w-2xl mx-auto">ꦄꦏꦴꦫꦺꦴ ꦩꦸꦑꦃ ꦱꦫ꧀ꦮꦣꦫ꧀ꦩꦴꦟꦴꦩ꧀ </p>
                 </div>
                 
@@ -706,10 +706,10 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                                 >
                                     {representativeChars[script.id] || script.nameKey[0]}
                                 </div>
-                                <div className="mt-2 hidden sm:block">
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t(script.nameKey)}</h3>
+                                <div className="mt-2">
+                                    <h3 className="text-xs sm:text-lg font-bold text-gray-900 dark:text-white">{t(script.nameKey)}</h3>
                                     {script.support === 'partial' && (
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('partialSupport')}</p>
+                                        <p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 mt-1">{t('partialSupport')}</p>
                                     )}
                                 </div>
                             </button>
@@ -723,8 +723,8 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                             <div className="script-card-char group-hover:scale-110 transition-transform duration-200 flex-grow flex items-center justify-center" aria-hidden="true">
                                 <SwitchScriptIcon />
                             </div>
-                            <div className="mt-2 hidden sm:block">
-                                <h3 className="text-lg font-bold">{t('createFromBlocks')}</h3>
+                            <div className="mt-2">
+                                <h3 className="text-xs sm:text-lg font-bold">{t('createFromBlocks')}</h3>
                             </div>
                         </button>
                         {/* New Empty Project Button */}
@@ -736,15 +736,14 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                              <div className="script-card-char group-hover:scale-110 transition-transform duration-200 flex-grow flex items-center justify-center" aria-hidden="true">
                                 <AddIcon className="w-12 h-12" />
                             </div>
-                            <div className="mt-2 hidden sm:block">
-                                <h3 className="text-lg font-bold">{t('createScript')}</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('newProjectDesc')}</p>
+                            <div className="mt-2">
+                                <h3 className="text-xs sm:text-lg font-bold">{t('createScript')}</h3>
                             </div>
                         </button>                        
                     </div>
                 </div>
 
-                <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 items-start text-center border-t border-gray-200 dark:border-gray-700 pt-10">
+                <div className="w-full max-w-5xl grid grid-cols-1 gap-8 items-center text-center border-t border-gray-200 dark:border-gray-700 pt-10">
                     {/* Secondary Action */}
                     <div className="space-y-4">
                         <p className="font-semibold text-gray-700 dark:text-gray-300">{t('returningUser')}</p>
@@ -757,17 +756,6 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                         </button>
                     </div>
 
-                    {/* Advanced Actions */}
-                    <div className="space-y-4">
-                        <p className="font-semibold text-gray-700 dark:text-gray-300">{t('advanced')}</p>
-                        <button
-                            onClick={() => setIsUploadingScript(true)}
-                            className="w-full max-w-xs mx-auto px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        >
-                            {t('uploadCustomScript')}
-                        </button>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{t('scriptSelectionUploadDescription')}</p>
-                    </div>
                 </div>
             </main>
             

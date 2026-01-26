@@ -18,7 +18,8 @@ interface UnifiedCardProps {
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (character: Character) => void;
-  variant?: 'default' | 'compact';
+  // FIX: Added 'overlay' to the variant prop type to match what CharacterGrid passes down.
+  variant?: 'default' | 'compact' | 'overlay';
 }
 
 const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {

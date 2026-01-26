@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode, useCallback, useRef } from 'react';
 import { Character, ProjectData, FilterMode } from '../types';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 export type Workspace = 'drawing' | 'positioning' | 'kerning' | 'rules' | 'metrics';
 type View = 'grid' | 'comparison' | 'settings' | 'creator' | 'rules';
@@ -74,6 +75,11 @@ interface LayoutContextType {
 
   // Session Flags for One-time UX events
   checkAndSetFlag: (key: string) => boolean;
+
+  // Mobile Nav Drawer
+  isNavDrawerOpen: boolean;
+  openNavDrawer: () => void;
+  closeNavDrawer: () => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -88,6 +94,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
     const [isEditingFontName, setIsEditingFontName] = useState(false);
     const [panelLayout, setPanelLayout] = useState<PanelLayout>('grid');
+    const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
 
     const [activeModal, setActiveModal] = useState<ModalState | null>(null);
     const [notification, setNotification] = useState<NotificationState | null>(null);
@@ -103,17 +110,25 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     // Session flags (non-persistent across refreshes)
     const sessionFlags = useRef<Set<string>>(new Set());
+    const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
     const selectCharacter = useCallback((character: Character, rect?: DOMRect) => {
         setModalOriginRect(rect || null);
         setSelectedCharacter(character);
-        setPanelLayout(prev => (prev === 'grid' ? 'split' : prev));
-    }, []);
+        if (isLargeScreen) {
+            setPanelLayout(prev => (prev === 'grid' ? 'split' : prev));
+        }
+    }, [isLargeScreen]);
     
     const closeCharacterModal = useCallback(() => {
         setSelectedCharacter(null);
-        setPanelLayout('grid');
-    }, []);
+        if (isLargeScreen) {
+            setPanelLayout('grid');
+        }
+    }, [isLargeScreen]);
+    
+    const openNavDrawer = useCallback(() => setIsNavDrawerOpen(true), []);
+    const closeNavDrawer = useCallback(() => setIsNavDrawerOpen(false), []);
 
     const openModal = useCallback((name: ModalState['name'], props?: any) => setActiveModal({ name, props }), []);
     const closeModal = useCallback(() => setActiveModal(null), []);
@@ -153,7 +168,8 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         pendingNavigationTarget, setPendingNavigationTarget,
         checkAndSetFlag,
         filterMode, setFilterMode,
-        searchQuery, setSearchQuery
+        searchQuery, setSearchQuery,
+        isNavDrawerOpen, openNavDrawer, closeNavDrawer
     };
 
     return (

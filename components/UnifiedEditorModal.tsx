@@ -12,6 +12,7 @@ import { getAccurateGlyphBBox, calculateDefaultMarkOffset, generateCompositeGlyp
 import { deepClone } from '../utils/cloneUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { filterAndSortCharacters } from '../utils/searchUtils';
+import { GridViewIcon } from '../constants';
 
 // Specialized Editor Pages
 import DrawingModal from './DrawingModal';
@@ -41,15 +42,16 @@ interface UnifiedEditorModalProps {
     onClose: () => void;
     markAttachmentRules: MarkAttachmentRules | null;
     onEditorModeChange: (mode: 'simple' | 'advanced') => void;
+    isClosing?: boolean;
 }
 
 const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({ 
     mode = 'modal',
     character: propCharacter, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, 
     settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, 
-    onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange 
+    onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange, isClosing
 }) => {
-  const { showNotification, filterMode, searchQuery } = useLayout();
+  const { showNotification, filterMode, searchQuery, openNavDrawer } = useLayout();
   const { 
     allCharsByName, allCharsByUnicode, positioningRules, recommendedKerning, 
     markAttachmentClasses, baseAttachmentClasses, dispatch: characterDispatch 
@@ -289,7 +291,16 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col">
+    <div className={`fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col ${isClosing ? 'animate-slide-out' : 'animate-slide-in'}`}>
+        {/* Floating Nav Button */}
+        <button
+            onClick={openNavDrawer}
+            className="absolute top-1/2 -translate-y-1/2 left-0 z-[60] w-6 h-20 bg-indigo-600/80 backdrop-blur-sm text-white rounded-r-lg shadow-lg flex items-center justify-center transition-transform hover:bg-indigo-500 active:translate-x-1"
+            title="Open Character Grid"
+        >
+            <GridViewIcon className="w-4 h-4" />
+        </button>
+      
         <div className="flex-1 min-h-0 h-full w-full overflow-hidden flex flex-col">
             {renderActivePage()}
         </div>

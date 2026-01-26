@@ -15,7 +15,7 @@ interface CharacterCardProps {
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (character: Character) => void;
-  variant?: 'default' | 'compact';
+  variant?: 'default' | 'compact' | 'overlay';
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({ 
@@ -69,7 +69,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
 
   if (!settings) return null;
 
-  const isCompact = variant === 'compact';
+  const isCompact = variant === 'compact' || variant === 'overlay';
   const paddingClass = isCompact ? 'p-2' : 'p-2 sm:p-4';
   const baseContainerClasses = `relative rounded-lg ${paddingClass} flex flex-col items-center justify-between transition-all duration-200 aspect-square h-full group select-none overflow-hidden`;
   
@@ -111,7 +111,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
 
   const ghostTextColor = !isAvailable 
     ? "text-gray-400 dark:text-gray-500" 
-    : "text-gray-200 dark:text-gray-700";
+    : "text-gray-200 dark:text-gray-700 group-hover:text-gray-300 dark:group-hover:text-gray-600";
 
   return (
     <div

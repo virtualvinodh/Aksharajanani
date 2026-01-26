@@ -290,9 +290,9 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                             data={items}
                             scrollerRef={scrollRef}
                             style={{ height: 68, width: '100%' }}
-// FIX: The `horizontal` prop is not valid. Replaced with `components.List` to achieve a horizontal layout.
+                            // FIX: Added 'any' type to the props of the List component to resolve TypeScript error.
                             components={{
-                                List: React.forwardRef(({ style, children }, ref) => (
+                                List: React.forwardRef(({ style, children }: any, ref) => (
                                     <div
                                         ref={ref as React.Ref<HTMLDivElement>}
                                         style={{

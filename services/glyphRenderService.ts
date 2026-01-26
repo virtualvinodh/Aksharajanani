@@ -863,7 +863,7 @@ export const getUnifiedPaths = (item: Character, ctx: UnifiedRenderContext): Pat
     }
     
     // NEW: Handle standard linked glyphs by dynamically baking them from components.
-    if (item.link || item.composite) {
+    if (item.link) {
         // We use generateCompositeGlyphData which accepts the full context (including proxies).
         // This ensures that if the context has "live" data for source characters, the composite
         // is rebuilt using that live data.
