@@ -45,14 +45,10 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
     variant
 }) => {
   const { t } = useLocale();
-  const { settings, metrics } = useSettings();
+  const { settings } = useSettings();
   const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
-  const { glyphDataMap, version: glyphVersion } = useGlyphData();
-  const { allCharsByName, characterSets: projectCharacterSets, markAttachmentRules, positioningRules } = useProject();
-  const { kerningMap } = useKerning();
-  const { markPositioningMap } = usePositioning();
-  const { state: rulesState } = useRules();
-  const groups = rulesState.fontRules?.groups || {};
+  const { glyphDataMap } = useGlyphData();
+  const { characterSets: projectCharacterSets } = useProject();
 
   const characterSets = propCharacterSets || projectCharacterSets;
 

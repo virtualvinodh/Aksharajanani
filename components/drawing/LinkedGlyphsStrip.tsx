@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Virtuoso } from 'react-virtuoso';
@@ -286,10 +287,24 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                     {useVirtuoso ? (
                         <Virtuoso
                             ref={virtuosoRef}
-                            horizontal
                             data={items}
                             scrollerRef={scrollRef}
                             style={{ height: 68, width: '100%' }}
+// FIX: The `horizontal` prop is not valid. Replaced with `components.List` to achieve a horizontal layout.
+                            components={{
+                                List: React.forwardRef(({ style, children }, ref) => (
+                                    <div
+                                        ref={ref as React.Ref<HTMLDivElement>}
+                                        style={{
+                                            ...style,
+                                            display: 'flex',
+                                            flexDirection: 'row',
+                                        }}
+                                    >
+                                        {children}
+                                    </div>
+                                )),
+                            }}
                             itemContent={(index, char) => (
                                 <div className="pr-2 py-1">
                                     {renderThumb(char, 60)}

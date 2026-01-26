@@ -1,4 +1,3 @@
-
 import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings, ComponentTransform, PositioningRules, UnifiedRenderContext } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -7,7 +6,6 @@ import { deepClone } from '../utils/cloneUtils';
 import { expandMembers } from './groupExpansionService';
 
 declare var paper: any;
-// FIX: Declared UnicodeProperties as it is loaded from a global script.
 declare var UnicodeProperties: any;
 
 // A single, persistent paper.js instance to avoid memory churn.
@@ -250,7 +248,7 @@ export const getAccurateGlyphBBox = (data: Path[] | GlyphData, strokeThickness: 
 
         if (path.type === 'dot') {
             const center = path.points[0];
-            const radius = strokeThickness > 0 ? VEC.len(VEC.sub(path.points.length > 1 ? path.points[1] : path.points[0], center)) : strokeThickness / 2;
+            const radius = path.points.length > 1 ? VEC.len(VEC.sub(path.points.length > 1 ? path.points[1] : path.points[0], center)) : strokeThickness / 2;
             minX = Math.min(minX, center.x - radius);
             maxX = Math.max(maxX, center.x + radius);
             minY = Math.min(minY, center.y - radius);
@@ -272,7 +270,6 @@ export const getAccurateGlyphBBox = (data: Path[] | GlyphData, strokeThickness: 
                 pMinX = Math.min(pMinX, point.x);
                 pMaxX = Math.max(pMaxX, point.x);
                 pMinY = Math.min(pMinY, point.y);
-                // FIX: Removed reference to undefined 'pBaseLineY'.
                 pMaxY = Math.max(pMaxY, point.y);
             });
 
@@ -995,7 +992,7 @@ export const calculateUnifiedTransform = (
 ) => {
     const bbox = getAccurateGlyphBBox(paths, strokeThickness);
     
-    // Fallback: standard 10% design-to-preview scale
+    // Fallback: standard scale
     let scale = targetSize / DRAWING_CANVAS_SIZE;
     let tx = 0;
     let ty = 0;
@@ -1009,14 +1006,11 @@ export const calculateUnifiedTransform = (
         const fitScaleY = availableHeight / bbox.height;
         const fitScale = Math.min(fitScaleX, fitScaleY);
         
-        // Shrink if huge, otherwise maintain standard to keep consistency
         if (fitScale < scale) scale = fitScale;
 
-        // Horizontal Center
         const contentCenterX = bbox.x + bbox.width / 2;
         tx = (targetSize / 2) - (contentCenterX * scale);
 
-        // Vertical Centering Logic
         let shouldVerticallyCenter = true;
         const char = options?.character;
 

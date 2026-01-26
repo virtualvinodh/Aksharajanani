@@ -141,7 +141,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
                         </button>
                     )}
                     
-                    <div ref={scrollRef} className="flex space-x-1 overflow-x-auto no-scrollbar px-2 sm:px-4 w-full items-center">
+                    <div ref={scrollRef} className="flex space-x-1 overflow-x-auto no-scrollbar py-2 w-full px-4 sm:px-8 scroll-smooth items-center">
                         {visibleCharacterSets.map((set, index) => (
                             <CharacterSetTab
                                 key={set.nameKey}
@@ -183,6 +183,9 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
                   glyphData={glyphDataMap.get(char.unicode!)}
                   onSelect={handleSelect}
                   variant="compact"
+// FIX: Added missing props `isAvailable` and `isManuallySet` to satisfy the CharacterCard component's requirements.
+                  isAvailable={true}
+                  isManuallySet={true}
                 />
               )) : (
                 <p className="col-span-full text-center text-gray-500">{t('noResultsFound')}</p>
