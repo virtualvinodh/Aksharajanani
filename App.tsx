@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import UnifiedEditorModal from './components/UnifiedEditorModal';
 import SettingsPage from './components/SettingsPage';
@@ -18,7 +18,6 @@ import DrawingWorkspace from './components/DrawingWorkspace';
 import PositioningWorkspace from './components/PositioningWorkspace';
 import KerningWorkspace from './components/KerningWorkspace';
 import RulesWorkspace from './components/RulesWorkspace';
-// BulkEditWorkspace removed
 import TestCasePage from './components/TestCasePage';
 import ExportAnimation from './components/ExportAnimation';
 import ImportGlyphsModal from './components/ImportGlyphsModal';
@@ -36,7 +35,8 @@ import { useRules } from './contexts/RulesContext';
 import { useProject } from './contexts/ProjectContext';
 import { useProgressCalculators } from './hooks/useProgressCalculators';
 import { useAppActions } from './hooks/useAppActions';
-import { TOOL_RANGES } from './constants';
+import { TOOL_RANGES, LeftArrowIcon, RightArrowIcon, GridViewIcon, SplitViewIcon, EditorViewIcon } from './constants';
+import { useMediaQuery } from './hooks/useMediaQuery';
 
 const GUIDE_FONT_STYLE_ID = 'guide-font-face-style';
 
@@ -62,7 +62,9 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const { state: rulesState } = useRules();
   
   const { fontRules, isFeaEditMode, manualFeaCode, hasUnsavedRules } = rulesState;
-  const { workspace, currentView, setCurrentView, selectedCharacter, selectCharacter, closeCharacterModal } = layout;
+  const { workspace, currentView, setCurrentView, selectedCharacter, selectCharacter, closeCharacterModal, panelLayout, setPanelLayout } = layout;
+
+  const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
   const [isDonateNoticeVisible, setIsDonateNoticeVisible] = useState(false);
   const [isAnimatingExport, setIsAnimatingExport] = useState(false);
@@ -117,6 +119,63 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       handleCreatorClick,
       startExportProcess
   } = appActions;
+  
+  const mainContainerRef = useRef<HTMLElement>(null);
+  const [gridPanelWidth, setGridPanelWidth] = useState<number>(() => {
+    const savedWidth = localStorage.getItem('gridPanelWidth');
+    return savedWidth ? parseInt(savedWidth, 10) : window.innerWidth * 0.1;
+  });
+
+  const handleMouseDownResize = useCallback((e: React.MouseEvent) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startWidth = gridPanelWidth;
+      const mainContainer = mainContainerRef.current;
+      if (!mainContainer) return;
+
+      const doDrag = (moveEvent: MouseEvent) => {
+          const newWidth = startWidth + (moveEvent.clientX - startX);
+          const minWidth = mainContainer.clientWidth * 0.10; // 10% min
+          const maxWidth = mainContainer.clientWidth * 0.75; // 75% max
+          setGridPanelWidth(Math.max(minWidth, Math.min(newWidth, maxWidth)));
+      };
+
+      const stopDrag = () => {
+          document.documentElement.removeEventListener('mousemove', doDrag);
+          document.documentElement.removeEventListener('mouseup', stopDrag);
+      };
+
+      document.documentElement.addEventListener('mousemove', doDrag);
+      document.documentElement.addEventListener('mouseup', stopDrag);
+  }, [gridPanelWidth]);
+
+  const handleTouchStartResize = useCallback((e: React.TouchEvent) => {
+      const startX = e.touches[0].clientX;
+      const startWidth = gridPanelWidth;
+      const mainContainer = mainContainerRef.current;
+      if (!mainContainer) return;
+
+      const doDrag = (moveEvent: TouchEvent) => {
+          const newWidth = startWidth + (moveEvent.touches[0].clientX - startX);
+          const minWidth = mainContainer.clientWidth * 0.10; // 10% min
+          const maxWidth = mainContainer.clientWidth * 0.75; // 75% max
+          setGridPanelWidth(Math.max(minWidth, Math.min(newWidth, maxWidth)));
+      };
+
+      const stopDrag = () => {
+          document.documentElement.removeEventListener('touchmove', doDrag);
+          document.documentElement.removeEventListener('touchend', stopDrag);
+          document.documentElement.removeEventListener('touchcancel', stopDrag);
+      };
+
+      document.documentElement.addEventListener('touchmove', doDrag);
+      document.documentElement.addEventListener('touchend', stopDrag);
+      document.documentElement.addEventListener('touchcancel', stopDrag);
+  }, [gridPanelWidth]);
+  
+  useEffect(() => {
+    localStorage.setItem('gridPanelWidth', String(gridPanelWidth));
+  }, [gridPanelWidth]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -204,14 +263,15 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   }
 
   const hasPositioning = positioningProgress.total > 0;
-  // Unlock Kerning tab once at least two glyphs are drawn, allowing manual spacing even if the script has no rules.
   const hasKerning = drawingProgress.completed >= 2;
   
+  const showEditorPanel = selectedCharacter && (panelLayout === 'split' || panelLayout === 'editor');
+  const RESIZER_WIDTH = isLargeScreen ? 8 : 16; // px
+
   return (
     <div className="h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
        
-       {/* Conditional Rendering for Full Page Views */}
        {currentView === 'creator' ? (
            <CreatorPage 
                 onClose={() => setCurrentView('grid')}
@@ -229,7 +289,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 rulesProgress={rulesProgress}
             />
        ) : (
-           // Main App Layout
            <>
                <AppHeader
                 script={script}
@@ -270,12 +329,17 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 hasSnapshot={hasSnapshot}
                 onSaveAs={openSaveAsModal}
                 onExportTemplate={handleSaveTemplate}
-                // FIX: used handleQuickAddGlyph as it is returned by useAppActions
                 onQuickAddGlyph={handleQuickAddGlyph}
                />
 
-              <main className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50">
+              <main ref={mainContainerRef} className="flex-1 flex overflow-hidden relative">
+                <div 
+                    className="flex-shrink-0 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50 transition-all duration-300"
+                    style={{ 
+                      width: panelLayout === 'split' ? `${gridPanelWidth}px` : (panelLayout === 'grid' ? '100%' : '0px'),
+                      display: panelLayout === 'editor' ? 'none' : 'flex'
+                    }}
+                >
                   {workspace === 'drawing' && (
                       <DrawingWorkspace
                         characterSets={characterSets}
@@ -283,6 +347,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                         onAddGlyph={(targetSet) => layout.openModal('addGlyph', { targetSet })}
                         onAddBlock={() => layout.openModal('addBlock')}
                         drawingProgress={drawingProgress}
+                        isCompactView={panelLayout === 'split'}
                       />
                   )}
                   {workspace === 'positioning' && positioningRules && (
@@ -301,37 +366,90 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                       />
                   )}
                 </div>
+
+                {showEditorPanel && (
+                    <>
+                        <div 
+                            onMouseDown={panelLayout === 'split' ? handleMouseDownResize : undefined}
+                            onTouchStart={panelLayout === 'split' ? handleTouchStartResize : undefined}
+                            className="resizer"
+                            style={{ width: `${RESIZER_WIDTH}px` }}
+                        />
+                        <aside 
+                            className="flex-shrink-0 bg-white dark:bg-gray-900 shadow-xl z-20 transition-all duration-300"
+                            style={{ 
+                                width: panelLayout === 'editor' ? '100%' : `calc(100% - ${gridPanelWidth}px - ${RESIZER_WIDTH}px)`,
+                            }}
+                        >
+                            <UnifiedEditorModal
+                                key={selectedCharacter ? "unified-editor-panel" : "none"}
+                                mode="panel"
+                                character={selectedCharacter}
+                                characterSet={characterSets.find(cs => cs.characters.some(c => c.unicode === selectedCharacter.unicode)) || characterSets[layout.activeTab]}
+                                glyphData={glyphDataMap.get(selectedCharacter.unicode)}
+                                onSave={handleSaveGlyph}
+                                onDelete={handleDeleteGlyph}
+                                onUnlockGlyph={handleUnlockGlyph}
+                                onRelinkGlyph={handleRelinkGlyph}
+                                onUpdateDependencies={handleUpdateDependencies}
+                                onNavigate={selectCharacter}
+                                settings={settings}
+                                metrics={metrics}
+                                allGlyphData={glyphDataMap}
+                                allCharacterSets={characterSets}
+                                gridConfig={script.grid}
+                                clipboard={clipboard}
+                                setClipboard={(paths) => clipboardDispatch({ type: 'SET_CLIPBOARD', payload: paths })}
+                                onClose={closeCharacterModal}
+                                markAttachmentRules={markAttachmentRules}
+                                onEditorModeChange={handleEditorModeChange}
+                            />
+                        </aside>
+                    </>
+                )}
+                 {selectedCharacter && (
+                    <>
+                        {panelLayout === 'split' && (
+                             <div 
+                                className="absolute top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 p-1 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
+                                style={{ left: `${gridPanelWidth}px`, transform: 'translateX(-50%)' }}
+                            >
+                                <button onClick={() => setPanelLayout('editor')} title="Maximize editor" className="p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 rounded-full transition-colors">
+                                    <RightArrowIcon className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => setPanelLayout('grid')} title="Maximize grid" className="p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 rounded-full transition-colors">
+                                    <LeftArrowIcon className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
+                        
+                        {panelLayout === 'grid' && (
+                             <button
+                                onClick={() => setPanelLayout('split')}
+                                title="Show Split View"
+                                className="absolute top-1/2 -translate-y-1/2 z-30 w-6 h-24 bg-white dark:bg-gray-800 border-t border-b border-l border-r-0 border-gray-300 dark:border-gray-600 shadow-lg flex items-center justify-center transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700 right-0 rounded-l-lg"
+                            >
+                                <LeftArrowIcon />
+                            </button>
+                        )}
+
+                        {panelLayout === 'editor' && (
+                             <button
+                                onClick={() => setPanelLayout('split')}
+                                title="Show Split View"
+                                className="absolute top-1/2 -translate-y-1/2 z-30 w-6 h-24 bg-white dark:bg-gray-800 border-t border-b border-l-0 border-r border-gray-300 dark:border-gray-600 shadow-lg flex items-center justify-center transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700 left-0 rounded-r-lg"
+                            >
+                                <RightArrowIcon />
+                            </button>
+                        )}
+                    </>
+                )}
               </main>
               
               <Footer hideOnMobile={true} />
            </>
        )}
       
-      {selectedCharacter && characterSets && (
-        <UnifiedEditorModal
-          key={selectedCharacter ? "unified-editor-modal" : "none"}
-          character={selectedCharacter}
-          characterSet={characterSets.find(cs => cs.characters.some(c => c.unicode === selectedCharacter.unicode)) || characterSets[layout.activeTab]}
-          glyphData={glyphDataMap.get(selectedCharacter.unicode)}
-          onSave={handleSaveGlyph}
-          onDelete={handleDeleteGlyph}
-          onUnlockGlyph={handleUnlockGlyph}
-          onRelinkGlyph={handleRelinkGlyph}
-          onUpdateDependencies={handleUpdateDependencies}
-          onNavigate={selectCharacter}
-          settings={settings}
-          metrics={metrics}
-          allGlyphData={glyphDataMap}
-          allCharacterSets={characterSets}
-          gridConfig={script.grid}
-          clipboard={clipboard}
-          setClipboard={(paths) => clipboardDispatch({ type: 'SET_CLIPBOARD', payload: paths })}
-          onClose={closeCharacterModal}
-          markAttachmentRules={markAttachmentRules}
-          onEditorModeChange={handleEditorModeChange}
-        />
-      )}
-
       {isDonateNoticeVisible && (
           <DonateNotice onClose={() => {
               setIsDonateNoticeVisible(false);
@@ -355,7 +473,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         />
       )}
 
-      {/* Modals */}
       {layout.activeModal?.name === 'addGlyph' && (
           <AddGlyphModal 
             isOpen={true} 

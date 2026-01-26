@@ -1,7 +1,6 @@
-
 import React, { useMemo, forwardRef, useCallback } from 'react';
 import { Character, CharacterSet } from '../types';
-import UnifiedCard from './UnifiedCard';
+import CharacterCard from './CharacterCard';
 import { useLocale } from '../contexts/LocaleContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -19,17 +18,10 @@ interface CharacterGridProps {
   isFiltered: boolean;
   virtuosoRef?: React.RefObject<VirtuosoHandle>;
   onSectionVisibilityChange?: (index: number) => void;
+  variant?: 'default' | 'compact';
 }
 
 // --- Components for Flat Grid View ---
-const ListContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => (
-    <div
-      {...props}
-      ref={ref}
-      className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 p-2 sm:gap-4 sm:p-4"
-    />
-));
-
 const ItemContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => (
     <div {...props} ref={ref} className="min-w-0 w-full" />
 ));
@@ -45,12 +37,20 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
     onAddBlock,
     isFiltered,
     virtuosoRef,
-    onSectionVisibilityChange
+    onSectionVisibilityChange,
+    variant
 }) => {
   const { t } = useLocale();
   const { settings } = useSettings();
   const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
   const { glyphDataMap } = useGlyphData();
+  
+  const ListContainer = useMemo(() => forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
+    const gridClasses = variant === 'compact' 
+        ? "grid grid-cols-5 gap-2 p-2"
+        : "grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 p-2 sm:gap-4 sm:p-4";
+    return <div {...props} ref={ref} className={gridClasses} />;
+  }), [variant]);
   
   const toggleSelection = useCallback((character: Character) => {
       if (character.unicode === undefined) return;
@@ -87,13 +87,15 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
             itemContent={(index) => {
                 const char = characters[index];
                 return (
-                    <UnifiedCard
+                    <CharacterCard
                         key={char.unicode || char.name}
                         character={char}
+                        glyphData={glyphDataMap.get(char.unicode)}
                         onSelect={onSelectCharacter}
                         isSelectionMode={isMetricsSelectionMode}
                         isSelected={char.unicode !== undefined && metricsSelection.has(char.unicode)}
                         onToggleSelect={toggleSelection}
+                        variant={variant}
                     />
                 );
             }}
@@ -105,6 +107,10 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
   // --- Render Mode 2: Grouped List (Default View) ---
   if (characterSets) {
       const ghostButtonClass = "relative rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 aspect-square h-full border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 bg-gray-50 dark:bg-gray-800/40 group";
+      
+      const gridClasses = variant === 'compact'
+        ? "grid grid-cols-5 gap-2 px-4"
+        : "grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 p-2 px-4 sm:gap-4 sm:px-6";
 
       return (
           <Virtuoso
@@ -135,15 +141,17 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                         </div>
                         
                         {/* Internal Grid */}
-                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 p-2 px-4 sm:gap-4 sm:px-6">
+                        <div className={gridClasses}>
                             {visibleChars.map(char => (
-                                <UnifiedCard
+                                <CharacterCard
                                     key={char.unicode || char.name}
                                     character={char}
+                                    glyphData={glyphDataMap.get(char.unicode)}
                                     onSelect={onSelectCharacter}
                                     isSelectionMode={isMetricsSelectionMode}
                                     isSelected={char.unicode !== undefined && metricsSelection.has(char.unicode)}
                                     onToggleSelect={toggleSelection}
+                                    variant={variant}
                                 />
                             ))}
                             

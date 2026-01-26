@@ -1,11 +1,12 @@
-
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderService';
-import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon, LinkIcon, PuzzleIcon } from '../constants';
+import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon, LinkIcon, PuzzleIcon, PositioningIcon, KerningIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
-import { isGlyphDrawn } from '../utils/glyphUtils';
+import { isGlyphDrawn as isDrawnCheck } from '../utils/glyphUtils';
+import { useGlyphData } from '../contexts/GlyphDataContext';
+import { useProject } from '../contexts/ProjectContext';
 
 interface CharacterCardProps {
   character: Character;
@@ -30,9 +31,34 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
   const { settings } = useSettings();
+  const { allCharsByName } = useProject();
+  const { glyphDataMap, version: glyphVersion } = useGlyphData();
   
   const [tooltip, setTooltip] = useState<{ visible: boolean; name: string }>({ visible: false, name: '' });
   const longPressTimeout = useRef<number | null>(null);
+
+  const isAvailable = useMemo(() => {
+    if (character.position) {
+        const base = allCharsByName.get(character.position[0]);
+        const mark = allCharsByName.get(character.position[1]);
+        if (!base || !mark) return false;
+        return isDrawnCheck(glyphDataMap.get(base.unicode!)) && isDrawnCheck(glyphDataMap.get(mark.unicode!));
+    }
+    if (character.kern) {
+        const left = allCharsByName.get(character.kern[0]);
+        const right = allCharsByName.get(character.kern[1]);
+        if (!left || !right) return false;
+        return isDrawnCheck(glyphDataMap.get(left.unicode!)) && isDrawnCheck(glyphDataMap.get(right.unicode!));
+    }
+    if (character.link) {
+        return character.link.every(name => {
+            const comp = allCharsByName.get(name);
+            return comp && comp.unicode !== undefined && isDrawnCheck(glyphDataMap.get(comp.unicode));
+        });
+    }
+    return true; // Standard glyphs are always available to open/draw
+  }, [character, allCharsByName, glyphDataMap, glyphVersion]);
+
 
   const showTooltip = () => {
     if (typeof unicodeName !== 'function' || character.unicode === undefined || character.isCustom || character.isPuaAssigned) {
@@ -53,6 +79,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   };
 
   const handleClick = (e: React.MouseEvent) => {
+      if (!isAvailable) return;
       // If we are in selection mode, OR if a modifier key is held, toggle selection.
       if (isSelectionMode || e.ctrlKey || e.metaKey || e.shiftKey) {
           e.stopPropagation();
@@ -91,7 +118,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   };
 
   // Check if drawn
-  const isDrawn = isGlyphDrawn(glyphData);
+  const isDrawn = isDrawnCheck(glyphData);
 
   useEffect(() => {
     // Only attempt to draw if the canvas exists (which it won't if isDrawn is false)
@@ -177,21 +204,21 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
         });
         ctx.restore();
     }
-  }, [glyphData, settings, theme, isDrawn]);
+  }, [glyphData, settings, theme, isDrawn, glyphVersion]);
 
   if (!settings) return null;
 
   const isCompact = variant === 'compact';
   const paddingClass = isCompact ? 'p-2' : 'p-2 sm:p-4';
   // Added overflow-hidden to prevent spillover of wide characters
-  const baseContainerClasses = `relative rounded-lg ${paddingClass} flex flex-col items-center justify-between cursor-pointer transition-all duration-200 aspect-square h-full group select-none overflow-hidden`;
+  const baseContainerClasses = `relative rounded-lg ${paddingClass} flex flex-col items-center justify-between transition-all duration-200 aspect-square h-full group select-none overflow-hidden`;
   
   // Mark Identification for Styling
   const isNonSpacingMark = character.glyphClass === 'mark' && (character.advWidth === 0 || character.advWidth === '0');
   const isSpacingMark = character.glyphClass === 'mark' && !isNonSpacingMark;
 
   // Composite Identification for Badge
-  const isCompositeTemplate = character.composite && character.composite.length > 0 && !character.link;
+  const isCompositeTemplate = character.composite && !character.link && !character.position && !character.kern;
 
   // Determine Type-Based Border Color (applied to both drawn and undrawn)
   let typeBorderClass = "border-gray-200 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400"; // Default Base/Ligature
@@ -205,7 +232,9 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   }
 
   let stateClasses = "";
-  if (isSelected) {
+  if (!isAvailable) {
+      stateClasses = "bg-gray-100 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700 opacity-40 grayscale cursor-not-allowed";
+  } else if (isSelected) {
       stateClasses = "ring-2 ring-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 border-transparent";
   } else if (character.hidden) {
       stateClasses = `bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed ${typeBorderClass} opacity-70`;
@@ -223,10 +252,15 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const shouldShowNameBlock = !isDrawn || showName || settings.showUnicodeValues;
 
   // Dynamic font size for ghost text
-  const nameLength = character.name.length;
-  let ghostFontSizeClass = "text-4xl sm:text-6xl";
-  if (nameLength > 2) ghostFontSizeClass = "text-xl sm:text-3xl";
-  else if (nameLength > 1) ghostFontSizeClass = "text-3xl sm:text-5xl";
+  let ghostFontSizeClass: string;
+    if (isCompact) {
+        ghostFontSizeClass = "text-2xl"; // Fixed smaller size for compact
+    } else {
+        const nameLength = character.name.length;
+        if (nameLength > 2) ghostFontSizeClass = "text-xl sm:text-3xl";
+        else if (nameLength > 1) ghostFontSizeClass = "text-3xl sm:text-5xl";
+        else ghostFontSizeClass = "text-4xl sm:text-6xl";
+    }
 
   return (
     <div
@@ -245,37 +279,45 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
         </div>
       )}
       
-      {/* Linked Glyph Badge */}
-      {character.link && (
+      {/* Badge Priority: pos -> kern -> link -> composite */}
+      {!isCompact && character.position && (
+          <div className="absolute top-1 left-1 p-1 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-full shadow-sm z-10" title="Syllable (Positioned)">
+             <PositioningIcon className="w-3 h-3" />
+          </div>
+      )}
+      {!isCompact && character.kern && (
+          <div className="absolute top-1 left-1 p-1 bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 rounded-full shadow-sm z-10" title="Kerning Pair">
+             <KerningIcon className="w-3 h-3" />
+          </div>
+      )}
+      {!isCompact && character.link && (
           <div className="absolute top-1 left-1 p-1 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full shadow-sm z-10" title="Linked Glyph">
              <LinkIcon className="w-3 h-3" />
           </div>
       )}
-
-      {/* Composite Template Badge (Puzzle) - Cyan */}
-      {isCompositeTemplate && (
+      {!isCompact && isCompositeTemplate && (
           <div className="absolute top-1 left-1 p-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-full shadow-sm z-10" title="Composite Template">
              <PuzzleIcon className="w-3 h-3" />
           </div>
       )}
 
       {/* Selection Indicator Overlay */}
-      {isSelectionMode && (
+      {!isCompact && isSelectionMode && isAvailable && (
           <div className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all z-10 ${isSelected ? 'bg-indigo-600 border-indigo-600 scale-110' : 'bg-white/80 dark:bg-gray-800/80 border-gray-400'}`}>
               {isSelected && <CheckCircleIcon className="w-4 h-4 text-white" />}
           </div>
       )}
 
-      {character.hidden && (
-          <span className={`absolute top-1 ${character.link ? 'left-8' : 'left-1'} text-[10px] font-bold text-gray-400 border border-gray-300 rounded px-1 bg-white dark:bg-gray-800`}>HIDDEN</span>
+      {!isCompact && character.hidden && (
+          <span className={`absolute top-1 ${character.link || character.position || character.kern ? 'left-8' : 'left-1'} text-[10px] font-bold text-gray-400 border border-gray-300 rounded px-1 bg-white dark:bg-gray-800`}>HIDDEN</span>
       )}
 
       {isDrawn ? (
         <>
           <div className="w-full flex-1 min-h-0 flex items-center justify-center">
-            <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className={`transition-transform duration-200 max-w-full max-h-full object-contain ${!isSelectionMode ? 'group-hover:scale-110' : ''}`}></canvas>
+            <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE} className={`transition-transform duration-200 max-w-full max-h-full object-contain ${!isSelectionMode && isAvailable && !isCompact ? 'group-hover:scale-110' : ''}`}></canvas>
           </div>
-          {shouldShowNameBlock && (
+          {!isCompact && shouldShowNameBlock && (
               <div className="text-center mt-1 sm:mt-2 flex-shrink-0">
                 {showName && (
                     <p 
@@ -297,7 +339,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       ) : (
         <div className="w-full h-full flex items-center justify-center flex-col">
             <span 
-                className={`${ghostFontSizeClass} text-gray-200 dark:text-gray-700 font-bold select-none transition-colors group-hover:text-gray-300 dark:group-hover:text-gray-600`}
+                className={`${ghostFontSizeClass} ${isAvailable ? "text-gray-200 dark:text-gray-700 group-hover:text-gray-300 dark:group-hover:text-gray-600" : "text-gray-300 dark:text-gray-600"} font-bold select-none transition-colors`}
                 style={{
                   fontFamily: 'var(--guide-font-family)',
                   fontFeatureSettings: 'var(--guide-font-feature-settings)'
@@ -305,7 +347,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
             >
                 {character.name}
             </span>
-             {settings.showUnicodeValues && character.unicode !== undefined && (
+             {!isCompact && settings.showUnicodeValues && character.unicode !== undefined && (
                 <span className="absolute bottom-2 text-[10px] text-gray-300 dark:text-gray-600">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</span>
             )}
         </div>

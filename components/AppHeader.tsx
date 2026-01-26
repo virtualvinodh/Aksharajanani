@@ -24,7 +24,6 @@ interface AppHeaderProps {
     onLoadProject: () => void;
     onImportGlyphsClick: () => void;
     onAddGlyphClick: (options?: { prefillName?: string; targetSet?: string }) => void;
-    // FIX: Added onAddBlock prop to fix type error in App.tsx.
     onAddBlock: () => void;
     onExportClick: () => void;
     onTestClick: () => void;
@@ -55,7 +54,6 @@ interface AppHeaderProps {
     hasSnapshot: boolean;
     onSaveAs: () => void;
     onExportTemplate: () => void;
-    // New prop for direct glyph creation
     onQuickAddGlyph: (input: string, targetSet?: string) => void;
 }
 
@@ -112,15 +110,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         selectCharacter, setWorkspace, setCurrentView, 
         isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection, 
         filterMode, setFilterMode,
-        searchQuery, setSearchQuery 
+        searchQuery, setSearchQuery
     } = useLayout();
     
     const kerningLabel = (settings.editorMode === 'advanced' || settings.preferKerningTerm) ? t('workspaceKerning') : t('workspaceSpacing');
     
-    const visibleTabCount = 1 + // Drawing
-        (hasPositioning ? 1 : 0) +
-        (hasKerning ? 1 : 0);
-
+    const visibleTabCount = 1 + (hasPositioning ? 1 : 0) + (hasKerning ? 1 : 0);
     let tabIndex = 1;
 
     const handleCommandAction = (action: string, data?: any) => {
@@ -175,7 +170,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Helper to see if filtering is relevant for current workspace
     const showFilter = activeWorkspace === 'drawing' || activeWorkspace === 'positioning' || activeWorkspace === 'kerning';
 
     useEffect(() => {
@@ -223,7 +217,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         <span className="hidden md:inline">{exportingType === 'export' ? t('exporting') : t('exportOtf')}</span>
                     </button>
                     
-                    {/* Creator Button */}
                     <button 
                         onClick={onCreatorClick} 
                         disabled={isAnyExporting} 
@@ -240,7 +233,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     </button>
                     
                     <button onClick={onSettingsClick} title={t('settings')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><SettingsIcon /><span className="hidden md:inline">{t('settings')}</span></button>
-
+                    
                     <div className="relative">
                         <button onClick={() => setIsMoreMenuOpen(prev => !prev)} className="p-2 sm:p-2.5 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"><MoreIcon /></button>
                         {isMoreMenuOpen && (
