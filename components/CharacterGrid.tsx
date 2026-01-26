@@ -47,7 +47,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
   
   const ListContainer = useMemo(() => forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
     const gridClasses = variant === 'compact' 
-        ? "grid grid-cols-5 gap-2 p-2"
+        ? "grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2 p-2"
         : "grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 p-2 sm:gap-4 sm:p-4";
     return <div {...props} ref={ref} className={gridClasses} />;
   }), [variant]);
@@ -109,7 +109,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
       const ghostButtonClass = "relative rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 aspect-square h-full border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 bg-gray-50 dark:bg-gray-800/40 group";
       
       const gridClasses = variant === 'compact'
-        ? "grid grid-cols-5 gap-2 px-4"
+        ? "grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2 px-4"
         : "grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 p-2 px-4 sm:gap-4 sm:px-6";
 
       return (
