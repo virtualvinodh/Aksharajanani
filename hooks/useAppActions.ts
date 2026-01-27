@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
@@ -55,13 +56,20 @@ export const useAppActions = ({
         characterSets.forEach(set => {
             set.characters.forEach(char => {
                 if (char.unicode !== undefined) {
-                    const components = char.link || char.composite;
-                    if (components) {
-                        components.forEach(compName => {
-                            const componentChar = allCharsByName.get(compName);
-                            if (componentChar?.unicode !== undefined) {
-                                if (!newMap.has(componentChar.unicode)) newMap.set(componentChar.unicode, new Set());
-                                newMap.get(componentChar.unicode)!.add(char.unicode!);
+                    // Unified scan of all possible component sources
+                    const sources = [
+                        ...(char.link || []),
+                        ...(char.composite || []),
+                        ...(char.position || []),
+                        ...(char.kern || [])
+                    ];
+                    
+                    if (sources.length > 0) {
+                        sources.forEach(sourceName => {
+                            const sourceChar = allCharsByName.get(sourceName);
+                            if (sourceChar?.unicode !== undefined) {
+                                if (!newMap.has(sourceChar.unicode)) newMap.set(sourceChar.unicode, new Set());
+                                newMap.get(sourceChar.unicode)!.add(char.unicode!);
                             }
                         });
                     }
@@ -70,6 +78,11 @@ export const useAppActions = ({
         });
         dependencyMap.current = newMap;
     }, [characterSets]);
+
+    // Reactive sync: Rebuild dependency map whenever characterSets change (Add/Delete/Import)
+    useEffect(() => {
+        refreshDependencyMap();
+    }, [characterSets, refreshDependencyMap]);
 
     // 2. Persistence Hook
     const {
@@ -270,15 +283,7 @@ export const useAppActions = ({
         handleUnlockGlyph,
         handleRelinkGlyph,
         handleUpdateDependencies,
-        handleEditorModeChange,
-        downloadFontBlob,
-        handleAddGlyph,
-        handleQuickAddGlyph, 
-        handleCheckGlyphExists,
-        handleCheckNameExists,
-        handleAddBlock,
         handleImportGlyphs,
-        startExportProcess,
         handleSaveToDB,
         handleTestClick,
         handleCreatorClick,
@@ -286,6 +291,15 @@ export const useAppActions = ({
         handleRestoreSnapshot,
         hasSnapshot,
         openSaveAsModal,
-        refreshDependencyMap
+        refreshDependencyMap,
+        // FIX: Added missing exported actions from sub-hooks and local scope to resolve errors in App.tsx
+        handleEditorModeChange,
+        downloadFontBlob,
+        handleAddGlyph,
+        handleQuickAddGlyph,
+        handleCheckGlyphExists,
+        handleCheckNameExists,
+        handleAddBlock,
+        startExportProcess
     };
 };

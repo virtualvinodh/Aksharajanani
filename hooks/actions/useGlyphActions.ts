@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -152,13 +151,13 @@ export const useGlyphActions = (
         // Check for immediate dependents
         const rawDependents = dependencyMap.current.get(unicode);
         
-        // Filter Dependents: Only include actual LINKED glyphs.
-        // Standard Composites should act as templates/copies and NOT update when source changes.
+        // Filter Dependents: Only include actual automated glyphs.
         const linkedDependents = new Set<number>();
         if (rawDependents) {
             rawDependents.forEach(depUni => {
                 const depChar = allCharsByUnicode.get(depUni);
-                if (depChar && depChar.link) {
+                // Include standard links, and positioned/kerned ligatures that are automated
+                if (depChar && (depChar.link || depChar.position || depChar.kern)) {
                     linkedDependents.add(depUni);
                 }
             });
@@ -217,9 +216,20 @@ export const useGlyphActions = (
 
                         const dependentChar = allCharsByUnicode.get(depUnicode);
                         
-                        // Strict Check: Only update if it is a Linked Glyph
-                        if (!dependentChar || !dependentChar.link) continue;
+                        // Strict Check: Only update if it is an automated construction
+                        if (!dependentChar || (!dependentChar.link && !dependentChar.position && !dependentChar.kern)) continue;
             
+                        // CRITICAL BAKING LOGIC: 
+                        // 1. If link exists: PERFORM BAKING. This is a standard composite.
+                        // 2. If gpos exists: SKIP BAKING. The character is a dynamic positioning pair. 
+                        //    We leave glyphDataMap empty so the renderer stays in "Live Rule" mode.
+                        // 3. Else, if position exists (but NO gpos): PERFORM BAKING. This is a static GSUB ligature.
+                        const isLink = !!dependentChar.link;
+                        const isPosition = !!dependentChar.position;
+                        const isGpos = !!dependentChar.gpos;
+                        
+                        const shouldBake = isLink || (isPosition && !isGpos);
+
                         // We use the map from start of transaction + accumulated updates
                         // This ensures consistency within the cascade
                         const dependentGlyphData = calculationSourceMap.get(depUnicode);
@@ -244,8 +254,8 @@ export const useGlyphActions = (
                         // Case B: Smart Update
                         else {
                             const indicesToUpdate: number[] = [];
-                            // For linked glyphs, we use the 'link' property
-                            const components = dependentChar.link || [];
+                            // Check all possible sources
+                            const components = dependentChar.link || dependentChar.position || dependentChar.kern || [];
                             
                             components.forEach((name, index) => {
                                 if (allCharsByName.get(name)?.unicode === currentSourceUnicode) {
@@ -296,8 +306,14 @@ export const useGlyphActions = (
                         }
 
                         if (resultData) {
-                            updates.set(depUnicode, resultData);
-                            calculationSourceMap.set(depUnicode, resultData); // Update local view for next steps
+                            // Only commit to the final update batch if it should be baked
+                            if (shouldBake) {
+                                updates.set(depUnicode, resultData);
+                            }
+                            
+                            // We always update the local source map so that dependents of THIS glyph
+                            // see the updated shape during this BFS pass.
+                            calculationSourceMap.set(depUnicode, resultData);
                             visited.add(depUnicode);
                             queue.push(depUnicode);
                             totalUpdatedCount++;
@@ -323,8 +339,6 @@ export const useGlyphActions = (
                 }
                 
                 // Show completion notification only if not silent
-                // We omit the specific "Updated X dependents" count to avoid clutter, 
-                // as the visual strip now provides feedback.
                 if (!silent) {
                     layout.showNotification(t('saveGlyphSuccess'));
                 }
