@@ -84,11 +84,15 @@ export const usePositioningSession = ({
     const [lsb, setLsb] = useState<number | undefined>(targetLigature.lsb);
     const [rsb, setRsb] = useState<number | undefined>(targetLigature.rsb);
     
-    // Metadata state
+    // Metadata States
     const [glyphClass, setGlyphClass] = useState<Character['glyphClass']>(targetLigature.glyphClass);
     const [advWidth, setAdvWidth] = useState<number | string | undefined>(targetLigature.advWidth);
     const [gpos, setGpos] = useState<string | undefined>(targetLigature.gpos);
     const [gsub, setGsub] = useState<string | undefined>(targetLigature.gsub);
+
+    // Construction States
+    const [position, setPosition] = useState<[string, string] | undefined>(targetLigature.position);
+    const [kern, setKern] = useState<[string, string] | undefined>(targetLigature.kern);
 
     const [manualX, setManualX] = useState<string>('0');
     const [manualY, setManualY] = useState<string>('0');
@@ -158,6 +162,8 @@ export const usePositioningSession = ({
         setAdvWidth(targetLigature.advWidth);
         setGpos(targetLigature.gpos);
         setGsub(targetLigature.gsub);
+        setPosition(targetLigature.position);
+        setKern(targetLigature.kern);
         setIsLinked(!(activeAttachmentClass?.exceptPairs?.includes(pairNameKey)));
     }, [pairIdentifier, markPositioningMap, alignmentOffset, activeAttachmentClass, pairNameKey, markChar.unicode, targetLigature, glyphDataMap]);
 
@@ -204,11 +210,11 @@ export const usePositioningSession = ({
             segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + offsetToSave.x, y: seg.point.y + offsetToSave.y }}))) : undefined
         }));
 
-        onSave(baseChar, markChar, targetLigature, { paths: [...(baseGlyph?.paths ?? []), ...transformedMarkPaths] }, offsetToSave, { lsb, rsb, glyphClass, advWidth, gpos, gsub }, isAutosave, isManual);
+        onSave(baseChar, markChar, targetLigature, { paths: [...(baseGlyph?.paths ?? []), ...transformedMarkPaths] }, offsetToSave, { lsb, rsb, glyphClass, advWidth, gpos, gsub, position, kern }, isAutosave, isManual);
         if (!isAutosave) {
             setInitialMarkPaths(deepClone(transformedMarkPaths));
         }
-    }, [glyphDataMap, markChar, baseChar, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, glyphClass, advWidth, gpos, gsub, currentOffset]);
+    }, [glyphDataMap, markChar, baseChar, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, glyphClass, advWidth, gpos, gsub, position, kern, currentOffset]);
 
     const handlePathsChange = useCallback((newPaths: Path[]) => {
         setMarkPaths(newPaths);
@@ -236,7 +242,9 @@ export const usePositioningSession = ({
                              glyphClass !== targetLigature.glyphClass ||
                              advWidth !== targetLigature.advWidth ||
                              gpos !== targetLigature.gpos ||
-                             gsub !== targetLigature.gsub;
+                             gsub !== targetLigature.gsub ||
+                             JSON.stringify(position) !== JSON.stringify(targetLigature.position) ||
+                             JSON.stringify(kern) !== JSON.stringify(targetLigature.kern);
                              
     const hasUnsavedChanges = hasPathChanges || hasMetadataChanges;
 
@@ -248,7 +256,7 @@ export const usePositioningSession = ({
              handleSave(currentOffset, true, false);
         }, 800);
         return () => { if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current); };
-    }, [lsb, rsb, glyphClass, advWidth, gpos, gsub, currentOffset, hasUnsavedChanges, settings.isAutosaveEnabled, handleSave]);
+    }, [lsb, rsb, glyphClass, advWidth, gpos, gsub, position, kern, currentOffset, hasUnsavedChanges, settings.isAutosaveEnabled, handleSave]);
 
     const handleNavigationAttempt = useCallback((target: Character | 'prev' | 'next' | 'back') => {
         const proceed = () => { 
@@ -312,6 +320,9 @@ export const usePositioningSession = ({
         lsb, setLsb, rsb, setRsb,
         glyphClass, setGlyphClass, advWidth, setAdvWidth,
         gpos, setGpos, gsub, setGsub,
+        // FIX: Added missing construction states to the return object
+        position, setPosition,
+        kern, setKern,
         manualX, manualY, setManualX, setManualY, setIsInputFocused,
         isUnsavedModalOpen, setIsUnsavedModalOpen,
         pendingNavigation, setPendingNavigation,

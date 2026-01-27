@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning, CharacterSet, ComponentTransform, Path } from '../types';
 import KerningEditorHeader from './kerning/KerningEditorHeader';
@@ -49,7 +48,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     const [lsb, setLsb] = useState<number | undefined>(props.character.lsb);
     const [rsb, setRsb] = useState<number | undefined>(props.character.rsb);
 
-    // ADD: State for construction properties to pass down.
+    // State for construction properties to pass down to header/panel
     const [position, setPosition] = useState<[string, string] | undefined>(props.character.position);
     const [kern, setKern] = useState<[string, string] | undefined>(props.character.kern);
     const [gpos, setGpos] = useState<string | undefined>(props.character.gpos);
@@ -59,7 +58,6 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     useEffect(() => {
         setLsb(props.character.lsb);
         setRsb(props.character.rsb);
-        // ADD: Sync construction state on character change
         setPosition(props.character.position);
         setKern(props.character.kern);
         setGpos(props.character.gpos);
@@ -137,12 +135,6 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     }, [props, characterDispatch, glyphDataDispatch, showNotification, kerningMap, kerningDispatch]);
 
     const onPathsChange = useCallback((paths: Path[]) => {
-        // This function is passed to the properties panel.
-        // The panel might call this with an empty array when switching construction type to 'Draw'.
-        // In the context of the kerning editor, we don't manage path state,
-        // but we can interpret this as a request to clear any associated geometry.
-        // The main construction change is handled by `onSaveConstruction`.
-        // This just prevents the "not supported" message from blocking the UI flow.
         if (props.character.unicode && paths.length === 0) {
             glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode: props.character.unicode } });
         } else if (paths.length > 0) {
@@ -179,7 +171,6 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
         return () => ro.disconnect();
     }, [updateSize]);
 
-    // Centered Zoom Action
     const handleZoomAction = useCallback((factor: number) => {
         const oldZoom = session.zoom;
         const newZoom = Math.max(0.1, Math.min(10, oldZoom * factor));
@@ -208,7 +199,6 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 const lsbR = props.pair.right.lsb ?? props.metrics.defaultLSB;
                 const kernNum = parseInt(session.kernValue, 10) || 0;
                 
-                // Logic derived from KerningCanvas rendering logic
                 const rightTranslateX = lBox.x + lBox.width + rsbL + kernNum + lsbR - rBox.x;
                 
                 const transforms: ComponentTransform[] = [
@@ -245,12 +235,10 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 characterDispatch={characterDispatch}
                 glyphDataDispatch={glyphDataDispatch}
                 onPathsChange={onPathsChange}
-                // Metrics props
                 lsb={lsb} setLsb={setLsb}
                 rsb={rsb} setRsb={setRsb}
                 metrics={props.metrics}
                 showPropertiesButton={props.showPropertiesButton !== undefined ? props.showPropertiesButton : true}
-                // PASS: Pass construction state down to the header
                 position={position} setPosition={setPosition}
                 kern={kern} setKern={setKern}
                 gpos={gpos} setGpos={setGpos}

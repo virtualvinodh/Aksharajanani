@@ -275,6 +275,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 glyphClass={session.glyphClass} setGlyphClass={session.setGlyphClass}
                 advWidth={session.advWidth} setAdvWidth={session.setAdvWidth}
                 // Construction props from session
+                position={session.position} setPosition={session.setPosition}
+                kern={session.kern} setKern={session.setKern}
                 gpos={session.gpos} setGpos={session.setGpos}
                 gsub={session.gsub} setGsub={session.setGsub}
             />
