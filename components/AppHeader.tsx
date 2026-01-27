@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning, FilterMode } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -110,7 +109,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         selectCharacter, setWorkspace, setCurrentView, 
         isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection, 
         filterMode, setFilterMode,
-        searchQuery, setSearchQuery
+        searchQuery, setSearchQuery,
+        openModal
     } = useLayout();
     
     const kerningLabel = (settings.editorMode === 'advanced' || settings.preferKerningTerm) ? t('workspaceKerning') : t('workspaceSpacing');
@@ -206,12 +206,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         </button>
                     )}
                     
-                    <button onClick={() => setCurrentView('rules')} title={t('workspaceRules')} className="relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
-                         <RulesIcon />
-                        <span className="hidden md:inline">{t('workspaceRules')}</span>
-                         {hasUnsavedRules && <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white dark:ring-gray-800" title="Unsaved changes"></span>}
-                    </button>
-
                     <button onClick={onExportClick} disabled={isAnyExporting} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:cursor-wait text-sm sm:text-base">
                         {exportingType === 'export' ? <SpinnerIcon /> : <ExportIcon />}
                         <span className="hidden md:inline">{exportingType === 'export' ? t('exporting') : t('exportOtf')}</span>
@@ -246,6 +240,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                 <button onClick={() => { onTakeSnapshot(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CameraIcon /> Take Snapshot</button>
                                 <button onClick={() => { onRestoreSnapshot(); setIsMoreMenuOpen(false); }} disabled={!hasSnapshot} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"><HistoryIcon /> Restore Snapshot</button>
+                                <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                                <button onClick={() => { setCurrentView('rules'); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <RulesIcon /> {t('workspaceRules')}
+                                    {hasUnsavedRules && <span className="ml-auto w-2 h-2 bg-yellow-400 rounded-full" title="Unsaved changes"></span>}
+                                </button>
+                                <button onClick={() => { openModal('positioningRulesManager'); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <WrenchIcon /> {t('managePositioningRules')}
+                                </button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                 <button onClick={() => { onShowAbout(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><AboutIcon /> {t('about')}</button>
                                 <button onClick={() => { onShowHelp(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><HelpIcon /> {t('help')}</button>

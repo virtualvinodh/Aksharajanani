@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 // FIX: Added Point to the list of imported types to resolve signature definition error.
@@ -15,7 +14,6 @@ import { usePositioningActions } from '../hooks/positioning/usePositioningAction
 import PositioningHeader from './positioning/PositioningHeader';
 import PositioningRulesView from './positioning/PositioningRulesView';
 import PositioningGridView from './positioning/PositioningGridView';
-import PositioningRulesModal from './PositioningRulesModal';
 import { usePositioning } from '../contexts/PositioningContext';
 import { expandMembers } from '../services/groupExpansionService';
 
@@ -63,9 +61,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
     const [reuseSourceItem, setReuseSourceItem] = useState<Character | null>(null);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
     
-    // Inline Rules Manager State
-    const [isRulesManagerOpen, setIsRulesManagerOpen] = useState(false);
-
     // Ref map to scroll cards into view
     const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     
@@ -258,7 +253,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             const isPositioned = markPositioningMap.has(`${combo.base.unicode}-${combo.mark.unicode}`);
             if (isPositioned) return false;
             
-            // Only count if eligible for auto-positioning (not a follower)
             return isPairEligibleForAutoPos(combo.base, combo.mark);
         }).length;
     }, [displayedCombinations, markPositioningMap, viewMode, isPairEligibleForAutoPos]);
@@ -371,61 +365,50 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
             <PositioningHeader 
                 viewMode={viewMode} setViewMode={setViewMode}
                 isFiltered={isFiltered} getBannerText={getBannerText}
-                isRulesManagerOpen={isRulesManagerOpen} setIsRulesManagerOpen={setIsRulesManagerOpen}
-                saveManagerChanges={() => { showNotification(t('projectSaved'), 'success'); }} // Autosave handles actual save, this just closes or confirms
-                settingsAutosaveEnabled={settings.isAutosaveEnabled}
                 navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab}
                 isGridView={viewMode === 'base' || viewMode === 'mark'}
             />
 
             <div className="flex-grow overflow-hidden bg-gray-50 dark:bg-gray-900/50 flex flex-col">
-                {isRulesManagerOpen && (
-                    <PositioningRulesModal isOpen={isRulesManagerOpen} onClose={() => setIsRulesManagerOpen(false)} />
+                {showIncompleteBanner && (
+                    <div className="flex-shrink-0 m-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">
+                        {t('positioningShowOnlyComplete')}
+                    </div>
                 )}
 
-                {!isRulesManagerOpen && (
-                    <>
-                        {showIncompleteBanner && (
-                            <div className="flex-shrink-0 m-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">
-                                {t('positioningShowOnlyComplete')}
-                            </div>
-                        )}
-
-                        {viewMode === 'rules' && !isFiltered ? (
-                             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-                                <PositioningRulesView 
-                                    ruleGroups={ruleGroups} selectedRuleGroupId={selectedRuleGroupId} setSelectedRuleGroupId={setSelectedRuleGroupId}
-                                    activeRuleGroup={activeRuleGroup} pagedRulePairs={pagedRulePairs} rulePage={rulePage} setRulePage={setRulePage}
-                                    ruleTotalPages={ruleTotalPages} markPositioningMap={markPositioningMap} getPairClassKey={getPairClassKey}
-                                    classCounts={classCounts} setEditingPair={setEditingPair} setEditingIndex={setEditingIndex}
-                                    setEditingContextList={setEditingContextList} handleConfirmPosition={handleConfirmPosition}
-                                    glyphDataMap={glyphDataMap} strokeThickness={settings.strokeThickness} markAttachmentRules={markAttachmentRules}
-                                    positioningRules={positioningRules}
-                                    characterSets={characterSets} groups={groups} glyphVersion={glyphVersion} metrics={metrics} ITEMS_PER_PAGE={ITEMS_PER_PAGE}
-                                    handleAcceptAllDefaults={handleAcceptAllDefaults}
-                                    uniqueRepPairs={uniqueRepPairs}
-                                    isPairEligible={isPairEligibleForAutoPos}
-                                />
-                            </div>
-                        ) : (
-                             <div className="flex-1 overflow-hidden p-4 sm:p-6">
-                                <PositioningGridView 
-                                    displayedCombinations={displayedCombinations} markPositioningMap={markPositioningMap}
-                                    glyphDataMap={glyphDataMap} strokeThickness={settings.strokeThickness} markAttachmentRules={markAttachmentRules}
-                                    positioningRules={positioningRules}
-                                    characterSets={characterSets} glyphVersion={glyphVersion} groups={groups}
-                                    setEditingPair={setEditingPair} setEditingIndex={setEditingIndex} setEditingContextList={setEditingContextList}
-                                    handleConfirmPosition={handleConfirmPosition} cardRefs={cardRefs} activeItem={activeItem} isFiltered={isFiltered}
-                                    viewMode={viewMode === 'rules' ? 'base' : viewMode} // Fallback to base if rules but filtered
-                                    handleOpenReuseModal={handleOpenReuseModal} handleAcceptAllDefaults={() => handleAcceptAllDefaults()}
-                                    unpositionedCount={unpositionedCount} setIsResetConfirmOpen={setIsResetConfirmOpen} hasManuallyPositioned={hasManuallyPositioned}
-                                    navItemsLength={navItems.length} t={t}
-                                    markAttachmentClasses={markAttachmentClasses}
-                                    baseAttachmentClasses={baseAttachmentClasses}
-                                />
-                            </div>
-                        )}
-                    </>
+                {viewMode === 'rules' && !isFiltered ? (
+                     <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                        <PositioningRulesView 
+                            ruleGroups={ruleGroups} selectedRuleGroupId={selectedRuleGroupId} setSelectedRuleGroupId={setSelectedRuleGroupId}
+                            activeRuleGroup={activeRuleGroup} pagedRulePairs={pagedRulePairs} rulePage={rulePage} setRulePage={setRulePage}
+                            ruleTotalPages={ruleTotalPages} markPositioningMap={markPositioningMap} getPairClassKey={getPairClassKey}
+                            classCounts={classCounts} setEditingPair={setEditingPair} setEditingIndex={setEditingIndex}
+                            setEditingContextList={setEditingContextList} handleConfirmPosition={handleConfirmPosition}
+                            glyphDataMap={glyphDataMap} strokeThickness={settings.strokeThickness} markAttachmentRules={markAttachmentRules}
+                            positioningRules={positioningRules}
+                            characterSets={characterSets} groups={groups} glyphVersion={glyphVersion} metrics={metrics} ITEMS_PER_PAGE={ITEMS_PER_PAGE}
+                            handleAcceptAllDefaults={handleAcceptAllDefaults}
+                            uniqueRepPairs={uniqueRepPairs}
+                            isPairEligible={isPairEligibleForAutoPos}
+                        />
+                    </div>
+                ) : (
+                     <div className="flex-1 overflow-hidden p-4 sm:p-6">
+                        <PositioningGridView 
+                            displayedCombinations={displayedCombinations} markPositioningMap={markPositioningMap}
+                            glyphDataMap={glyphDataMap} strokeThickness={settings.strokeThickness} markAttachmentRules={markAttachmentRules}
+                            positioningRules={positioningRules}
+                            characterSets={characterSets} glyphVersion={glyphVersion} groups={groups}
+                            setEditingPair={setEditingPair} setEditingIndex={setEditingIndex} setEditingContextList={setEditingContextList}
+                            handleConfirmPosition={handleConfirmPosition} cardRefs={cardRefs} activeItem={activeItem} isFiltered={isFiltered}
+                            viewMode={viewMode === 'rules' ? 'base' : viewMode} // Fallback to base if rules but filtered
+                            handleOpenReuseModal={handleOpenReuseModal} handleAcceptAllDefaults={() => handleAcceptAllDefaults()}
+                            unpositionedCount={unpositionedCount} setIsResetConfirmOpen={setIsResetConfirmOpen} hasManuallyPositioned={hasManuallyPositioned}
+                            navItemsLength={navItems.length} t={t}
+                            markAttachmentClasses={markAttachmentClasses}
+                            baseAttachmentClasses={baseAttachmentClasses}
+                        />
+                    </div>
                 )}
             </div>
             

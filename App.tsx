@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ScriptConfig, ProjectData, Character } from './types';
 import UnifiedEditorModal from './components/UnifiedEditorModal';
 import SettingsPage from './components/SettingsPage';
@@ -38,6 +39,7 @@ import { useProgressCalculators } from './hooks/useProgressCalculators';
 import { useAppActions } from './hooks/useAppActions';
 import { TOOL_RANGES, LeftArrowIcon, RightArrowIcon, GridViewIcon, SplitViewIcon, EditorViewIcon } from './constants';
 import { useMediaQuery } from './hooks/useMediaQuery';
+import PositioningRulesModal from './components/PositioningRulesModal';
 
 const GUIDE_FONT_STYLE_ID = 'guide-font-face-style';
 
@@ -73,11 +75,21 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
   // State for mobile editor animation
   const [editorClosing, setEditorClosing] = useState(false);
-  const [characterForModal, setCharacterForModal] = useState<Character | null>(null);
 
   // State for mobile navigation drawer animation
   const [isNavDrawerVisible, setNavDrawerVisible] = useState(false);
   const [isNavDrawerAnimatingOut, setNavDrawerAnimatingOut] = useState(false);
+  
+  // FIX: This is the core of the refresh fix.
+  // We use `useMemo` to get the fresh version of the selected character from the global ProjectContext
+  // every time the App component re-renders (which happens when any context it consumes changes).
+  const characterForModal = useMemo(() => {
+    if (!selectedCharacter?.unicode) return selectedCharacter;
+    // Look up the character by its ID in the latest, globally-updated map.
+    // If it's not found (e.g., during deletion), fall back to the one in layout state to avoid crashes.
+    return allCharsByUnicode.get(selectedCharacter.unicode) || selectedCharacter;
+  }, [selectedCharacter, allCharsByUnicode]);
+
 
   useEffect(() => {
     if (isNavDrawerOpen) {
@@ -94,7 +106,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
   useEffect(() => {
     if (selectedCharacter) {
-      setCharacterForModal(selectedCharacter);
       setEditorClosing(false);
     }
   }, [selectedCharacter]);
@@ -105,7 +116,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         setTimeout(() => {
             closeCharacterModal();
             setEditorClosing(false);
-            setCharacterForModal(null);
         }, 300); // Animation duration
     } else {
         closeCharacterModal();
@@ -306,7 +316,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const hasPositioning = positioningProgress.total > 0;
   const hasKerning = drawingProgress.completed >= 2;
   
-  const showEditorPanel = isLargeScreen && selectedCharacter && (panelLayout === 'split' || panelLayout === 'editor');
+  const showEditorPanel = isLargeScreen && characterForModal && (panelLayout === 'split' || panelLayout === 'editor');
   const RESIZER_WIDTH = isLargeScreen ? 8 : 16; // px
 
   return (
@@ -408,7 +418,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                   )}
                 </div>
 
-                {showEditorPanel && (
+                {showEditorPanel && characterForModal && (
                     <>
                         <div 
                             onMouseDown={panelLayout === 'split' ? handleMouseDownResize : undefined}
@@ -423,11 +433,11 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                             }}
                         >
                             <UnifiedEditorModal
-                                key={selectedCharacter ? "unified-editor-panel" : "none"}
+                                key={characterForModal.unicode || "unified-editor-panel"}
                                 mode="panel"
-                                character={selectedCharacter}
-                                characterSet={characterSets.find(cs => cs.characters.some(c => c.unicode === selectedCharacter.unicode)) || characterSets[layout.activeTab]}
-                                glyphData={glyphDataMap.get(selectedCharacter.unicode)}
+                                character={characterForModal}
+                                characterSet={characterSets.find(cs => cs.characters.some(c => c.unicode === characterForModal.unicode)) || characterSets[layout.activeTab]}
+                                glyphData={glyphDataMap.get(characterForModal.unicode)}
                                 onSave={handleSaveGlyph}
                                 onDelete={handleDeleteGlyph}
                                 onUnlockGlyph={handleUnlockGlyph}
@@ -448,7 +458,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                         </aside>
                     </>
                 )}
-                 {isLargeScreen && selectedCharacter && (
+                 {isLargeScreen && characterForModal && (
                     <>
                         {panelLayout === 'split' && (
                              <div 
@@ -606,6 +616,12 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
             confirmActionText={t('restore')}
             onConfirm={layout.activeModal.props.onConfirm}
             closeOnBackdropClick={false}
+        />
+      )}
+      {layout.activeModal?.name === 'positioningRulesManager' && (
+        <PositioningRulesModal 
+            isOpen={true} 
+            onClose={layout.closeModal} 
         />
       )}
       {layout.activeModal?.name === 'saveAs' && (

@@ -6,6 +6,8 @@ import SmartGlyphInput from './rules/manager/SmartGlyphInput';
 import { SaveIcon, TrashIcon, RightArrowIcon, CloseIcon, AddIcon } from '../constants';
 import { useRules } from '../contexts/RulesContext';
 import { GlyphDataAction } from '../contexts/GlyphDataContext';
+import { useKerning } from '../contexts/KerningContext';
+import { useProject } from '../contexts/ProjectContext';
 
 // Helper component for managing a list of components
 const ComponentListEditor: React.FC<{
@@ -190,6 +192,9 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
 }) => {
   const { t } = useLocale();
   const { state: rulesState } = useRules();
+  const { kerningMap, dispatch: kerningDispatch } = useKerning();
+  const { allCharsByName } = useProject();
+
   const groups = rulesState.fontRules?.groups || {};
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -292,6 +297,32 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   // Logic to apply changes
   const handleApplyConstruction = () => {
       if (!character || !onSaveConstruction) return;
+
+      // --- CLEANUP LOGIC FOR KERNING MAP ---
+      // If the character was previously defined as a 'kern' pair, and we are either:
+      // 1. Changing to a different type (removing kern property)
+      // 2. Or changing the components (modifying kern property)
+      // Then we must remove the old pair from the KerningMap to prevent stale data.
+      if (character.kern) {
+          const isRemovingKern = type !== 'kerning';
+          // Check if components changed. Note: kernComps are the NEW values from state.
+          const isChangingKern = type === 'kerning' && (kernComps[0] !== character.kern[0] || kernComps[1] !== character.kern[1]);
+
+          if (isRemovingKern || isChangingKern) {
+              const [leftName, rightName] = character.kern;
+              const leftChar = allCharsByName.get(leftName);
+              const rightChar = allCharsByName.get(rightName);
+              
+              if (leftChar?.unicode !== undefined && rightChar?.unicode !== undefined) {
+                  const key = `${leftChar.unicode}-${rightChar.unicode}`;
+                  if (kerningMap.has(key)) {
+                      const newMap = new Map(kerningMap);
+                      newMap.delete(key);
+                      kerningDispatch({ type: 'SET_MAP', payload: newMap });
+                  }
+              }
+          }
+      }
 
       // Handle Virtual Types (Pos/Kern) via direct dispatch if available
       if (type === 'positioning' && setPosition && positionComps[0] && positionComps[1]) {

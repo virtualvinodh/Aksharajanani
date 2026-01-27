@@ -7,7 +7,7 @@ type View = 'grid' | 'comparison' | 'settings' | 'creator' | 'rules';
 export type PanelLayout = 'grid' | 'split' | 'editor';
 
 interface ModalState {
-  name: 'confirmChangeScript' | 'incompleteWarning' | 'mismatchedScript' | 'testPage' | 'addGlyph' | 'positioningUpdateWarning' | 'feaError' | 'unsavedRules' | 'about' | 'help' | 'restoreSession' | 'testCases' | 'confirmLoadProject' | 'addBlock' | 'importGlyphs' | 'confirmSnapshotRestore' | 'snapshotRestore' | 'saveAs';
+  name: 'confirmChangeScript' | 'incompleteWarning' | 'mismatchedScript' | 'testPage' | 'addGlyph' | 'positioningUpdateWarning' | 'feaError' | 'unsavedRules' | 'about' | 'help' | 'restoreSession' | 'testCases' | 'confirmLoadProject' | 'addBlock' | 'importGlyphs' | 'confirmSnapshotRestore' | 'snapshotRestore' | 'saveAs' | 'positioningRulesManager';
   props?: any;
 }
 
@@ -84,7 +84,7 @@ interface LayoutContextType {
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
 
-export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [workspace, setWorkspace] = useState<Workspace>('drawing');
     const [currentView, setCurrentView] = useState<View>('grid');
     const [activeTab, setActiveTab] = useState(0);

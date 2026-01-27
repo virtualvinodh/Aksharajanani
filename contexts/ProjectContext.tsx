@@ -13,7 +13,12 @@ type CharacterAction =
     | { type: 'SET_CHARACTER_SETS'; payload: CharacterSet[] | null }
     | { type: 'UPDATE_CHARACTER_SETS', payload: (prev: CharacterSet[] | null) => CharacterSet[] | null }
     | { type: 'DELETE_CHARACTER', payload: { unicode: number } }
-    | { type: 'UPDATE_CHARACTER_METADATA', payload: { unicode: number, lsb?: number, rsb?: number, glyphClass?: Character['glyphClass'], advWidth?: number | string } }
+    | { type: 'UPDATE_CHARACTER_METADATA', payload: { 
+          unicode: number, 
+          lsb?: number, rsb?: number, glyphClass?: Character['glyphClass'], advWidth?: number | string,
+          position?: [string, string], kern?: [string, string], link?: string[], composite?: string[], compositeTransform?: ComponentTransform[],
+          gpos?: string, gsub?: string
+      } }
     | { type: 'UPDATE_CHARACTER_BEARINGS', payload: { unicode: number, lsb?: number, rsb?: number } }
     | { type: 'ADD_CHARACTERS', payload: { characters: Character[], activeTabNameKey: string } }
     | { type: 'UNLINK_GLYPH', payload: { unicode: number, transforms?: ComponentTransform[] } }
@@ -110,6 +115,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                 });
                 break;
             case 'UPDATE_CHARACTER_METADATA':
+                console.log("PROJECT CONTEXT: Updating Metadata", action.payload);
                 setCharacterSets(prev => {
                     if (!prev) return null;
                     return prev.map(set => ({
@@ -117,10 +123,23 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                         characters: set.characters.map(char => {
                             if (char.unicode === action.payload.unicode) {
                                 const newChar = { ...char };
-                                if (action.payload.lsb !== undefined) newChar.lsb = action.payload.lsb; else delete newChar.lsb;
-                                if (action.payload.rsb !== undefined) newChar.rsb = action.payload.rsb; else delete newChar.rsb;
-                                if (action.payload.glyphClass !== undefined) newChar.glyphClass = action.payload.glyphClass;
-                                if (action.payload.advWidth !== undefined) newChar.advWidth = action.payload.advWidth; else delete newChar.advWidth;
+                                const p = action.payload;
+
+                                // Helper to update or delete based on presence in payload
+                                if ('lsb' in p) p.lsb !== undefined ? newChar.lsb = p.lsb : delete newChar.lsb;
+                                if ('rsb' in p) p.rsb !== undefined ? newChar.rsb = p.rsb : delete newChar.rsb;
+                                if ('glyphClass' in p) p.glyphClass !== undefined ? newChar.glyphClass = p.glyphClass : delete newChar.glyphClass;
+                                if ('advWidth' in p) p.advWidth !== undefined ? newChar.advWidth = p.advWidth : delete newChar.advWidth;
+                                
+                                // Construction props
+                                if ('position' in p) p.position !== undefined ? newChar.position = p.position : delete newChar.position;
+                                if ('kern' in p) p.kern !== undefined ? newChar.kern = p.kern : delete newChar.kern;
+                                if ('link' in p) p.link !== undefined ? newChar.link = p.link : delete newChar.link;
+                                if ('composite' in p) p.composite !== undefined ? newChar.composite = p.composite : delete newChar.composite;
+                                if ('compositeTransform' in p) p.compositeTransform !== undefined ? newChar.compositeTransform = p.compositeTransform : delete newChar.compositeTransform;
+                                if ('gpos' in p) p.gpos !== undefined ? newChar.gpos = p.gpos : delete newChar.gpos;
+                                if ('gsub' in p) p.gsub !== undefined ? newChar.gsub = p.gsub : delete newChar.gsub;
+
                                 return newChar;
                             }
                             return char;

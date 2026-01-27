@@ -35,14 +35,19 @@ interface KerningEditorHeaderProps {
     setRsb: (v: number | undefined) => void;
     metrics: FontMetrics;
     showPropertiesButton?: boolean;
+
+    // ADD: Accept all construction-related props to pass down
+    position?: [string, string];
+    setPosition?: (val: [string, string] | undefined) => void;
+    kern?: [string, string];
+    setKern?: (val: [string, string] | undefined) => void;
+    gpos?: string;
+    setGpos?: (val: string | undefined) => void;
+    gsub?: string;
+    setGsub?: (val: string | undefined) => void;
 }
 
-const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
-    pair, onClose, onDelete, onNavigate, hasPrev, hasNext, onAutoKern, isAutoKerning, onSave, onRemove, isDirty, settings, isKerned,
-    allCharacterSets, character, onDetach,
-    onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange,
-    lsb, setLsb, rsb, setRsb, metrics, showPropertiesButton = true
-}) => {
+const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
     const { t } = useLocale();
     const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -62,15 +67,15 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
 
     const navButtonClass = "p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all";
     
-    const useKerningTerm = settings.editorMode === 'advanced' || settings.preferKerningTerm;
+    const useKerningTerm = props.settings.editorMode === 'advanced' || props.settings.preferKerningTerm;
     const autoLabel = useKerningTerm ? t('autoKern') : "Auto-space";
 
     const renderActionButton = () => {
-        if (settings.isAutosaveEnabled) {
-            if (!isKerned) {
+        if (props.settings.isAutosaveEnabled) {
+            if (!props.isKerned) {
                 return (
                     <button 
-                        onClick={onSave} 
+                        onClick={props.onSave} 
                         title="Accept Default" 
                         className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
                     >
@@ -81,10 +86,10 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
             }
             return null;
         } else {
-            if (!isKerned && !isDirty) {
+            if (!props.isKerned && !props.isDirty) {
                  return (
                     <button 
-                        onClick={onSave} 
+                        onClick={props.onSave} 
                         title="Accept Default Value" 
                         className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
                     >
@@ -93,10 +98,10 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                     </button>
                 );
             }
-            if (isDirty) {
+            if (props.isDirty) {
                  return (
                     <button 
-                        onClick={onSave} 
+                        onClick={props.onSave} 
                         title={t('save')} 
                         className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
                     >
@@ -118,7 +123,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
         <header className="bg-gray-50 dark:bg-gray-800 p-4 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0 z-20 shadow-sm">
             <div className="flex-1 flex justify-start">
                 <button 
-                    onClick={onClose} 
+                    onClick={props.onClose} 
                     className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 active:scale-95"
                 >
                     <BackIcon />
@@ -127,7 +132,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
             </div>
 
             <div className="flex-1 flex items-center gap-2 sm:gap-4 justify-center">
-                <button onClick={() => onNavigate('prev')} disabled={!hasPrev} className={navButtonClass}>
+                <button onClick={() => props.onNavigate('prev')} disabled={!props.hasPrev} className={navButtonClass}>
                     <LeftArrowIcon />
                 </button>
                 
@@ -136,11 +141,11 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                         className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-xs leading-tight" 
                         style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}
                     >
-                        {pair.left.name} + {pair.right.name}
+                        {props.pair.left.name} + {props.pair.right.name}
                     </h2>
                 </div>
                 
-                <button onClick={() => onNavigate('next')} disabled={!hasNext} className={navButtonClass}>
+                <button onClick={() => props.onNavigate('next')} disabled={!props.hasNext} className={navButtonClass}>
                     <RightArrowIcon />
                 </button>
             </div>
@@ -149,12 +154,12 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                 {renderActionButton()}
                 
                 <button 
-                    onClick={onAutoKern} 
-                    disabled={isAutoKerning} 
+                    onClick={props.onAutoKern} 
+                    disabled={props.isAutoKerning} 
                     title={autoLabel} 
                     className="flex items-center gap-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-teal-400 transition-all active:scale-95 shadow-sm"
                 >
-                    {isAutoKerning ? (
+                    {props.isAutoKerning ? (
                         <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
                     ) : (
                         <SparklesIcon />
@@ -162,9 +167,9 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                     <span className="hidden xl:inline font-semibold">{autoLabel}</span>
                 </button>
                 
-                {onDetach && (
+                {props.onDetach && (
                     <button 
-                        onClick={onDetach}
+                        onClick={props.onDetach}
                         className="flex items-center gap-2 px-3 py-2 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 font-semibold rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-all active:scale-95 shadow-sm border border-orange-200 dark:border-orange-800"
                         title="Detach and Convert to Composite Glyph"
                     >
@@ -174,9 +179,9 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                 )}
 
                 <button 
-                    onClick={onRemove} 
+                    onClick={props.onRemove} 
                     title={t('reset')} 
-                    disabled={!isKerned}
+                    disabled={!props.isKerned}
                     className="flex items-center gap-2 px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-yellow-400 transition-all active:scale-95 shadow-sm"
                 >
                     <UndoIcon />
@@ -184,7 +189,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                 </button>
                 
                 {/* Properties Button - Conditionally Visible */}
-                {showPropertiesButton && (
+                {props.showPropertiesButton && (
                     <button 
                         onClick={() => setIsPropertiesPanelOpen(prev => !prev)}
                         className={`p-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ${isPropertiesPanelOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
@@ -205,7 +210,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                     </button>
                     {isMoreMenuOpen && (
                         <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 z-50">
-                            <button onClick={() => { onDelete(); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                            <button onClick={() => { props.onDelete(); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                                 <TrashIcon /> <span>{t('deleteGlyph')}</span>
                             </button>
                         </div>
@@ -213,18 +218,24 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = ({
                 </div>
                 {isPropertiesPanelOpen && (
                     <GlyphPropertiesPanel 
-                        lsb={lsb} setLsb={setLsb} 
-                        rsb={rsb} setRsb={setRsb}
-                        metrics={metrics} 
+                        lsb={props.lsb} setLsb={props.setLsb} 
+                        rsb={props.rsb} setRsb={props.setRsb}
+                        metrics={props.metrics} 
                         onClose={() => setIsPropertiesPanelOpen(false)}
-                        character={character}
-                        allCharacterSets={allCharacterSets}
-                        onSaveConstruction={onSaveConstruction}
-                        characterDispatch={characterDispatch}
-                        glyphDataDispatch={glyphDataDispatch}
-                        onPathsChange={onPathsChange}
-                        kern={character.kern}
-                        setKern={undefined} 
+                        character={props.character}
+                        allCharacterSets={props.allCharacterSets}
+                        onSaveConstruction={props.onSaveConstruction}
+                        characterDispatch={props.characterDispatch}
+                        glyphDataDispatch={props.glyphDataDispatch}
+                        onPathsChange={props.onPathsChange}
+                        kern={props.kern}
+                        setKern={props.setKern}
+                        position={props.position}
+                        setPosition={props.setPosition}
+                        gpos={props.gpos}
+                        setGpos={props.setGpos}
+                        gsub={props.gsub}
+                        setGsub={props.setGsub}
                     />
                 )}
             </div>

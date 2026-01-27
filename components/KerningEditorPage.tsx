@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning, CharacterSet, ComponentTransform } from '../types';
+import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning, CharacterSet, ComponentTransform, Path } from '../types';
 import KerningEditorHeader from './kerning/KerningEditorHeader';
 import KerningEditorWorkspace from './kerning/KerningEditorWorkspace';
 import KerningCanvas from './KerningCanvas';
@@ -12,6 +12,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 import { useLayout } from '../contexts/LayoutContext';
+import { useKerning } from '../contexts/KerningContext';
 
 interface KerningEditorPageProps {
     pair: { left: Character, right: Character };
@@ -48,22 +49,106 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     const [lsb, setLsb] = useState<number | undefined>(props.character.lsb);
     const [rsb, setRsb] = useState<number | undefined>(props.character.rsb);
 
+    // ADD: State for construction properties to pass down.
+    const [position, setPosition] = useState<[string, string] | undefined>(props.character.position);
+    const [kern, setKern] = useState<[string, string] | undefined>(props.character.kern);
+    const [gpos, setGpos] = useState<string | undefined>(props.character.gpos);
+    const [gsub, setGsub] = useState<string | undefined>(props.character.gsub);
+
     // Sync state if character changes
     useEffect(() => {
         setLsb(props.character.lsb);
         setRsb(props.character.rsb);
+        // ADD: Sync construction state on character change
+        setPosition(props.character.position);
+        setKern(props.character.kern);
+        setGpos(props.character.gpos);
+        setGsub(props.character.gsub);
     }, [props.character]);
 
 
     const { showNotification } = useLayout();
     const { dispatch: characterDispatch } = useProject();
     const { dispatch: glyphDataDispatch } = useGlyphDataContext();
-    const onSaveConstruction = useCallback(() => {
-        showNotification("Changing construction type is not supported here.", "info");
-    }, [showNotification]);
-    const onPathsChange = useCallback(() => {
-        showNotification("Path editing is not supported here.", "info");
-    }, [showNotification]);
+    const { kerningMap, dispatch: kerningDispatch } = useKerning();
+    
+    const onSaveConstruction = useCallback((type: 'drawing' | 'composite' | 'link' | 'positioning' | 'kerning', components: string[], transforms?: ComponentTransform[]) => {
+        const { character } = props;
+        if (!character.unicode) {
+            showNotification("Cannot modify a character without a Unicode ID.", "error");
+            return;
+        }
+
+        // Cleanup Kerning Map if removing 'kerning' type
+        if (character.kern && type !== 'kerning') {
+             const [l, r] = character.kern;
+             const lc = props.allCharsByName.get(l);
+             const rc = props.allCharsByName.get(r);
+             if (lc?.unicode && rc?.unicode) {
+                 const key = `${lc.unicode}-${rc.unicode}`;
+                 if (kerningMap.has(key)) {
+                     const nm = new Map(kerningMap);
+                     nm.delete(key);
+                     kerningDispatch({type: 'SET_MAP', payload: nm});
+                 }
+             }
+        }
+    
+        characterDispatch({
+            type: 'UPDATE_CHARACTER_SETS',
+            payload: (prevSets: CharacterSet[] | null) => {
+                if (!prevSets) return null;
+                return prevSets.map(set => ({
+                    ...set,
+                    characters: set.characters.map(c => {
+                        if (c.unicode === character.unicode) {
+                            const updated: Character = { ...character };
+                            // Clear all construction types
+                            delete updated.kern;
+                            delete updated.position;
+                            delete updated.link;
+                            delete updated.composite;
+                            delete updated.compositeTransform;
+    
+                            // Set the new type
+                            if (type === 'link') updated.link = components;
+                            if (type === 'composite') {
+                                updated.composite = components;
+                                if (transforms) updated.compositeTransform = transforms;
+                            }
+                            if (type === 'positioning') updated.position = components as [string, string];
+                            if (type === 'kerning') updated.kern = components as [string, string];
+                            
+                            return updated;
+                        }
+                        return c;
+                    })
+                }));
+            }
+        });
+    
+        // If changing to a virtual type, ensure any old drawing data is removed.
+        if (type === 'positioning' || type === 'kerning') {
+            glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode: character.unicode } });
+        } 
+        
+        showNotification("Construction type changed. The editor will now update.", "success");
+    
+    }, [props, characterDispatch, glyphDataDispatch, showNotification, kerningMap, kerningDispatch]);
+
+    const onPathsChange = useCallback((paths: Path[]) => {
+        // This function is passed to the properties panel.
+        // The panel might call this with an empty array when switching construction type to 'Draw'.
+        // In the context of the kerning editor, we don't manage path state,
+        // but we can interpret this as a request to clear any associated geometry.
+        // The main construction change is handled by `onSaveConstruction`.
+        // This just prevents the "not supported" message from blocking the UI flow.
+        if (props.character.unicode && paths.length === 0) {
+            glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode: props.character.unicode } });
+        } else if (paths.length > 0) {
+             showNotification("Path editing is not supported in the kerning editor.", "info");
+        }
+    }, [props.character.unicode, glyphDataDispatch, showNotification]);
 
     const session = useKerningSession(props);
     const sourceGlyphs = useMemo(() => [props.pair.left, props.pair.right], [props.pair]);
@@ -165,6 +250,11 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 rsb={rsb} setRsb={setRsb}
                 metrics={props.metrics}
                 showPropertiesButton={props.showPropertiesButton !== undefined ? props.showPropertiesButton : true}
+                // PASS: Pass construction state down to the header
+                position={position} setPosition={setPosition}
+                kern={kern} setKern={setKern}
+                gpos={gpos} setGpos={setGpos}
+                gsub={gsub} setGsub={setGsub}
             />
             
             <KerningEditorWorkspace 

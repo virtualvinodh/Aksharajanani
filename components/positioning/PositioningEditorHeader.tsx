@@ -19,8 +19,6 @@ interface PositioningEditorHeaderProps {
     isPositioned: boolean;
     onResetRequest: () => void;
     isGsubPair: boolean;
-    isPropertiesPanelOpen: boolean;
-    setIsPropertiesPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
     lsb: number | undefined;
     setLsb: (val: number | undefined) => void;
     rsb: number | undefined;
@@ -33,24 +31,34 @@ interface PositioningEditorHeaderProps {
     isDirty: boolean;
     onConfirmPosition: () => void;
     onDetach?: () => void;
-    // FIX: Added missing props for GlyphPropertiesPanel.
     allCharacterSets: CharacterSet[];
     onSaveConstruction: (...args: any) => void;
     characterDispatch: any;
     glyphDataDispatch: (action: GlyphDataAction) => void;
     onPathsChange: (paths: Path[]) => void;
+
+    // ADD: Construction Props
+    position?: [string, string];
+    setPosition?: (val: [string, string] | undefined) => void;
+    kern?: [string, string];
+    setKern?: (val: [string, string] | undefined) => void;
+    gpos?: string;
+    setGpos?: (val: string | undefined) => void;
+    gsub?: string;
+    setGsub?: (val: string | undefined) => void;
 }
 
 const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
     targetLigature, prevPair, nextPair, onNavigate, onDelete, activeAttachmentClass, isLinked, isPivot,
-    canEdit, isPositioned, onResetRequest, isGsubPair, isPropertiesPanelOpen, 
-    setIsPropertiesPanelOpen, lsb, setLsb, rsb, setRsb, metrics, isAutosaveEnabled, 
+    canEdit, isPositioned, onResetRequest, isGsubPair, lsb, setLsb, rsb, setRsb, metrics, isAutosaveEnabled, 
     onSaveRequest, isLargeScreen, isStripExpanded, isDirty, onConfirmPosition, onDetach,
-    allCharacterSets, onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange
+    allCharacterSets, onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange,
+    position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub
 }) => {
     const { t } = useLocale();
     const moreMenuRef = useRef<HTMLDivElement>(null);
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+    const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -173,7 +181,7 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                 </button>
             </div>
 
-            <div className="flex-1 flex justify-end items-center gap-2">
+            <div className="flex-1 flex justify-end items-center gap-2 relative">
                 {renderActionButton()}
                 
                 {onDetach && (
@@ -223,21 +231,27 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                         </div>
                     )}
                 </div>
-            </div>
-             {isPropertiesPanelOpen && (
+
+                {isPropertiesPanelOpen && (
                 <GlyphPropertiesPanel 
                     character={targetLigature}
                     lsb={lsb} setLsb={setLsb} 
                     rsb={rsb} setRsb={setRsb} 
                     metrics={metrics} 
-                    onClose={() => setIsPropertiesPanelOpen(p => !p)}
+                    onClose={() => setIsPropertiesPanelOpen(false)}
                     allCharacterSets={allCharacterSets}
                     onSaveConstruction={onSaveConstruction}
                     characterDispatch={characterDispatch}
                     glyphDataDispatch={glyphDataDispatch}
                     onPathsChange={onPathsChange}
+                    // PASS: Construction props
+                    position={position} setPosition={setPosition}
+                    kern={kern} setKern={setKern}
+                    gpos={gpos} setGpos={setGpos}
+                    gsub={gsub} setGsub={setGsub}
                 />
-            )}
+                )}
+            </div>
         </header>
     );
 };

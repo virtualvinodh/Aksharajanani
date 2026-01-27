@@ -9,7 +9,6 @@ import UnsavedChangesModal from './UnsavedChangesModal';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import Modal from './Modal';
 import { useRules } from '../contexts/RulesContext';
-// FIX: Import useProject to get characterDispatch.
 import { useProject } from '../contexts/ProjectContext';
 import PositioningEditorHeader from './positioning/PositioningEditorHeader';
 import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace';
@@ -18,8 +17,8 @@ import { VEC } from '../utils/vectorUtils';
 import { usePositioningSession } from '../hooks/positioning/usePositioningSession';
 import { deepClone } from '../../utils/cloneUtils';
 import { expandMembers } from '../../services/groupExpansionService';
-// FIX: Import useGlyphDataContext to get glyphDataDispatch.
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
+import { usePositioning } from '../contexts/PositioningContext';
 
 interface PositioningEditorPageProps {
     baseChar: Character;
@@ -52,21 +51,35 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     const { showNotification } = useLayout();
     const { state: rulesState } = useRules();
     const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
-    // FIX: Get dispatchers from context.
+    
     const { markAttachmentClasses, setMarkAttachmentClasses, baseAttachmentClasses, setBaseAttachmentClasses, dispatch: characterDispatch } = useProject();
     const { dispatch: glyphDataDispatch } = useGlyphDataContext();
+    const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
+
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
     const [isReusePanelOpen, setIsReusePanelOpen] = useState(false);
-    const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
     const [isStripExpanded, setIsStripExpanded] = useState(false);
     const [isDetachConfirmOpen, setIsDetachConfirmOpen] = useState(false);
     const [pageTool, setPageTool] = useState<'select' | 'pan'>('select');
 
+    // Local state for construction properties
+    const [position, setPosition] = useState<[string, string] | undefined>(props.targetLigature.position);
+    const [kern, setKern] = useState<[string, string] | undefined>(props.targetLigature.kern);
+    const [gpos, setGpos] = useState<string | undefined>(props.targetLigature.gpos);
+    const [gsub, setGsub] = useState<string | undefined>(props.targetLigature.gsub);
+
+    // Sync state when targetLigature changes (navigation)
+    useEffect(() => {
+        setPosition(props.targetLigature.position);
+        setKern(props.targetLigature.kern);
+        setGpos(props.targetLigature.gpos);
+        setGsub(props.targetLigature.gsub);
+    }, [props.targetLigature]);
+
     const sourceGlyphs = useMemo(() => [props.baseChar, props.markChar], [props.baseChar, props.markChar]);
 
-    // session hook refactored to bubble up navigation direction
     const session = usePositioningSession({
         ...props,
         groups,
@@ -74,10 +87,73 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
         baseAttachmentClasses
     });
 
-    // FIX: Define dummy/stub functions for props required by GlyphPropertiesPanel.
-    const onSaveConstruction = useCallback(() => {
-        showNotification("Changing construction type is not supported in this editor.", "info");
-    }, [showNotification]);
+    const onSaveConstruction = useCallback((type: 'drawing' | 'composite' | 'link' | 'positioning' | 'kerning', components: string[], transforms?: ComponentTransform[]) => {
+        const character = props.targetLigature;
+        if (!character.unicode) {
+            showNotification("Cannot modify a character without a Unicode ID.", "error");
+            return;
+        }
+
+        // Cleanup Positioning Map if removing 'positioning' type
+        if (character.position && type !== 'positioning') {
+             const [b, m] = character.position;
+             const baseC = props.allChars.get(b);
+             const markC = props.allChars.get(m);
+             if (baseC?.unicode !== undefined && markC?.unicode !== undefined) {
+                 const key = `${baseC.unicode}-${markC.unicode}`;
+                 if (markPositioningMap.has(key)) {
+                     const nm = new Map(markPositioningMap);
+                     nm.delete(key);
+                     positioningDispatch({type: 'SET_MAP', payload: nm});
+                 }
+             }
+        }
+    
+        characterDispatch({
+            type: 'UPDATE_CHARACTER_SETS',
+            payload: (prevSets: CharacterSet[] | null) => {
+                if (!prevSets) return null;
+                return prevSets.map(set => ({
+                    ...set,
+                    characters: set.characters.map(c => {
+                        if (c.unicode === character.unicode) {
+                            const updated: Character = { ...character };
+                            // Clear all construction types
+                            delete updated.kern;
+                            delete updated.position;
+                            delete updated.link;
+                            delete updated.composite;
+                            delete updated.compositeTransform;
+    
+                            // Set the new type
+                            if (type === 'link') updated.link = components;
+                            if (type === 'composite') {
+                                updated.composite = components;
+                                if (transforms) updated.compositeTransform = transforms;
+                            }
+                            if (type === 'positioning') updated.position = components as [string, string];
+                            if (type === 'kerning') updated.kern = components as [string, string];
+                            
+                            // Update tags
+                            if (type === 'positioning' && gpos) updated.gpos = gpos;
+                            if (type === 'positioning' && gsub) updated.gsub = gsub;
+
+                            return updated;
+                        }
+                        return c;
+                    })
+                }));
+            }
+        });
+    
+        // If changing to a virtual type, ensure any old drawing data is removed.
+        if (type === 'positioning' || type === 'kerning') {
+            glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode: character.unicode } });
+        } 
+        
+        showNotification("Construction type changed.", "success");
+    
+    }, [props, characterDispatch, glyphDataDispatch, showNotification, markPositioningMap, positioningDispatch, gpos, gsub]);
 
 
     const isPositioned = useMemo(() => props.markPositioningMap.has(`${props.baseChar.unicode}-${props.markChar.unicode}`), [props.markPositioningMap, props.baseChar, props.markChar]);
@@ -178,7 +254,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-900 overflow-hidden relative">
+        <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-900 min-h-0 relative overflow-hidden">
             <PositioningEditorHeader 
                 targetLigature={props.targetLigature} 
                 prevPair={props.hasPrev} 
@@ -192,8 +268,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 isPositioned={isPositioned} 
                 onResetRequest={() => setIsResetConfirmOpen(true)} 
                 isGsubPair={isGsubPair}
-                isPropertiesPanelOpen={isPropertiesPanelOpen} 
-                setIsPropertiesPanelOpen={setIsPropertiesPanelOpen}
                 lsb={session.lsb} setLsb={session.setLsb} rsb={session.rsb} setRsb={session.setRsb} 
                 metrics={props.metrics} 
                 isAutosaveEnabled={props.settings.isAutosaveEnabled}
@@ -208,6 +282,11 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 characterDispatch={characterDispatch}
                 glyphDataDispatch={glyphDataDispatch}
                 onPathsChange={session.handlePathsChange}
+                // PASS: Construction props
+                position={position} setPosition={setPosition}
+                kern={kern} setKern={setKern}
+                gpos={gpos} setGpos={setGpos}
+                gsub={gsub} setGsub={setGsub}
             />
 
             <PositioningEditorWorkspace 
