@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -15,8 +14,8 @@ import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace
 import { CloseIcon } from '../constants';
 import { VEC } from '../utils/vectorUtils';
 import { usePositioningSession } from '../hooks/positioning/usePositioningSession';
-import { deepClone } from '../../utils/cloneUtils';
-import { expandMembers } from '../../services/groupExpansionService';
+import { deepClone } from '../utils/cloneUtils';
+import { expandMembers } from '../services/groupExpansionService';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 import { usePositioning } from '../contexts/PositioningContext';
 
@@ -26,7 +25,7 @@ interface PositioningEditorPageProps {
     targetLigature: Character;
     glyphDataMap: Map<number, GlyphData>;
     markPositioningMap: MarkPositioningMap;
-    onSave: (base: Character, mark: Character, targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => void;
+    onSave: (base: Character, mark: Character, targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newMetadata: any, isAutosave?: boolean, isManual?: boolean) => void;
     onConfirmPosition: (base: Character, mark: Character, ligature: Character) => void;
     onClose: () => void;
     onDelete: () => void;
@@ -63,20 +62,6 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     const [isStripExpanded, setIsStripExpanded] = useState(false);
     const [isDetachConfirmOpen, setIsDetachConfirmOpen] = useState(false);
     const [pageTool, setPageTool] = useState<'select' | 'pan'>('select');
-
-    // Local state for construction properties
-    const [position, setPosition] = useState<[string, string] | undefined>(props.targetLigature.position);
-    const [kern, setKern] = useState<[string, string] | undefined>(props.targetLigature.kern);
-    const [gpos, setGpos] = useState<string | undefined>(props.targetLigature.gpos);
-    const [gsub, setGsub] = useState<string | undefined>(props.targetLigature.gsub);
-
-    // Sync state when targetLigature changes (navigation)
-    useEffect(() => {
-        setPosition(props.targetLigature.position);
-        setKern(props.targetLigature.kern);
-        setGpos(props.targetLigature.gpos);
-        setGsub(props.targetLigature.gsub);
-    }, [props.targetLigature]);
 
     const sourceGlyphs = useMemo(() => [props.baseChar, props.markChar], [props.baseChar, props.markChar]);
 
@@ -135,8 +120,12 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                             if (type === 'kerning') updated.kern = components as [string, string];
                             
                             // Update tags
-                            if (type === 'positioning' && gpos) updated.gpos = gpos;
-                            if (type === 'positioning' && gsub) updated.gsub = gsub;
+                            if (type === 'positioning' && session.gpos) updated.gpos = session.gpos;
+                            if (type === 'positioning' && session.gsub) updated.gsub = session.gsub;
+
+                            // Update metadata
+                            if (session.glyphClass) updated.glyphClass = session.glyphClass;
+                            if (session.advWidth !== undefined) updated.advWidth = session.advWidth;
 
                             return updated;
                         }
@@ -153,7 +142,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
         
         showNotification("Construction type changed.", "success");
     
-    }, [props, characterDispatch, glyphDataDispatch, showNotification, markPositioningMap, positioningDispatch, gpos, gsub]);
+    }, [props, characterDispatch, glyphDataDispatch, showNotification, markPositioningMap, positioningDispatch, session.gpos, session.gsub, session.glyphClass, session.advWidth]);
 
 
     const isPositioned = useMemo(() => props.markPositioningMap.has(`${props.baseChar.unicode}-${props.markChar.unicode}`), [props.markPositioningMap, props.baseChar, props.markChar]);
@@ -161,10 +150,10 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
         if (!props.positioningRules) return false;
         const rule = props.positioningRules.find(r => 
             expandMembers(r.base, groups, props.characterSets).includes(props.baseChar.name) && 
-            expandMembers(r.mark, groups, props.characterSets).includes(props.markChar.name)
+            expandMembers(r.mark, groups, props.characterSets).includes(props.baseChar.name)
         );
         return !!rule?.gsub;
-    }, [props.positioningRules, props.baseChar, props.markChar, groups, props.characterSets]);
+    }, [props.positioningRules, props.baseChar, groups, props.characterSets]);
 
     const classSiblings = useMemo(() => {
         if (session.activeAttachmentClass && session.activeClassType) {
@@ -282,11 +271,12 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 characterDispatch={characterDispatch}
                 glyphDataDispatch={glyphDataDispatch}
                 onPathsChange={session.handlePathsChange}
-                // PASS: Construction props
-                position={position} setPosition={setPosition}
-                kern={kern} setKern={setKern}
-                gpos={gpos} setGpos={setGpos}
-                gsub={gsub} setGsub={setGsub}
+                // Metadata props from session
+                glyphClass={session.glyphClass} setGlyphClass={session.setGlyphClass}
+                advWidth={session.advWidth} setAdvWidth={session.setAdvWidth}
+                // Construction props from session
+                gpos={session.gpos} setGpos={session.setGpos}
+                gsub={session.gsub} setGsub={session.setGsub}
             />
 
             <PositioningEditorWorkspace 

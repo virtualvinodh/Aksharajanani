@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -107,8 +106,16 @@ export const usePositioningActions = ({
         targetLigature: Character,
         newGlyphData: GlyphData,
         newOffset: Point,
-        newBearings: { lsb?: number, rsb?: number },
-        isAutosave: boolean = false
+        newBearings: { 
+            lsb?: number, 
+            rsb?: number,
+            glyphClass?: Character['glyphClass'],
+            advWidth?: number | string,
+            gsub?: string,
+            gpos?: string
+        },
+        isAutosave: boolean = false,
+        isManual: boolean = false
     ) => {
         if (!characterSets || !settings) return;
     
@@ -126,7 +133,8 @@ export const usePositioningActions = ({
             markAttachmentRules,
             groups,
             strokeThickness: settings.strokeThickness,
-            metrics // CRITICAL: Pass real metrics here
+            metrics,
+            isManual
         });
     
         const propagatedCount = result.updatedMarkPositioningMap.size - markPositioningMap.size - 1;
@@ -149,7 +157,8 @@ export const usePositioningActions = ({
                     markAttachmentRules,
                     groups,
                     strokeThickness: settings.strokeThickness,
-                    metrics // CRITICAL: Pass real metrics here
+                    metrics,
+                    isManual
                 });
     
                 positioningDispatch({ type: 'SET_MAP', payload: reapplyResult.updatedMarkPositioningMap });
@@ -202,10 +211,10 @@ export const usePositioningActions = ({
         }));
         const combinedPaths = [...baseGlyph.paths, ...transformedMarkPaths];
         const newGlyphData = { paths: combinedPaths };
-        const newBearings = { lsb: ligature.lsb, rsb: ligature.rsb };
+        const newBearings = { lsb: ligature.lsb, rsb: ligature.rsb, glyphClass: ligature.glyphClass, advWidth: ligature.advWidth, gsub: ligature.gsub, gpos: ligature.gpos };
     
         // We pass 'true' for isAutosave to suppress the notification, as visual feedback is sufficient here.
-        savePositioningUpdate(base, mark, ligature, newGlyphData, offset, newBearings, true);
+        savePositioningUpdate(base, mark, ligature, newGlyphData, offset, newBearings, true, false);
     }, [glyphDataMap, markAttachmentRules, savePositioningUpdate, t, metrics, characterSets, settings, groups, positioningRules]);
 
     const handleAcceptAllDefaults = useCallback((pairsToProcess?: { base: Character; mark: Character; ligature: Character }[]) => {
@@ -251,7 +260,7 @@ export const usePositioningActions = ({
             }));
             const combinedPaths = [...baseGlyph.paths, ...transformedMarkPaths];
             const newGlyphData = { paths: combinedPaths };
-            const newBearings = { lsb: ligature.lsb, rsb: ligature.rsb };
+            const newBearings = { lsb: ligature.lsb, rsb: ligature.rsb, glyphClass: ligature.glyphClass, advWidth: ligature.advWidth, gsub: ligature.gsub, gpos: ligature.gpos };
             
             const result = updatePositioningAndCascade({
                 baseChar: base, markChar: mark, targetLigature: ligature, newGlyphData,
@@ -264,7 +273,8 @@ export const usePositioningActions = ({
                 markAttachmentRules,
                 groups,
                 strokeThickness: settings.strokeThickness,
-                metrics // CRITICAL
+                metrics,
+                isManual: false
             });
             
             tempMarkPositioningMap = result.updatedMarkPositioningMap;

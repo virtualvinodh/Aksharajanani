@@ -1,6 +1,6 @@
+
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
-// FIX: Added Point to the list of imported types to resolve signature definition error.
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, PositioningRules, AttachmentClass, Point } from '../types';
 import PositioningEditorPage from './PositioningEditorPage';
 import { useGlyphData } from '../contexts/GlyphDataContext';
@@ -173,10 +173,8 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         }
     }, [pendingNavigationTarget, displayedCombinations, ruleGroups, viewMode, editingPair, setPendingNavigationTarget, getPairClassKey]);
 
-    // FIX: Updated handleSavePair signature to match the required format of the onSave prop in PositioningEditorPage.
-    // It now correctly receives base and mark as its first two arguments.
-    const handleSavePair = (base: Character, mark: Character, targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => {
-        savePositioningUpdate(base, mark, targetLigature, newGlyphData, newOffset, newBearings, isAutosave);
+    const handleSavePair = (base: Character, mark: Character, targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newMetadata: any, isAutosave?: boolean, isManual?: boolean) => {
+        savePositioningUpdate(base, mark, targetLigature, newGlyphData, newOffset, newMetadata, isAutosave, isManual);
     };
 
     const handleNavigatePair = (direction: 'prev' | 'next') => {

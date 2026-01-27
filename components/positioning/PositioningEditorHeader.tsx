@@ -37,6 +37,12 @@ interface PositioningEditorHeaderProps {
     glyphDataDispatch: (action: GlyphDataAction) => void;
     onPathsChange: (paths: Path[]) => void;
 
+    // ADD: Metadata props
+    glyphClass?: Character['glyphClass'];
+    setGlyphClass?: (val: Character['glyphClass']) => void;
+    advWidth?: number | string;
+    setAdvWidth?: (val: number | string | undefined) => void;
+
     // ADD: Construction Props
     position?: [string, string];
     setPosition?: (val: [string, string] | undefined) => void;
@@ -53,6 +59,7 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
     canEdit, isPositioned, onResetRequest, isGsubPair, lsb, setLsb, rsb, setRsb, metrics, isAutosaveEnabled, 
     onSaveRequest, isLargeScreen, isStripExpanded, isDirty, onConfirmPosition, onDetach,
     allCharacterSets, onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange,
+    glyphClass, setGlyphClass, advWidth, setAdvWidth,
     position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub
 }) => {
     const { t } = useLocale();
@@ -244,6 +251,9 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                     characterDispatch={characterDispatch}
                     glyphDataDispatch={glyphDataDispatch}
                     onPathsChange={onPathsChange}
+                    // PASS: Metadata props
+                    glyphClass={glyphClass} setGlyphClass={setGlyphClass}
+                    advWidth={advWidth} setAdvWidth={setAdvWidth}
                     // PASS: Construction props
                     position={position} setPosition={setPosition}
                     kern={kern} setKern={setKern}

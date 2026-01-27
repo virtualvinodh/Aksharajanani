@@ -1,4 +1,3 @@
-
 import {
     Character,
     GlyphData,
@@ -22,7 +21,14 @@ interface UpdatePositioningAndCascadeArgs {
     targetLigature: Character;
     newGlyphData: GlyphData;
     newOffset: Point;
-    newBearings: { lsb?: number; rsb?: number };
+    newBearings: { 
+        lsb?: number; 
+        rsb?: number; 
+        glyphClass?: Character['glyphClass']; 
+        advWidth?: number | string;
+        gsub?: string;
+        gpos?: string;
+    };
     allChars: Map<string, Character>;
     allLigaturesByKey: Map<string, Character>;
     markAttachmentClasses: AttachmentClass[] | null;
@@ -35,6 +41,7 @@ interface UpdatePositioningAndCascadeArgs {
     groups?: Record<string, string[]>;
     strokeThickness: number;
     metrics: FontMetrics;
+    isManual?: boolean;
 }
 
 interface UpdatePositioningResult {
@@ -51,7 +58,8 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
         markAttachmentRules,
         groups = {},
         strokeThickness,
-        metrics
+        metrics,
+        isManual = false
     } = args;
 
     const newMarkPositioningMap = new Map(markPositioningMap);
@@ -71,11 +79,28 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
     // Update baked glyph if GSUB is requested
     if (leaderRule && leaderRule.gsub) {
         newGlyphDataMap.set(targetLigature.unicode, newGlyphData);
-        const newLigatureInfo = { ...targetLigature, ...newBearings };
-        if (newBearings.lsb === undefined) delete (newLigatureInfo as any).lsb;
-        if (newBearings.rsb === undefined) delete (newLigatureInfo as any).rsb;
-        newLigaturesToUpdate.set(targetLigature.unicode, newLigatureInfo);
     }
+
+    // Prepare the metadata update for the target ligature regardless of GSUB/GPOS
+    // This ensures LSB/RSB/Class changes persist
+    let newLigatureInfo: Character;
+    if (isManual) {
+        // Manual Apply: Architectural change, spread the provided targetLigature object to allow structural changes
+        newLigatureInfo = { ...targetLigature, ...newBearings };
+    } else {
+        // Background update: Surgical patch of metadata fields only to avoid overwriting unrelated structural state
+        newLigatureInfo = { ...targetLigature, ...newBearings };
+    }
+    
+    // Cleanup undefined to avoid literal "undefined" strings in JSON
+    if (newBearings.lsb === undefined) delete (newLigatureInfo as any).lsb;
+    if (newBearings.rsb === undefined) delete (newLigatureInfo as any).rsb;
+    if (newBearings.glyphClass === undefined) delete (newLigatureInfo as any).glyphClass;
+    if (newBearings.advWidth === undefined) delete (newLigatureInfo as any).advWidth;
+    if (newBearings.gsub === undefined) delete (newLigatureInfo as any).gsub;
+    if (newBearings.gpos === undefined) delete (newLigatureInfo as any).gpos;
+    
+    newLigaturesToUpdate.set(targetLigature.unicode, newLigatureInfo);
 
     // 2. Propagation Logic
     const baseGlyphOriginal = glyphDataMap.get(baseChar.unicode);
@@ -158,7 +183,7 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
 
                 const siblingFinalOffset = VEC.add(siblingDefaultOffset, userDelta);
                 
-                // 1. Commit to GPOS map (Always, ensures grid highlights)
+                // 1. Commit to GPOS map
                 newMarkPositioningMap.set(key, siblingFinalOffset);
 
                 // 2. Commit to baked paths (GSUB) only if a rule exists and it has gsub property
@@ -170,7 +195,8 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
                         segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: { x: seg.point.x + siblingFinalOffset.x, y: seg.point.y + siblingFinalOffset.y } }))) : undefined
                     }));
                     newGlyphDataMap.set(ligature.unicode, { paths: [...siblingBaseGlyph.paths, ...transformedMarkPaths] });
-                    newLigaturesToUpdate.set(ligature.unicode, ligature);
+                    // NOTE: Sibling metadata isn't updated during leader edit unless specifically requested,
+                    // but we ensure the character sets merge logic below respects their existing state.
                 }
             });
         });
@@ -181,9 +207,24 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
         characters: set.characters.map(char => {
             if (newLigaturesToUpdate.has(char.unicode)) {
                 const updatedLigature = newLigaturesToUpdate.get(char.unicode)!;
-                const updatedChar = { ...char, ...updatedLigature };
-                if (updatedChar.lsb === undefined) delete (updatedChar as any).lsb;
-                if (updatedChar.rsb === undefined) delete (updatedChar as any).rsb;
+                
+                // Surgical update of character properties
+                const updatedChar = { ...char };
+                if (updatedLigature.lsb !== undefined) updatedChar.lsb = updatedLigature.lsb;
+                if (updatedLigature.rsb !== undefined) updatedChar.rsb = updatedLigature.rsb;
+                if (updatedLigature.glyphClass !== undefined) updatedChar.glyphClass = updatedLigature.glyphClass;
+                if (updatedLigature.advWidth !== undefined) updatedChar.advWidth = updatedLigature.advWidth;
+                if (updatedLigature.gsub !== undefined) updatedChar.gsub = updatedLigature.gsub;
+                if (updatedLigature.gpos !== undefined) updatedChar.gpos = updatedLigature.gpos;
+                
+                // Only merge construction props if we are in manual mode (Apply button)
+                if (isManual) {
+                    if (updatedLigature.position) updatedChar.position = updatedLigature.position;
+                    if (updatedLigature.kern) updatedChar.kern = updatedLigature.kern;
+                    if (updatedLigature.link) updatedChar.link = updatedLigature.link;
+                    if (updatedLigature.composite) updatedChar.composite = updatedLigature.composite;
+                }
+
                 return updatedChar;
             }
             return char;

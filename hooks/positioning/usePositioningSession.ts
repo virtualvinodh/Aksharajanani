@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { 
     Character, GlyphData, Point, Path, AppSettings, FontMetrics, 
@@ -21,7 +20,7 @@ interface UsePositioningSessionProps {
     targetLigature: Character;
     glyphDataMap: Map<number, GlyphData>;
     markPositioningMap: MarkPositioningMap;
-    onSave: (base: Character, mark: Character, targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => void;
+    onSave: (base: Character, mark: Character, targetLigature: Character, newGlyphData: GlyphData, newOffset: Point, newMetadata: any, isAutosave?: boolean, isManual?: boolean) => void;
     settings: AppSettings;
     metrics: FontMetrics;
     markAttachmentRules: MarkAttachmentRules | null;
@@ -84,6 +83,13 @@ export const usePositioningSession = ({
     const [overrideClassType, setOverrideClassType] = useState<'mark' | 'base' | null>(null);
     const [lsb, setLsb] = useState<number | undefined>(targetLigature.lsb);
     const [rsb, setRsb] = useState<number | undefined>(targetLigature.rsb);
+    
+    // Metadata state
+    const [glyphClass, setGlyphClass] = useState<Character['glyphClass']>(targetLigature.glyphClass);
+    const [advWidth, setAdvWidth] = useState<number | string | undefined>(targetLigature.advWidth);
+    const [gpos, setGpos] = useState<string | undefined>(targetLigature.gpos);
+    const [gsub, setGsub] = useState<string | undefined>(targetLigature.gsub);
+
     const [manualX, setManualX] = useState<string>('0');
     const [manualY, setManualY] = useState<string>('0');
     const [isInputFocused, setIsInputFocused] = useState(false);
@@ -148,8 +154,12 @@ export const usePositioningSession = ({
         setSelectedPathIds(new Set(newMarkPaths.map(p => p.id)));
         setLsb(targetLigature.lsb); 
         setRsb(targetLigature.rsb);
+        setGlyphClass(targetLigature.glyphClass);
+        setAdvWidth(targetLigature.advWidth);
+        setGpos(targetLigature.gpos);
+        setGsub(targetLigature.gsub);
         setIsLinked(!(activeAttachmentClass?.exceptPairs?.includes(pairNameKey)));
-    }, [pairIdentifier, markPositioningMap, alignmentOffset, activeAttachmentClass, pairNameKey, markChar.unicode, targetLigature.lsb, targetLigature.rsb, glyphDataMap]);
+    }, [pairIdentifier, markPositioningMap, alignmentOffset, activeAttachmentClass, pairNameKey, markChar.unicode, targetLigature, glyphDataMap]);
 
     // Sync Manual Input Fields (Show difference from snap)
     useEffect(() => {
@@ -184,7 +194,7 @@ export const usePositioningSession = ({
     }, [pairIdentifier, markPaths, baseGlyph, settings.strokeThickness, zoom]);
 
     // --- Handlers ---
-    const handleSave = useCallback((offsetToSave: Point = currentOffset, isAutosave: boolean = false) => {
+    const handleSave = useCallback((offsetToSave: Point = currentOffset, isAutosave: boolean = false, isManual: boolean = false) => {
         const markGlyph = glyphDataMap.get(markChar.unicode);
         const originalMarkPaths = markGlyph?.paths || [];
         
@@ -194,11 +204,11 @@ export const usePositioningSession = ({
             segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + offsetToSave.x, y: seg.point.y + offsetToSave.y }}))) : undefined
         }));
 
-        onSave(baseChar, markChar, targetLigature, { paths: [...(baseGlyph?.paths ?? []), ...transformedMarkPaths] }, offsetToSave, { lsb, rsb }, isAutosave);
+        onSave(baseChar, markChar, targetLigature, { paths: [...(baseGlyph?.paths ?? []), ...transformedMarkPaths] }, offsetToSave, { lsb, rsb, glyphClass, advWidth, gpos, gsub }, isAutosave, isManual);
         if (!isAutosave) {
             setInitialMarkPaths(deepClone(transformedMarkPaths));
         }
-    }, [glyphDataMap, markChar, baseChar, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, currentOffset]);
+    }, [glyphDataMap, markChar, baseChar, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, glyphClass, advWidth, gpos, gsub, currentOffset]);
 
     const handlePathsChange = useCallback((newPaths: Path[]) => {
         setMarkPaths(newPaths);
@@ -216,13 +226,29 @@ export const usePositioningSession = ({
 
         if (settings.isAutosaveEnabled) {
             if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
-            autosaveTimeout.current = window.setTimeout(() => handleSave(newOffset, true), 500);
+            autosaveTimeout.current = window.setTimeout(() => handleSave(newOffset, true, false), 500);
         }
     }, [settings.isAutosaveEnabled, handleSave, glyphDataMap, markChar.unicode, settings.strokeThickness]);
 
     const hasPathChanges = JSON.stringify(markPaths) !== JSON.stringify(initialMarkPaths);
-    const hasBearingChanges = lsb !== targetLigature.lsb || rsb !== targetLigature.rsb;
-    const hasUnsavedChanges = hasPathChanges || hasBearingChanges;
+    const hasMetadataChanges = lsb !== targetLigature.lsb || 
+                             rsb !== targetLigature.rsb ||
+                             glyphClass !== targetLigature.glyphClass ||
+                             advWidth !== targetLigature.advWidth ||
+                             gpos !== targetLigature.gpos ||
+                             gsub !== targetLigature.gsub;
+                             
+    const hasUnsavedChanges = hasPathChanges || hasMetadataChanges;
+
+    // Background Autosave Effect for Slider/Bearing changes
+    useEffect(() => {
+        if (!settings.isAutosaveEnabled || !hasUnsavedChanges) return;
+        if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
+        autosaveTimeout.current = window.setTimeout(() => {
+             handleSave(currentOffset, true, false);
+        }, 800);
+        return () => { if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current); };
+    }, [lsb, rsb, glyphClass, advWidth, gpos, gsub, currentOffset, hasUnsavedChanges, settings.isAutosaveEnabled, handleSave]);
 
     const handleNavigationAttempt = useCallback((target: Character | 'prev' | 'next' | 'back') => {
         const proceed = () => { 
@@ -230,7 +256,7 @@ export const usePositioningSession = ({
             else onNavigate(target); 
         };
         if (settings.isAutosaveEnabled) { 
-            if (hasUnsavedChanges) handleSave(currentOffset, false); 
+            if (hasUnsavedChanges) handleSave(currentOffset, false, false); 
             proceed(); 
         }
         else if (hasUnsavedChanges) { 
@@ -265,7 +291,7 @@ export const usePositioningSession = ({
         
         if (settings.isAutosaveEnabled) {
             if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
-            autosaveTimeout.current = window.setTimeout(() => handleSave(newOffset, true), 500);
+            autosaveTimeout.current = window.setTimeout(() => handleSave(newOffset, true, false), 500);
         }
     };
 
@@ -284,10 +310,13 @@ export const usePositioningSession = ({
         selectedPathIds, setSelectedPathIds,
         isLinked, setIsLinked,
         lsb, setLsb, rsb, setRsb,
+        glyphClass, setGlyphClass, advWidth, setAdvWidth,
+        gpos, setGpos, gsub, setGsub,
         manualX, manualY, setManualX, setManualY, setIsInputFocused,
         isUnsavedModalOpen, setIsUnsavedModalOpen,
         pendingNavigation, setPendingNavigation,
-        handlePathsChange, handleSave, handleNavigationAttempt, handleManualCommit,
+        handlePathsChange, handleSave: () => handleSave(currentOffset, false, true), // Manual button
+        handleNavigationAttempt, handleManualCommit,
         pivotName, isPivot, activeAttachmentClass, activeClassType, hasDualContext, setOverrideClassType,
         canEdit: !activeAttachmentClass || !isLinked || isPivot,
         movementConstraint,
