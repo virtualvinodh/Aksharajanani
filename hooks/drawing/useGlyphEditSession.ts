@@ -4,7 +4,7 @@ import { Path, Character, GlyphData, AppSettings, FontMetrics, MarkAttachmentRul
 import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
-import { generateCompositeGlyphData } from '../../services/glyphRenderService';
+import { generateCompositeGlyphData, getAccurateGlyphBBox } from '../../services/glyphRenderService';
 import { SaveOptions } from '../actions/useGlyphActions';
 import { deepClone } from '../../utils/cloneUtils';
 import { useRules } from '../../contexts/RulesContext';
@@ -42,13 +42,10 @@ export const useGlyphEditSession = ({
     // --- STATE INITIALIZATION ---
     
     const [currentPaths, setCurrentPaths] = useState<Path[]>(() => {
-        // Check for prefill on mount
         const initiallyDrawn = isGlyphDrawn(glyphData);
         const prefillSource = character.link || character.composite;
         const isPrefillEnabled = settings.isPrefillEnabled !== false;
 
-        // Force regeneration if it's a Linked Glyph (to get latest component state)
-        // OR if it's a Composite/Template that hasn't been drawn yet.
         const shouldRegenerate = (!!character.link) || (isPrefillEnabled && prefillSource && !initiallyDrawn);
 
         if (shouldRegenerate) {
@@ -70,12 +67,10 @@ export const useGlyphEditSession = ({
         return glyphData?.paths || [];
     });
 
-    // Used to track "dirty" state against what was loaded/saved.
     const [initialPathsOnLoad, setInitialPathsOnLoad] = useState<Path[]>(() => {
         return isGlyphDrawn(glyphData) ? (glyphData!.paths || []) : [];
     });
     
-    // Tracks if any changes have happened that require a full commit (cascade update)
     const hasPendingCascade = useRef(false);
     
     const [wasEmptyOnLoad] = useState(() => {
@@ -94,11 +89,40 @@ export const useGlyphEditSession = ({
     const [kern, setKern] = useState<[string, string] | undefined>(character.kern);
     const [gpos, setGpos] = useState<string | undefined>(character.gpos);
     const [gsub, setGsub] = useState<string | undefined>(character.gsub);
-    // FIX: Add state for composite/link properties.
     const [link, setLink] = useState<string[] | undefined>(character.link);
     const [composite, setComposite] = useState<string[] | undefined>(character.composite);
     const [compositeTransform, setCompositeTransform] = useState<ComponentTransform[] | undefined>(character.compositeTransform);
 
+    // --- SYNCHRONOUS METADATA TRACKING ---
+    const metaRef = useRef({ lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, compositeTransform });
+    
+    useEffect(() => {
+        metaRef.current = { lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, compositeTransform };
+    }, [lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, compositeTransform]);
+
+    // --- EXTERNAL PROP SYNC ---
+    // Critical: Listen for external updates (e.g. from Properties Panel) to avoid stale overwrites
+    useEffect(() => {
+        setLsbState(character.lsb);
+        setRsbState(character.rsb);
+        setGlyphClassState(character.glyphClass);
+        setAdvWidthState(character.advWidth);
+        setPosition(character.position);
+        setKern(character.kern);
+        setGpos(character.gpos);
+        setGsub(character.gsub);
+        setLink(character.link);
+        setComposite(character.composite);
+        setCompositeTransform(character.compositeTransform);
+        
+        // Reset the "Saved Base" for path tracking to prevent the app from thinking 
+        // newly applied construction changes are unsaved local modifications.
+        if (glyphData) {
+            setInitialPathsOnLoad(deepClone(glyphData.paths || []));
+        }
+        
+        hasPendingCascade.current = false;
+    }, [character, glyphData]);
 
     const setLsb = (val: number | undefined) => {
         setLsbState(val);
@@ -120,22 +144,16 @@ export const useGlyphEditSession = ({
         hasPendingCascade.current = true;
     };
     
-    const [isTransitioning] = useState(false); // Kept for interface compat
+    const [isTransitioning] = useState(false);
     const autosaveTimeout = useRef<number | null>(null);
     
-    // Navigation State
     const [pendingNavigation, setPendingNavigation] = useState<Character | null>(null);
     const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
 
-    // --- NOTIFICATIONS ON MOUNT ---
     useEffect(() => {
         const componentNames = character.link || character.composite;
-        
-        // 1. Check for missing components if composite/linked and currently empty
         if (componentNames && componentNames.length > 0 && currentPaths.length === 0) {
              const missingComponents: string[] = [];
-             
-             // Create a quick lookup for name -> char to get unicode
              const tempAllCharsByName = new Map<string, Character>();
              allCharacterSets.flatMap(set => set.characters).forEach(char => tempAllCharsByName.set(char.name, char));
 
@@ -147,7 +165,6 @@ export const useGlyphEditSession = ({
                          missingComponents.push(name);
                      }
                  } else {
-                     // If char not found or no unicode, assume missing/undrawn
                      missingComponents.push(name);
                  }
              });
@@ -160,8 +177,6 @@ export const useGlyphEditSession = ({
              }
         }
 
-        // 2. Existing Prefill Notification
-        // Only show if it's a template composite (not linked) and was just filled
         const isPrefilled = currentPaths.length > 0 && !isGlyphDrawn(glyphData);
         if (isPrefilled && !character.link) {
             const hasSeen = checkAndSetFlag('composite_intro');
@@ -172,49 +187,80 @@ export const useGlyphEditSession = ({
         }
     }, []);
 
-    // --- SAVING WRAPPER ---
     const performSave = useCallback((
         pathsToSave: Path[] = currentPaths, 
-        options: SaveOptions = {}
+        options: SaveOptions = {},
+        metadataOverride?: any
     ) => {
         if (character.unicode === undefined) return;
         
         const onSuccess = () => {
-            // Update our baseline for "clean" state
             setInitialPathsOnLoad(deepClone(pathsToSave));
-            
-            // If this was a commit (not draft), we clear the pending cascade flag
             if (!options.isDraft) {
                 hasPendingCascade.current = false;
             }
         };
 
-        const metadata: any = { lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, compositeTransform };
-        
+        const metadata: any = metadataOverride || metaRef.current;
         onSave(character.unicode, { paths: pathsToSave }, metadata, onSuccess, options);
-    }, [onSave, character.unicode, currentPaths, lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, compositeTransform]);
+    }, [onSave, character.unicode, currentPaths]);
 
 
-    // --- HISTORY & AUTOSAVE ---
     const handlePathsChange = useCallback((newPaths: Path[]) => {
-        // 1. Update History
+        let updatedTransforms = metaRef.current.compositeTransform ? [...metaRef.current.compositeTransform] : [];
+        const componentsList = character.link || character.composite;
+
+        if (componentsList && componentsList.length > 0) {
+            let metadataChanged = false;
+
+            for (let i = 0; i < componentsList.length; i++) {
+                const groupId = `component-${i}`;
+                const oldCompPaths = currentPaths.filter(p => p.groupId === groupId);
+                const newCompPaths = newPaths.filter(p => p.groupId === groupId);
+                
+                if (oldCompPaths.length > 0 && newCompPaths.length > 0) {
+                    const oldBbox = getAccurateGlyphBBox(oldCompPaths, settings.strokeThickness);
+                    const newBbox = getAccurateGlyphBBox(newCompPaths, settings.strokeThickness);
+                    
+                    if (oldBbox && newBbox) {
+                        const dx = newBbox.x - oldBbox.x;
+                        const dy = newBbox.y - oldBbox.y;
+                        
+                        if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
+                            if (!updatedTransforms[i]) {
+                                updatedTransforms[i] = { scale: 1, x: 0, y: 0, mode: 'relative' };
+                            } else {
+                                updatedTransforms[i] = { ...updatedTransforms[i] };
+                            }
+                            updatedTransforms[i].x = Math.round((updatedTransforms[i].x || 0) + dx);
+                            updatedTransforms[i].y = Math.round((updatedTransforms[i].y || 0) + dy);
+                            metadataChanged = true;
+                        }
+                    }
+                }
+            }
+
+            if (metadataChanged) {
+                setCompositeTransform(updatedTransforms);
+                metaRef.current.compositeTransform = updatedTransforms;
+            }
+        }
+
         const newHistory = history.slice(0, historyIndex + 1);
         newHistory.push(newPaths);
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
         
-        // 2. Update State
         setCurrentPaths(newPaths);
         hasPendingCascade.current = true;
 
-        // 3. Trigger Autosave (Draft)
         if (settings.isAutosaveEnabled) {
             if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
             autosaveTimeout.current = window.setTimeout(() => {
                 performSave(newPaths, { isDraft: true, silent: true });
             }, 500);
         }
-    }, [history, historyIndex, settings.isAutosaveEnabled, performSave]);
+    }, [history, historyIndex, settings.isAutosaveEnabled, performSave, currentPaths, character, settings.strokeThickness]);
 
     const undo = useCallback(() => {
         if (historyIndex > 0) {
@@ -249,13 +295,20 @@ export const useGlyphEditSession = ({
     const canUndo = historyIndex > 0;
     const canRedo = historyIndex < history.length - 1;
 
-    // --- DIRTY STATE ---
     const hasPathChanges = JSON.stringify(currentPaths) !== JSON.stringify(initialPathsOnLoad);
-    // FIX: Include all metadata properties in dirty check.
-    const hasMetadataChanges = lsb !== character.lsb || rsb !== character.rsb || glyphClass !== character.glyphClass || advWidth !== character.advWidth || JSON.stringify(position) !== JSON.stringify(character.position) || JSON.stringify(kern) !== JSON.stringify(character.kern) || gpos !== character.gpos || gsub !== character.gsub || JSON.stringify(link) !== JSON.stringify(character.link) || JSON.stringify(composite) !== JSON.stringify(character.composite) || JSON.stringify(compositeTransform) !== JSON.stringify(character.compositeTransform);
+    const hasMetadataChanges = lsb !== character.lsb || 
+                                rsb !== character.rsb || 
+                                glyphClass !== character.glyphClass || 
+                                advWidth !== character.advWidth || 
+                                JSON.stringify(position) !== JSON.stringify(character.position) || 
+                                JSON.stringify(kern) !== JSON.stringify(character.kern) || 
+                                gpos !== character.gpos || 
+                                gsub !== character.gsub || 
+                                JSON.stringify(link) !== JSON.stringify(character.link) || 
+                                JSON.stringify(composite) !== JSON.stringify(character.composite) || 
+                                JSON.stringify(compositeTransform) !== JSON.stringify(character.compositeTransform);
     const hasUnsavedChanges = hasPathChanges || hasMetadataChanges;
 
-    // --- INITIAL AUTOSAVE FOR PREFILL OR REGENERATION ---
     useEffect(() => {
         if (settings.isAutosaveEnabled && hasUnsavedChanges) {
              if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
@@ -265,7 +318,6 @@ export const useGlyphEditSession = ({
         }
     }, []);
 
-    // --- AUTOSAVE FOR METADATA ---
     useEffect(() => {
         if (settings.isAutosaveEnabled && hasMetadataChanges) {
              if (autosaveTimeout.current) {
@@ -278,7 +330,6 @@ export const useGlyphEditSession = ({
     }, [settings.isAutosaveEnabled, hasMetadataChanges, performSave, currentPaths]);
 
 
-    // --- NAVIGATION & CLOSING ---
     const handleNavigationAttempt = useCallback((targetCharacter: Character | null) => {
         if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
 
@@ -287,19 +338,21 @@ export const useGlyphEditSession = ({
             else onClose();
         };
 
+        // Check against current local variables AND the metaRef for the most accurate dirty check
+        const isDirty = hasUnsavedChanges || (JSON.stringify(metaRef.current.compositeTransform) !== JSON.stringify(character.compositeTransform));
+
         if (settings.isAutosaveEnabled) {
-            // Force a commit save (cascade updates) if anything was touched
-            if (hasPendingCascade.current || hasUnsavedChanges) {
+            if (hasPendingCascade.current || isDirty) {
                 performSave(currentPaths, { isDraft: false, silent: true });
             }
             proceed();
-        } else if (hasUnsavedChanges) {
+        } else if (isDirty) {
             setPendingNavigation(targetCharacter); 
             setIsUnsavedModalOpen(true);
         } else {
             proceed();
         }
-    }, [settings.isAutosaveEnabled, hasUnsavedChanges, performSave, currentPaths, onNavigate, onClose]);
+    }, [settings.isAutosaveEnabled, hasUnsavedChanges, performSave, currentPaths, onNavigate, onClose, character.compositeTransform]);
 
     const handleConfirmSave = () => {
         performSave(currentPaths, { isDraft: false });

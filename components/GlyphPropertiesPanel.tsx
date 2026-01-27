@@ -177,6 +177,8 @@ interface GlyphPropertiesPanelProps {
   setGpos?: (val: string | undefined) => void;
   gsub?: string;
   setGsub?: (val: string | undefined) => void;
+  compositeTransform?: ComponentTransform[];
+  setCompositeTransform?: (val: ComponentTransform[] | undefined) => void;
 
   characterDispatch?: any;
   glyphDataDispatch?: (action: GlyphDataAction) => void;
@@ -188,6 +190,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   character, glyphData, allCharacterSets, onSaveConstruction,
   glyphClass, setGlyphClass, advWidth, setAdvWidth,
   position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
+  compositeTransform, setCompositeTransform,
   characterDispatch, glyphDataDispatch, onPathsChange
 }) => {
   const { t } = useLocale();
@@ -217,7 +220,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   const [isClassificationExpanded, setIsClassificationExpanded] = useState(false);
   const [isConstructionExpanded, setIsConstructionExpanded] = useState(false);
 
-  // Sync state with character prop changes
+  // --- SYNC INTERNAL STATE WITH PROPS ---
   useEffect(() => {
     if (!character) return;
     
@@ -231,7 +234,8 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
 
     if (newType === 'link' || newType === 'composite') {
         setComponents(character.link || character.composite || []);
-        setTransforms(character.compositeTransform || []);
+        // Prioritize parent-provided transforms (from canvas movements) over base character object
+        setTransforms(compositeTransform || character.compositeTransform || []);
     } else if (newType === 'positioning') {
         setPositionComps(character.position || ['', '']);
     } else if (newType === 'kerning') {
@@ -241,6 +245,13 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
         setTransforms([]);
     }
   }, [character]);
+
+  // ADD: Explicit reactive sync for canvas movements
+  useEffect(() => {
+    if (compositeTransform) {
+        setTransforms(compositeTransform);
+    }
+  }, [compositeTransform]);
 
   // Sync transforms array size with components
   useEffect(() => {
@@ -298,14 +309,8 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   const handleApplyConstruction = () => {
       if (!character || !onSaveConstruction) return;
 
-      // --- CLEANUP LOGIC FOR KERNING MAP ---
-      // If the character was previously defined as a 'kern' pair, and we are either:
-      // 1. Changing to a different type (removing kern property)
-      // 2. Or changing the components (modifying kern property)
-      // Then we must remove the old pair from the KerningMap to prevent stale data.
       if (character.kern) {
           const isRemovingKern = type !== 'kerning';
-          // Check if components changed. Note: kernComps are the NEW values from state.
           const isChangingKern = type === 'kerning' && (kernComps[0] !== character.kern[0] || kernComps[1] !== character.kern[1]);
 
           if (isRemovingKern || isChangingKern) {
@@ -333,7 +338,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
            if (onPathsChange) onPathsChange([]);
            if (glyphDataDispatch) glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode: character.unicode! }});
            
-           // Update metadata to reflect type change (clear link/composite/kern)
            if (characterDispatch) {
                characterDispatch({ type: 'UPDATE_CHARACTER_METADATA', payload: { unicode: character.unicode!, link: undefined, composite: undefined, kern: undefined, position: positionComps }});
            }

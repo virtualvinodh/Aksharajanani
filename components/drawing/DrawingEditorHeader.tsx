@@ -43,6 +43,8 @@ interface DrawingEditorHeaderProps {
   setGpos?: (val: string | undefined) => void;
   gsub?: string;
   setGsub?: (val: string | undefined) => void;
+  compositeTransform?: ComponentTransform[];
+  setCompositeTransform?: (val: ComponentTransform[] | undefined) => void;
 
   // Dispatchers
   characterDispatch: any;
