@@ -115,15 +115,15 @@ const ComponentListEditor: React.FC<{
                                     <div className="flex gap-2 items-center">
                                         <div className="flex-1">
                                             <label className="block text-[9px] text-gray-500 uppercase">Scale</label>
-                                            <input type="number" step="0.1" value={tr.scale} onChange={e => handleTransformChange(index, 'scale', parseFloat(e.target.value))} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                            <input type="text" value={tr.scale} onChange={e => handleTransformChange(index, 'scale', parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                         </div>
                                         <div className="flex-1">
                                             <label className="block text-[9px] text-gray-500 uppercase">X</label>
-                                            <input type="number" value={tr.x} onChange={e => handleTransformChange(index, 'x', parseInt(e.target.value))} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                            <input type="text" value={tr.x} onChange={e => handleTransformChange(index, 'x', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                         </div>
                                         <div className="flex-1">
                                             <label className="block text-[9px] text-gray-500 uppercase">Y</label>
-                                            <input type="number" value={tr.y} onChange={e => handleTransformChange(index, 'y', parseInt(e.target.value))} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                            <input type="text" value={tr.y} onChange={e => handleTransformChange(index, 'y', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                         </div>
                                     </div>
                                     <div>
@@ -381,7 +381,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
     >
       <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2 flex-shrink-0">
         <h4 className="font-bold text-gray-900 dark:text-white">{t('glyphProperties')}</h4>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:white">
           <CloseIcon className="w-5 h-5" />
         </button>
       </div>
@@ -394,7 +394,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                   {t('leftSpace')}
               </label>
               <input
-                  type="number"
+                  type="text"
                   placeholder={String(metrics.defaultLSB)}
                   value={lsb ?? ''}
                   onChange={(e) => setLsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
@@ -406,7 +406,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                   {t('rightSpace')}
               </label>
               <input
-                  type="number"
+                  type="text"
                   placeholder={String(metrics.defaultRSB)}
                   value={rsb ?? ''}
                   onChange={(e) => setRsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}

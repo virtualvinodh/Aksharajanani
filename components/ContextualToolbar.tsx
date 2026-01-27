@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { BoundingBox, Point, TransformState } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -184,7 +185,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
       <div className="flex items-center gap-1">
         <span className="text-xs text-gray-500 font-medium">R°</span>
         <input
-          type="number"
+          type="text"
           value={rotateInput}
           onChange={(e) => handleTransformChange('rotate', e.target.value)}
           onKeyDown={handleKeyDown}
@@ -196,8 +197,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
       <div className="flex items-center gap-1">
         <span className="text-xs text-gray-500 font-medium">S</span>
         <input
-          type="number"
-          step="0.1"
+          type="text"
           value={scaleInput}
           onChange={(e) => handleTransformChange('scale', e.target.value)}
           onKeyDown={handleKeyDown}
