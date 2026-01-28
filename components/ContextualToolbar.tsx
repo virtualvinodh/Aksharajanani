@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { BoundingBox, Point, TransformState } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { CheckCircleIcon, ControlPointsIcon } from '../constants';
@@ -34,6 +34,9 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
   const [rotateInput, setRotateInput] = useState('0');
   const [scaleInput, setScaleInput] = useState('1.0');
   
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [toolbarWidth, setToolbarWidth] = useState(0);
+
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
@@ -42,6 +45,23 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
       setScaleInput('1.0');
     }
   }, [previewTransform, selectionBox]);
+
+  // Continuously monitor toolbar width to handle content changes
+  useEffect(() => {
+    if (!toolbarRef.current) return;
+    const ro = new ResizeObserver(entries => {
+        for (const entry of entries) {
+            // borderBoxSize is more accurate for absolute positioning bounds
+            if (entry.borderBoxSize?.[0]) {
+                setToolbarWidth(entry.borderBoxSize[0].inlineSize);
+            } else {
+                setToolbarWidth(entry.contentRect.width);
+            }
+        }
+    });
+    ro.observe(toolbarRef.current);
+    return () => ro.disconnect();
+  }, []);
 
   const handleTransformChange = (type: 'rotate' | 'scale', value: string) => {
     if (type === 'rotate') setRotateInput(value);
@@ -93,6 +113,9 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
     }
   };
 
+  // Determine readiness to prevent layout jumps
+  const isReady = toolbarWidth > 0 && containerWidth > 0 && containerHeight > 0;
+  
   let style: React.CSSProperties = {};
 
   if (isMobile) {
@@ -105,43 +128,72 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         marginRight: 'auto',
         width: 'fit-content',
         maxWidth: '95%',
-        pointerEvents: 'auto',
-        zIndex: 40
+        pointerEvents: isReady ? 'auto' : 'none',
+        zIndex: 40,
+        opacity: isReady ? 1 : 0
     };
   } else {
-    // Desktop: Contextual positioning relative to selection
-    // Math: internal_design_units -> visible_canvas_pixels
-    const domScale = internalCanvasSize > 0 ? containerWidth / internalCanvasSize : 1;
-    
-    const domSelLeft = (selectionBox.x * zoom + viewOffset.x) * domScale;
-    const domSelTop = (selectionBox.y * zoom + viewOffset.y) * domScale;
-    const domSelWidth = (selectionBox.width * zoom) * domScale;
+    // 1. Determine Scale/Offset to map Design Units -> Container Pixels
+    const containerAspectRatio = containerWidth / containerHeight;
+    const canvasAspectRatio = 1;
 
+    let displayedCanvasWidth;
+    let canvasLeftOffset = 0;
+    let canvasTopOffset = 0;
+
+    if (containerAspectRatio > canvasAspectRatio) {
+        // Pillarbox (Height matches container, Width is centered)
+        const displayedCanvasHeight = containerHeight;
+        displayedCanvasWidth = displayedCanvasHeight * canvasAspectRatio;
+        canvasLeftOffset = (containerWidth - displayedCanvasWidth) / 2;
+    } else {
+        // Letterbox (Width matches container, Height is centered)
+        displayedCanvasWidth = containerWidth;
+        const displayedCanvasHeight = displayedCanvasWidth / canvasAspectRatio;
+        canvasTopOffset = (containerHeight - displayedCanvasHeight) / 2;
+    }
+
+    const domScale = internalCanvasSize > 0 ? displayedCanvasWidth / internalCanvasSize : 1;
+    
+    // 2. Map Selection Center to Container Coordinates
+    const domSelLeft = canvasLeftOffset + (selectionBox.x * zoom + viewOffset.x) * domScale;
+    const domSelTop = canvasTopOffset + (selectionBox.y * zoom + viewOffset.y) * domScale;
+    const domSelWidth = (selectionBox.width * zoom) * domScale;
     const domSelCenterX = domSelLeft + domSelWidth / 2;
 
     const TOOLBAR_HEIGHT = 44; 
     const GAP = 25; 
-    const VISUAL_MARGIN_CONTAINER = 10;
-    const TOOLBAR_HALF_WIDTH = 110; 
-
-    // Preferred position: Above the selection
+    const PADDING = 10;
+    
+    // 3. Calculate Vertical Position (Preferred: Above, Fallback: Inside Top)
     let top = domSelTop - TOOLBAR_HEIGHT - GAP;
+    top = Math.max(PADDING, top);
+    top = Math.min(top, containerHeight - TOOLBAR_HEIGHT - PADDING);
 
-    // Fallback: If toolbar goes above container top, place it inside the top of container
-    top = Math.max(VISUAL_MARGIN_CONTAINER, top);
-
-    // Horizontal clamping: Ensure it stays within container width
-    let left = domSelCenterX;
-    left = Math.max(TOOLBAR_HALF_WIDTH, Math.min(left, containerWidth - TOOLBAR_HALF_WIDTH));
+    // 4. Calculate Horizontal Position (Exact Left Edge)
+    // Centered attempt: Center - HalfWidth
+    let left = domSelCenterX - (toolbarWidth / 2);
+    
+    // Strict Clamping
+    const minLeft = PADDING;
+    const maxLeft = containerWidth - toolbarWidth - PADDING;
+    
+    if (maxLeft < minLeft) {
+        // Edge case: Container smaller than toolbar + padding -> Center it simply
+        left = (containerWidth - toolbarWidth) / 2;
+    } else {
+        left = Math.max(minLeft, Math.min(left, maxLeft));
+    }
 
     style = {
         position: 'absolute',
         top: `${top}px`,
         left: `${left}px`,
-        transform: 'translateX(-50%)',
         width: 'fit-content',
-        pointerEvents: 'auto',
-        zIndex: 40 
+        whiteSpace: 'nowrap',
+        pointerEvents: isReady ? 'auto' : 'none',
+        zIndex: 40,
+        opacity: isReady ? 1 : 0
     };
   }
 
@@ -151,6 +203,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
 
   return (
     <div
+      ref={toolbarRef}
       className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded-full shadow-xl border border-gray-200 dark:border-gray-700 animate-pop-in overflow-x-auto no-scrollbar"
       style={style}
       onMouseDown={(e) => e.stopPropagation()} 
