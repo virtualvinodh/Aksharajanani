@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -127,12 +128,28 @@ export const useProjectLoad = ({
                     if (feature && feature.children === undefined) {
                         const hasInlineRules = ['liga', 'context', 'single', 'multiple', 'dist'].some(key => feature[key] && Object.keys(feature[key]).length > 0);
                         const lookupRefs = Array.isArray(feature.lookups) ? feature.lookups.map((name: string) => ({ type: 'lookup', name })) : [];
-                        if (hasInlineRules) {
-                            feature.children = [{ type: 'inline' }, ...lookupRefs];
-                        } else {
-                            feature.children = lookupRefs;
+                        
+                        // Create children array
+                        feature.children = [];
+                        if (hasInlineRules) feature.children.push({ type: 'inline' });
+                        if (lookupRefs.length > 0) feature.children.push(...lookupRefs);
+                        
+                        // --- INJECT AUTO-GENERATED PLACEHOLDER ---
+                        // For reordering capability, we ensure the placeholder exists in common GSUB features.
+                        // We check if it's missing and append it.
+                        if (!feature.children.some((c: any) => c.type === 'auto_generated')) {
+                             // Only add to features that typically have auto-generation to avoid clutter,
+                             // or just add to all since it's empty by default if not used.
+                             // Adding to all GSUB features is safer for consistency.
+                             feature.children.push({ type: 'auto_generated' });
                         }
+
                         delete feature.lookups;
+                    } else if (feature && feature.children) {
+                        // Existing project with children: Ensure placeholder exists for reordering
+                         if (!feature.children.some((c: any) => c.type === 'auto_generated')) {
+                             feature.children.push({ type: 'auto_generated' });
+                        }
                     }
                 }
             }
