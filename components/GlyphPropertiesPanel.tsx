@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { FontMetrics, Character, CharacterSet, GlyphData, ComponentTransform, PositioningMode, Path } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -32,6 +33,7 @@ const ComponentListEditor: React.FC<{
                 setTransforms([...transforms, { scale: 1, x: 0, y: 0, mode: 'relative' }]);
             }
             setInputValue('');
+            setShowInput(false);
         }
     };
 
@@ -467,6 +469,16 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 showAdvanced={false}
                                 color="purple"
                             />
+                            {setGsub && (
+                                <input 
+                                    type="text" 
+                                    value={gsub || ''} 
+                                    onChange={e => setGsub(e.target.value)} 
+                                    className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 text-xs font-mono" 
+                                    placeholder="Feature Tag (e.g. dlig)"
+                                    title="GSUB Feature Tag (Default: liga)"
+                                />
+                            )}
                         </div>
                     )}
 
@@ -559,9 +571,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                     </div>
                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                            <input type="text" value={gsub || ''} onChange={e => setGsub && setGsub(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 text-xs" placeholder="GSUB Tag" />
-                        </div>
-                        <div>
+                            {/* Note: This is an extra input for GPOS if used in Positioning construction mode. GSUB is handled in Metadata section for Ligatures. */}
                             <input type="text" value={gpos || ''} onChange={e => setGpos && setGpos(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 text-xs" placeholder="GPOS Tag" />
                         </div>
                     </div>
