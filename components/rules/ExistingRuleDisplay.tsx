@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Character, GlyphData } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -19,6 +20,7 @@ interface ExistingRuleDisplayProps {
     strokeThickness?: number;
     mode?: 'editing' | 'creating';
     glyphVersion?: number;
+    readOnly?: boolean;
 }
 
 const GlyphDisplay: React.FC<{ char: Character, glyphData?: GlyphData, strokeThickness: number, mode: 'editing' | 'creating' }> = ({ char, glyphData, strokeThickness, mode }) => {
@@ -30,7 +32,8 @@ const GlyphDisplay: React.FC<{ char: Character, glyphData?: GlyphData, strokeThi
 
 const ExistingRuleDisplay: React.FC<ExistingRuleDisplayProps> = ({ 
     ruleKey, ruleValue, ruleType, onEdit, onDelete, allCharsByName, 
-    glyphDataMap, strokeThickness = 15, mode = 'editing', glyphVersion
+    glyphDataMap, strokeThickness = 15, mode = 'editing', glyphVersion,
+    readOnly = false
 }) => {
     const { t } = useLocale();
 
@@ -123,14 +126,16 @@ const ExistingRuleDisplay: React.FC<ExistingRuleDisplayProps> = ({
     return (
         <div className="flex flex-wrap items-center gap-2 p-2 pr-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             {renderRuleContent()}
-            <div className="flex items-center gap-1 ml-auto">
-                <button onClick={onEdit} title={t('edit')} className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <EditIcon />
-                </button>
-                <button onClick={onDelete} title={t('deleteRule')} className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <ClearIcon />
-                </button>
-            </div>
+            {!readOnly && (
+                <div className="flex items-center gap-1 ml-auto">
+                    <button onClick={onEdit} title={t('edit')} className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <EditIcon />
+                    </button>
+                    <button onClick={onDelete} title={t('deleteRule')} className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <ClearIcon />
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

@@ -4,6 +4,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useRules } from '../contexts/RulesContext';
 import { useLayout } from '../contexts/LayoutContext';
+import { useProject } from '../contexts/ProjectContext';
 import { deepClone } from '../utils/cloneUtils';
 
 export type RuleType = 'ligature' | 'contextual' | 'multiple' | 'single';
@@ -14,6 +15,7 @@ export const useRulesState = () => {
     const { settings } = useSettings();
     const { state: rulesState, dispatch: rulesDispatch } = useRules();
     const { showNotification } = useLayout();
+    const { allCharsByUnicode } = useProject();
     const { fontRules, manualFeaCode, isFeaEditMode } = rulesState;
 
     const [localRules, setLocalRules] = useState(() => deepClone(fontRules));
@@ -81,7 +83,21 @@ export const useRulesState = () => {
     const scriptTag = useMemo(() => Object.keys(localRules).find(key => key !== 'groups' && key !== 'lookups'), [localRules]);
     const groups = useMemo(() => localRules.groups || {}, [localRules]);
     const lookups = useMemo(() => localRules.lookups || {}, [localRules]);
-    const features = useMemo(() => (scriptTag && localRules[scriptTag] ? Object.keys(localRules[scriptTag]) : []), [localRules, scriptTag]);
+    
+    const features = useMemo(() => {
+        if (!scriptTag) return [];
+        const explicitFeatures = localRules[scriptTag] ? Object.keys(localRules[scriptTag]) : [];
+        const impliedFeatures = new Set<string>();
+        
+        allCharsByUnicode.forEach(char => {
+            if (char.gsub) {
+                impliedFeatures.add(char.gsub);
+            }
+        });
+
+        const allFeatures = new Set([...explicitFeatures, ...impliedFeatures]);
+        return Array.from(allFeatures).sort();
+    }, [localRules, scriptTag, allCharsByUnicode]);
 
     useEffect(() => {
         // This effect ensures that when the lookups are first loaded, they are all expanded.
