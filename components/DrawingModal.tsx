@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, TransformState, ComponentTransform } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -62,6 +61,9 @@ const DrawingModal: React.FC<any> = ({
     lsb, setLsb, rsb, setRsb, 
     glyphClass, setGlyphClass, advWidth, setAdvWidth,
     position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
+    link, setLink,
+    composite, setComposite,
+    liga, setLiga,
     compositeTransform, setCompositeTransform,
     isTransitioning,
     handleSave, handleRefresh, handleNavigationAttempt,
@@ -230,9 +232,9 @@ const DrawingModal: React.FC<any> = ({
         kern={kern} setKern={setKern}
         gpos={gpos} setGpos={setGpos}
         gsub={gsub} setGsub={setGsub}
+        liga={liga} setLiga={setLiga}
         compositeTransform={compositeTransform}
         setCompositeTransform={setCompositeTransform}
-        // Pass dispatchers and setters for direct manipulation in the panel
         characterDispatch={characterDispatch}
         glyphDataDispatch={glyphDataDispatch}
         onPathsChange={handlePathsChange}

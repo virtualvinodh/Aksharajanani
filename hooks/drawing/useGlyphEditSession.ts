@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Path, Character, GlyphData, AppSettings, FontMetrics, MarkAttachmentRules, CharacterSet, ComponentTransform } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -85,20 +84,21 @@ export const useGlyphEditSession = ({
     const [rsb, setRsbState] = useState<number | undefined>(character.rsb);
     const [glyphClass, setGlyphClassState] = useState<Character['glyphClass']>(character.glyphClass);
     const [advWidth, setAdvWidthState] = useState<number | string | undefined>(character.advWidth);
-    const [position, setPosition] = useState<[string, string] | undefined>(character.position);
-    const [kern, setKern] = useState<[string, string] | undefined>(character.kern);
-    const [gpos, setGpos] = useState<string | undefined>(character.gpos);
-    const [gsub, setGsub] = useState<string | undefined>(character.gsub);
-    const [link, setLink] = useState<string[] | undefined>(character.link);
-    const [composite, setComposite] = useState<string[] | undefined>(character.composite);
-    const [compositeTransform, setCompositeTransform] = useState<ComponentTransform[] | undefined>(character.compositeTransform);
+    const [position, setPositionState] = useState<[string, string] | undefined>(character.position);
+    const [kern, setKernState] = useState<[string, string] | undefined>(character.kern);
+    const [gpos, setGposState] = useState<string | undefined>(character.gpos);
+    const [gsub, setGsubState] = useState<string | undefined>(character.gsub);
+    const [link, setLinkState] = useState<string[] | undefined>(character.link);
+    const [composite, setCompositeState] = useState<string[] | undefined>(character.composite);
+    const [liga, setLigaState] = useState<string[] | undefined>(character.liga);
+    const [compositeTransform, setCompositeTransformState] = useState<ComponentTransform[] | undefined>(character.compositeTransform);
 
     // --- SYNCHRONOUS METADATA TRACKING ---
-    const metaRef = useRef({ lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, compositeTransform });
+    const metaRef = useRef({ lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, liga, compositeTransform });
     
     useEffect(() => {
-        metaRef.current = { lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, compositeTransform };
-    }, [lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, compositeTransform]);
+        metaRef.current = { lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, liga, compositeTransform };
+    }, [lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, liga, compositeTransform]);
 
     // --- EXTERNAL PROP SYNC ---
     // Critical: Listen for external updates (e.g. from Properties Panel) to avoid stale overwrites
@@ -107,13 +107,14 @@ export const useGlyphEditSession = ({
         setRsbState(character.rsb);
         setGlyphClassState(character.glyphClass);
         setAdvWidthState(character.advWidth);
-        setPosition(character.position);
-        setKern(character.kern);
-        setGpos(character.gpos);
-        setGsub(character.gsub);
-        setLink(character.link);
-        setComposite(character.composite);
-        setCompositeTransform(character.compositeTransform);
+        setPositionState(character.position);
+        setKernState(character.kern);
+        setGposState(character.gpos);
+        setGsubState(character.gsub);
+        setLinkState(character.link);
+        setCompositeState(character.composite);
+        setLigaState(character.liga);
+        setCompositeTransformState(character.compositeTransform);
         
         // Reset the "Saved Base" for path tracking to prevent the app from thinking 
         // newly applied construction changes are unsaved local modifications.
@@ -141,6 +142,46 @@ export const useGlyphEditSession = ({
     
     const setAdvWidth = (val: number | string | undefined) => {
         setAdvWidthState(val);
+        hasPendingCascade.current = true;
+    };
+
+    const setGpos = (val: string | undefined) => {
+        setGposState(val);
+        hasPendingCascade.current = true;
+    };
+
+    const setGsub = (val: string | undefined) => {
+        setGsubState(val);
+        hasPendingCascade.current = true;
+    };
+
+    const setLink = (val: string[] | undefined) => {
+        setLinkState(val);
+        hasPendingCascade.current = true;
+    };
+
+    const setComposite = (val: string[] | undefined) => {
+        setCompositeState(val);
+        hasPendingCascade.current = true;
+    };
+
+    const setLiga = (val: string[] | undefined) => {
+        setLigaState(val);
+        hasPendingCascade.current = true;
+    };
+
+    const setPosition = (val: [string, string] | undefined) => {
+        setPositionState(val);
+        hasPendingCascade.current = true;
+    };
+
+    const setKern = (val: [string, string] | undefined) => {
+        setKernState(val);
+        hasPendingCascade.current = true;
+    };
+
+    const setCompositeTransform = (val: ComponentTransform[] | undefined) => {
+        setCompositeTransformState(val);
         hasPendingCascade.current = true;
     };
     
@@ -306,6 +347,7 @@ export const useGlyphEditSession = ({
                                 gsub !== character.gsub || 
                                 JSON.stringify(link) !== JSON.stringify(character.link) || 
                                 JSON.stringify(composite) !== JSON.stringify(character.composite) || 
+                                JSON.stringify(liga) !== JSON.stringify(character.liga) || 
                                 JSON.stringify(compositeTransform) !== JSON.stringify(character.compositeTransform);
     const hasUnsavedChanges = hasPathChanges || hasMetadataChanges;
 
@@ -420,6 +462,7 @@ export const useGlyphEditSession = ({
         gsub, setGsub,
         link, setLink,
         composite, setComposite,
+        liga, setLiga,
         compositeTransform, setCompositeTransform,
         isTransitioning,
         hasUnsavedChanges,

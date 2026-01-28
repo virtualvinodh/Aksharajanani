@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
     Character, GlyphData, Point, Path, AppSettings, FontMetrics, 
     MarkAttachmentRules, MarkPositioningMap, PositioningRules, 
@@ -89,6 +89,7 @@ export const usePositioningSession = ({
     const [advWidth, setAdvWidth] = useState<number | string | undefined>(targetLigature.advWidth);
     const [gpos, setGpos] = useState<string | undefined>(targetLigature.gpos);
     const [gsub, setGsub] = useState<string | undefined>(targetLigature.gsub);
+    const [liga, setLiga] = useState<string[] | undefined>(targetLigature.liga);
 
     // Construction States
     const [position, setPosition] = useState<[string, string] | undefined>(targetLigature.position);
@@ -162,6 +163,7 @@ export const usePositioningSession = ({
         setAdvWidth(targetLigature.advWidth);
         setGpos(targetLigature.gpos);
         setGsub(targetLigature.gsub);
+        setLiga(targetLigature.liga);
         setPosition(targetLigature.position);
         setKern(targetLigature.kern);
         setIsLinked(!(activeAttachmentClass?.exceptPairs?.includes(pairNameKey)));
@@ -210,11 +212,11 @@ export const usePositioningSession = ({
             segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + offsetToSave.x, y: seg.point.y + offsetToSave.y }}))) : undefined
         }));
 
-        onSave(baseChar, markChar, targetLigature, { paths: [...(baseGlyph?.paths ?? []), ...transformedMarkPaths] }, offsetToSave, { lsb, rsb, glyphClass, advWidth, gpos, gsub, position, kern }, isAutosave, isManual);
+        onSave(baseChar, markChar, targetLigature, { paths: [...(baseGlyph?.paths ?? []), ...transformedMarkPaths] }, offsetToSave, { lsb, rsb, glyphClass, advWidth, gpos, gsub, liga, position, kern }, isAutosave, isManual);
         if (!isAutosave) {
             setInitialMarkPaths(deepClone(transformedMarkPaths));
         }
-    }, [glyphDataMap, markChar, baseChar, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, glyphClass, advWidth, gpos, gsub, position, kern, currentOffset]);
+    }, [glyphDataMap, markChar, baseChar, baseGlyph?.paths, onSave, targetLigature, lsb, rsb, glyphClass, advWidth, gpos, gsub, liga, position, kern, currentOffset]);
 
     const handlePathsChange = useCallback((newPaths: Path[]) => {
         setMarkPaths(newPaths);
@@ -243,6 +245,7 @@ export const usePositioningSession = ({
                              advWidth !== targetLigature.advWidth ||
                              gpos !== targetLigature.gpos ||
                              gsub !== targetLigature.gsub ||
+                             JSON.stringify(liga) !== JSON.stringify(targetLigature.liga) ||
                              JSON.stringify(position) !== JSON.stringify(targetLigature.position) ||
                              JSON.stringify(kern) !== JSON.stringify(targetLigature.kern);
                              
@@ -256,7 +259,7 @@ export const usePositioningSession = ({
              handleSave(currentOffset, true, false);
         }, 800);
         return () => { if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current); };
-    }, [lsb, rsb, glyphClass, advWidth, gpos, gsub, position, kern, currentOffset, hasUnsavedChanges, settings.isAutosaveEnabled, handleSave]);
+    }, [lsb, rsb, glyphClass, advWidth, gpos, gsub, liga, position, kern, currentOffset, hasUnsavedChanges, settings.isAutosaveEnabled, handleSave]);
 
     const handleNavigationAttempt = useCallback((target: Character | 'prev' | 'next' | 'back') => {
         const proceed = () => { 
@@ -319,8 +322,7 @@ export const usePositioningSession = ({
         isLinked, setIsLinked,
         lsb, setLsb, rsb, setRsb,
         glyphClass, setGlyphClass, advWidth, setAdvWidth,
-        gpos, setGpos, gsub, setGsub,
-        // FIX: Added missing construction states to the return object
+        gpos, setGpos, gsub, setGsub, liga, setLiga,
         position, setPosition,
         kern, setKern,
         manualX, manualY, setManualX, setManualY, setIsInputFocused,

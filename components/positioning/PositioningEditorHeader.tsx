@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, FontMetrics, CharacterSet, Path } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -42,6 +41,8 @@ interface PositioningEditorHeaderProps {
     setGlyphClass?: (val: Character['glyphClass']) => void;
     advWidth?: number | string;
     setAdvWidth?: (val: number | string | undefined) => void;
+    liga?: string[];
+    setLiga?: (val: string[] | undefined) => void;
 
     // ADD: Construction Props
     position?: [string, string];
@@ -59,7 +60,7 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
     canEdit, isPositioned, onResetRequest, isGsubPair, lsb, setLsb, rsb, setRsb, metrics, isAutosaveEnabled, 
     onSaveRequest, isLargeScreen, isStripExpanded, isDirty, onConfirmPosition, onDetach,
     allCharacterSets, onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange,
-    glyphClass, setGlyphClass, advWidth, setAdvWidth,
+    glyphClass, setGlyphClass, advWidth, setAdvWidth, liga, setLiga,
     position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub
 }) => {
     const { t } = useLocale();
@@ -225,7 +226,7 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                 <div ref={moreMenuRef} className="relative">
                     <button
                         onClick={() => setIsMoreMenuOpen(prev => !prev)}
-                        className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                        className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 transition-all active:scale-95"
                         title={t('more')}
                     >
                         <MoreIcon />
@@ -254,6 +255,7 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                     // PASS: Metadata props
                     glyphClass={glyphClass} setGlyphClass={setGlyphClass}
                     advWidth={advWidth} setAdvWidth={setAdvWidth}
+                    liga={liga} setLiga={setLiga}
                     // PASS: Construction props
                     position={position} setPosition={setPosition}
                     kern={kern} setKern={setKern}

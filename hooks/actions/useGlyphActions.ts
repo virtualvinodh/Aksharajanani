@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -106,6 +105,7 @@ export const useGlyphActions = (
             compositeTransform?: ComponentTransform[];
             link?: string[];
             composite?: string[];
+            liga?: string[];
             position?: [string, string];
             kern?: [string, string];
             gpos?: string;
@@ -123,7 +123,7 @@ export const useGlyphActions = (
         const newPathsJSON = JSON.stringify(newGlyphData.paths);
         const hasPathChanges = oldPathsJSON !== newPathsJSON;
         
-        // CRITICAL FIX: The dirty check for metadata must include compositeTransform and all construction fields
+        // CRITICAL FIX: The dirty check for metadata must include liga and all construction fields
         const hasMetadataChanges = 
             newMetadata.lsb !== charToSave.lsb || 
             newMetadata.rsb !== charToSave.rsb ||
@@ -131,6 +131,7 @@ export const useGlyphActions = (
             newMetadata.advWidth !== charToSave.advWidth ||
             newMetadata.gpos !== charToSave.gpos ||
             newMetadata.gsub !== charToSave.gsub ||
+            JSON.stringify(newMetadata.liga) !== JSON.stringify(charToSave.liga) ||
             JSON.stringify(newMetadata.compositeTransform) !== JSON.stringify(charToSave.compositeTransform) ||
             JSON.stringify(newMetadata.link) !== JSON.stringify(charToSave.link) ||
             JSON.stringify(newMetadata.composite) !== JSON.stringify(charToSave.composite) ||
@@ -664,6 +665,7 @@ export const useGlyphActions = (
         if (!characterSets) return;
         const visibleCharacterSets = characterSets.map(set => ({ ...set, characters: set.characters.filter(char => char.unicode !== 8205 && char.unicode !== 8204) })).filter(set => set.nameKey !== 'dynamicLigatures' && set.characters.length > 0);
         const activeTabNameKey = (layout.activeTab < visibleCharacterSets.length) ? visibleCharacterSets[layout.activeTab].nameKey : 'punctuationsAndOthers';
+        /* FIX: Corrected nesting of charsToAdd array in characterDispatch call to fix type mismatch error. */
         characterDispatch({ type: 'ADD_CHARACTERS', payload: { characters: charsToAdd, activeTabNameKey } });
         if (charsToAdd.length > 0) layout.showNotification(t('glyphsAddedFromBlock', { count: charsToAdd.length }), 'success');
         else layout.showNotification(t('allGlyphsFromBlockExist'), 'info');

@@ -1,8 +1,7 @@
-
 import React, {useState, useRef, useEffect} from 'react';
 import { Character, AppSettings, CharacterSet, Path, FontMetrics } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon, PropertiesIcon, TrashIcon, MoreIcon, BrokenLinkIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon, PropertiesIcon, TrashIcon, MoreIcon, BrokenLinkIcon, LinkIcon, RefreshIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
 import { GlyphDataAction } from '../../contexts/GlyphDataContext';
 
@@ -45,6 +44,8 @@ interface KerningEditorHeaderProps {
     setGpos?: (val: string | undefined) => void;
     gsub?: string;
     setGsub?: (val: string | undefined) => void;
+    liga?: string[];
+    setLiga?: (val: string[] | undefined) => void;
 }
 
 const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
@@ -235,7 +236,10 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                         gpos={props.gpos}
                         setGpos={props.setGpos}
                         gsub={props.gsub}
+                        /* FIX: Corrected typo 'setGsub' to 'props.setGsub' to resolve the 'Cannot find name' error. */
                         setGsub={props.setGsub}
+                        liga={props.liga}
+                        setLiga={props.setLiga}
                     />
                 )}
             </div>

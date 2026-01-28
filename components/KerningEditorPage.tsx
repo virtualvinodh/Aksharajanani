@@ -53,6 +53,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     const [kern, setKern] = useState<[string, string] | undefined>(props.character.kern);
     const [gpos, setGpos] = useState<string | undefined>(props.character.gpos);
     const [gsub, setGsub] = useState<string | undefined>(props.character.gsub);
+    const [liga, setLiga] = useState<string[] | undefined>(props.character.liga);
 
     // Sync state if character changes
     useEffect(() => {
@@ -62,6 +63,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
         setKern(props.character.kern);
         setGpos(props.character.gpos);
         setGsub(props.character.gsub);
+        setLiga(props.character.liga);
     }, [props.character]);
 
 
@@ -243,6 +245,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 kern={kern} setKern={setKern}
                 gpos={gpos} setGpos={setGpos}
                 gsub={gsub} setGsub={setGsub}
+                liga={liga} setLiga={setLiga}
             />
             
             <KerningEditorWorkspace 

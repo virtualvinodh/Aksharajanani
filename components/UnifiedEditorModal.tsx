@@ -120,8 +120,8 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
                   }
               } else if (c.kern) {
                    const [left, right] = c.kern;
-                   const l = allCharsByName.get(left);
-                   const r = allCharsByName.get(right);
+                   const l : any = allCharsByName.get(left);
+                   const r : any = allCharsByName.get(right);
                    if (l?.unicode !== undefined && r?.unicode !== undefined) {
                        isComplete = kerningMap.has(`${l.unicode}-${r.unicode}`);
                    }
@@ -184,12 +184,12 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
       return map;
   }, [allCharacterSets, allCharsByName, positioningRules, groups]);
 
-  const handlePositioningSave = useCallback((base: Character, mark: Character, targetLig: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: { lsb?: number, rsb?: number }, isAutosave?: boolean) => {
+  const handlePositioningSave = useCallback((base: Character, mark: Character, targetLig: Character, newGlyphData: GlyphData, newOffset: Point, newBearings: any, isAutosave?: boolean, isManual?: boolean) => {
     const result = updatePositioningAndCascade({
         baseChar: base, markChar: mark, targetLigature: targetLig, newGlyphData, newOffset, newBearings,
         allChars: allCharsByName, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses,
         markPositioningMap, glyphDataMap: allGlyphData, characterSets: allCharacterSets, positioningRules,
-        markAttachmentRules, groups, strokeThickness: settings.strokeThickness, metrics
+        markAttachmentRules, groups, strokeThickness: settings.strokeThickness, metrics, isManual
     });
     positioningDispatch({ type: 'SET_MAP', payload: result.updatedMarkPositioningMap });
     glyphDataDispatch({ type: 'SET_MAP', payload: result.updatedGlyphDataMap });
@@ -202,8 +202,8 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
   }, [allCharsByName, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses, markPositioningMap, allGlyphData, allCharacterSets, positioningRules, markAttachmentRules, groups, settings.strokeThickness, metrics, positioningDispatch, glyphDataDispatch, characterDispatch, showNotification]);
 
   const handleConfirmPosition = useCallback((base: Character, mark: Character, ligature: Character) => {
-    const baseGlyph = allGlyphData.get(base.unicode);
-    const markGlyph = allGlyphData.get(mark.unicode);
+    const baseGlyph = allGlyphData.get(base.unicode!);
+    const markGlyph = allGlyphData.get(mark.unicode!);
     if (!baseGlyph || !markGlyph || !metrics || !allCharacterSets || !settings) return;
     const rule = positioningRules?.find(r => expandMembers(r.base, groups, allCharacterSets).includes(base.name) && expandMembers(r.mark, groups, allCharacterSets).includes(mark.name));
     const constraint = (rule && (rule.movement === 'horizontal' || rule.movement === 'vertical')) ? rule.movement : 'none';
@@ -211,7 +211,7 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
     const markBbox = getAccurateGlyphBBox(markGlyph.paths, settings.strokeThickness);
     const offset = calculateDefaultMarkOffset(base, mark, baseBbox, markBbox, markAttachmentRules, metrics, allCharacterSets, false, groups, constraint);
     const transformedMarkPaths = deepClone(markGlyph.paths).map((p: Path) => ({ ...p, points: p.points.map((pt: Point) => ({ x: pt.x + offset.x, y: pt.y + offset.y })), segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + offset.x, y: seg.point.y + offset.y } }))) : undefined }));
-    handlePositioningSave(base, mark, ligature, { paths: [...baseGlyph.paths, ...transformedMarkPaths] }, offset, { lsb: ligature.lsb, rsb: ligature.rsb }, true);
+    handlePositioningSave(base, mark, ligature, { paths: [...baseGlyph.paths, ...transformedMarkPaths] }, offset, { lsb: ligature.lsb, rsb: ligature.rsb, glyphClass: ligature.glyphClass, advWidth: ligature.advWidth, gsub: ligature.gsub, gpos: ligature.gpos, liga: ligature.liga }, true, false);
   }, [allGlyphData, metrics, allCharacterSets, settings, positioningRules, groups, markAttachmentRules, handlePositioningSave]);
   
   const handleConvertToComposite = useCallback((newTransforms: ComponentTransform[]) => {
@@ -240,8 +240,8 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
     const pageKey = character.unicode || character.name;
     switch(profile) {
         case 'kerning': {
-            const kernLeftChar = allCharsByName.get(character.kern[0]);
-            const kernRightChar = allCharsByName.get(character.kern[1]);
+            const kernLeftChar = allCharsByName.get(character.kern![0]);
+            const kernRightChar = allCharsByName.get(character.kern![1]);
             const key = `${kernLeftChar?.unicode}-${kernRightChar?.unicode}`;
             return (
                 <KerningEditorPage
@@ -249,19 +249,19 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
                     glyphDataMap={allGlyphData} strokeThickness={settings.strokeThickness} metrics={metrics} settings={settings}
                     recommendedKerning={recommendedKerning} onSave={(val) => { const newMap = new Map(kerningMap); newMap.set(key, val); kerningDispatch({ type: 'SET_MAP', payload: newMap }); }}
                     onRemove={() => { const newMap = new Map(kerningMap); newMap.delete(key); kerningDispatch({ type: 'SET_MAP', payload: newMap }); onClose(); }}
-                    onClose={() => onClose()} onDelete={() => onDelete(character.unicode)} onNavigate={handlePageNavigate}
+                    onClose={() => onClose()} onDelete={() => onDelete(character.unicode!)} onNavigate={handlePageNavigate}
                     hasPrev={!!prevCharacter} hasNext={!!nextCharacter} glyphVersion={glyphVersion} isKerned={kerningMap.has(key)}
                     allCharacterSets={allCharacterSets} onConvertToComposite={handleConvertToComposite} allCharsByName={allCharsByName} character={character}
                 />
             );
         }
         case 'positioning': {
-            const posBaseChar = allCharsByName.get(character.position?.[0]) || character;
-            const posMarkChar = allCharsByName.get(character.position?.[1]) || character;
+            const posBaseChar = allCharsByName.get(character.position?.[0]!) || character;
+            const posMarkChar = allCharsByName.get(character.position?.[1]!) || character;
             return (
                 <PositioningEditorPage
                     key={pageKey} baseChar={posBaseChar} markChar={posMarkChar} targetLigature={character} glyphDataMap={allGlyphData} markPositioningMap={markPositioningMap}
-                    onSave={handlePositioningSave} onConfirmPosition={handleConfirmPosition} onClose={() => onClose()} onDelete={() => onDelete(character.unicode)}
+                    onSave={handlePositioningSave} onConfirmPosition={handleConfirmPosition} onClose={() => onClose()} onDelete={() => onDelete(character.unicode!)}
                     onReset={(b, m, l) => { const key = `${b.unicode}-${m.unicode}`; const newMap = new Map(markPositioningMap); newMap.delete(key); positioningDispatch({ type: 'SET_MAP', payload: newMap }); }}
                     settings={settings} metrics={metrics} markAttachmentRules={markAttachmentRules} positioningRules={positioningRules} allChars={allCharsByName}
                     onNavigate={handlePageNavigate} hasPrev={!!prevCharacter} hasNext={!!nextCharacter} setEditingPair={(pair: any) => handlePageNavigate(pair.ligature)}

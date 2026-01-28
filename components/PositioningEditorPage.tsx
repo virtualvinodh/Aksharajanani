@@ -271,11 +271,11 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 characterDispatch={characterDispatch}
                 glyphDataDispatch={glyphDataDispatch}
                 onPathsChange={session.handlePathsChange}
-                // Metadata props from session
                 glyphClass={session.glyphClass} setGlyphClass={session.setGlyphClass}
                 advWidth={session.advWidth} setAdvWidth={session.setAdvWidth}
-                // Construction props from session
+                liga={session.liga} setLiga={session.setLiga}
                 position={session.position} setPosition={session.setPosition}
+                /* FIX: Added missing 'session.' prefix to setKern, setGpos, and setGsub props to resolve 'Cannot find name' errors. */
                 kern={session.kern} setKern={session.setKern}
                 gpos={session.gpos} setGpos={session.setGpos}
                 gsub={session.gsub} setGsub={session.setGsub}

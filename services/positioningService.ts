@@ -28,6 +28,11 @@ interface UpdatePositioningAndCascadeArgs {
         advWidth?: number | string;
         gsub?: string;
         gpos?: string;
+        liga?: string[];
+        link?: string[];
+        composite?: string[];
+        position?: [string, string];
+        kern?: [string, string];
     };
     allChars: Map<string, Character>;
     allLigaturesByKey: Map<string, Character>;
@@ -81,16 +86,8 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
         newGlyphDataMap.set(targetLigature.unicode, newGlyphData);
     }
 
-    // Prepare the metadata update for the target ligature regardless of GSUB/GPOS
-    // This ensures LSB/RSB/Class changes persist
-    let newLigatureInfo: Character;
-    if (isManual) {
-        // Manual Apply: Architectural change, spread the provided targetLigature object to allow structural changes
-        newLigatureInfo = { ...targetLigature, ...newBearings };
-    } else {
-        // Background update: Surgical patch of metadata fields only to avoid overwriting unrelated structural state
-        newLigatureInfo = { ...targetLigature, ...newBearings };
-    }
+    // Prepare the metadata update for the target ligature
+    const newLigatureInfo = { ...targetLigature, ...newBearings };
     
     // Cleanup undefined to avoid literal "undefined" strings in JSON
     if (newBearings.lsb === undefined) delete (newLigatureInfo as any).lsb;
@@ -99,6 +96,7 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
     if (newBearings.advWidth === undefined) delete (newLigatureInfo as any).advWidth;
     if (newBearings.gsub === undefined) delete (newLigatureInfo as any).gsub;
     if (newBearings.gpos === undefined) delete (newLigatureInfo as any).gpos;
+    if (newBearings.liga === undefined) delete (newLigatureInfo as any).liga;
     
     newLigaturesToUpdate.set(targetLigature.unicode, newLigatureInfo);
 
@@ -195,8 +193,6 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
                         segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: { x: seg.point.x + siblingFinalOffset.x, y: seg.point.y + siblingFinalOffset.y } }))) : undefined
                     }));
                     newGlyphDataMap.set(ligature.unicode, { paths: [...siblingBaseGlyph.paths, ...transformedMarkPaths] });
-                    // NOTE: Sibling metadata isn't updated during leader edit unless specifically requested,
-                    // but we ensure the character sets merge logic below respects their existing state.
                 }
             });
         });
@@ -216,6 +212,7 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
                 if (updatedLigature.advWidth !== undefined) updatedChar.advWidth = updatedLigature.advWidth;
                 if (updatedLigature.gsub !== undefined) updatedChar.gsub = updatedLigature.gsub;
                 if (updatedLigature.gpos !== undefined) updatedChar.gpos = updatedLigature.gpos;
+                if (updatedLigature.liga !== undefined) updatedChar.liga = updatedLigature.liga;
                 
                 // Only merge construction props if we are in manual mode (Apply button)
                 if (isManual) {

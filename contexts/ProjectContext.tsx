@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { 
     GlyphData, KerningMap, CharacterSet, Path, 
@@ -16,7 +15,9 @@ type CharacterAction =
     | { type: 'UPDATE_CHARACTER_METADATA', payload: { 
           unicode: number, 
           lsb?: number, rsb?: number, glyphClass?: Character['glyphClass'], advWidth?: number | string,
-          position?: [string, string], kern?: [string, string], link?: string[], composite?: string[], compositeTransform?: ComponentTransform[],
+          position?: [string, string], kern?: [string, string], link?: string[], composite?: string[], 
+          liga?: string[],
+          compositeTransform?: ComponentTransform[],
           gpos?: string, gsub?: string
       } }
     | { type: 'UPDATE_CHARACTER_BEARINGS', payload: { unicode: number, lsb?: number, rsb?: number } }
@@ -136,6 +137,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                                 if ('kern' in p) p.kern !== undefined ? newChar.kern = p.kern : delete newChar.kern;
                                 if ('link' in p) p.link !== undefined ? newChar.link = p.link : delete newChar.link;
                                 if ('composite' in p) p.composite !== undefined ? newChar.composite = p.composite : delete newChar.composite;
+                                if ('liga' in p) p.liga !== undefined ? newChar.liga = p.liga : delete newChar.liga;
                                 if ('compositeTransform' in p) p.compositeTransform !== undefined ? newChar.compositeTransform = p.compositeTransform : delete newChar.compositeTransform;
                                 if ('gpos' in p) p.gpos !== undefined ? newChar.gpos = p.gpos : delete newChar.gpos;
                                 if ('gsub' in p) p.gsub !== undefined ? newChar.gsub = p.gsub : delete newChar.gsub;

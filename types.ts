@@ -1,5 +1,3 @@
-
-
 export interface Point {
   x: number;
   y: number;
@@ -64,6 +62,7 @@ export interface Character {
   glyphClass?: 'base' | 'ligature' | 'mark';
   composite?: string[];
   link?: string[];
+  liga?: string[]; // New: Ligature components for GSUB
   position?: [string, string]; // [BaseName, MarkName] for virtual assembly
   gpos?: string; // New: GPOS feature tag (e.g., 'abvm')
   gsub?: string; // New: GSUB feature tag (e.g., 'liga', 'haln')

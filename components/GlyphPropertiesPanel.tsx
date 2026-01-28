@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { FontMetrics, Character, CharacterSet, GlyphData, ComponentTransform, PositioningMode, Path } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -13,11 +12,14 @@ import { useProject } from '../contexts/ProjectContext';
 const ComponentListEditor: React.FC<{
     components: string[];
     setComponents: (c: string[]) => void;
-    transforms: ComponentTransform[];
-    setTransforms: (t: ComponentTransform[]) => void;
+    transforms?: ComponentTransform[];
+    setTransforms?: (t: ComponentTransform[]) => void;
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
-}> = ({ components, setComponents, transforms, setTransforms, characterSets, groups }) => {
+    label?: string;
+    showAdvanced?: boolean;
+    color?: 'blue' | 'purple';
+}> = ({ components, setComponents, transforms, setTransforms, characterSets, groups, label, showAdvanced = true, color = 'blue' }) => {
     const { t } = useLocale();
     const [inputValue, setInputValue] = useState('');
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
@@ -26,33 +28,40 @@ const ComponentListEditor: React.FC<{
     const handleAdd = (val: string) => {
         if (val && !components.includes(val)) {
             setComponents([...components, val]);
-            setTransforms([...transforms, { scale: 1, x: 0, y: 0, mode: 'relative' }]);
+            if (setTransforms && transforms) {
+                setTransforms([...transforms, { scale: 1, x: 0, y: 0, mode: 'relative' }]);
+            }
             setInputValue('');
-            // Keep input open for rapid entry
         }
     };
 
     const handleRemove = (index: number) => {
         setComponents(components.filter((_, i) => i !== index));
-        setTransforms(transforms.filter((_, i) => i !== index));
+        if (setTransforms && transforms) {
+            setTransforms(transforms.filter((_, i) => i !== index));
+        }
     };
 
     const handleTransformChange = (index: number, field: keyof ComponentTransform, value: any) => {
+        if (!setTransforms || !transforms) return;
         const newTransforms = [...transforms];
-        // Ensure object exists
         if (!newTransforms[index]) newTransforms[index] = { scale: 1, x: 0, y: 0, mode: 'relative' };
-        
         const current = { ...newTransforms[index] };
         (current as any)[field] = value;
         newTransforms[index] = current;
         setTransforms(newTransforms);
     };
 
+    const colorClasses = color === 'purple' 
+        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+
     return (
         <div className="space-y-3">
+            {label && <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</label>}
             <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 items-center">
                 {components.map((comp, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-mono bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    <span key={idx} className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-mono border ${colorClasses}`}>
                         {comp}
                         <button onClick={() => handleRemove(idx)} className="hover:text-red-500 focus:outline-none">
                             <CloseIcon className="w-3 h-3" />
@@ -66,8 +75,8 @@ const ComponentListEditor: React.FC<{
                             value={inputValue}
                             onChange={setInputValue}
                             characterSets={characterSets}
-                            groups={{}} // Pass empty groups to filter only chars (hide @groups)
-                            showSets={false} // Hide $sets
+                            groups={{}} 
+                            showSets={false} 
                             placeholder="Type char..."
                             className="w-full border-none focus:ring-0 p-0 text-xs bg-transparent"
                             autoFocus={true}
@@ -96,56 +105,58 @@ const ComponentListEditor: React.FC<{
                 )}
             </div>
 
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
-                <button 
-                    onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} 
-                    className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors"
-                >
-                    <RightArrowIcon className={`w-3 h-3 transition-transform ${isAdvancedOpen ? 'rotate-90' : ''}`} />
-                    ADVANCED TRANSFORMS
-                </button>
-                
-                {isAdvancedOpen && (
-                    <div className="mt-2 space-y-2 max-h-60 overflow-y-auto pr-1">
-                         {components.map((comp, index) => {
-                            const tr = transforms[index] || { scale: 1, x: 0, y: 0, mode: 'relative' };
-                            return (
-                                <div key={index} className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded text-xs space-y-2">
-                                    <div className="font-bold text-gray-700 dark:text-gray-300 truncate">{comp}</div>
-                                    <div className="flex gap-2 items-center">
-                                        <div className="flex-1">
-                                            <label className="block text-[9px] text-gray-500 uppercase">Scale</label>
-                                            <input type="text" value={tr.scale} onChange={e => handleTransformChange(index, 'scale', parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+            {showAdvanced && setTransforms && transforms && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+                    <button 
+                        onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} 
+                        className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors"
+                    >
+                        <RightArrowIcon className={`w-3 h-3 transition-transform ${isAdvancedOpen ? 'rotate-90' : ''}`} />
+                        ADVANCED TRANSFORMS
+                    </button>
+                    
+                    {isAdvancedOpen && (
+                        <div className="mt-2 space-y-2 max-h-60 overflow-y-auto pr-1">
+                             {components.map((comp, index) => {
+                                const tr = transforms[index] || { scale: 1, x: 0, y: 0, mode: 'relative' };
+                                return (
+                                    <div key={index} className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded text-xs space-y-2">
+                                        <div className="font-bold text-gray-700 dark:text-gray-300 truncate">{comp}</div>
+                                        <div className="flex gap-2 items-center">
+                                            <div className="flex-1">
+                                                <label className="block text-[9px] text-gray-500 uppercase">Scale</label>
+                                                <input type="text" value={tr.scale} onChange={e => handleTransformChange(index, 'scale', parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="block text-[9px] text-gray-500 uppercase">X</label>
+                                                <input type="text" value={tr.x} onChange={e => handleTransformChange(index, 'x', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="block text-[9px] text-gray-500 uppercase">Y</label>
+                                                <input type="text" value={tr.y} onChange={e => handleTransformChange(index, 'y', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <label className="block text-[9px] text-gray-500 uppercase">X</label>
-                                            <input type="text" value={tr.x} onChange={e => handleTransformChange(index, 'x', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <label className="block text-[9px] text-gray-500 uppercase">Y</label>
-                                            <input type="text" value={tr.y} onChange={e => handleTransformChange(index, 'y', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                        <div>
+                                            <label className="block text-[9px] text-gray-500 uppercase mb-1">Mode</label>
+                                            <div className="flex bg-gray-200 dark:bg-gray-600 rounded p-0.5">
+                                                {(['relative', 'absolute', 'touching'] as const).map(m => (
+                                                    <button
+                                                        key={m}
+                                                        onClick={() => handleTransformChange(index, 'mode', m)}
+                                                        className={`flex-1 py-0.5 rounded text-[10px] capitalize ${tr.mode === m ? 'bg-white dark:bg-gray-500 shadow text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+                                                    >
+                                                        {m.slice(0, 3)}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-[9px] text-gray-500 uppercase mb-1">Mode</label>
-                                        <div className="flex bg-gray-200 dark:bg-gray-600 rounded p-0.5">
-                                            {(['relative', 'absolute', 'touching'] as const).map(m => (
-                                                <button
-                                                    key={m}
-                                                    onClick={() => handleTransformChange(index, 'mode', m)}
-                                                    className={`flex-1 py-0.5 rounded text-[10px] capitalize ${tr.mode === m ? 'bg-white dark:bg-gray-500 shadow text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-                                                >
-                                                    {m.slice(0, 3)}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                         })}
-                    </div>
-                )}
-            </div>
+                                );
+                             })}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
@@ -168,6 +179,10 @@ interface GlyphPropertiesPanelProps {
   advWidth?: number | string;
   setAdvWidth?: (val: number | string | undefined) => void;
   
+  // New: Liga Property
+  liga?: string[];
+  setLiga?: (val: string[] | undefined) => void;
+
   // Positioning/Kerning Props (Restored)
   position?: [string, string];
   setPosition?: (val: [string, string] | undefined) => void;
@@ -189,6 +204,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   lsb, setLsb, rsb, setRsb, metrics, onClose,
   character, glyphData, allCharacterSets, onSaveConstruction,
   glyphClass, setGlyphClass, advWidth, setAdvWidth,
+  liga, setLiga,
   position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
   compositeTransform, setCompositeTransform,
   characterDispatch, glyphDataDispatch, onPathsChange
@@ -234,7 +250,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
 
     if (newType === 'link' || newType === 'composite') {
         setComponents(character.link || character.composite || []);
-        // Prioritize parent-provided transforms (from canvas movements) over base character object
         setTransforms(compositeTransform || character.compositeTransform || []);
     } else if (newType === 'positioning') {
         setPositionComps(character.position || ['', '']);
@@ -246,14 +261,12 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
     }
   }, [character]);
 
-  // ADD: Explicit reactive sync for canvas movements
   useEffect(() => {
     if (compositeTransform) {
         setTransforms(compositeTransform);
     }
   }, [compositeTransform]);
 
-  // Sync transforms array size with components
   useEffect(() => {
       if (transforms.length !== components.length) {
           const newTransforms = [...transforms];
@@ -280,13 +293,11 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   const handleTypeChange = (newType: ConstructionType) => {
     if (newType === type) return;
     
-    // Clear data from previous type conceptually
     if (newType === 'drawing') {
         setComponents([]);
         setTransforms([]);
     } else if (newType === 'link' || newType === 'composite') {
         if (type !== 'link' && type !== 'composite') {
-             // If switching from draw/pos/kern to comp/link, maybe keep existing comps if any, else clear
              if (components.length === 0 && character?.composite) {
                  setComponents(character.composite);
                  setTransforms(character.compositeTransform || []);
@@ -305,7 +316,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
     setType(newType);
   };
   
-  // Logic to apply changes
   const handleApplyConstruction = () => {
       if (!character || !onSaveConstruction) return;
 
@@ -329,12 +339,10 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
           }
       }
 
-      // Handle Virtual Types (Pos/Kern) via direct dispatch if available
       if (type === 'positioning' && setPosition && positionComps[0] && positionComps[1]) {
            setPosition(positionComps);
            if (setGpos) setGpos(gpos);
            if (setGsub) setGsub(gsub);
-           // Clear other types
            if (onPathsChange) onPathsChange([]);
            if (glyphDataDispatch) glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode: character.unicode! }});
            
@@ -349,7 +357,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
            setKern(kernComps);
            if (onPathsChange) onPathsChange([]);
            if (glyphDataDispatch) glyphDataDispatch({ type: 'DELETE_GLYPH', payload: { unicode: character.unicode! }});
-            // Update metadata
            if (characterDispatch) {
                characterDispatch({ type: 'UPDATE_CHARACTER_METADATA', payload: { unicode: character.unicode!, link: undefined, composite: undefined, position: undefined, kern: kernComps }});
            }
@@ -357,7 +364,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
            return;
       }
 
-      // Handle Standard Types (Draw/Comp/Link)
       onSaveConstruction(type as 'drawing' | 'composite' | 'link', components, transforms);
       onClose();
   };
@@ -367,7 +373,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
 
   return (
     <>
-    {/* Mobile Backdrop */}
     <div className="fixed inset-0 bg-black/50 z-[90] sm:hidden" onClick={onClose} aria-hidden="true" />
 
     <div 
@@ -386,7 +391,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
         </button>
       </div>
       
-      {/* Metrics - Hidden for Kerning type */}
       {!isNonSpacing && type !== 'kerning' && (
       <div className="grid grid-cols-2 gap-3 flex-shrink-0">
           <div>
@@ -416,7 +420,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
       </div>
       )}
       
-      {/* Classification */}
       {setGlyphClass && (
         <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex-shrink-0">
             <button 
@@ -451,6 +454,22 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                             })}
                         </div>
                     </div>
+
+                    {/* Ligature Components Input */}
+                    {glyphClass === 'ligature' && setLiga && (
+                        <div className="space-y-2 animate-fade-in-up">
+                            <ComponentListEditor
+                                label="Ligature Components (GSUB)"
+                                components={liga || []}
+                                setComponents={(c) => setLiga(c.length > 0 ? c : undefined)}
+                                characterSets={allCharacterSets!}
+                                groups={groups}
+                                showAdvanced={false}
+                                color="purple"
+                            />
+                        </div>
+                    )}
+
                     {setAdvWidth && glyphClass === 'mark' && (
                         <div className="flex items-center gap-2 p-2 rounded-md bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 animate-fade-in-up">
                              <input 
@@ -468,7 +487,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
         </div>
       )}
 
-      {/* Construction */}
       {showConstruction && (
       <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex-shrink-0">
         <button 
@@ -481,7 +499,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
         
         {isConstructionExpanded && (
         <div className="mt-3 animate-fade-in-up">
-            {/* Type Tabs */}
             <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-4">
                 {constructionTypes.map(ct => (
                     <button
@@ -498,7 +515,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                 ))}
             </div>
             
-            {/* Conditional Editors */}
             {type === 'drawing' && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 italic text-center py-2">
                     Manual drawing mode. Paths are stored directly.
@@ -507,6 +523,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
 
             {(type === 'composite' || type === 'link') && (
                 <ComponentListEditor
+                    label="Geometric Sources"
                     components={components}
                     setComponents={setComponents}
                     transforms={transforms}
@@ -524,8 +541,8 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 value={positionComps[0]} 
                                 onChange={v => setPositionComps([v, positionComps[1]])} 
                                 characterSets={allCharacterSets!} 
-                                groups={{}} // Hide groups
-                                showSets={false} // Hide sets
+                                groups={{}} 
+                                showSets={false} 
                                 placeholder="Base" 
                              />
                         </div>
@@ -534,8 +551,8 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 value={positionComps[1]} 
                                 onChange={v => setPositionComps([positionComps[0], v])} 
                                 characterSets={allCharacterSets!} 
-                                groups={{}} // Hide groups
-                                showSets={false} // Hide sets
+                                groups={{}} 
+                                showSets={false} 
                                 placeholder="Mark" 
                              />
                         </div>
@@ -559,8 +576,8 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 value={kernComps[0]} 
                                 onChange={v => setKernComps([v, kernComps[1]])} 
                                 characterSets={allCharacterSets!} 
-                                groups={{}} // Hide groups
-                                showSets={false} // Hide sets
+                                groups={{}} 
+                                showSets={false} 
                                 placeholder="Left" 
                             />
                         </div>
@@ -569,8 +586,8 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 value={kernComps[1]} 
                                 onChange={v => setKernComps([kernComps[0], v])} 
                                 characterSets={allCharacterSets!} 
-                                groups={{}} // Hide groups
-                                showSets={false} // Hide sets
+                                groups={{}} 
+                                showSets={false} 
                                 placeholder="Right" 
                             />
                         </div>
@@ -578,7 +595,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                 </div>
             )}
 
-            {/* Action Button */}
             {type !== 'drawing' && (
                 <button 
                     onClick={handleApplyConstruction}
