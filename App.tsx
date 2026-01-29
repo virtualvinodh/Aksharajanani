@@ -316,7 +316,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const hasPositioning = positioningProgress.total > 0;
   const hasKerning = drawingProgress.completed >= 2;
   
-  const showEditorPanel = isLargeScreen && characterForModal && (panelLayout === 'split' || panelLayout === 'editor');
+  const showEditorPanel = isLargeScreen && characterForModal && workspace === 'drawing' && (panelLayout === 'split' || panelLayout === 'editor');
   const RESIZER_WIDTH = isLargeScreen ? 8 : 16; // px
 
   return (
@@ -387,8 +387,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 <div 
                     className="flex-shrink-0 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50 transition-all duration-300"
                     style={{ 
-                      width: isLargeScreen && panelLayout === 'split' ? `${gridPanelWidth}px` : (panelLayout === 'grid' || !isLargeScreen ? '100%' : '0px'),
-                      display: isLargeScreen && panelLayout === 'editor' ? 'none' : 'flex'
+                      width: isLargeScreen && panelLayout === 'split' && workspace === 'drawing' ? `${gridPanelWidth}px` : (panelLayout === 'grid' || !isLargeScreen || workspace !== 'drawing' ? '100%' : '0px'),
+                      display: isLargeScreen && panelLayout === 'editor' && workspace === 'drawing' ? 'none' : 'flex'
                     }}
                 >
                   {workspace === 'drawing' && (
@@ -458,7 +458,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                         </aside>
                     </>
                 )}
-                 {isLargeScreen && characterForModal && (
+                 {isLargeScreen && characterForModal && workspace === 'drawing' && (
                     <>
                         {panelLayout === 'split' && (
                              <div 
