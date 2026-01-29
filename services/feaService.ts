@@ -256,7 +256,7 @@ export const generateFea = (
     // --- End GDEF Table Generation ---
 
     // --- GSUB Features ---
-    const scriptData = fontRules[scriptTag]; // Direct access, no need to clone for mutations anymore
+    const scriptData = fontRules[scriptTag] || {}; // Direct access, use empty object if undefined
 
     let allLookupDefinitions = '';
     const generatedLookupNames = new Set<string>();
@@ -419,116 +419,101 @@ export const generateFea = (
         }
     }
 
-    for (const featureTag in scriptData) {
-        if (!Object.prototype.hasOwnProperty.call(scriptData, featureTag)) continue;
+    // 1. Collect all features while preserving implicit/explicit distinctions
+    const explicitFeatures = Object.keys(scriptData);
+    const impliedFeatures = new Set<string>();
+    allCharsByUnicode.forEach(char => {
+        if (char.gsub) {
+            impliedFeatures.add(char.gsub);
+        }
+    });
+
+    // 2. Ordered List: Explicit features first (order from rules.json), then new implied ones appended
+    const allFeatures = [...explicitFeatures];
+    impliedFeatures.forEach(tag => {
+        if (!explicitFeatures.includes(tag)) {
+            allFeatures.push(tag);
+        }
+    });
+
+    for (const featureTag of allFeatures) {
         if (featureTag === 'dist') continue; // GPOS handled later
     
-        const featureData = scriptData[featureTag];
-        let featureLookups: string[] = [];
+        // Get feature definition. If it's a "Ghost" feature (implied but not in rules), use default.
+        const rawFeatureData = scriptData[featureTag];
+        const featureData = rawFeatureData || { children: [{ type: 'auto_generated' }] };
+        
+        // Ensure children exists (fallback for legacy/malformed data)
         const children = featureData.children || [];
-    
-        // 1. Detect if a feature has inline rules (i.e., rule content directly on the feature object).
-        let anonymousRulesContent = '';
-        for (const ruleType in featureData) {
-            if (ruleGenerators[ruleType as keyof typeof ruleGenerators]) {
-                anonymousRulesContent += ruleGenerators[ruleType as keyof typeof ruleGenerators](featureData[ruleType]);
-            }
+        
+        // Detect and handle legacy structure (rules directly on feature object)
+        const effectiveChildren = [...children];
+        if (effectiveChildren.length === 0) {
+             let hasInline = false;
+             for (const ruleType in featureData) {
+                if (ruleGenerators[ruleType as keyof typeof ruleGenerators]) {
+                    hasInline = true;
+                    break;
+                }
+             }
+             if (hasInline) effectiveChildren.push({ type: 'inline' });
+             effectiveChildren.push({ type: 'auto_generated' });
         }
-        const hasInlineRules = anonymousRulesContent.trim() !== '';
-
-        // Check if the feature references any named lookups or auto-generated blocks
-        const hasChildren = children.length > 0;
-        const hasNamedLookups = !hasChildren && featureData.lookups && Array.isArray(featureData.lookups) && featureData.lookups.length > 0;
-    
-        if (!hasNamedLookups && !hasChildren && hasInlineRules) {
-            // SIMPLE MODE: No named lookups or structure, output rules directly.
-            let featureBlock = `feature ${featureTag} {\n`;
-            
-            // Add feature-level lookup flags
-            if (featureData.lookupflags) {
-                for (const flagName in featureData.lookupflags) {
-                    if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
-                        featureBlock += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
-                    }
+        
+        let featureLookups: string[] = [];
+        
+        // Pre-calculate inline content if needed
+        let inlineContentCache = '';
+        const generateInlineContent = () => {
+             if (inlineContentCache) return inlineContentCache;
+             let content = '';
+             for (const ruleType in featureData) {
+                if (ruleGenerators[ruleType as keyof typeof ruleGenerators]) {
+                    content += ruleGenerators[ruleType as keyof typeof ruleGenerators](featureData[ruleType]);
                 }
             }
-            
-            featureBlock += anonymousRulesContent;
-            featureBlock += `} ${featureTag};\n\n`;
-            feaContent += featureBlock;
-            if (!allGsubFeatures.includes(featureTag)) allGsubFeatures.push(featureTag);
+            inlineContentCache = content;
+            return content;
+        };
 
-        } else {
-            // MIXED or NAMED MODE: Use lookup wrappers/references to support ordering.
-            
-            if (hasChildren) {
-                for (const child of children) {
-                    if (child.type === 'lookup') {
-                        featureLookups.push(child.name);
-                    } else if (child.type === 'inline' && hasInlineRules) {
-                        let inlineLookupContent = '';
-                        if (featureData.lookupflags) {
-                            for (const flagName in featureData.lookupflags) {
-                                if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
-                                    inlineLookupContent += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
-                                }
-                            }
-                        }
-                        inlineLookupContent += anonymousRulesContent;
-                        
-                        const anonLookupName = `${featureTag}_inline_rules`;
-                        if (!allLookupDefinitions.includes(`lookup ${anonLookupName}`)) {
-                            allLookupDefinitions += `lookup ${anonLookupName} {\n${inlineLookupContent}} ${anonLookupName};\n\n`;
-                            generatedLookupNames.add(anonLookupName);
-                        }
-                        featureLookups.push(anonLookupName);
-                    } else if (child.type === 'auto_generated') {
-                         // DYNAMIC GENERATION: Calculate rules on the fly
-                         const dynamicRules = getAutoGeneratedRules(allCharsByUnicode, glyphDataMap, featureTag);
-                         if (dynamicRules.length > 0) {
-                             let content = '';
-                             dynamicRules.forEach(r => {
-                                 const inputs = r.input.map(n => toFeaName(n)).filter(Boolean).join(' ');
-                                 const output = toFeaName(r.output);
-                                 if(inputs && output) content += `  sub ${inputs} by ${output};\n`;
-                             });
-                             
-                             if (content) {
-                                const lookupName = `${featureTag}_auto_generated`;
-                                // Wrap in lookup to ensure scope
-                                if (!allLookupDefinitions.includes(`lookup ${lookupName}`)) {
-                                     allLookupDefinitions += `lookup ${lookupName} {\n${content}} ${lookupName};\n\n`;
-                                     generatedLookupNames.add(lookupName);
-                                }
-                                featureLookups.push(lookupName);
-                             }
-                         }
-                    }
-                }
-            } else { // Fallback for old data structure
-                if (featureData.lookups && Array.isArray(featureData.lookups)) {
-                    featureLookups.push(...featureData.lookups);
-                }
-                if (hasInlineRules) {
-                    let inlineLookupContent = '';
+        for (const child of effectiveChildren) {
+            if (child.type === 'lookup') {
+                featureLookups.push(child.name);
+            } else if (child.type === 'inline') {
+                const inlineContent = generateInlineContent();
+                if (inlineContent.trim() !== '') {
+                    const anonLookupName = `${featureTag}_inline_rules`;
+                    
+                    let lookupBody = '';
                     if (featureData.lookupflags) {
                         for (const flagName in featureData.lookupflags) {
-                            inlineLookupContent += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
+                             if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
+                                lookupBody += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
+                            }
                         }
                     }
-                    inlineLookupContent += anonymousRulesContent;
-                    const anonLookupName = `${featureTag}_inline_rules`;
+                    lookupBody += inlineContent;
+                    
                     if (!allLookupDefinitions.includes(`lookup ${anonLookupName}`)) {
-                        allLookupDefinitions += `lookup ${anonLookupName} {\n${inlineLookupContent}} ${anonLookupName};\n\n`;
+                        allLookupDefinitions += `lookup ${anonLookupName} {\n${lookupBody}} ${anonLookupName};\n\n`;
                         generatedLookupNames.add(anonLookupName);
                     }
                     featureLookups.push(anonLookupName);
                 }
-                
-                // Implicitly append auto-generated rules at the end for legacy projects
-                const dynamicRules = getAutoGeneratedRules(allCharsByUnicode, glyphDataMap, featureTag);
-                if (dynamicRules.length > 0) {
+            } else if (child.type === 'auto_generated') {
+                 const dynamicRules = getAutoGeneratedRules(allCharsByUnicode, glyphDataMap, featureTag);
+                 if (dynamicRules.length > 0) {
                      let content = '';
+                     
+                     // Apply feature flags to auto-generated lookup too for consistency
+                     if (featureData.lookupflags) {
+                        for (const flagName in featureData.lookupflags) {
+                             if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
+                                content += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
+                            }
+                        }
+                    }
+
                      dynamicRules.forEach(r => {
                          const inputs = r.input.map(n => toFeaName(n)).filter(Boolean).join(' ');
                          const output = toFeaName(r.output);
@@ -543,32 +528,20 @@ export const generateFea = (
                         }
                         featureLookups.push(lookupName);
                      }
-                }
+                 }
             }
+        }
             
-            const validLookups = featureLookups.filter(name => generatedLookupNames.has(name));
-        
-            if (validLookups.length > 0) {
-                let featureBlock = `feature ${featureTag} {\n`;
-                // Only add lookupflags at feature level if inline rules were NOT used (as they wrap their own flags)
-                // However, with the new child structure, we should be careful. 
-                // Simplest approach: If we used lookups, flags are usually inside them or handled.
-                // Feature level flags apply to all lookups.
-                if (featureData.lookupflags && !hasInlineRules && !children.some((c:any) => c.type === 'inline')) {
-                     for (const flagName in featureData.lookupflags) {
-                        if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
-                            featureBlock += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
-                        }
-                    }
-                }
-
-                validLookups.forEach(name => {
-                    featureBlock += `  lookup ${sanitizeIdentifier(name)};\n`;
-                });
-                featureBlock += `} ${featureTag};\n\n`;
-                feaContent += featureBlock;
-                if (!allGsubFeatures.includes(featureTag)) allGsubFeatures.push(featureTag);
-            }
+        const validLookups = featureLookups.filter(name => generatedLookupNames.has(name));
+    
+        if (validLookups.length > 0) {
+            let featureBlock = `feature ${featureTag} {\n`;
+            validLookups.forEach(name => {
+                featureBlock += `  lookup ${sanitizeIdentifier(name)};\n`;
+            });
+            featureBlock += `} ${featureTag};\n\n`;
+            feaContent += featureBlock;
+            if (!allGsubFeatures.includes(featureTag)) allGsubFeatures.push(featureTag);
         }
     }
     

@@ -40,7 +40,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       }
   };
 
-  const isDrawn = isDrawnCheck(glyphData);
+  const isDrawn = isDrawnCheck(glyphData) && isAvailable;
 
   useEffect(() => {
     const canvas = canvasRef.current;
