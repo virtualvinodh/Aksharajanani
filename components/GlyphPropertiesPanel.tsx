@@ -393,7 +393,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
         </button>
       </div>
       
-      {!isNonSpacing && type !== 'kerning' && (
+      {!isNonSpacing && type !== 'kerning' && !gpos && (
       <div className="grid grid-cols-2 gap-3 flex-shrink-0">
           <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
