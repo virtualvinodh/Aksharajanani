@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 
 interface ModalProps {
@@ -59,7 +58,7 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 dark:bg-gray-900/80 z-50 flex items-center justify-center p-4 animate-fade-in-up" 
+      className="fixed inset-0 bg-black/60 dark:bg-gray-900/80 z-[100] flex items-center justify-center p-4 animate-fade-in-up" 
       style={{ animationDuration: '0.2s' }}
       onMouseDown={handleBackdropMouseDown}
       onClick={handleBackdropClick}

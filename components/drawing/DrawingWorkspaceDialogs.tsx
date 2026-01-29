@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import Modal from '../Modal';
@@ -185,19 +184,19 @@ const DrawingWorkspaceDialogs: React.FC<DrawingWorkspaceDialogsProps> = (props) 
                 <div className="space-y-6">
                     {props.previewSample && (
                         <div className="flex justify-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-inner">
-                             <canvas ref={canvasRef} width={240} height={240} className="max-w-full" />
+                             <canvas ref={canvasRef} width={240} height={240} className="w-32 h-32 sm:w-60 sm:h-60" />
                         </div>
                     )}
 
                     <p className="text-xs text-gray-500 italic text-center">{t('transformOriginCenter')}</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2 sm:col-span-1">
-                            <label className="block text-sm font-medium mb-1">{t('scaleX')}</label>
-                            <input type="text" value={scaleX} onChange={e => { setScaleX(e.target.value); if(lockAspect) setScaleY(e.target.value); }} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                        <div className="col-span-1">
+                            <label className="block text-xs sm:text-sm font-medium mb-1">{t('scaleX')}</label>
+                            <input type="text" value={scaleX} onChange={e => { setScaleX(e.target.value); if(lockAspect) setScaleY(e.target.value); }} className="w-full px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
                         </div>
-                        <div className="col-span-2 sm:col-span-1">
-                            <label className="block text-sm font-medium mb-1">{t('scaleY')}</label>
-                            <input type="text" value={scaleY} onChange={e => setScaleY(e.target.value)} disabled={lockAspect} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50" />
+                        <div className="col-span-1">
+                            <label className="block text-xs sm:text-sm font-medium mb-1">{t('scaleY')}</label>
+                            <input type="text" value={scaleY} onChange={e => setScaleY(e.target.value)} disabled={lockAspect} className="w-full px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50" />
                         </div>
                         <div className="col-span-2 flex items-center">
                             <input type="checkbox" id="lockAspect" checked={lockAspect} onChange={e => setLockAspect(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" />
