@@ -1,7 +1,8 @@
+
 import React, { useRef } from 'react';
 import { Point, Path, FontMetrics, AppSettings, Character } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
-import { renderPaths } from '../services/glyphRenderService';
+import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderService';
 import { usePositioningCanvas } from '../hooks/usePositioningCanvas';
 
 interface PositioningCanvasProps {
@@ -92,6 +93,54 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
         ctx.moveTo(guideStart, metrics.baseLineY);
         ctx.lineTo(guideStart + guideWidth, metrics.baseLineY);
         ctx.stroke();
+
+        // --- Visual Bounding Box Overlay (Crosshairs Only) ---
+        // This is always true
+        if (true) {
+            const drawCrosshairs = (paths: Path[], color: string) => {
+                const bbox = getAccurateGlyphBBox(paths, settings.strokeThickness);
+                if (!bbox) return;
+
+                ctx.save();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1 / zoom;
+                
+                // Draw 8 Crosshair Markers (Corners + Midpoints)
+                // Note: Box outline omitted for cleaner UI
+                ctx.setLineDash([]); 
+                const markerSize = 4 / zoom; 
+                
+                const x1 = bbox.x;
+                const x2 = bbox.x + bbox.width / 2;
+                const x3 = bbox.x + bbox.width;
+                
+                const y1 = bbox.y;
+                const y2 = bbox.y + bbox.height / 2;
+                const y3 = bbox.y + bbox.height;
+
+                const points = [
+                    { x: x1, y: y1 }, { x: x2, y: y1 }, { x: x3, y: y1 },
+                    { x: x3, y: y2 }, { x: x3, y: y3 }, { x: x2, y: y3 },
+                    { x: x1, y: y3 }, { x: x1, y: y2 }
+                ];
+                
+                ctx.beginPath();
+                points.forEach(p => {
+                    // Horizontal line of crosshair
+                    ctx.moveTo(p.x - markerSize, p.y);
+                    ctx.lineTo(p.x + markerSize, p.y);
+                    // Vertical line of crosshair
+                    ctx.moveTo(p.x, p.y - markerSize);
+                    ctx.lineTo(p.x, p.y + markerSize);
+                });
+                ctx.stroke();
+                ctx.restore();
+            };
+
+            const cyan = '#06b6d4';
+            drawCrosshairs(basePaths, cyan);
+            drawCrosshairs(markPaths, cyan);
+        }
 
         // Render Base (Background)
         renderPaths(ctx, basePaths, { 

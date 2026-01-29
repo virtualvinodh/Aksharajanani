@@ -402,11 +402,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.strokeStyle = cyan;
         ctx.lineWidth = 1 / zoom;
         
-        // Draw Dashed Box
-        ctx.setLineDash([4 / zoom, 4 / zoom]);
-        ctx.strokeRect(glyphBBox.x, glyphBBox.y, glyphBBox.width, glyphBBox.height);
-        
-        // Draw 8 Crosshair Markers
+        // Draw 8 Crosshair Markers (Rectangle outline removed per request)
         ctx.setLineDash([]); 
         const markerSize = 4 / zoom; 
         
