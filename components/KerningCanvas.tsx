@@ -44,6 +44,10 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
 
         ctx.clearRect(0, 0, width, height);
 
+        // Safety check: If scale is 0 or invalid (e.g. initial render before measurement), abort drawing to prevent division by zero errors.
+        const finalScale = baseScale * zoom;
+        if (!finalScale || finalScale <= 0 || !isFinite(finalScale)) return;
+
         const leftGlyph = glyphDataMap.get(leftChar.unicode!);
         const rightGlyph = glyphDataMap.get(rightChar.unicode!);
         if (!leftGlyph || !rightGlyph) return;
@@ -52,7 +56,6 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
         const rBox = getAccurateGlyphBBox(rightGlyph.paths, strokeThickness);
         if (!lBox || !rBox) return;
 
-        const finalScale = baseScale * zoom;
         
         // Centering origin: Middle of the canvas
         const cx = width / 2;
@@ -87,6 +90,7 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
         // Guides
         ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
         ctx.lineWidth = Math.max(2.0, 2.5 / zoom); 
+        // Use safe division just in case, though guard clause above handles most cases
         ctx.setLineDash([12 / zoom, 8 / zoom]);
         ctx.beginPath(); ctx.moveTo(-500, metrics.topLineY); ctx.lineTo(2000, metrics.topLineY); ctx.stroke();
         ctx.beginPath(); ctx.setLineDash([]); ctx.moveTo(-500, metrics.baseLineY); ctx.lineTo(2000, metrics.baseLineY); ctx.stroke();
@@ -101,6 +105,37 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
         ctx.translate(rightTranslateX, 0);
         renderPaths(ctx, rightGlyph.paths, { strokeThickness, color: rightColor });
         ctx.restore();
+
+        // --- Debug Kerning Bounding Boxes ---
+        if (settings.isDebugKerningEnabled) {
+            ctx.save();
+            ctx.setLineDash([4 / finalScale, 4 / finalScale]); 
+            ctx.lineWidth = 1 / finalScale; // Hairline
+
+            const drawDebugBox = (bbox: { minX: number, maxX: number, minY: number, maxY: number } | null, color: string) => {
+                if (!bbox) return;
+                ctx.strokeStyle = color;
+                ctx.strokeRect(bbox.minX, bbox.minY, bbox.maxX - bbox.minX, bbox.maxY - bbox.minY);
+            };
+
+            const lSub = getGlyphSubBBoxes(leftGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
+            if (lSub) {
+                drawDebugBox(lSub.ascender, '#3b82f6'); // Blue (Ascender)
+                drawDebugBox(lSub.xHeight, '#22c55e');  // Green (X-Height)
+                drawDebugBox(lSub.descender, '#ef4444'); // Red (Descender)
+            }
+
+            const rSub = getGlyphSubBBoxes(rightGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
+            if (rSub) {
+                ctx.save();
+                ctx.translate(rightTranslateX, 0);
+                drawDebugBox(rSub.ascender, '#3b82f6');
+                drawDebugBox(rSub.xHeight, '#22c55e');
+                drawDebugBox(rSub.descender, '#ef4444');
+                ctx.restore();
+            }
+            ctx.restore();
+        }
 
         if (showMeasurement) {
             const lSub = getGlyphSubBBoxes(leftGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
@@ -123,7 +158,7 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
             }
         }
         ctx.restore();
-    }, [width, height, leftChar, rightChar, kernValue, zoom, viewOffset, theme, baseScale, showMeasurement, glyphDataMap, metrics, strokeThickness, isDragging]);
+    }, [width, height, leftChar, rightChar, kernValue, zoom, viewOffset, theme, baseScale, showMeasurement, glyphDataMap, metrics, strokeThickness, isDragging, settings.isDebugKerningEnabled]);
 
     return (
         <canvas
