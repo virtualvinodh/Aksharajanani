@@ -26,13 +26,22 @@ const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
                 
                 {/* Selection Info Section */}
                 <div className="flex items-center gap-3 pr-4 border-b sm:border-b-0 sm:border-r border-gray-200 dark:border-gray-700 w-full sm:w-auto pb-2 sm:pb-0 justify-center">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-500/30">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 flex-shrink-0">
                         <span className="font-black text-sm">{props.selectionSize}</span>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-1">
-                        <button onClick={props.onSelectVisible} className="px-2 py-1 text-[10px] font-bold uppercase tracking-tight bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">{t('selectVisible')}</button>
-                        <button onClick={props.onSelectAll} className="px-2 py-1 text-[10px] font-bold uppercase tracking-tight bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">{t('selectAll')}</button>
-                        <button onClick={props.onSelectNone} disabled={props.selectionSize === 0} className="px-2 py-1 text-[10px] font-bold uppercase tracking-tight bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-30 transition-colors">{t('selectNone')}</button>
+                    <div className="flex flex-row gap-1">
+                        <button onClick={props.onSelectVisible} className="px-2 py-1 text-[10px] font-bold uppercase tracking-tight bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                            <span className="hidden sm:inline">{t('selectVisible')}</span>
+                            <span className="sm:hidden">{t('visible')}</span>
+                        </button>
+                        <button onClick={props.onSelectAll} className="px-2 py-1 text-[10px] font-bold uppercase tracking-tight bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                            <span className="hidden sm:inline">{t('selectAll')}</span>
+                            <span className="sm:hidden">{t('showAll')}</span>
+                        </button>
+                        <button onClick={props.onSelectNone} disabled={props.selectionSize === 0} className="px-2 py-1 text-[10px] font-bold uppercase tracking-tight bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-30 transition-colors">
+                            <span className="hidden sm:inline">{t('selectNone')}</span>
+                            <span className="sm:hidden">{t('none')}</span>
+                        </button>
                     </div>
                 </div>
 
