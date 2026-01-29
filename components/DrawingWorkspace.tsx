@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
@@ -66,6 +67,17 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const showHidden = settings?.showHiddenGlyphs ?? false;
     const isSearching = searchQuery.trim().length > 0;
     const isFiltered = filterMode !== 'none' || isSearching;
+
+    // Get a sample glyph for transformation preview
+    const previewUnicode = useMemo(() => {
+        if (metricsSelection.size === 0) return undefined;
+        // Just take the first one
+        return metricsSelection.values().next().value;
+    }, [metricsSelection]);
+
+    const previewSample = useMemo(() => {
+        return previewUnicode !== undefined ? glyphDataMap.get(previewUnicode) : undefined;
+    }, [previewUnicode, glyphDataMap, glyphVersion]);
 
     const visibleCharacterSets = useMemo(() => {
         if (isFiltered) return [];
@@ -538,6 +550,8 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     isDeleteOpen={isDeleteOpen} setIsDeleteOpen={setIsDeleteOpen}
                     onBulkDelete={() => handleBulkDelete(metricsSelection, handleBatchComplete)}
                     selectionSize={metricsSelection.size}
+                    previewSample={previewSample}
+                    strokeThickness={settings?.strokeThickness}
                 />
             )}
 

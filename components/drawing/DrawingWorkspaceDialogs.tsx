@@ -1,9 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import Modal from '../Modal';
 import { SaveIcon, TransformIcon } from '../../constants';
 import { sanitizeIdentifier } from '../../utils/stringUtils';
+import { GlyphData } from '../../types';
+import { renderPaths, getAccurateGlyphBBox } from '../../services/glyphRenderService';
+import { transformGlyphPaths } from '../../hooks/useBatchOperations';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface DrawingWorkspaceDialogsProps {
     modalState: { type: 'create' | 'rename', index?: number, isOpen: boolean };
@@ -26,10 +30,13 @@ interface DrawingWorkspaceDialogsProps {
     onBulkDelete: () => void;
     
     selectionSize: number;
+    previewSample?: GlyphData;
+    strokeThickness?: number;
 }
 
 const DrawingWorkspaceDialogs: React.FC<DrawingWorkspaceDialogsProps> = (props) => {
     const { t } = useLocale();
+    const { theme } = useTheme();
     
     // Internal state for sub-modals to avoid prop-drilling complex numeric values
     const [lsb, setLsb] = useState('');
@@ -40,6 +47,84 @@ const DrawingWorkspaceDialogs: React.FC<DrawingWorkspaceDialogsProps> = (props) 
     const [flipH, setFlipH] = useState(false);
     const [flipV, setFlipV] = useState(false);
     const [lockAspect, setLockAspect] = useState(true);
+    
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        if (!props.isTransformOpen || !props.previewSample || !canvasRef.current) return;
+        
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        const size = canvas.width; // Assume square
+        ctx.clearRect(0, 0, size, size);
+        
+        const originalPaths = props.previewSample.paths;
+        const thickness = props.strokeThickness || 15;
+        
+        // Calculate transform
+        const sX = parseFloat(scaleX) || 1;
+        const sY = parseFloat(scaleY) || 1;
+        const rot = parseFloat(rotation) || 0;
+        
+        const transformedPaths = transformGlyphPaths(originalPaths, thickness, sX, sY, rot, flipH, flipV);
+        
+        const bbox = getAccurateGlyphBBox(originalPaths, thickness);
+        if (!bbox) return;
+        
+        const contentCenterX = bbox.x + bbox.width / 2;
+        const contentCenterY = bbox.y + bbox.height / 2;
+        
+        // Dynamic fit padding
+        const padding = 40;
+        const availableDim = size - (padding * 2);
+        // Ensure divisor isn't zero or negative
+        const maxDim = Math.max(bbox.width, bbox.height, 100); 
+        
+        const scale = availableDim / maxDim;
+        
+        // Draw
+        ctx.save();
+        
+        // Move canvas origin to center
+        ctx.translate(size / 2, size / 2);
+        ctx.scale(scale, scale);
+        // Move glyph origin so its center aligns with canvas center
+        // Note: Coordinates are typically "font units", so y-up vs y-down matters if not careful, 
+        // but here we just center the bbox.
+        ctx.translate(-contentCenterX, -contentCenterY);
+        
+        // 1. Draw Origin Marker (at glyph center)
+        ctx.save();
+        ctx.strokeStyle = theme === 'dark' ? '#555' : '#e5e7eb';
+        ctx.lineWidth = 2 / scale;
+        ctx.beginPath();
+        const markLen = Math.max(bbox.width, bbox.height) / 4;
+        ctx.moveTo(contentCenterX - markLen, contentCenterY);
+        ctx.lineTo(contentCenterX + markLen, contentCenterY);
+        ctx.moveTo(contentCenterX, contentCenterY - markLen);
+        ctx.lineTo(contentCenterX, contentCenterY + markLen);
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. Ghost (Original)
+        ctx.globalAlpha = 0.3;
+        renderPaths(ctx, originalPaths, { 
+            strokeThickness: thickness, 
+            color: theme === 'dark' ? '#fff' : '#000' 
+        });
+        ctx.globalAlpha = 1.0;
+        
+        // 3. Active (Transformed)
+        renderPaths(ctx, transformedPaths, { 
+            strokeThickness: thickness, 
+            color: theme === 'dark' ? '#818CF8' : '#4f46e5' 
+        });
+
+        ctx.restore();
+
+    }, [props.isTransformOpen, scaleX, scaleY, rotation, flipH, flipV, props.previewSample, props.strokeThickness, theme]);
 
     return (
         <>
@@ -98,6 +183,12 @@ const DrawingWorkspaceDialogs: React.FC<DrawingWorkspaceDialogsProps> = (props) 
                 footer={<><button onClick={() => props.setIsTransformOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button><button onClick={() => props.onBulkTransform(parseFloat(scaleX)||1, parseFloat(scaleY)||1, parseFloat(rotation)||0, flipH, flipV)} className="px-4 py-2 bg-green-600 text-white rounded-lg">{t('applyTransform')}</button></>}
             >
                 <div className="space-y-6">
+                    {props.previewSample && (
+                        <div className="flex justify-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-inner">
+                             <canvas ref={canvasRef} width={240} height={240} className="max-w-full" />
+                        </div>
+                    )}
+
                     <p className="text-xs text-gray-500 italic text-center">{t('transformOriginCenter')}</p>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2 sm:col-span-1">

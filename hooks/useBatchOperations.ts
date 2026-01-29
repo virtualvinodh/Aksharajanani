@@ -14,7 +14,7 @@ import { VEC } from '../utils/vectorUtils';
 import { deepClone } from '../utils/cloneUtils';
 
 // Helper Logic for Transformation
-const transformGlyphPaths = (
+export const transformGlyphPaths = (
     paths: Path[], 
     strokeThickness: number, 
     scaleX: number, 
