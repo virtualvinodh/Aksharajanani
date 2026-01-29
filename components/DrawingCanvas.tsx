@@ -395,6 +395,48 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       renderPaths(ctx, backgroundPaths, { color: backgroundPathsColor || (theme === 'dark' ? '#4A5568' : '#A0AEC0'), strokeThickness: settings.strokeThickness });
     }
 
+    // --- Visual Bounding Box Overlay ---
+    if (settings.showBoundingBox && glyphBBox) {
+        ctx.save();
+        const cyan = '#06b6d4'; // Cyan-500
+        ctx.strokeStyle = cyan;
+        ctx.lineWidth = 1 / zoom;
+        
+        // Draw Dashed Box
+        ctx.setLineDash([4 / zoom, 4 / zoom]);
+        ctx.strokeRect(glyphBBox.x, glyphBBox.y, glyphBBox.width, glyphBBox.height);
+        
+        // Draw 8 Crosshair Markers
+        ctx.setLineDash([]); 
+        const markerSize = 4 / zoom; 
+        
+        const x1 = glyphBBox.x;
+        const x2 = glyphBBox.x + glyphBBox.width / 2;
+        const x3 = glyphBBox.x + glyphBBox.width;
+        
+        const y1 = glyphBBox.y;
+        const y2 = glyphBBox.y + glyphBBox.height / 2;
+        const y3 = glyphBBox.y + glyphBBox.height;
+
+        const points = [
+            { x: x1, y: y1 }, { x: x2, y: y1 }, { x: x3, y: y1 },
+            { x: x3, y: y2 }, { x: x3, y: y3 }, { x: x2, y: y3 },
+            { x: x1, y: y3 }, { x: x1, y: y2 }
+        ];
+        
+        ctx.beginPath();
+        points.forEach(p => {
+            // Horizontal line of crosshair
+            ctx.moveTo(p.x - markerSize, p.y);
+            ctx.lineTo(p.x + markerSize, p.y);
+            // Vertical line of crosshair
+            ctx.moveTo(p.x, p.y - markerSize);
+            ctx.lineTo(p.x, p.y + markerSize);
+        });
+        ctx.stroke();
+        ctx.restore();
+    }
+
     const mainColor = theme === 'dark' ? '#E2E8F0' : '#1F2937';
     const highlightColor = theme === 'dark' ? '#A78BFA' : '#8B5CF6'; 
 

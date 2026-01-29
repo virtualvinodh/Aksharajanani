@@ -1,3 +1,4 @@
+
 export interface Point {
   x: number;
   y: number;
@@ -157,6 +158,7 @@ export interface AppSettings {
   licenseInfoURL?: string;
   testPage?: TestPageConfig;
   isDebugKerningEnabled?: boolean;
+  showBoundingBox?: boolean;
   customSampleText?: string;
   // Creator Studio Persistence
   creatorSettings?: CreatorSettings;
