@@ -91,8 +91,6 @@
       { "unicode": 3386, "name": "ഺ", "glyphClass": "base" }      
     ]
   },
-
- 
   {
     "nameKey": "chillus",
     "characters": [
@@ -106,6 +104,16 @@
       { "unicode": 3414, "name": "ൖ", "glyphClass": "base" }    
     ]
   },
+  {
+    "nameKey": "miniatures",
+    "characters": [
+      {  "name": "ഗ", "glyphClass": "base", "link": [""], "compositeTransform": [""] },
+      {  "name": "ഡ", "glyphClass": "base", "link": [""], "compositeTransform": [""] },
+      { "name": "ണ", "glyphClass": "base", "link": [""], "compositeTransform": [""] },
+      {  "name": "റ", "glyphClass": "base", "link": [""], "compositeTransform": [""]},
+      { "name": "ശ", "glyphClass": "base", "link": [""], "compositeTransform": [""] }  
+    ]
+  },  
   {
     "nameKey": "conjuncts",
     "characters":[
