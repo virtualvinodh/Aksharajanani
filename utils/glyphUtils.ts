@@ -1,4 +1,4 @@
-import { GlyphData } from '../types';
+import { GlyphData, Character, MarkPositioningMap, KerningMap } from '../types';
 
 /**
  * Checks if a glyph has been drawn, considering both freehand points and vector outlines.
@@ -30,4 +30,64 @@ export const getGlyphExportNameByUnicode = (unicode: number): string => {
         // SMP characters are named uXXXXX...
         return `u${hex}`;
     }
+};
+
+/**
+ * Checks if a glyph is "complete" based on a broader definition that includes
+ * being manually drawn, being an "accepted" positioned/kerned pair, or
+ * being a linked/composite glyph whose source components are drawn.
+ * @param character The character to check.
+ * @param glyphDataMap The map of all glyph drawing data.
+ * @param markPositioningMap The map of manually positioned pairs.
+ * @param kerningMap The map of manually kerned pairs.
+ * @param allCharsByName A map of all characters by name for component lookups.
+ * @returns True if the glyph is considered complete.
+ */
+export const isGlyphComplete = (
+    character: Character | undefined,
+    glyphDataMap: Map<number, GlyphData>,
+    markPositioningMap: MarkPositioningMap,
+    kerningMap: KerningMap,
+    allCharsByName: Map<string, Character>
+): boolean => {
+    if (!character) return false;
+
+    // 1. Manually drawn in the editor
+    if (isGlyphDrawn(glyphDataMap.get(character.unicode))) {
+        return true;
+    }
+
+    // 2. An accepted (saved) positioned pair
+    if (character.position) {
+        const base = allCharsByName.get(character.position[0]);
+        const mark = allCharsByName.get(character.position[1]);
+        if (base?.unicode !== undefined && mark?.unicode !== undefined) {
+            if (markPositioningMap.has(`${base.unicode}-${mark.unicode}`)) {
+                return true;
+            }
+        }
+    }
+
+    // 3. An accepted (saved) kerned pair
+    if (character.kern) {
+        const left = allCharsByName.get(character.kern[0]);
+        const right = allCharsByName.get(character.kern[1]);
+        if (left?.unicode !== undefined && right?.unicode !== undefined) {
+            if (kerningMap.has(`${left.unicode}-${right.unicode}`)) {
+                return true;
+            }
+        }
+    }
+
+    // 4. A linked or composite glyph whose source components are drawn
+    const components = character.link || character.composite;
+    if (components) {
+         return components.every(name => {
+            const comp = allCharsByName.get(name);
+            // Use isGlyphDrawn for source components, not isGlyphComplete, to avoid infinite recursion.
+            return comp && isGlyphDrawn(glyphDataMap.get(comp.unicode));
+        });
+    }
+
+    return false;
 };

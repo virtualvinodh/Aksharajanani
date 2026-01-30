@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { CharacterSet, GlyphData, KerningMap, MarkPositioningMap, RecommendedKerning, Character, PositioningRules } from '../types';
-import { isGlyphDrawn } from '../utils/glyphUtils';
+import { isGlyphDrawn, isGlyphComplete } from '../utils/glyphUtils';
 import { useSettings } from '../contexts/SettingsContext';
 import { expandMembers } from '../services/groupExpansionService';
 
@@ -45,11 +45,11 @@ export const useProgressCalculators = ({
         const totalDrawableChars = allDrawableChars.length;
         
         const drawnGlyphCount = allDrawableChars.filter(char => {
-            return isGlyphDrawn(glyphDataMap.get(char.unicode));
+            return isGlyphComplete(char, glyphDataMap, markPositioningMap, kerningMap, allCharsByName);
         }).length;
 
         return { completed: drawnGlyphCount, total: totalDrawableChars };
-    }, [glyphDataMap, characterSets, glyphVersion, showHidden]);
+    }, [glyphDataMap, characterSets, glyphVersion, showHidden, markPositioningMap, kerningMap, allCharsByName]);
 
     /**
      * Positioning Progress (Absolute Scope):

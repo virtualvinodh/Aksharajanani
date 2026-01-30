@@ -7,7 +7,7 @@ import { useLayout } from '../contexts/LayoutContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { VirtuosoGrid, Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { AddIcon, SwitchScriptIcon, CheckCircleIcon } from '../constants';
-import { isGlyphDrawn } from '../utils/glyphUtils';
+import { isGlyphComplete } from '../utils/glyphUtils';
 import { useProject } from '../contexts/ProjectContext';
 import { useKerning } from '../contexts/KerningContext';
 import { usePositioning } from '../contexts/PositioningContext';
@@ -48,7 +48,9 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
   const { settings } = useSettings();
   const { metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode } = useLayout();
   const { glyphDataMap } = useGlyphData();
-  const { characterSets: projectCharacterSets } = useProject();
+  const { characterSets: projectCharacterSets, allCharsByName } = useProject();
+  const { kerningMap } = useKerning();
+  const { markPositioningMap } = usePositioning();
 
   const characterSets = propCharacterSets || projectCharacterSets;
 
@@ -136,7 +138,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                 const visibleChars = group.characters.filter(char => !char.hidden || settings.showHiddenGlyphs);
                 
                 const isGroupComplete = visibleChars.length > 0 && visibleChars.every(char => {
-                    return isGlyphDrawn(glyphDataMap.get(char.unicode));
+                    return isGlyphComplete(char, glyphDataMap, markPositioningMap, kerningMap, allCharsByName);
                 });
 
                 return (
