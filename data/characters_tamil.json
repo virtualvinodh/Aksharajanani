@@ -43,7 +43,7 @@
       { "unicode": 2999, "name": "ஷ", "glyphClass": "base" },
       { "unicode": 3000, "name": "ஸ", "glyphClass": "base" },
       { "unicode": 3001, "name": "ஹ", "glyphClass": "base" },
-      { "unicode": 57344, "name": "க்ஷ", "glyphClass": "ligature", "liga": ["க", "்", "ஷ"],  "gsub": "akhn", },
+      { "unicode": 57344, "name": "க்ஷ", "glyphClass": "ligature", "liga": ["க", "்", "ஷ"],  "gsub": "akhn" },
       { "unicode": 2998, "name": "ஶ", "glyphClass": "base" }      
     ]
   },
