@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -604,6 +605,11 @@ export const useGlyphActions = (
                  }
              }
         } else { relinkedChar.link = relinkedChar.sourceLink; }
+
+        if (relinkedChar.sourceGlyphClass) {
+             relinkedChar.glyphClass = relinkedChar.sourceGlyphClass;
+             delete relinkedChar.sourceGlyphClass;
+        }
 
         delete relinkedChar.sourceLink; delete relinkedChar.sourceLinkType; delete relinkedChar.composite; delete relinkedChar.compositeTransform;
         if (layout.selectedCharacter?.unicode === unicode) layout.selectCharacter(relinkedChar);

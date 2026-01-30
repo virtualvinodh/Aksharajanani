@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { FontMetrics, Character, CharacterSet, GlyphData, ComponentTransform, PositioningMode, Path } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -437,7 +438,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                     <div>
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
                         <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                            {(['base', 'ligature', 'mark'] as const).map((typeOption) => {
+                            {(['base', 'ligature', 'mark', 'virtual'] as const).map((typeOption) => {
                                 const isActive = (glyphClass || 'base') === typeOption;
                                 return (
                                     <button

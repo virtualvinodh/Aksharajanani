@@ -70,6 +70,7 @@ export interface Character {
   kern?: [string, string];     // [LeftName, RightName] for virtual assembly
   sourceLink?: string[]; // To remember original link after unlinking
   sourceLinkType?: 'position' | 'link' | 'kern'; // To remember if it was a position pair, kern pair, or standard link
+  sourceGlyphClass?: 'base' | 'ligature' | 'mark' | 'virtual'; // To remember original glyph class
   compositeTransform?: ComponentTransform[];
   isCustom?: boolean;
   advWidth?: number | string;

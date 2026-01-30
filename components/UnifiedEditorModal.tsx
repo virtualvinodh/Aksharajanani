@@ -1,3 +1,5 @@
+
+
 import React, { useState, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, CharacterSet, MarkAttachmentRules, Point, Path, ComponentTransform } from '../types';
 import { useLayout } from '../contexts/LayoutContext';
@@ -221,6 +223,10 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
       if (character.position) { newChar.sourceLink = character.position; newChar.sourceLinkType = 'position'; }
       else if (character.kern) { newChar.sourceLink = character.kern; newChar.sourceLinkType = 'kern'; }
       delete newChar.position; delete newChar.kern;
+      
+      // Save original class before conversion to ligature
+      newChar.sourceGlyphClass = character.glyphClass;
+      
       newChar.composite = components; newChar.compositeTransform = newTransforms; newChar.glyphClass = 'ligature';
       if (character.position) {
            const base = allCharsByName.get(components[0]); const mark = allCharsByName.get(components[1]);
