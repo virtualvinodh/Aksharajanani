@@ -40,7 +40,8 @@ export const useProgressCalculators = ({
         
         const allDrawableChars = characterSets.flatMap(cs => cs.characters)
             .filter(c => c.unicode !== 8205 && c.unicode !== 8204)
-            .filter(c => !c.hidden || showHidden);
+            .filter(c => !c.hidden || showHidden)
+            .filter(c => !c.optional);
         
         const totalDrawableChars = allDrawableChars.length;
         

@@ -136,8 +136,10 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
             }}
             itemContent={(index, group) => {
                 const visibleChars = group.characters.filter(char => !char.hidden || settings.showHiddenGlyphs);
+                if (visibleChars.length === 0 && group.characters.length > 0) return null; // Don't render empty hidden groups
                 
-                const isGroupComplete = visibleChars.length > 0 && visibleChars.every(char => {
+                const requiredChars = visibleChars.filter(char => !char.optional);
+                const isGroupComplete = requiredChars.length > 0 && requiredChars.every(char => {
                     return isGlyphComplete(char, glyphDataMap, markPositioningMap, kerningMap, allCharsByName);
                 });
 

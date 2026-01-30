@@ -180,7 +180,7 @@
 {
   "nameKey": "uuCons",
   "characters": [
-    { "unicode": 57436, "name": "கூ", "glyphClass": "ligature", "liga": ["க", "ூ"], "gsub": "psts" },
+    { "unicode": 57436, "name": "கூ", "liga": ["க", "ூ"], "gsub": "psts" },
     { "unicode": 57437, "name": "ஙூ", "glyphClass": "ligature", "composite": ["ஙு"], "liga": ["ங", "ூ"], "gsub": "psts" },
     { "unicode": 57438, "name": "சூ", "glyphClass": "ligature", "composite": ["சு"], "liga": ["ச", "ூ"], "gsub": "psts" },
     { "unicode": 57439, "name": "ஞூ", "glyphClass": "ligature", "composite": ["ஞு"], "liga": ["ஞ", "ூ"], "gsub": "psts" },
@@ -198,6 +198,18 @@
     { "unicode": 57451, "name": "ளூ", "glyphClass": "ligature", "composite": ["ளு"], "liga": ["ள", "ூ" ], "gsub": "psts" },
     { "unicode": 57452, "name": "றூ", "glyphClass": "ligature", "composite": ["று"], "liga": ["ற", "ூ" ], "gsub": "psts" },
     { "unicode": 57453, "name": "னூ", "glyphClass": "ligature", "composite": ["னு"], "liga": ["ன", "ூ" ], "gsub": "psts" }
+  ]
+},
+{
+  "nameKey": "archaicLetters",
+  "characters": [
+      { "name": "ண", "glyphClass": "ligature", "liga": ["ண", "ா" ], "gsub": "psts", "optional": true },
+      { "name": "ன", "glyphClass": "ligature", "liga": ["ன", "ூா" ], "gsub": "psts", "optional": true  },
+      {  "name": "ற", "glyphClass": "ligature", "liga": ["ற", "ா" ], "gsub": "psts", "optional": true  },
+      { "name": "ண", "glyphClass": "ligature", "liga": ["ை","ண"], "gsub": "psts", "optional": true  },
+      { "name": "ன", "glyphClass": "ligature", "liga": ["ை","ன" ], "gsub": "psts", "optional": true  },      
+      { "name": "ல", "glyphClass": "ligature", "liga": ["ை","ல"], "gsub": "psts", "optional": true },
+      {"name": "ள", "glyphClass": "ligature", "liga": ["ை","ள" ], "gsub": "psts", "optional": true  }
   ]
 },
     {

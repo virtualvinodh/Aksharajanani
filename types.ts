@@ -78,6 +78,7 @@ export interface Character {
   desc?: string;
   if?: string;
   hidden?: boolean;
+  optional?: boolean;
 }
 
 export interface CharacterSet {
