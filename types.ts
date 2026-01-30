@@ -60,7 +60,7 @@ export interface Character {
   name: string;
   lsb?: number;
   rsb?: number;
-  glyphClass?: 'base' | 'ligature' | 'mark';
+  glyphClass?: 'base' | 'ligature' | 'mark' | 'virtual';
   composite?: string[];
   link?: string[];
   liga?: string[]; // New: Ligature components for GSUB

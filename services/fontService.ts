@@ -1,5 +1,4 @@
 
-
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Path, KerningMap, MarkPositioningMap, PositioningRules, MarkAttachmentRules, Segment } from '../types';
 import { compileFeaturesAndPatch } from './pythonFontService';
 import { generateFea } from './feaService';
@@ -461,10 +460,10 @@ export const exportToOtf = async (
     
     const groups = fontRules?.groups || {};
 
-    // Bake dynamic/implicit ligatures (GSUB) before compiling font outlines
+    // Bake dynamic/implicit ligatures (GSUB) and kerned pairs before compiling font outlines
     allCharsByUnicode.forEach(char => {
         // Condition: Is a composite glyph that needs to be baked (not a GPOS rule) and has a unicode.
-        if (char.position && !char.gpos && char.unicode) {
+        if (char.position && char.glyphClass !== 'virtual' && char.unicode) {
             // Don't overwrite if it's already manually drawn.
             if (isGlyphDrawn(finalGlyphData.get(char.unicode))) {
                 return;
@@ -534,64 +533,55 @@ export const exportToOtf = async (
     
             const combinedPaths = [...deepClone(baseGlyphData!.paths), ...transformedMarkPaths];
             finalGlyphData.set(char.unicode, { paths: combinedPaths });
-        }
-    });
+        } else if (char.kern && char.glyphClass !== 'virtual' && char.unicode) {
+            // Don't overwrite if it's already manually drawn.
+            if (isGlyphDrawn(finalGlyphData.get(char.unicode))) {
+                return;
+            }
 
-    // Final map for FEA generation, including manually positioned pairs.
-    const finalMarkPositioningMap = new Map(markPositioningMap.entries());
+            const [leftName, rightName] = char.kern;
+            const leftChar = allCharsByName.get(leftName);
+            const rightChar = allCharsByName.get(rightName);
 
-    // Pass 1: Calculate default positions for pairs defined in positioning.json
-    if (positioningRules) {
-        for (const rule of positioningRules) {
-            const allPossibleMarks = expandMembers(rule.mark || [], groups, characterSets);
-            const allBases = expandMembers(rule.base, groups, characterSets);
+            if (!leftChar || !rightChar || leftChar.unicode === undefined || rightChar.unicode === undefined) return;
+
+            const leftGlyphData = finalGlyphData.get(leftChar.unicode);
+            const rightGlyphData = finalGlyphData.get(rightChar.unicode);
+
+            if (!isGlyphDrawn(leftGlyphData) || !isGlyphDrawn(rightGlyphData)) return;
             
-            for (const baseName of allBases) {
-                for (const markName of allPossibleMarks) {
-                    const baseChar = allCharsByName.get(baseName);
-                    const markChar = allCharsByName.get(markName);
-                    if (!baseChar || !markChar || baseChar.unicode === undefined || markChar.unicode === undefined) continue;
+            // --- Calculate Horizontal Shift ---
+            const kernValue = kerningMap.get(`${leftChar.unicode}-${rightChar.unicode}`) ?? 0;
+            
+            const leftBbox = getAccurateGlyphBBox(leftGlyphData!.paths, settings.strokeThickness);
+            const rightBbox = getAccurateGlyphBBox(rightGlyphData!.paths, settings.strokeThickness);
 
-                    const key = `${baseChar.unicode}-${markChar.unicode}`;
-                    if (finalMarkPositioningMap.has(key)) continue;
+            if (!leftBbox || !rightBbox) return;
 
-                    const baseGlyphData = finalGlyphData.get(baseChar.unicode);
-                    const markGlyphData = finalGlyphData.get(markChar.unicode);
-                    
-                    if (isGlyphDrawn(baseGlyphData) && isGlyphDrawn(markGlyphData)) {
-                        const baseBbox = getAccurateGlyphBBox(baseGlyphData!.paths, settings.strokeThickness);
-                        const markBbox = getAccurateGlyphBBox(markGlyphData!.paths, settings.strokeThickness);
-                        const offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
-                        finalMarkPositioningMap.set(key, offset);
-                    }
+            const leftRsb = leftChar.rsb ?? metrics.defaultRSB;
+            const rightLsb = rightChar.lsb ?? metrics.defaultLSB;
+            
+            const rightGlyphContentStartX = (leftBbox.x + leftBbox.width) + leftRsb + kernValue + rightLsb;
+            const deltaX = rightGlyphContentStartX - rightBbox.x;
+
+            // --- Bake Geometry ---
+            const translatedRightPaths = deepClone(rightGlyphData!.paths).map((p: Path) => {
+                const offset = { x: deltaX, y: 0 };
+                p.points = p.points.map(pt => VEC.add(pt, offset));
+                if (p.segmentGroups) {
+                    p.segmentGroups.forEach(group => {
+                        group.forEach(seg => {
+                            seg.point = VEC.add(seg.point, offset);
+                        });
+                    });
                 }
-            }
-        }
-    }
-
-    // Pass 2: Calculate default positions for pairs defined *only* in characters.json
-    allCharsByUnicode.forEach(char => {
-        if (char.position && char.gpos) {
-            const [baseName, markName] = char.position;
-            const baseChar = allCharsByName.get(baseName);
-            const markChar = allCharsByName.get(markName);
-            if (!baseChar || !markChar || baseChar.unicode === undefined || markChar.unicode === undefined) return;
-
-            const key = `${baseChar.unicode}-${markChar.unicode}`;
-            if (finalMarkPositioningMap.has(key)) return;
-
-            const baseGlyphData = finalGlyphData.get(baseChar.unicode);
-            const markGlyphData = finalGlyphData.get(markChar.unicode);
-
-            if (isGlyphDrawn(baseGlyphData) && isGlyphDrawn(markGlyphData)) {
-                const baseBbox = getAccurateGlyphBBox(baseGlyphData!.paths, settings.strokeThickness);
-                const markBbox = getAccurateGlyphBBox(markGlyphData!.paths, settings.strokeThickness);
-                const offset = calculateDefaultMarkOffset(baseChar, markChar, baseBbox, markBbox, markAttachmentRules, metrics, characterSets, false, groups);
-                finalMarkPositioningMap.set(key, offset);
-            }
+                return p;
+            });
+    
+            const combinedPaths = [...deepClone(leftGlyphData!.paths), ...translatedRightPaths];
+            finalGlyphData.set(char.unicode, { paths: combinedPaths });
         }
     });
-
 
     // Stage 1: Generate base font outlines in a non-blocking Web Worker.
     const fontBlob = await new Promise<Blob>((resolve, reject) => {
@@ -922,17 +912,23 @@ export const exportToOtf = async (
     });
     
     // Stage 2: Generate the full FEA code
-    const glyphBBoxes = new Map<number, BoundingBox | null>();
-    finalGlyphData.forEach((glyphData, unicode) => {
-        glyphBBoxes.set(unicode, getAccurateGlyphBBox(glyphData.paths, settings.strokeThickness));
-    });
-
     const feaContent = isFeaEditMode 
         ? manualFeaCode || '' 
-        : generateFea(fontRules, kerningMap, finalMarkPositioningMap, allCharsByUnicode, settings.fontName, positioningRules, finalGlyphData, metrics, glyphBBoxes, characterSets);
+        : generateFea(
+            fontRules, 
+            kerningMap, 
+            markPositioningMap, 
+            allCharsByUnicode, 
+            settings.fontName, 
+            positioningRules, 
+            finalGlyphData, 
+            metrics, 
+            characterSets, 
+            markAttachmentRules,
+            settings.strokeThickness
+        );
 
     // Stage 3: Use Pyodide to compile the FEA and patch the font
-    // FIX: Added missing 't' argument to the function call.
     const { blob: patchedBlob, feaError } = await compileFeaturesAndPatch(fontBlob, feaContent, showNotification, t);
     
     return { blob: patchedBlob, feaError };

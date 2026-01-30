@@ -1,7 +1,7 @@
 
 import React from 'react';
 import RulesPage from './RulesPage';
-import { PositioningRules } from '../types';
+import { PositioningRules, MarkAttachmentRules } from '../types';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useKerning } from '../contexts/KerningContext';
@@ -21,13 +21,15 @@ interface RulesWorkspaceProps {
 }
 
 const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
-    const { characterSets, allCharsByName, allCharsByUnicode, positioningGroupNames } = useProject();
+    const { t } = useLocale();
+    // FIX: Import `markAttachmentRules` from the `useProject` hook.
+    // This provides the necessary data for generating font features and resolves a missing prop error in the `RulesPage` component.
+    const { characterSets, allCharsByName, allCharsByUnicode, positioningGroupNames, markAttachmentRules } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap } = useKerning();
     const { markPositioningMap } = usePositioning();
     const { state, dispatch } = useRules();
     const { settings, metrics } = useSettings();
-    const { t } = useLocale();
     
     const { rulesProgress, onClose, ...rulesPageProps } = props;
 
@@ -71,6 +73,9 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
                     fontName={settings.fontName}
                     settings={settings}
                     metrics={metrics}
+                    // FIX: Pass the `markAttachmentRules` prop to the `RulesPage` component.
+                    // This resolves a TypeScript error where the prop was expected but not provided, ensuring that feature generation functions receive all required arguments.
+                    markAttachmentRules={markAttachmentRules}
                     isFeaEditMode={state.isFeaEditMode}
                     onIsFeaEditModeChange={(isEditMode) => dispatch({ type: 'SET_FEA_EDIT_MODE', payload: isEditMode })}
                     manualFeaCode={state.manualFeaCode}
