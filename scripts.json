@@ -84,48 +84,6 @@
       }
     },
     {
-      "id": "tamil_old",
-      "nameKey": "scriptTamilOld",
-      "support": "full",
-      "metrics": {
-        "unitsPerEm": 1000,
-        "ascender": 800,
-        "descender": -500,
-        "defaultAdvanceWidth": 800,
-        "topLineY": 300,
-        "baseLineY": 600,
-        "styleName": "Medium",
-        "spaceAdvanceWidth": 400,
-        "defaultLSB": 50,
-        "defaultRSB": 50
-      },
-      "defaults": {
-        "fontName": "TamilOld",
-        "strokeThickness": 25,
-        "pathSimplification": 0.5,
-        "showGridOutlines": true,
-        "isAutosaveEnabled": true,
-        "editorMode": "simple",
-        "isPrefillEnabled": true
-      },
-      "grid": {
-        "characterNameSize": 450
-      },
-      "guideFont": {
-        "fontName": "Mukta Malar",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/MuktaMalar-Regular.ttf",
-        "stylisticSet": "\"ss04\""
-      },
-      "testPage": {
-        "fontSize": {
-          "default": 48
-        },
-        "lineHeight": {
-          "default": 1.5
-        }
-      }
-    },
-    {
       "id": "malayalam",
       "nameKey": "scriptMalayalam",
       "support": "full",
