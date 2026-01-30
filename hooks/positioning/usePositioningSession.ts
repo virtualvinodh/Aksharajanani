@@ -1,15 +1,15 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
     Character, GlyphData, Point, Path, AppSettings, FontMetrics, 
     MarkAttachmentRules, MarkPositioningMap, PositioningRules, 
-    CharacterSet, AttachmentClass, AttachmentPoint 
+    CharacterSet, AttachmentClass
 } from '../../types';
 import { 
     calculateDefaultMarkOffset, getAccurateGlyphBBox, 
 } from '../../services/glyphRenderService';
 import { VEC } from '../../utils/vectorUtils';
 import { deepClone } from '../../utils/cloneUtils';
-import { isGlyphDrawn } from '../../utils/glyphUtils';
 import { expandMembers } from '../../services/groupExpansionService';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -102,9 +102,71 @@ export const usePositioningSession = ({
     const [pendingNavigation, setPendingNavigation] = useState<'prev' | 'next' | 'back' | Character | null>(null);
 
     const autosaveTimeout = useRef<number | null>(null);
-    const lastPairIdentifierRef = useRef<string | null>(null);
-
     const baseGlyph = glyphDataMap.get(baseChar.unicode);
+
+    // --- Animation Refs (Auto-fit) ---
+    // These track the animation state outside of the render cycle
+    const zoomRef = useRef(zoom);
+    const viewOffsetRef = useRef(viewOffset);
+    const targetZoomRef = useRef(zoom);
+    const targetViewOffsetRef = useRef(viewOffset);
+    const animationFrameRef = useRef<number | undefined>(undefined);
+
+    // Sync refs with state when state changes (e.g. manual zoom)
+    useEffect(() => {
+        zoomRef.current = zoom;
+        if (!animationFrameRef.current) targetZoomRef.current = zoom;
+    }, [zoom]);
+
+    useEffect(() => {
+        viewOffsetRef.current = viewOffset;
+        if (!animationFrameRef.current) targetViewOffsetRef.current = viewOffset;
+    }, [viewOffset]);
+
+    const startAnimation = useCallback(() => {
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+
+        const animate = () => {
+            const LERP_FACTOR = 0.15; 
+            const currentZoom = zoomRef.current;
+            const currentOffset = viewOffsetRef.current;
+            const targetZoom = targetZoomRef.current;
+            const targetOffset = targetViewOffsetRef.current;
+            
+            // Linear Interpolation
+            const newZoom = currentZoom + (targetZoom - currentZoom) * LERP_FACTOR;
+            const newOffset = {
+                x: currentOffset.x + (targetOffset.x - currentOffset.x) * LERP_FACTOR,
+                y: currentOffset.y + (targetOffset.y - currentOffset.y) * LERP_FACTOR,
+            };
+
+            // Snap when close enough
+            const isZoomDone = Math.abs(newZoom - targetZoom) < 0.001;
+            const isOffsetDone = VEC.len(VEC.sub(newOffset, targetOffset)) < 0.1;
+
+            if (isZoomDone && isOffsetDone) {
+                setZoom(targetZoom);
+                setViewOffset(targetOffset);
+                zoomRef.current = targetZoom;
+                viewOffsetRef.current = targetOffset;
+                animationFrameRef.current = undefined;
+            } else {
+                setZoom(newZoom);
+                setViewOffset(newOffset);
+                zoomRef.current = newZoom;
+                viewOffsetRef.current = newOffset;
+                animationFrameRef.current = requestAnimationFrame(animate);
+            }
+        };
+
+        animationFrameRef.current = requestAnimationFrame(animate);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        };
+    }, []);
 
     // --- Class Logic ---
     const { pivotName, isPivot, activeAttachmentClass, activeClassType, hasDualContext } = useMemo(() => {
@@ -138,25 +200,28 @@ export const usePositioningSession = ({
         return { pivotName: pName, isPivot: isP, activeAttachmentClass: activeClass, activeClassType: targetType, hasDualContext: hasDual };
     }, [markAttachmentClasses, baseAttachmentClasses, markChar.name, baseChar.name, groups, characterSets, overrideClassType]);
 
-    // Initial Hydration
+    // --- Initial Hydration & Auto-Fit ---
     useEffect(() => {
+        // 1. Calculate Initial State
         const savedOffset = markPositioningMap.get(pairIdentifier);
-        const effective = savedOffset || alignmentOffset;
+        const effectiveOffset = savedOffset || alignmentOffset;
         
-        setCurrentOffset(effective);
+        setCurrentOffset(effectiveOffset);
 
         const markGlyph = glyphDataMap.get(markChar.unicode);
         const originalMarkPaths = markGlyph?.paths || [];
         const newMarkPaths = deepClone(originalMarkPaths).map((p: Path) => ({
             ...p,
             groupId: "positioning-mark-group",
-            points: p.points.map(pt => ({ x: pt.x + effective.x, y: pt.y + effective.y })),
-            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + effective.x, y: seg.point.y + effective.y }}))) : undefined
+            points: p.points.map(pt => ({ x: pt.x + effectiveOffset.x, y: pt.y + effectiveOffset.y })),
+            segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + effectiveOffset.x, y: seg.point.y + effectiveOffset.y }}))) : undefined
         }));
         
         setMarkPaths(newMarkPaths);
         setInitialMarkPaths(deepClone(newMarkPaths));
         setSelectedPathIds(new Set(newMarkPaths.map(p => p.id)));
+        
+        // Metadata Sync
         setLsb(targetLigature.lsb); 
         setRsb(targetLigature.rsb);
         setGlyphClass(targetLigature.glyphClass);
@@ -167,7 +232,46 @@ export const usePositioningSession = ({
         setPosition(targetLigature.position);
         setKern(targetLigature.kern);
         setIsLinked(!(activeAttachmentClass?.exceptPairs?.includes(pairNameKey)));
-    }, [pairIdentifier, markPositioningMap, alignmentOffset, activeAttachmentClass, pairNameKey, markChar.unicode, targetLigature, glyphDataMap]);
+
+        // 2. Perform Auto-Fit IMMEDIATELY using local variables
+        // This ensures no race condition where we wait for state to update
+        const allPaths = [...(baseGlyph?.paths || []), ...newMarkPaths];
+        
+        if (allPaths.length > 0) {
+            const combinedBbox = getAccurateGlyphBBox(allPaths, settings.strokeThickness);
+            if (combinedBbox) {
+                // Determine if we need to fit (if content is large or off-screen)
+                // For simplified UX, we always auto-fit on pair switch
+                const PADDING = 150;
+                const availableDim = 1000 - (PADDING * 2);
+                
+                let fitScale = 1;
+                if (combinedBbox.width > 0 && combinedBbox.height > 0) {
+                     fitScale = Math.min(availableDim / combinedBbox.width, availableDim / combinedBbox.height, 1.5); // Cap max zoom
+                }
+
+                const contentCenterX = combinedBbox.x + combinedBbox.width / 2;
+                const contentCenterY = combinedBbox.y + combinedBbox.height / 2;
+                
+                const newTargetZoom = fitScale;
+                const newTargetOffset = {
+                    x: 500 - (contentCenterX * newTargetZoom),
+                    y: 500 - (contentCenterY * newTargetZoom)
+                };
+
+                // Update animation targets immediately
+                targetZoomRef.current = newTargetZoom;
+                targetViewOffsetRef.current = newTargetOffset;
+                startAnimation();
+            }
+        } else {
+             // Reset if empty
+            targetZoomRef.current = 1;
+            targetViewOffsetRef.current = { x: 0, y: 0 };
+            startAnimation();
+        }
+
+    }, [pairIdentifier, markPositioningMap, alignmentOffset, activeAttachmentClass, pairNameKey, markChar.unicode, targetLigature, glyphDataMap, baseGlyph, settings.strokeThickness, startAnimation]);
 
     // Sync Manual Input Fields (Show difference from snap)
     useEffect(() => {
@@ -176,30 +280,6 @@ export const usePositioningSession = ({
             setManualY(Math.round(currentOffset.y - alignmentOffset.y).toString());
         }
     }, [currentOffset, alignmentOffset, isInputFocused]);
-
-    // Auto-Fit Viewport
-    useEffect(() => {
-        if (lastPairIdentifierRef.current === pairIdentifier) return;
-        const allPaths = [...(baseGlyph?.paths || []), ...markPaths];
-        if (allPaths.length > 0) {
-            const combinedBbox = getAccurateGlyphBBox(allPaths, settings.strokeThickness);
-            if (combinedBbox) {
-                const isBeyond = combinedBbox.x < 0 || combinedBbox.y < 0 || (combinedBbox.x + combinedBbox.width) > 1000 || (combinedBbox.y + combinedBbox.height) > 1000;
-                if (isBeyond || zoom !== 1) {
-                    const PADDING = 100;
-                    const availableDim = 1000 - (PADDING * 2);
-                    const fitScale = Math.min(availableDim / combinedBbox.width, availableDim / combinedBbox.height, 1);
-                    const contentCenterX = combinedBbox.x + combinedBbox.width / 2;
-                    const contentCenterY = combinedBbox.y + combinedBbox.height / 2;
-                    setZoom(fitScale); 
-                    setViewOffset({ x: 500 - (contentCenterX * fitScale), y: 500 - (contentCenterY * fitScale) });
-                } else {
-                    setZoom(1); setViewOffset({ x: 0, y: 0 });
-                }
-                lastPairIdentifierRef.current = pairIdentifier;
-            }
-        }
-    }, [pairIdentifier, markPaths, baseGlyph, settings.strokeThickness, zoom]);
 
     // --- Handlers ---
     const handleSave = useCallback((offsetToSave: Point = currentOffset, isAutosave: boolean = false, isManual: boolean = false) => {
