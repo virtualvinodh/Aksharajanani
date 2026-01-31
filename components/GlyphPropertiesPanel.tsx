@@ -448,7 +448,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
               </label>
               <input
                   type="text"
-                  value={character?.unicode !== undefined ? `U+${character.unicode.toString(16).toUpperCase().padStart(4, '0')}` : 'PUA/Virtual'}
+                  value={character?.unicode !== undefined && character.glyphClass !== 'virtual' ? `U+${character.unicode.toString(16).toUpperCase().padStart(4, '0')}` : 'Virtual'}
                   disabled
                   className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm text-gray-500 cursor-not-allowed font-mono"
               />

@@ -99,7 +99,7 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
                 {props.character.name}
               </h2>
-              {props.settings.showUnicodeValues && props.character.unicode !== undefined && (
+              {props.settings.showUnicodeValues && props.character.unicode !== undefined && props.character.glyphClass !== 'virtual' && (
                  <p className="text-gray-500 dark:text-gray-400 text-[10px] font-mono leading-none mt-1">U+{props.character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
               )}
           </div>

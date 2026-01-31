@@ -8,7 +8,6 @@ import { useKerning } from '../contexts/KerningContext';
 import { usePositioning } from '../contexts/PositioningContext';
 import { useRules } from '../contexts/RulesContext';
 import { useSettings } from '../contexts/SettingsContext';
-import ProgressIndicator from './ProgressIndicator';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon } from '../constants';
 import Footer from './Footer';
@@ -51,13 +50,6 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
                 <div className="w-24 hidden sm:block"></div>
              </header>
 
-            <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <ProgressIndicator
-                    completed={rulesProgress.completed}
-                    total={rulesProgress.total}
-                    progressTextKey="rulesProgress"
-                />
-            </div>
             <div className="flex-grow overflow-y-auto">
                 <RulesPage 
                     {...rulesPageProps}
