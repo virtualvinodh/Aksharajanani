@@ -1,5 +1,4 @@
 
-
 import React, { useMemo, useState } from 'react';
 import { Character } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -19,7 +18,11 @@ const CharacterSelectionPanel: React.FC<CharacterSelectionPanelProps> = ({ title
 
     const filteredCharacters = useMemo(() => {
         if (!searchTerm) return characters;
-        return characters.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        const lowerTerm = searchTerm.toLowerCase();
+        return characters.filter(c => 
+            c.name.toLowerCase().includes(lowerTerm) || 
+            (c.label && c.label.toLowerCase().includes(lowerTerm))
+        );
     }, [characters, searchTerm]);
 
     return (
@@ -46,7 +49,7 @@ const CharacterSelectionPanel: React.FC<CharacterSelectionPanelProps> = ({ title
                             onChange={(e) => onSelectionChange(char.unicode, e.target.checked)}
                         />
                         <span className="text-lg font-semibold text-gray-800 dark:text-gray-200" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
-                            {char.name}
+                            {char.label || char.name}
                         </span>
                     </label>
                 ))}

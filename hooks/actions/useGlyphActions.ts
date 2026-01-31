@@ -103,6 +103,7 @@ export const useGlyphActions = (
             rsb?: number; 
             glyphClass?: Character['glyphClass']; 
             advWidth?: number | string;
+            label?: string; // Add label here
             compositeTransform?: ComponentTransform[];
             link?: string[];
             composite?: string[];
@@ -124,12 +125,13 @@ export const useGlyphActions = (
         const newPathsJSON = JSON.stringify(newGlyphData.paths);
         const hasPathChanges = oldPathsJSON !== newPathsJSON;
         
-        // CRITICAL FIX: The dirty check for metadata must include liga and all construction fields
+        // CRITICAL FIX: The dirty check for metadata must include label, liga and all construction fields
         const hasMetadataChanges = 
             newMetadata.lsb !== charToSave.lsb || 
             newMetadata.rsb !== charToSave.rsb ||
             newMetadata.glyphClass !== charToSave.glyphClass ||
             newMetadata.advWidth !== charToSave.advWidth ||
+            newMetadata.label !== charToSave.label || // Check label
             newMetadata.gpos !== charToSave.gpos ||
             newMetadata.gsub !== charToSave.gsub ||
             JSON.stringify(newMetadata.liga) !== JSON.stringify(charToSave.liga) ||

@@ -67,7 +67,7 @@ const ReusePreviewCard: React.FC<ReusePreviewCardProps> = ({
     <div onClick={onClick} className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 flex flex-col items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-600 hover:border-indigo-500 cursor-pointer transition-all duration-200 aspect-square">
         <canvas ref={canvasRef} width={PREVIEW_CANVAS_SIZE} height={PREVIEW_CANVAS_SIZE}></canvas>
         <p className="text-center mt-1 text-sm font-bold text-gray-700 dark:text-gray-300 truncate w-full" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
-            {displayLabel || markChar.name}
+            {displayLabel || markChar.label || markChar.name}
         </p>
     </div>
   );

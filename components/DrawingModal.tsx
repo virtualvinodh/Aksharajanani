@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, TransformState, ComponentTransform } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -56,15 +57,14 @@ const DrawingModal: React.FC<any> = ({
   
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
   
+  // NOTE: Removed local neighbor calculation. Now using props 'prevCharacter' and 'nextCharacter' passed from UnifiedEditorModal.
+
   const {
     currentPaths, handlePathsChange, undo, redo, canUndo, canRedo,
     lsb, setLsb, rsb, setRsb, 
     glyphClass, setGlyphClass, advWidth, setAdvWidth,
+    label, setLabel,
     position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
-    link, setLink,
-    composite, setComposite,
-    liga, setLiga,
-    compositeTransform, setCompositeTransform,
     isTransitioning,
     handleSave, handleRefresh, handleNavigationAttempt,
     wasEmptyOnLoad,
@@ -73,6 +73,13 @@ const DrawingModal: React.FC<any> = ({
       character, glyphData, allGlyphData, allCharacterSets, settings, metrics, markAttachmentRules,
       onSave, onNavigate, onClose
   });
+
+  // Create a transient character object that includes the live label state
+  // This allows the canvas ghost text to update instantly before saving
+  const liveCharacter = useMemo(() => ({
+    ...character,
+    label: label ?? character.label
+  }), [character, label]);
 
   const {
       imageImportRef, svgImportRef, imageTraceRef,
@@ -111,6 +118,7 @@ const DrawingModal: React.FC<any> = ({
       const results: Character[] = [];
       const seenKeys = new Set<string>();
 
+      // Optimization: Create a lookup map for virtual pairs
       const virtualPairMap = new Map<string, Character>();
       allCharacterSets.forEach(set => {
           set.characters.forEach(c => {
@@ -131,6 +139,7 @@ const DrawingModal: React.FC<any> = ({
           seenKeys.add(key);
       };
 
+      // 1. Grid Characters (Real)
       allCharacterSets.forEach(set => set.characters.forEach(c => {
           if (c.hidden || c.unicode === undefined) return;
           const isComponentDep = c.link?.includes(character.name);
@@ -142,6 +151,7 @@ const DrawingModal: React.FC<any> = ({
           }
       }));
 
+      // 2. Positioning Map (Virtual)
       markPositioningMap.forEach((_, key) => {
           const [baseUni, markUni] = key.split('-').map(Number);
           if (baseUni === character.unicode || markUni === character.unicode) {
@@ -163,6 +173,7 @@ const DrawingModal: React.FC<any> = ({
           }
       });
 
+      // 3. Kerning Map (Virtual)
       kerningMap.forEach((_, key) => {
           const [leftUni, rightUni] = key.split('-').map(Number);
           if (leftUni === character.unicode || rightUni === character.unicode) {
@@ -220,7 +231,7 @@ const DrawingModal: React.FC<any> = ({
       <input type="file" ref={imageTraceRef} onChange={handleImageTraceFileChange} className="hidden" accept="image/*" />
 
       <DrawingEditorHeader
-        character={character} glyphData={glyphData} prevCharacter={prevCharacter} nextCharacter={nextCharacter}
+        character={liveCharacter} glyphData={glyphData} prevCharacter={prevCharacter} nextCharacter={nextCharacter}
         onBackClick={() => handleNavigationAttempt(null)} onNavigate={handleNavigationAttempt}
         settings={settings} metrics={metrics} lsb={lsb} setLsb={setLsb} rsb={rsb} setRsb={setRsb}
         onDeleteClick={() => setIsDeleteConfirmOpen(true)} onClear={() => handlePathsChange([])} onSave={handleSave} 
@@ -228,20 +239,18 @@ const DrawingModal: React.FC<any> = ({
         allCharacterSets={allCharacterSets} onSaveConstruction={handleSaveConstruction}
         onUnlock={() => setIsUnlockConfirmOpen(true)} onRelink={() => setIsRelinkConfirmOpen(true)}
         glyphClass={glyphClass} setGlyphClass={setGlyphClass} advWidth={advWidth} setAdvWidth={setAdvWidth}
+        label={label} setLabel={setLabel}
         position={position} setPosition={setPosition}
         kern={kern} setKern={setKern}
         gpos={gpos} setGpos={setGpos}
         gsub={gsub} setGsub={setGsub}
-        liga={liga} setLiga={setLiga}
-        compositeTransform={compositeTransform}
-        setCompositeTransform={setCompositeTransform}
         characterDispatch={characterDispatch}
         glyphDataDispatch={glyphDataDispatch}
         onPathsChange={handlePathsChange}
       />
 
       <DrawingEditorWorkspace 
-        character={character} currentPaths={currentPaths} onPathsChange={handlePathsChange} metrics={metrics}
+        character={liveCharacter} currentPaths={currentPaths} onPathsChange={handlePathsChange} metrics={metrics}
         currentTool={currentTool} setCurrentTool={setCurrentTool} zoom={zoom} setZoom={setZoom}
         viewOffset={viewOffset} setViewOffset={setViewOffset} settings={settings}
         allGlyphData={allGlyphData} allCharacterSets={allCharacterSets} allCharsByName={allCharsByName}

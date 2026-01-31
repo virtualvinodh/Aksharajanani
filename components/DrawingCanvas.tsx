@@ -281,7 +281,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       const hintSize = settings.gridGhostSize ?? gridConfig.characterNameSize;
       ctx.fillStyle = textColor; ctx.font = `bold ${hintSize}px ${guideFontFamily}`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      ctx.fillText(currentCharacter.name, 500, metrics.baseLineY);
+      ctx.fillText(currentCharacter.label || currentCharacter.name, 500, metrics.baseLineY);
     }
     
     // --- Responsive Guide Lines ---

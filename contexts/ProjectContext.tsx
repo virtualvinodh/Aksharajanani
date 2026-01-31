@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { 
     GlyphData, KerningMap, CharacterSet, Path, 
@@ -15,6 +16,7 @@ type CharacterAction =
     | { type: 'UPDATE_CHARACTER_METADATA', payload: { 
           unicode: number, 
           lsb?: number, rsb?: number, glyphClass?: Character['glyphClass'], advWidth?: number | string,
+          label?: string,
           position?: [string, string], kern?: [string, string], link?: string[], composite?: string[], 
           liga?: string[],
           compositeTransform?: ComponentTransform[],
@@ -131,7 +133,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                                 if ('rsb' in p) p.rsb !== undefined ? newChar.rsb = p.rsb : delete newChar.rsb;
                                 if ('glyphClass' in p) p.glyphClass !== undefined ? newChar.glyphClass = p.glyphClass : delete newChar.glyphClass;
                                 if ('advWidth' in p) p.advWidth !== undefined ? newChar.advWidth = p.advWidth : delete newChar.advWidth;
-                                
+                                if ('label' in p) p.label !== undefined ? newChar.label = p.label : delete newChar.label;
+
                                 // Construction props
                                 if ('position' in p) p.position !== undefined ? newChar.position = p.position : delete newChar.position;
                                 if ('kern' in p) p.kern !== undefined ? newChar.kern = p.kern : delete newChar.kern;

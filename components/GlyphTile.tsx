@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -59,7 +60,7 @@ const GlyphTile: React.FC<GlyphTileProps> = ({ character, glyphData, strokeThick
           fontFeatureSettings: 'var(--guide-font-feature-settings)'
         }}
       >
-        {character.name}
+        {character.label || character.name}
       </p>
     </div>
   );

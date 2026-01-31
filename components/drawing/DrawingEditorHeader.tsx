@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet, ComponentTransform, Path } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -34,6 +35,8 @@ interface DrawingEditorHeaderProps {
   setGlyphClass?: (val: Character['glyphClass']) => void;
   advWidth?: number | string;
   setAdvWidth?: (val: number | string | undefined) => void;
+  label?: string;
+  setLabel?: (val: string | undefined) => void;
   liga?: string[];
   setLiga?: (val: string[] | undefined) => void;
   position?: [string, string];

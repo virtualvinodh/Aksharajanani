@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Character } from '../../types';
 
@@ -17,7 +18,7 @@ const CharacterChip: React.FC<CharacterChipProps> = ({ char, isSelected, onToggl
                 className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 focus:ring-indigo-500 accent-indigo-500"
             />
             <span style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
-                {char.name}
+                {char.label || char.name}
             </span>
         </label>
     );

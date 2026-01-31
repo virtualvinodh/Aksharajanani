@@ -58,6 +58,7 @@ export interface ComponentTransform {
 export interface Character {
   unicode?: number;
   name: string;
+  label?: string; // Optional label for display (ghost text), defaults to name if missing
   lsb?: number;
   rsb?: number;
   glyphClass?: 'base' | 'ligature' | 'mark' | 'virtual';

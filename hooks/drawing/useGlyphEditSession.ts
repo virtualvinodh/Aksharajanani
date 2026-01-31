@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Path, Character, GlyphData, AppSettings, FontMetrics, MarkAttachmentRules, CharacterSet, ComponentTransform } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -84,6 +85,7 @@ export const useGlyphEditSession = ({
     const [rsb, setRsbState] = useState<number | undefined>(character.rsb);
     const [glyphClass, setGlyphClassState] = useState<Character['glyphClass']>(character.glyphClass);
     const [advWidth, setAdvWidthState] = useState<number | string | undefined>(character.advWidth);
+    const [label, setLabelState] = useState<string | undefined>(character.label);
     const [position, setPositionState] = useState<[string, string] | undefined>(character.position);
     const [kern, setKernState] = useState<[string, string] | undefined>(character.kern);
     const [gpos, setGposState] = useState<string | undefined>(character.gpos);
@@ -94,11 +96,11 @@ export const useGlyphEditSession = ({
     const [compositeTransform, setCompositeTransformState] = useState<ComponentTransform[] | undefined>(character.compositeTransform);
 
     // --- SYNCHRONOUS METADATA TRACKING ---
-    const metaRef = useRef({ lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, liga, compositeTransform });
+    const metaRef = useRef({ lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform });
     
     useEffect(() => {
-        metaRef.current = { lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, liga, compositeTransform };
-    }, [lsb, rsb, glyphClass, advWidth, position, kern, gpos, gsub, link, composite, liga, compositeTransform]);
+        metaRef.current = { lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform };
+    }, [lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform]);
 
     // --- EXTERNAL PROP SYNC ---
     // Critical: Listen for external updates (e.g. from Properties Panel) to avoid stale overwrites
@@ -107,6 +109,7 @@ export const useGlyphEditSession = ({
         setRsbState(character.rsb);
         setGlyphClassState(character.glyphClass);
         setAdvWidthState(character.advWidth);
+        setLabelState(character.label);
         setPositionState(character.position);
         setKernState(character.kern);
         setGposState(character.gpos);
@@ -142,6 +145,11 @@ export const useGlyphEditSession = ({
     
     const setAdvWidth = (val: number | string | undefined) => {
         setAdvWidthState(val);
+        hasPendingCascade.current = true;
+    };
+
+    const setLabel = (val: string | undefined) => {
+        setLabelState(val);
         hasPendingCascade.current = true;
     };
 
@@ -340,7 +348,8 @@ export const useGlyphEditSession = ({
     const hasMetadataChanges = lsb !== character.lsb || 
                                 rsb !== character.rsb || 
                                 glyphClass !== character.glyphClass || 
-                                advWidth !== character.advWidth || 
+                                advWidth !== character.advWidth ||
+                                label !== character.label ||
                                 JSON.stringify(position) !== JSON.stringify(character.position) || 
                                 JSON.stringify(kern) !== JSON.stringify(character.kern) || 
                                 gpos !== character.gpos || 
@@ -456,6 +465,7 @@ export const useGlyphEditSession = ({
         setGlyphClass,
         advWidth,
         setAdvWidth,
+        label, setLabel,
         position, setPosition,
         kern, setKern,
         gpos, setGpos,

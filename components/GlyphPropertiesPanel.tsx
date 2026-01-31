@@ -1,5 +1,4 @@
 
-
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { FontMetrics, Character, CharacterSet, GlyphData, ComponentTransform, PositioningMode, Path } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -182,6 +181,10 @@ interface GlyphPropertiesPanelProps {
   advWidth?: number | string;
   setAdvWidth?: (val: number | string | undefined) => void;
   
+  // New: Label Property
+  label?: string;
+  setLabel?: (val: string | undefined) => void;
+  
   // New: Liga Property
   liga?: string[];
   setLiga?: (val: string[] | undefined) => void;
@@ -207,6 +210,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   lsb, setLsb, rsb, setRsb, metrics, onClose,
   character, glyphData, allCharacterSets, onSaveConstruction,
   glyphClass, setGlyphClass, advWidth, setAdvWidth,
+  label, setLabel,
   liga, setLiga,
   position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
   compositeTransform, setCompositeTransform,
@@ -236,6 +240,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   const [positionComps, setPositionComps] = useState<[string, string]>(character?.position || ['', '']);
   const [kernComps, setKernComps] = useState<[string, string]>(character?.kern || ['', '']);
   
+  // Set default state to false to close accordions by default
   const [isClassificationExpanded, setIsClassificationExpanded] = useState(false);
   const [isConstructionExpanded, setIsConstructionExpanded] = useState(false);
 
@@ -380,11 +385,11 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
 
     <div 
       ref={panelRef} 
+      // Removed animation classes: animate-pop-in, sm:animate-fade-in-up
       className="
         fixed top-20 left-0 right-0 mx-auto w-[90vw] max-h-[70vh] z-[100] flex flex-col gap-4 p-4
         bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-y-auto
-        animate-pop-in
-        sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-80 sm:h-auto sm:max-h-[80vh] sm:mx-0 sm:animate-fade-in-up
+        sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-80 sm:h-auto sm:max-h-[80vh] sm:mx-0
       "
     >
       <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2 flex-shrink-0">
@@ -422,6 +427,33 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
           </div>
       </div>
       )}
+
+      {/* Label and Codepoint */}
+      <div className="grid grid-cols-2 gap-3 flex-shrink-0">
+          <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
+                  Label (Ghost)
+              </label>
+              <input
+                  type="text"
+                  placeholder={character?.name}
+                  value={label || ''}
+                  onChange={(e) => setLabel && setLabel(e.target.value === '' ? undefined : e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+          </div>
+          <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
+                  Codepoint
+              </label>
+              <input
+                  type="text"
+                  value={character?.unicode !== undefined ? `U+${character.unicode.toString(16).toUpperCase().padStart(4, '0')}` : 'PUA/Virtual'}
+                  disabled
+                  className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm text-gray-500 cursor-not-allowed font-mono"
+              />
+          </div>
+      </div>
       
       {setGlyphClass && (
         <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex-shrink-0">

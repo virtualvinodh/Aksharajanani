@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, CharacterSet, MarkAttachmentRules, Point, Path, ComponentTransform } from '../types';
 import { useLayout } from '../contexts/LayoutContext';
@@ -297,7 +296,7 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
   }
 
   return (
-    <div className={`fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col ${isClosing ? 'animate-slide-out' : 'animate-slide-in'}`}>
+    <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col">
         {/* Floating Nav Button */}
         <button
             onClick={openNavDrawer}

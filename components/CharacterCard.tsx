@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -99,11 +100,12 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const showName = !!settings.showGlyphNames;
   const shouldShowNameBlock = !isDrawn || showName || settings.showUnicodeValues;
 
-  const nameLength = character.name.length;
+  const displayLabel = character.label || character.name;
+  const labelLength = displayLabel.length;
   let ghostFontSizeClass: string;
-  if (nameLength > 2) {
+  if (labelLength > 2) {
     ghostFontSizeClass = isCompact ? "text-sm sm:text-lg" : "text-xl sm:text-3xl";
-  } else if (nameLength > 1) {
+  } else if (labelLength > 1) {
     ghostFontSizeClass = isCompact ? "text-lg sm:text-3xl" : "text-3xl sm:text-5xl";
   } else {
     ghostFontSizeClass = isCompact ? "text-2xl sm:text-4xl" : "text-4xl sm:text-6xl";
@@ -180,7 +182,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                   fontFeatureSettings: 'var(--guide-font-feature-settings)'
                 }}
             >
-                {character.name}
+                {displayLabel}
             </span>
              {!isCompact && settings.showUnicodeValues && character.unicode !== undefined && (
                 <span className="absolute bottom-2 text-[10px] text-gray-300 dark:text-gray-600">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</span>

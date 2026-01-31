@@ -134,7 +134,7 @@ const GlyphThumbnail: React.FC<{
                         className="text-gray-300 dark:text-gray-600 font-bold text-2xl truncate"
                         style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}
                     >
-                        {character.name}
+                        {character.label || character.name}
                     </span>
                 </div>
             )}

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -310,7 +311,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                         <button onClick={() => setIsReusePanelOpen(false)}><CloseIcon className="w-5 h-5"/></button>
                     </div>
                     <div className="flex-grow overflow-y-auto pr-1 grid grid-cols-2 gap-3">
-                        {reuseSources.length > 0 ? reuseSources.map(s => <ReusePreviewCard key={s.unicode} baseChar={s} markChar={props.markChar} onClick={() => handleReuse(s)} glyphDataMap={props.glyphDataMap} strokeThickness={props.settings.strokeThickness} markPositioningMap={props.markPositioningMap} glyphVersion={props.glyphVersion} displayLabel={s.name} />) : <div className="col-span-2 text-center text-gray-500 italic py-4">{t('noCompleteSources')}</div>}
+                        {reuseSources.length > 0 ? reuseSources.map(s => <ReusePreviewCard key={s.unicode} baseChar={s} markChar={props.markChar} onClick={() => handleReuse(s)} glyphDataMap={props.glyphDataMap} strokeThickness={props.settings.strokeThickness} markPositioningMap={props.markPositioningMap} glyphVersion={props.glyphVersion} displayLabel={s.label || s.name} />) : <div className="col-span-2 text-center text-gray-500 italic py-4">{t('noCompleteSources')}</div>}
                     </div>
                  </div>
             )}
