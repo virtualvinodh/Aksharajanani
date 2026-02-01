@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { Character, GlyphData } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -47,13 +45,12 @@ const ExistingRuleDisplay: React.FC<ExistingRuleDisplayProps> = ({
 
         const glyphOrGroupDisplay = (name: string, isContext: boolean = false) => {
             if (name.startsWith('@') || name.startsWith('$')) {
-                const displayName = name.startsWith('$') ? `@${name.substring(1)}` : name;
                 return (
                     <SizedDisplay isContext={isContext}>
                         <div className="w-full h-full flex items-center justify-center p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
                             <span 
                                 className="text-sm text-purple-800 dark:text-purple-200 break-all font-mono"
-                            >{displayName}</span>
+                            >{name}</span>
                         </div>
                     </SizedDisplay>
                 );
@@ -81,7 +78,6 @@ const ExistingRuleDisplay: React.FC<ExistingRuleDisplayProps> = ({
             );
         }
         if (ruleType === 'ligature') {
-            const ligChar = allCharsByName.get(ruleKey);
             return (
                 <>
                     {(ruleValue as string[]).map((compName, index) => (
@@ -91,7 +87,7 @@ const ExistingRuleDisplay: React.FC<ExistingRuleDisplayProps> = ({
                         </React.Fragment>
                     ))}
                     <span className="text-2xl font-bold mx-4 text-indigo-500 dark:text-indigo-400">→</span>
-                    {ligChar && glyphOrGroupDisplay(ligChar.name)}
+                    {glyphOrGroupDisplay(ruleKey)}
                 </>
             );
         }

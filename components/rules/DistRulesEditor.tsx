@@ -2,10 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import GlyphTile from '../GlyphTile';
-import { ClearIcon, EditIcon, AddIcon, TrashIcon } from '../../constants';
+import { ClearIcon, EditIcon, TrashIcon, AddIcon } from '../../constants';
 import { Character, GlyphData, CharacterSet } from '../../types';
-import GlyphSelectionModal from '../GlyphSelectionModal';
-import GlyphSelect from '../scriptcreator/GlyphSelect';
+import SmartGlyphInput from './manager/SmartGlyphInput';
 
 interface DistContextualRuleValue {
     target: string;
@@ -33,7 +32,6 @@ interface DistRulesEditorProps {
     glyphVersion: number;
 }
 
-
 interface GlyphSlotProps {
     onClick: () => void;
     char: Character | null;
@@ -41,133 +39,43 @@ interface GlyphSlotProps {
     strokeThickness: number;
     prompt: string;
     onClear?: () => void;
+    isGroup?: boolean;
+    groupName?: string;
 }
-const GlyphSlot: React.FC<GlyphSlotProps> = React.memo(({ onClick, char, glyphData, strokeThickness, prompt, onClear }) => {
+
+const GlyphSlot: React.FC<GlyphSlotProps> = React.memo(({ onClick, char, glyphData, strokeThickness, prompt, onClear, isGroup, groupName }) => {
     return (
-        <div className="relative">
+        <div className="relative group/slot">
             <div 
                 onClick={onClick}
-                className={`w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors cursor-pointer hover:border-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 ${char ? 'border-gray-300 dark:border-gray-600' : 'border-gray-400 dark:border-gray-500'}`}
+                className={`w-20 h-20 border-2 rounded-lg flex items-center justify-center transition-colors cursor-pointer hover:border-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 ${
+                    isGroup 
+                        ? 'bg-purple-100 dark:bg-purple-900/40 border-purple-200 dark:border-purple-800' 
+                        : (char ? 'border-gray-300 dark:border-gray-600 border-dashed' : 'border-gray-400 dark:border-gray-500 border-dashed')
+                }`}
             >
-                {char ? (
-                    <GlyphTile character={char} glyphData={glyphData} strokeThickness={strokeThickness} />
+                {isGroup ? (
+                    <span className="font-mono text-sm text-purple-800 dark:text-purple-200 break-all text-center p-1">{groupName}</span>
                 ) : (
-                    <span className="text-xs text-gray-500 text-center p-1">{prompt}</span>
+                    char ? (
+                        <GlyphTile character={char} glyphData={glyphData} strokeThickness={strokeThickness} />
+                    ) : (
+                        <span className="text-xs text-gray-500 text-center p-1">{prompt}</span>
+                    )
                 )}
             </div>
-            {char && onClear && (
-                 <button onClick={(e) => { e.stopPropagation(); onClear(); }} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
+            {onClear && (
+                 <button 
+                    onClick={(e) => { e.stopPropagation(); onClear(); }} 
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 z-10 opacity-0 group-hover/slot:opacity-100 transition-opacity shadow-sm"
+                    type="button"
+                 >
                     <ClearIcon />
                 </button>
             )}
         </div>
     );
 });
-
-const GroupSlot: React.FC<{ 
-    value: string; 
-    groups: Record<string, string[]>; 
-    characterSets: CharacterSet[];
-    onChange: (newValue: string) => void; 
-    onRemove: () => void; 
-}> = ({ value, groups, characterSets, onChange, onRemove }) => {
-    const { t } = useLocale();
-    const groupNames = Object.keys(groups);
-    const prefix = value.charAt(0); // '$' or '@'
-
-    return (
-        <div className="relative group z-10">
-            <div className="w-20 h-20 border-2 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/50 cursor-pointer border-purple-200 dark:border-purple-800 group-hover:border-purple-400">
-                <span className="font-mono text-sm text-purple-800 dark:text-purple-200">{value}</span>
-            </div>
-            <button 
-                onClick={(e) => { e.stopPropagation(); onRemove(); }} 
-                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 z-20"
-                type="button"
-            >
-                <ClearIcon />
-            </button>
-            
-            <div className="absolute hidden group-hover:block top-full pt-1 left-1/2 -translate-x-1/2 z-30">
-                <div className="bg-white dark:bg-gray-700 rounded-md shadow-xl border dark:border-gray-600 p-1 min-w-[140px] max-h-48 overflow-y-auto">
-                    {characterSets.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] uppercase font-bold text-gray-400 border-b dark:border-gray-600">Sets</div>
-                    )}
-                    {characterSets.map(set => (
-                        <button
-                            key={`set-${set.nameKey}`}
-                            type="button"
-                            onClick={() => onChange(`$${set.nameKey}`)}
-                            className={`w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-purple-50 dark:hover:bg-gray-600 font-mono block ${value === `$${set.nameKey}` ? 'bg-purple-100 dark:bg-gray-600 font-bold' : ''}`}
-                        >
-                            ${t(set.nameKey)}
-                        </button>
-                    ))}
-                    {groupNames.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] uppercase font-bold text-gray-400 border-b border-t mt-1 dark:border-gray-600">Groups</div>
-                    )}
-                    {groupNames.map(name => (
-                        <button
-                            key={name}
-                            type="button"
-                            onClick={() => onChange(`@${name}`)}
-                            className={`w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-purple-50 dark:hover:bg-gray-600 font-mono block ${value === `@${name}` ? 'bg-purple-100 dark:bg-gray-600 font-bold' : ''}`}
-                        >
-                            @{name}
-                        </button>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const GroupSelector: React.FC<{ 
-    groups: Record<string, string[]>, 
-    characterSets: CharacterSet[],
-    onSelect: (groupName: string) => void 
-}> = ({ groups, characterSets, onSelect }) => {
-    const { t } = useLocale();
-    const groupNames = Object.keys(groups);
-
-    return (
-        <div className="relative group">
-            <button type="button" className="w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors text-xs text-gray-500 hover:border-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border-gray-400 dark:border-gray-500">
-                {t('addGroup')}
-            </button>
-            <div className="absolute hidden group-hover:block z-20 bottom-full pb-2 left-1/2 -translate-x-1/2">
-                <div className="bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 p-1 min-w-[140px] max-h-48 overflow-y-auto">
-                    {characterSets.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] uppercase font-bold text-gray-400 border-b dark:border-gray-600">Sets</div>
-                    )}
-                    {characterSets.map(set => (
-                        <button
-                            key={`set-${set.nameKey}`}
-                            type="button"
-                            onClick={() => onSelect(`$${set.nameKey}`)}
-                            className="w-full text-left px-3 py-1 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-mono"
-                        >
-                            ${t(set.nameKey)}
-                        </button>
-                    ))}
-                    {groupNames.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] uppercase font-bold text-gray-400 border-b border-t mt-1 dark:border-gray-600">Groups</div>
-                    )}
-                    {groupNames.map(name => (
-                        <button
-                            key={name}
-                            type="button"
-                            onClick={() => onSelect(`@${name}`)}
-                            className="w-full text-left px-3 py-1 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-mono"
-                        >
-                            @{name}
-                        </button>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
 
 
 const DistRulesEditor: React.FC<DistRulesEditorProps> = ({ 
@@ -181,14 +89,20 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
     
     const [editingContextualRuleIndex, setEditingContextualRuleIndex] = useState<number | null>(null);
     const [editingSimpleRuleKey, setEditingSimpleRuleKey] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalTarget, setModalTarget] = useState<{ type: string; index?: number } | null>(null);
+    
+    // Editing State
+    const [editingSlot, setEditingSlot] = useState<{ type: string, index?: number } | null>(null);
+    const [addValue, setAddValue] = useState('');
 
     const simpleRules = Object.entries(rules.simple || {});
     const contextualRules = rules.contextual || [];
 
     const isEditing = editingContextualRuleIndex !== null || editingSimpleRuleKey !== null;
     const isAdding = addingRuleType !== null;
+
+    useEffect(() => {
+        setAddValue('');
+    }, [editingSlot]);
 
     useEffect(() => {
         if (editingContextualRuleIndex !== null) {
@@ -221,36 +135,110 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
             setEditorState({ type: addingRuleType!, target: null, value: '0', left: [], right: [] });
         }
     }, [isAdding, addingRuleType]);
-    
-    const openGlyphModal = (type: string, index?: number) => {
-        setModalTarget({ type, index });
-        setIsModalOpen(true);
-    };
 
-    const handleGlyphSelect = (char: Character) => {
-        if (!modalTarget) return;
-        const { type, index } = modalTarget;
-        
-        const updateArray = (field: 'left' | 'right', value: string, idx?: number) => {
+    const handleUpdate = (type: string, value: string, index?: number) => {
+        const updateArray = (field: 'left' | 'right', val: string, idx?: number) => {
             setEditorState(s => {
                 const newArr = [...s[field]];
-                if (idx !== undefined) {
-                    newArr[idx] = value;
+                if (idx !== undefined && idx < newArr.length) {
+                    newArr[idx] = val;
+                } else {
+                    newArr.push(val);
                 }
                 return { ...s, [field]: newArr };
             });
         };
 
         switch (type) {
-            case 'target': setEditorState(s => ({ ...s, target: char.name })); break;
-            case 'left-add': setEditorState(s => ({ ...s, left: [...s.left, char.name] })); break;
-            case 'left-replace': updateArray('left', char.name, index); break;
-            case 'right-add': setEditorState(s => ({ ...s, right: [...s.right, char.name] })); break;
-            case 'right-replace': updateArray('right', char.name, index); break;
+            case 'target': setEditorState(s => ({ ...s, target: value })); break;
+            case 'left': updateArray('left', value, index); break;
+            case 'right': updateArray('right', value, index); break;
+        }
+    };
+
+    const handleRemove = (type: string, index?: number) => {
+        if (type === 'target') {
+            setEditorState(s => ({ ...s, target: null }));
+        } else if ((type === 'left' || type === 'right') && index !== undefined) {
+             setEditorState(s => ({ 
+                 ...s, 
+                 [type]: s[type].filter((_, i) => i !== index) 
+             }));
+        }
+        setEditingSlot(null);
+    };
+
+    const renderSlot = (type: string, value: string | null, index?: number, placeholder: string = "Select") => {
+        const isEditingSlot = editingSlot?.type === type && editingSlot?.index === index;
+
+        if (isEditingSlot) {
+            return (
+                <div className="w-32 h-20 flex items-center">
+                    <SmartGlyphInput
+                        value={value || ''}
+                        onChange={(val) => handleUpdate(type, val, index)}
+                        onSelect={(val) => { handleUpdate(type, val, index); setEditingSlot(null); }}
+                        onBlur={() => setEditingSlot(null)}
+                        autoFocus
+                        characterSets={allCharacterSets}
+                        groups={groups}
+                        placeholder={placeholder}
+                    />
+                </div>
+            );
         }
 
-        setIsModalOpen(false);
-        setModalTarget(null);
+        const isGroup = value ? (value.startsWith('@') || value.startsWith('$')) : false;
+        const char = (value && !isGroup) ? allCharsByName.get(value) : null;
+        const glyphData = char ? glyphDataMap.get(char.unicode) : undefined;
+
+        return (
+            <GlyphSlot
+                onClick={() => setEditingSlot({ type, index })}
+                char={char}
+                glyphData={glyphData}
+                strokeThickness={strokeThickness}
+                prompt={value || placeholder}
+                onClear={value ? () => handleRemove(type, index) : undefined}
+                isGroup={isGroup}
+                groupName={value || ''}
+            />
+        );
+    };
+
+    const renderAddSlot = (type: string, index: number, placeholder: string = "Add") => {
+         const isEditingSlot = editingSlot?.type === type && editingSlot?.index === index;
+         if (isEditingSlot) {
+             return (
+                <div className="w-32 h-20 flex items-center">
+                    <SmartGlyphInput
+                        value={addValue}
+                        onChange={(val) => setAddValue(val)}
+                        onSelect={(val) => { handleUpdate(type, val, index); setAddValue(''); setEditingSlot(null); }}
+                        onBlur={() => { setAddValue(''); setEditingSlot(null); }}
+                        onKeyDown={(e) => {
+                             if (e.key === 'Enter' && addValue) {
+                                 handleUpdate(type, addValue, index);
+                                 setAddValue('');
+                             }
+                             if (e.key === 'Escape') setEditingSlot(null);
+                        }}
+                        autoFocus
+                        characterSets={allCharacterSets}
+                        groups={groups}
+                        placeholder={placeholder}
+                    />
+                </div>
+             );
+         }
+         return (
+             <button 
+                onClick={() => setEditingSlot({ type, index })}
+                className="w-20 h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-500 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all"
+             >
+                 <AddIcon className="w-6 h-6" />
+             </button>
+         );
     };
 
     const handleSave = () => {
@@ -301,60 +289,42 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
     const renderEditor = () => (
         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 space-y-4">
             {(isEditing ? editorState.type : addingRuleType) === 'simple' ? (
-                 <div className="flex items-end gap-4 justify-center">
-                    <GlyphSlot onClick={() => openGlyphModal('target')} onClear={() => setEditorState(s => ({...s, target: null}))} char={editorState.target ? allCharsByName.get(editorState.target) : null} glyphData={editorState.target ? glyphDataMap.get(allCharsByName.get(editorState.target)!.unicode) : undefined} strokeThickness={strokeThickness} prompt={t('targetCharacter')} />
+                 <div className="flex items-center gap-4 justify-center">
+                    {renderSlot('target', editorState.target, undefined, t('targetCharacter'))}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('ruleValue')}</label>
                         <input type="number" value={editorState.value} onChange={e => setEditorState(s => ({...s, value: e.target.value}))} className="w-24 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2" />
                     </div>
                 </div>
             ) : (
-                <div className="flex flex-wrap items-start justify-center gap-2">
-                     <div>
+                <div className="flex flex-col md:flex-row items-start justify-center gap-4">
+                     <div className="flex flex-col items-center">
                         <h4 className="font-semibold mb-2 text-xs text-center text-gray-700 dark:text-gray-300">{t('leftContext')}</h4>
-                        <div className="flex flex-col items-center gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[120px]">
-                            {editorState.left.map((name, index) => (name.startsWith('@') || name.startsWith('$')) ? 
-                                <GroupSlot
-                                    key={index}
-                                    value={name}
-                                    groups={groups}
-                                    characterSets={allCharacterSets}
-                                    onChange={(val) => setEditorState(s => ({...s, left: s.left.map((item, idx) => idx === index ? val : item)}))}
-                                    onRemove={() => setEditorState(s => ({...s, left: s.left.filter((_, i) => i !== index)}))}
-                                /> :
-                                <GlyphSlot key={index} onClick={() => openGlyphModal('left-replace', index)} onClear={() => setEditorState(s => ({...s, left: s.left.filter((_, i) => i !== index)}))} char={allCharsByName.get(name) || null} glyphData={allCharsByName.get(name) ? glyphDataMap.get(allCharsByName.get(name)!.unicode) : undefined} strokeThickness={strokeThickness} prompt={t('add')} />)}
-                            <GlyphSlot onClick={() => openGlyphModal('left-add')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('add')} />
-                            <GroupSelector groups={groups} characterSets={allCharacterSets} onSelect={name => setEditorState(s => ({...s, left: [...s.left, name]}))} />
+                        <div className="flex flex-wrap gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[100px] justify-center">
+                            {editorState.left.map((name, index) => renderSlot('left', name, index))}
+                            {renderAddSlot('left', editorState.left.length)}
                         </div>
                     </div>
-                    <div className="pt-5 text-center">
+                    <div className="flex flex-col items-center">
                         <h4 className="font-semibold mb-2 text-xs text-center text-gray-700 dark:text-gray-300">{t('targetCharacter')}</h4>
-                        <GlyphSlot onClick={() => openGlyphModal('target')} onClear={() => setEditorState(s => ({...s, target: null}))} char={editorState.target ? allCharsByName.get(editorState.target) : null} glyphData={editorState.target ? glyphDataMap.get(allCharsByName.get(editorState.target)!.unicode) : undefined} strokeThickness={strokeThickness} prompt={t('targetGlyph')} />
-                    </div>
-                     <div>
-                        <h4 className="font-semibold mb-2 text-xs text-center text-gray-700 dark:text-gray-300">{t('rightContext')}</h4>
-                        <div className="flex flex-col items-center gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[120px]">
-                            {editorState.right.map((name, index) => (name.startsWith('@') || name.startsWith('$')) ?
-                                <GroupSlot
-                                    key={index}
-                                    value={name}
-                                    groups={groups}
-                                    characterSets={allCharacterSets}
-                                    onChange={(val) => setEditorState(s => ({...s, right: s.right.map((item, idx) => idx === index ? val : item)}))}
-                                    onRemove={() => setEditorState(s => ({...s, right: s.right.filter((_, i) => i !== index)}))}
-                                /> :
-                                <GlyphSlot key={index} onClick={() => openGlyphModal('right-replace', index)} onClear={() => setEditorState(s => ({...s, right: s.right.filter((_, i) => i !== index)}))} char={allCharsByName.get(name) || null} glyphData={allCharsByName.get(name) ? glyphDataMap.get(allCharsByName.get(name)!.unicode) : undefined} strokeThickness={strokeThickness} prompt={t('add')} />)}
-                            <GlyphSlot onClick={() => openGlyphModal('right-add')} char={null} glyphData={undefined} strokeThickness={strokeThickness} prompt={t('add')} />
-                            <GroupSelector groups={groups} characterSets={allCharacterSets} onSelect={name => setEditorState(s => ({...s, right: [...s.right, name]}))} />
+                        <div className="flex flex-col gap-4 items-center">
+                            {renderSlot('target', editorState.target, undefined, t('targetGlyph'))}
+                            <div className="w-full">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 text-center">{t('space')}</label>
+                                <input type="number" value={editorState.value} onChange={e => setEditorState(s => ({...s, value: e.target.value}))} className="w-24 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-center" />
+                            </div>
                         </div>
                     </div>
-                    <div className="pt-5">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('space')}</label>
-                        <input type="number" value={editorState.value} onChange={e => setEditorState(s => ({...s, value: e.target.value}))} className="w-24 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2" />
+                     <div className="flex flex-col items-center">
+                        <h4 className="font-semibold mb-2 text-xs text-center text-gray-700 dark:text-gray-300">{t('rightContext')}</h4>
+                        <div className="flex flex-wrap gap-2 p-2 bg-gray-100 dark:bg-gray-900/50 rounded-md min-h-[100px] justify-center">
+                            {editorState.right.map((name, index) => renderSlot('right', name, index))}
+                            {renderAddSlot('right', editorState.right.length)}
+                        </div>
                     </div>
                 </div>
             )}
-            <div className="flex justify-end gap-2 mt-2">
+            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button onClick={handleCancel} className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600">{t('cancel')}</button>
                 <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">{isEditing ? t('updateRule') : t('saveRule')}</button>
             </div>
@@ -376,43 +346,56 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
             {(isAdding || isEditing) && renderEditor()}
             
             {simpleRules.length > 0 && <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">{t('simplePositioning')}</h3>}
-            {simpleRules.map(([key, value]) => (
-                <div key={key} className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-                    <GlyphTile character={allCharsByName.get(key)!} glyphData={glyphDataMap.get(allCharsByName.get(key)!.unicode)} strokeThickness={strokeThickness} />
-                    <span className="text-xl font-bold mx-2 text-indigo-500 dark:text-indigo-400">→</span>
-                    <span className="font-mono text-lg font-semibold p-2 bg-gray-100 dark:bg-gray-700 rounded-md">{value as string}</span>
-                     <div className="flex items-center gap-1 ml-auto">
-                        <button onClick={() => setEditingSimpleRuleKey(key)} title={t('edit')} className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                            <EditIcon />
-                        </button>
-                        <button onClick={() => onDelete(key, 'simple')} title={t('deleteRule')} className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                            <ClearIcon />
-                        </button>
+            {simpleRules.map(([key, value]) => {
+                const isGroup = key.startsWith('@') || key.startsWith('$');
+                return (
+                    <div key={key} className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 group">
+                        {isGroup ? (
+                            <div className="w-20 h-20 bg-purple-100 dark:bg-purple-900/50 rounded-lg border border-purple-200 dark:border-purple-800 flex items-center justify-center">
+                                <span className="font-mono text-sm text-purple-800 dark:text-purple-200 font-bold">{key}</span>
+                            </div>
+                        ) : (
+                            <GlyphTile character={allCharsByName.get(key)!} glyphData={glyphDataMap.get(allCharsByName.get(key)?.unicode || 0)} strokeThickness={strokeThickness} />
+                        )}
+                        <span className="text-xl font-bold mx-2 text-indigo-500 dark:text-indigo-400">→</span>
+                        <span className="font-mono text-lg font-semibold p-2 bg-gray-100 dark:bg-gray-700 rounded-md">{value as string}</span>
+                        <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setEditingSimpleRuleKey(key)} title={t('edit')} className="p-2 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <EditIcon />
+                            </button>
+                            <button onClick={() => onDelete(key, 'simple')} title={t('deleteRule')} className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <ClearIcon />
+                            </button>
+                        </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
 
             {contextualRules.length > 0 && <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">{t('contextualPositioning')}</h3>}
-            {contextualRules.map((rule, index) => (
-                <div key={index} className="p-2 border rounded-md flex justify-between items-start dark:border-gray-600">
-                    <div className="flex items-center gap-1 flex-wrap">
-                        {(rule.left || []).map((name: string, i: number) => (name.startsWith('@') || name.startsWith('$')) ? <span key={`l-${i}`} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 p-1 rounded font-mono opacity-70">{name}</span> : <div key={`l-${i}`} className="opacity-60"><GlyphTile character={allCharsByName.get(name)!} glyphData={glyphDataMap.get(allCharsByName.get(name)!.unicode)} strokeThickness={strokeThickness} /></div>)}
-                        <GlyphTile character={allCharsByName.get(rule.target)!} glyphData={glyphDataMap.get(allCharsByName.get(rule.target)!.unicode)} strokeThickness={strokeThickness} />
-                        {(rule.right || []).map((name: string, i: number) => (name.startsWith('@') || name.startsWith('$')) ? <span key={`r-${i}`} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 p-1 rounded font-mono opacity-70">{name}</span> : <div key={`r-${i}`} className="opacity-60"><GlyphTile character={allCharsByName.get(name)!} glyphData={glyphDataMap.get(allCharsByName.get(name)!.unicode)} strokeThickness={strokeThickness} /></div>)}
-                        <span className="text-xl font-bold mx-2 text-indigo-500 dark:text-indigo-400">→</span>
-                        <span className="font-mono p-1 bg-gray-100 dark:bg-gray-700 rounded">{rule.space}</span>
+            {contextualRules.map((rule, index) => {
+                const isTargetGroup = rule.target.startsWith('@') || rule.target.startsWith('$');
+                return (
+                    <div key={index} className="p-3 border bg-white dark:bg-gray-800 rounded-lg flex justify-between items-center dark:border-gray-700 group shadow-sm">
+                        <div className="flex items-center gap-1 flex-wrap">
+                            {(rule.left || []).map((name: string, i: number) => (name.startsWith('@') || name.startsWith('$')) ? <span key={`l-${i}`} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-mono font-bold">{name}</span> : <div key={`l-${i}`} className="opacity-60 scale-75"><GlyphTile character={allCharsByName.get(name)!} glyphData={glyphDataMap.get(allCharsByName.get(name)?.unicode || 0)} strokeThickness={strokeThickness} /></div>)}
+                            
+                            {isTargetGroup ? (
+                                <span className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-mono font-bold">{rule.target}</span>
+                            ) : (
+                                <GlyphTile character={allCharsByName.get(rule.target)!} glyphData={glyphDataMap.get(allCharsByName.get(rule.target)?.unicode || 0)} strokeThickness={strokeThickness} />
+                            )}
+                            
+                            {(rule.right || []).map((name: string, i: number) => (name.startsWith('@') || name.startsWith('$')) ? <span key={`r-${i}`} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-mono font-bold">{name}</span> : <div key={`r-${i}`} className="opacity-60 scale-75"><GlyphTile character={allCharsByName.get(name)!} glyphData={glyphDataMap.get(allCharsByName.get(name)?.unicode || 0)} strokeThickness={strokeThickness} /></div>)}
+                            <span className="text-xl font-bold mx-2 text-indigo-500 dark:text-indigo-400">→</span>
+                            <span className="font-mono p-1.5 bg-gray-100 dark:bg-gray-700 rounded font-bold text-sm">{rule.space}</span>
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setEditingContextualRuleIndex(index)} className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full hover:text-indigo-600"><EditIcon/></button>
+                            <button onClick={() => onDelete(index, 'contextual')} className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full hover:text-red-600"><TrashIcon/></button>
+                        </div>
                     </div>
-                    <div><button onClick={() => setEditingContextualRuleIndex(index)} className="p-1"><EditIcon/></button><button onClick={() => onDelete(index, 'contextual')} className="p-1"><TrashIcon/></button></div>
-                </div>
-            ))}
-            
-            <GlyphSelectionModal 
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSelect={handleGlyphSelect}
-                characterSets={allCharacterSets}
-                glyphDataMap={glyphDataMap}
-            />
+                );
+            })}
         </div>
     )
 };
