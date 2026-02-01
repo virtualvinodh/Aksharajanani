@@ -6,6 +6,7 @@ import { renderPaths, calculateUnifiedTransform } from '../services/glyphRenderS
 import { PREVIEW_CANVAS_SIZE, CheckCircleIcon, LinkIcon, PuzzleIcon, PositioningIcon, KerningIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
 import { isGlyphDrawn as isDrawnCheck } from '../utils/glyphUtils';
+import { useLayout } from '../contexts/LayoutContext';
 
 interface CharacterCardProps {
   character: Character;
@@ -17,20 +18,27 @@ interface CharacterCardProps {
   isSelected?: boolean;
   onToggleSelect?: (character: Character) => void;
   variant?: 'default' | 'compact' | 'overlay';
+  disabledReason?: string;
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({ 
     character, glyphData, isAvailable, isManuallySet, onSelect, 
     isSelectionMode = false, isSelected = false, onToggleSelect,
-    variant = 'default'
+    variant = 'default', disabledReason
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
   const { settings, metrics } = useSettings();
+  const { showNotification } = useLayout();
   
   const handleClick = (e: React.MouseEvent) => {
-      if (!isAvailable) return;
+      if (!isAvailable) {
+          if (disabledReason) {
+              showNotification(disabledReason, 'info');
+          }
+          return;
+      }
       if (isSelectionMode || e.ctrlKey || e.metaKey || e.shiftKey) {
           e.stopPropagation();
           onToggleSelect?.(character);
@@ -120,6 +128,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       ref={cardRef}
       onClick={handleClick}
       className={`${baseContainerClasses} ${stateClasses}`}
+      title={disabledReason}
     >
       {/* Badge Priority: pos -> kern -> link -> composite */}
       {!isCompact && character.position && (

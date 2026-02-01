@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Character, UnifiedRenderContext, GlyphData } from '../types';
 import CharacterCard from './CharacterCard';
@@ -35,16 +36,26 @@ const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {
   const groups = rulesState.fontRules?.groups || {};
 
   // 2. Perform logic calculations using useMemo for performance
-  const { resolvedGlyphData, isAvailable, isManuallySet } = useMemo(() => {
+  const { resolvedGlyphData, isAvailable, isManuallySet, disabledReason } = useMemo(() => {
     // isAvailable check
     let available = true;
+    const missingComponents: string[] = [];
     const sourceChars = character.position || character.kern || character.link;
     if (sourceChars) {
-        available = sourceChars.every(name => {
+        sourceChars.forEach(name => {
             const comp = allCharsByName.get(name);
-            return comp && comp.unicode !== undefined && isDrawnCheck(glyphDataMap.get(comp.unicode));
+            // Check if component exists and is drawn
+            // unicode can be undefined if it's purely virtual without ID, but here we likely deal with mapped chars
+            if (!comp || comp.unicode === undefined || !isDrawnCheck(glyphDataMap.get(comp.unicode))) {
+                missingComponents.push(name);
+            }
         });
+        available = missingComponents.length === 0;
     }
+
+    const reason = !available && missingComponents.length > 0 
+        ? `To edit this, first draw: ${missingComponents.join(', ')}` 
+        : undefined;
 
     // isManuallySet check
     let manuallySet = true; // Default to true for standard glyphs
@@ -81,7 +92,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {
     const resolvedPaths = getUnifiedPaths(character, renderCtx);
     const resolvedData: GlyphData | undefined = resolvedPaths.length > 0 ? { paths: resolvedPaths } : undefined;
 
-    return { resolvedGlyphData: resolvedData, isAvailable: available, isManuallySet: manuallySet };
+    return { resolvedGlyphData: resolvedData, isAvailable: available, isManuallySet: manuallySet, disabledReason: reason };
   }, [character, glyphDataMap, allCharsByName, markPositioningMap, kerningMap, characterSets, groups, metrics, markAttachmentRules, positioningRules, settings?.strokeThickness, glyphVersion]);
 
   // 3. Render CharacterCard with all the resolved props
@@ -91,6 +102,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {
       glyphData={resolvedGlyphData}
       isAvailable={isAvailable}
       isManuallySet={isManuallySet}
+      disabledReason={disabledReason}
     />
   );
 };
