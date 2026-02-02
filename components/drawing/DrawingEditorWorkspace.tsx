@@ -71,6 +71,10 @@ interface DrawingEditorWorkspaceProps {
 const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) => {
     const canvasContainerRef = useRef<HTMLDivElement>(null);
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    
+    // New States for collapsible strips
+    const [isSourcesCollapsed, setIsSourcesCollapsed] = useState(false);
+    const [isDependentsCollapsed, setIsDependentsCollapsed] = useState(false);
 
     useEffect(() => {
         if (canvasContainerRef.current) {
@@ -166,6 +170,8 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
                             <LinkedGlyphsStrip 
                                 title="Sources" items={props.sourceGlyphs} glyphDataMap={props.allGlyphData} 
                                 settings={props.settings} onSelect={props.handleNavigationAttempt} variant="sources"
+                                isCollapsed={isSourcesCollapsed}
+                                onToggleCollapse={() => setIsSourcesCollapsed(!isSourcesCollapsed)}
                             />
                         </div>
                     )}
@@ -177,6 +183,8 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
                                 sourceCharacter={props.character} allCharsByName={props.allCharsByName} metrics={props.metrics}
                                 markAttachmentRules={props.markAttachmentRules} characterSets={props.allCharacterSets} groups={props.groups}
                                 kerningMap={props.kerningMap} markPositioningMap={props.markPositioningMap}
+                                isCollapsed={isDependentsCollapsed}
+                                onToggleCollapse={() => setIsDependentsCollapsed(!isDependentsCollapsed)}
                             />
                         </div>
                     )}

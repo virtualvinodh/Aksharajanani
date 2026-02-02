@@ -76,6 +76,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     sourceGlyphs, onSelectCharacter, allCharsByName
 }) => {
     const [activeTab, setActiveTab] = useState<'class' | 'sources'>('class');
+    const [isClassStripCollapsed, setIsClassStripCollapsed] = useState(false);
 
     // Automatically switch tabs based on class availability
     useEffect(() => {
@@ -221,6 +222,8 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                                     hasDualContext={hasDualContext}
                                     activeClassType={activeClassType}
                                     onToggleContext={onToggleContext}
+                                    isCollapsed={isClassStripCollapsed}
+                                    onToggleCollapse={() => setIsClassStripCollapsed(!isClassStripCollapsed)}
                                 />
                             ) : (
                                 <LinkedGlyphsStrip

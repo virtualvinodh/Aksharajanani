@@ -5,7 +5,7 @@ import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, Characte
 import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths, calculateDefaultMarkOffset, getAccurateGlyphBBox } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
-import { LeftArrowIcon, RightArrowIcon, FoldIcon, CloseIcon, LinkIcon, BrokenLinkIcon } from '../../constants';
+import { LeftArrowIcon, RightArrowIcon, FoldIcon, CloseIcon, LinkIcon, BrokenLinkIcon, ChevronUpIcon, ChevronDownIcon } from '../../constants';
 import { VEC } from '../../utils/vectorUtils';
 import { useLocale } from '../../contexts/LocaleContext';
 import { expandMembers } from '../../services/groupExpansionService';
@@ -38,6 +38,10 @@ interface ClassPreviewStripProps {
     // Lifted State
     isExpanded: boolean;
     setIsExpanded: (expanded: boolean) => void;
+
+    // Collapse State
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
     
     activeClass?: AttachmentClass;
     
@@ -111,7 +115,7 @@ const SiblingThumbnail: React.FC<{
             metrics, 
             characterSets, 
             false, 
-            groups,
+            groups, 
             movementConstraint
         );
     }, [pair, baseGlyph, markGlyph, strokeThickness, markAttachmentRules, metrics, characterSets, groups, movementConstraint]);
@@ -221,18 +225,23 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
     siblings, activePair, pivotChar, glyphDataMap, strokeThickness, anchorDelta, isLinked, onToggleLink, onSelectPair,
     metrics, markAttachmentRules, positioningRules, characterSets, groups,
     isExpanded, setIsExpanded, activeClass,
-    hasDualContext, activeClassType, onToggleContext
+    hasDualContext, activeClassType, onToggleContext,
+    isCollapsed: propCollapsed, onToggleCollapse
 }) => {
     const { t } = useLocale();
     const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
+    const [internalCollapsed, setInternalCollapsed] = useState(false);
+    
+    const collapsed = propCollapsed !== undefined ? propCollapsed : internalCollapsed;
+    const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(p => !p));
 
     useEffect(() => {
-        if (!isExpanded) {
+        if (!isExpanded && !collapsed) {
             checkVisibility();
             const timer = setTimeout(checkVisibility, 100);
             return () => clearTimeout(timer);
         }
-    }, [siblings, checkVisibility, isExpanded]);
+    }, [siblings, checkVisibility, isExpanded, collapsed]);
 
     // If Unlinked AND no active class context, hide strip (pure manual mode)
     if (!activeClass && siblings.length === 0) return null;
@@ -340,36 +349,47 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                  )}
 
                  <div className={`w-full max-w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center transition-all duration-300 rounded-b-lg`}>
-                     {/* Control Column - CLASS HUB */}
-                     <div className="flex flex-col items-center justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 self-stretch">
+                     {/* Control Column - CLASS HUB - REFACTORED */}
+                     <div className={`flex items-center transition-all duration-300 ${collapsed ? 'flex-row w-full justify-between px-2 border-r-0' : 'flex-col justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 self-stretch'}`}>
                         <button 
                             onClick={onToggleLink}
                             className={`p-2 rounded-lg transition-all shadow-sm ${
                                 isLinked 
                                 ? 'bg-indigo-600 text-white hover:bg-indigo-700 ring-2 ring-indigo-200 dark:ring-indigo-900' 
                                 : 'bg-orange-100 text-orange-600 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400 ring-2 ring-orange-50 dark:ring-orange-950'
-                            }`}
+                            } ${collapsed ? 'hidden' : 'block'}`}
                             title={isLinked ? "Synced: Click to Break Sync (Make Exception)" : "Exception: Click to Relink to Class"}
                         >
                             {isLinked ? <LinkIcon className="w-5 h-5" /> : <BrokenLinkIcon className="w-5 h-5" />}
                         </button>
                         
-                        <span className={`text-[10px] font-bold uppercase tracking-tight text-center leading-tight ${isLinked ? 'text-indigo-500' : 'text-orange-600'}`}>
+                        <span className={`text-[10px] font-bold uppercase tracking-tight leading-tight ${isLinked ? 'text-indigo-500' : 'text-orange-600'} ${collapsed ? 'text-left flex gap-2 items-center' : 'text-center'}`}>
                             {isLinked ? 'Synced' : 'Override'}
+                            {collapsed && <span className="text-gray-300 dark:text-gray-600">•</span>}
+                            {collapsed && <span className="text-gray-500 dark:text-gray-400">{activeClass?.name || t('group')}</span>}
                         </span>
-
-                        <button 
-                            onClick={() => setIsExpanded(true)}
-                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 transition-colors"
-                            title="Expand to Fullscreen"
-                        >
-                            <FoldIcon className="w-4 h-4 rotate-180" />
-                        </button>
+                        
+                        <div className="flex gap-1">
+                            <button 
+                                onClick={toggleCollapse}
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 transition-colors"
+                                title={collapsed ? "Expand" : "Minimize"}
+                            >
+                                {collapsed ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+                            </button>
+                            <button 
+                                onClick={() => setIsExpanded(true)}
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 transition-colors"
+                                title="Expand to Fullscreen"
+                            >
+                                <FoldIcon className="w-4 h-4 rotate-180" />
+                            </button>
+                        </div>
                      </div>
     
                      {/* Collapsed Scroll View */}
-                     <div className={`relative flex-grow overflow-hidden flex items-center transition-opacity duration-300`}>
-                         {visibility.left && (
+                     <div className={`relative flex-grow overflow-hidden flex items-center transition-all duration-300 ease-in-out origin-top ${collapsed ? 'hidden' : 'w-full opacity-100'}`}>
+                         {visibility.left && !collapsed && (
                             <button
                                 onClick={() => handleScroll('left')}
                                 className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-8 bg-gradient-to-r from-gray-50 via-gray-50/90 to-transparent dark:from-gray-800 dark:via-gray-800/90"
@@ -384,7 +404,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                             {siblings.map((pair) => renderThumb(pair, 80))}
                         </div>
     
-                        {visibility.right && (
+                        {visibility.right && !collapsed && (
                             <button
                                 onClick={() => handleScroll('right')}
                                 className="absolute right-0 top-0 bottom-0 z-20 flex items-center justify-center w-8 bg-gradient-to-l from-gray-50 via-gray-50/90 to-transparent dark:from-gray-800 dark:via-gray-800/90"

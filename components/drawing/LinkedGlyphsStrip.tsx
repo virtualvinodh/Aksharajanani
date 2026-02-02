@@ -4,9 +4,9 @@ import { createPortal } from 'react-dom';
 import { Virtuoso } from 'react-virtuoso';
 import { Character, GlyphData, AppSettings, CharacterSet, MarkAttachmentRules, Path, KerningMap, MarkPositioningMap, UnifiedRenderContext } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
-import { renderPaths, getAccurateGlyphBBox, generateCompositeGlyphData, updateComponentInPaths, getUnifiedPaths } from '../../services/glyphRenderService';
+import { renderPaths, getAccurateGlyphBBox, getUnifiedPaths } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
-import { LeftArrowIcon, RightArrowIcon, LinkIcon, BrokenLinkIcon, FoldIcon, CloseIcon } from '../../constants';
+import { LeftArrowIcon, RightArrowIcon, LinkIcon, BrokenLinkIcon, FoldIcon, CloseIcon, ChevronUpIcon, ChevronDownIcon } from '../../constants';
 import { isGlyphDrawn as isDrawnUtil } from '../../utils/glyphUtils';
 
 interface LinkedGlyphsStripProps {
@@ -27,6 +27,10 @@ interface LinkedGlyphsStripProps {
     groups?: Record<string, string[]>;
     kerningMap?: KerningMap;
     markPositioningMap?: MarkPositioningMap;
+    
+    // Collapse props
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
 }
 
 const DRAWING_CANVAS_SIZE = 1000;
@@ -145,12 +149,16 @@ const GlyphThumbnail: React.FC<{
 const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({ 
     title, items, glyphDataMap, settings, onSelect, variant,
     liveSourcePaths, sourceCharacter, allCharsByName, metrics, markAttachmentRules, characterSets, groups,
-    kerningMap, markPositioningMap
+    kerningMap, markPositioningMap, isCollapsed: propCollapsed, onToggleCollapse
 }) => {
-    const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll([items]);
-    const [isExpanded, setIsExpanded] = useState(false);
-    const virtuosoRef = useRef<any>(null);
+    const { visibility, handleScroll, scrollRef } = useHorizontalScroll([items]);
+    const [isExpanded, setIsExpanded] = useState(false); // Fullscreen
+    const [internalCollapsed, setInternalCollapsed] = useState(false); // Minimize
+
+    const collapsed = propCollapsed !== undefined ? propCollapsed : internalCollapsed;
+    const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(p => !p));
     
+    const virtuosoRef = useRef<any>(null);
     const useVirtuoso = items.length >= VIRTUOSO_THRESHOLD && !isExpanded;
 
     const getDisplayData = useCallback((char: Character): { displayData: GlyphData | undefined, isAvailable: boolean } => {
@@ -254,26 +262,47 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
         <>
             {expandedView && createPortal(expandedView, document.body)}
 
-            <div className="w-full max-w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center overflow-hidden rounded-b-xl mx-auto">
-                 <div className="flex flex-col items-center justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 w-20">
-                    <span className={`p-1.5 rounded-full ${variant === 'sources' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-blue-300'}`}>
+            <div className={`w-full max-w-full flex flex-row border-t bg-gray-50 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 p-2 animate-fade-in-up relative items-center overflow-hidden rounded-b-xl mx-auto transition-all duration-300 ${collapsed ? 'h-12' : ''}`}>
+                 
+                 {/* Left Control Column - Re-orients based on collapse state */}
+                 <div className={`flex items-center transition-all duration-300 ${collapsed ? 'flex-row w-full justify-between px-2 border-r-0' : 'flex-col justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 w-20'}`}>
+                    
+                    {/* Icon - Hide when collapsed */}
+                    <span className={`p-1.5 rounded-full ${variant === 'sources' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-blue-300'} ${collapsed ? 'hidden' : 'block'}`}>
                         {variant === 'sources' ? <LinkIcon className="w-4 h-4" /> : <BrokenLinkIcon className="w-4 h-4" />}
                     </span>
-                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center leading-tight">
-                        {title}<br/>
-                        <span className="text-indigo-600 dark:text-indigo-400 text-xs">{items.length}</span>
+
+                    {/* Text Label - Re-aligns when collapsed */}
+                    <span className={`text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight ${collapsed ? 'text-left flex gap-2 items-center' : 'text-center'}`}>
+                        {title}
+                        {collapsed && <span className="text-gray-300 dark:text-gray-600">•</span>}
+                        <span className="text-indigo-600 dark:text-indigo-400 text-xs block sm:inline">{items.length} {collapsed ? 'items' : ''}</span>
                     </span>
-                    <button 
-                        onClick={() => setIsExpanded(true)}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"
-                        title="Expand"
-                    >
-                        <FoldIcon className="w-4 h-4 rotate-180" />
-                    </button>
+                    
+                    {/* Buttons - Always visible */}
+                    <div className="flex gap-1">
+                        <button 
+                            onClick={toggleCollapse}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"
+                            title={collapsed ? "Expand" : "Minimize"}
+                        >
+                            {collapsed ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+                        </button>
+                        <button 
+                            onClick={() => setIsExpanded(true)}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"
+                            title="Fullscreen"
+                        >
+                            <FoldIcon className="w-4 h-4 rotate-180" />
+                        </button>
+                    </div>
                  </div>
 
-                 <div className="relative flex-grow overflow-hidden flex items-center h-[72px]">
-                    {visibility.left && (
+                 {/* Thumbnails Container - Completely hidden when collapsed to allow left col to expand */}
+                 <div 
+                    className={`relative flex-grow overflow-hidden flex items-center transition-all duration-300 ease-in-out origin-top ${collapsed ? 'hidden' : 'w-full opacity-100 h-[72px]'}`}
+                 >
+                    {visibility.left && !collapsed && (
                         <button
                             onClick={() => handleScroll('left')}
                             className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-6 bg-gradient-to-r from-gray-50 via-gray-50/90 to-transparent dark:from-gray-800 dark:via-gray-800/90"
@@ -284,7 +313,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                         </button>
                     )}
 
-                    {useVirtuoso ? (
+                    {useVirtuoso && !collapsed ? (
                         <Virtuoso
                             ref={virtuosoRef}
                             data={items}
@@ -317,7 +346,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                         </div>
                     )}
 
-                    {visibility.right && (
+                    {visibility.right && !collapsed && (
                         <button
                             onClick={() => handleScroll('right')}
                             className="absolute right-0 top-0 bottom-0 z-20 flex items-center justify-center w-6 bg-gradient-to-l from-gray-50 via-gray-50/90 to-transparent dark:from-gray-800 dark:via-gray-800/90"
