@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Point, Path, FontMetrics } from '../types';
 import { VEC } from '../utils/vectorUtils';
@@ -14,10 +15,11 @@ export interface UsePositioningCanvasProps {
     setViewOffset: (offset: Point) => void;
     movementConstraint: 'horizontal' | 'vertical' | 'none';
     canEdit: boolean;
+    onLockedInteraction?: () => void;
 }
 
 export const usePositioningCanvas = ({
-    canvasRef, paths, onPathsChange, tool, zoom, setZoom, viewOffset, setViewOffset, movementConstraint, canEdit
+    canvasRef, paths, onPathsChange, tool, zoom, setZoom, viewOffset, setViewOffset, movementConstraint, canEdit, onLockedInteraction
 }: UsePositioningCanvasProps) => {
     const [isDragging, setIsDragging] = useState(false);
     const dragStartPointRef = useRef<Point>({ x: 0, y: 0 });
@@ -62,8 +64,12 @@ export const usePositioningCanvas = ({
             setIsDragging(true);
             dragStartPointRef.current = getCanvasPoint(viewportPoint);
             pathsAtStartRef.current = JSON.parse(JSON.stringify(paths));
+        } else {
+            if (onLockedInteraction) {
+                onLockedInteraction();
+            }
         }
-    }, [tool, canEdit, paths, getViewportPoint, getCanvasPoint, panTool]);
+    }, [tool, canEdit, paths, getViewportPoint, getCanvasPoint, panTool, onLockedInteraction]);
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
         const viewportPoint = getViewportPoint(e);

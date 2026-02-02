@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PositioningCanvas from '../PositioningCanvas';
 import PositioningToolbar from '../PositioningToolbar';
 import ClassPreviewStrip from './ClassPreviewStrip';
 import LinkedGlyphsStrip from '../drawing/LinkedGlyphsStrip';
 import { Character, GlyphData, Path, Point, FontMetrics, MarkAttachmentRules, PositioningRules, CharacterSet, AttachmentClass, MarkPositioningMap } from '../../types';
 import { DRAWING_CANVAS_SIZE } from '../../constants';
+import { useLayout } from '../../contexts/LayoutContext';
 
 interface PositioningEditorWorkspaceProps {
     markPaths: Path[];
@@ -78,6 +79,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
 }) => {
     const [activeTab, setActiveTab] = useState<'class' | 'sources'>('class');
     const [isClassStripCollapsed, setIsClassStripCollapsed] = useState(false);
+    const { showNotification } = useLayout();
 
     // Automatically switch tabs based on class availability
     useEffect(() => {
@@ -87,6 +89,12 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
             setActiveTab('sources');
         }
     }, [activeAttachmentClass]);
+
+    const handleLockedInteraction = useCallback(() => {
+        if (lockedMessage) {
+            showNotification(lockedMessage, 'info');
+        }
+    }, [lockedMessage, showNotification]);
 
     return (
         <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative min-h-0">
@@ -132,6 +140,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                                     movementConstraint={movementConstraint}
                                     canEdit={canEdit}
                                     character={targetLigature}
+                                    onLockedInteraction={handleLockedInteraction}
                                 />
                             </div>
                         </div>

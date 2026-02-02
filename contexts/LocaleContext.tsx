@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useRef } from 'react';
 import { Locale, LocaleInfo } from '../types';
 
@@ -126,7 +127,8 @@ export const LocaleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     if (replacements) {
         Object.keys(replacements).forEach(rKey => {
-            translation = translation.replace(`{${rKey}}`, String(replacements[rKey]));
+            // Use replaceAll to ensure all instances of the placeholder are replaced
+            translation = translation.replaceAll(`{${rKey}}`, String(replacements[rKey]));
         });
     }
     return translation;

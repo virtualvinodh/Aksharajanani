@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Point, Path, FontMetrics, AppSettings, Character } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderService';
@@ -21,17 +21,32 @@ interface PositioningCanvasProps {
     movementConstraint: 'horizontal' | 'vertical' | 'none';
     canEdit: boolean;
     character: Character;
+    onLockedInteraction?: () => void;
 }
 
 const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
     width, height, markPaths, basePaths, onPathsChange, metrics, tool, zoom, setZoom,
-    viewOffset, setViewOffset, settings, movementConstraint, canEdit, character
+    viewOffset, setViewOffset, settings, movementConstraint, canEdit, character, onLockedInteraction
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
+    const [isShake, setIsShake] = useState(false);
+
+    useEffect(() => {
+        if (isShake) {
+            const timer = setTimeout(() => setIsShake(false), 500);
+            return () => clearTimeout(timer);
+        }
+    }, [isShake]);
+
+    const handleLockedInteractionInternal = useCallback(() => {
+        setIsShake(true);
+        if (onLockedInteraction) onLockedInteraction();
+    }, [onLockedInteraction]);
 
     const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel, isPanning, isDragging } = usePositioningCanvas({
-        canvasRef, paths: markPaths, onPathsChange, tool, zoom, setZoom, viewOffset, setViewOffset, movementConstraint, canEdit
+        canvasRef, paths: markPaths, onPathsChange, tool, zoom, setZoom, viewOffset, setViewOffset, movementConstraint, canEdit,
+        onLockedInteraction: handleLockedInteractionInternal
     });
 
     React.useEffect(() => {
@@ -171,7 +186,7 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
             ref={canvasRef}
             width={width}
             height={height}
-            className="bg-white dark:bg-gray-900 max-w-full max-h-full block mx-auto shadow-inner"
+            className={`bg-white dark:bg-gray-900 max-w-full max-h-full block mx-auto shadow-inner ${isShake ? 'animate-shake' : ''}`}
             style={{ touchAction: 'none', cursor: getCursor() }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
