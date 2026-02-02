@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { DRAWING_CANVAS_SIZE } from '../constants';
@@ -302,6 +302,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 sourceGlyphs={sourceGlyphs}
                 onSelectCharacter={session.handleNavigationAttempt}
                 allCharsByName={props.allChars}
+                markPositioningMap={props.markPositioningMap}
             />
 
             {isReusePanelOpen && (

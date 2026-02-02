@@ -4,7 +4,7 @@ import PositioningCanvas from '../PositioningCanvas';
 import PositioningToolbar from '../PositioningToolbar';
 import ClassPreviewStrip from './ClassPreviewStrip';
 import LinkedGlyphsStrip from '../drawing/LinkedGlyphsStrip';
-import { Character, GlyphData, Path, Point, FontMetrics, MarkAttachmentRules, PositioningRules, CharacterSet, AttachmentClass } from '../../types';
+import { Character, GlyphData, Path, Point, FontMetrics, MarkAttachmentRules, PositioningRules, CharacterSet, AttachmentClass, MarkPositioningMap } from '../../types';
 import { DRAWING_CANVAS_SIZE } from '../../constants';
 
 interface PositioningEditorWorkspaceProps {
@@ -63,6 +63,7 @@ interface PositioningEditorWorkspaceProps {
     sourceGlyphs: Character[];
     onSelectCharacter: (char: Character) => void;
     allCharsByName: Map<string, Character>;
+    markPositioningMap: MarkPositioningMap;
 }
 
 const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
@@ -73,7 +74,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     characterSets, groups, isStripExpanded, setIsStripExpanded, activeAttachmentClass,
     hasDualContext, activeClassType, onToggleContext, isLargeScreen,
     manualX, manualY, onManualChange, onManualCommit, setIsInputFocused,
-    sourceGlyphs, onSelectCharacter, allCharsByName
+    sourceGlyphs, onSelectCharacter, allCharsByName, markPositioningMap
 }) => {
     const [activeTab, setActiveTab] = useState<'class' | 'sources'>('class');
     const [isClassStripCollapsed, setIsClassStripCollapsed] = useState(false);
@@ -224,6 +225,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                                     onToggleContext={onToggleContext}
                                     isCollapsed={isClassStripCollapsed}
                                     onToggleCollapse={() => setIsClassStripCollapsed(!isClassStripCollapsed)}
+                                    markPositioningMap={markPositioningMap}
                                 />
                             ) : (
                                 <LinkedGlyphsStrip

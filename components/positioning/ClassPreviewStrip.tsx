@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet, AttachmentClass, PositioningRules } from '../../types';
+import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet, AttachmentClass, PositioningRules, MarkPositioningMap } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths, calculateDefaultMarkOffset, getAccurateGlyphBBox } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
@@ -49,6 +49,7 @@ interface ClassPreviewStripProps {
     hasDualContext?: boolean;
     activeClassType?: 'mark' | 'base' | null;
     onToggleContext?: (type: 'mark' | 'base') => void;
+    markPositioningMap: MarkPositioningMap;
 }
 
 const DRAWING_CANVAS_SIZE = 1000;
@@ -75,7 +76,8 @@ const SiblingThumbnail: React.FC<{
     positioningRules: PositioningRules[] | null;
     characterSets: CharacterSet[];
     groups: Record<string, string[]>;
-}> = React.memo(({ pair, isActive, isPivot, glyphDataMap, strokeThickness, anchorDelta, isLinked, activeClass, onClick, size = 80, metrics, markAttachmentRules, positioningRules, characterSets, groups }) => {
+    markPositioningMap: MarkPositioningMap;
+}> = React.memo(({ pair, isActive, isPivot, glyphDataMap, strokeThickness, anchorDelta, isLinked, activeClass, onClick, size = 80, metrics, markAttachmentRules, positioningRules, characterSets, groups, markPositioningMap }) => {
     const { t } = useLocale();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
@@ -130,13 +132,22 @@ const SiblingThumbnail: React.FC<{
         if (!baseGlyph || !markGlyph) return;
 
         // --- ISOLATION LOGIC ---
-        // We only use the anchorDelta if:
-        // 1. This thumbnail represents the pair currently being edited (isActive)
-        // 2. Global Sync is ON (isLinked) AND this specific sibling is not an exception.
-        const shouldApplyDelta = isActive || (isLinked && !isThisSiblingAnException);
-        const effectiveDelta = shouldApplyDelta ? anchorDelta : { x: 0, y: 0 };
+        // 1. If active: Use default + live delta.
+        // 2. If synced (linked) sibling: Use default + live delta.
+        // 3. If unlinked (exception): Use SAVED position (from map) if exists, else default.
+        
+        const savedOffset = markPositioningMap.get(`${pair.base.unicode}-${pair.mark.unicode}`);
+        let finalOffset: Point;
 
-        const finalOffset = VEC.add(defaultAnchorOffset, effectiveDelta);
+        if (isActive) {
+            finalOffset = VEC.add(defaultAnchorOffset, anchorDelta);
+        } else if (isLinked && !isThisSiblingAnException) {
+            finalOffset = VEC.add(defaultAnchorOffset, anchorDelta);
+        } else {
+            // Unlinked item: Show actual saved position or default
+            finalOffset = savedOffset || defaultAnchorOffset;
+        }
+
         const baseBbox = getAccurateGlyphBBox(baseGlyph.paths, strokeThickness);
         const markBbox = getAccurateGlyphBBox(markGlyph.paths, strokeThickness);
 
@@ -191,13 +202,17 @@ const SiblingThumbnail: React.FC<{
 
         ctx.restore();
 
-    }, [pair, glyphDataMap, strokeThickness, defaultAnchorOffset, anchorDelta, theme, size, baseGlyph, markGlyph, isLinked, isActive, isThisSiblingAnException]);
+    }, [pair, glyphDataMap, strokeThickness, defaultAnchorOffset, anchorDelta, theme, size, baseGlyph, markGlyph, isLinked, isActive, isThisSiblingAnException, markPositioningMap]);
 
     // Dynamic Classes
-    const containerClasses = `flex-shrink-0 flex flex-col items-center justify-center bg-white dark:bg-gray-800 border rounded shadow-sm cursor-pointer transition-all duration-200 aspect-square relative
+    const containerClasses = `flex-shrink-0 flex flex-col items-center justify-center border rounded shadow-sm cursor-pointer transition-all duration-200 aspect-square relative
         ${isActive 
-            ? 'ring-2 ring-indigo-500 border-transparent opacity-100 z-10' 
-            : 'border-gray-200 dark:border-gray-600 opacity-60 hover:opacity-100 hover:scale-105'}`;
+            ? 'bg-white dark:bg-gray-800 ring-2 ring-indigo-500 border-transparent opacity-100 z-10' 
+            : (isThisSiblingAnException
+                ? 'bg-gray-100 dark:bg-black/40 border-dashed border-gray-400 dark:border-gray-600 grayscale opacity-80 hover:opacity-100' // Unlinked style
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 opacity-60 hover:opacity-100 hover:scale-105' // Normal linked style
+              )
+        }`;
 
     return (
         <div 
@@ -226,7 +241,8 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
     metrics, markAttachmentRules, positioningRules, characterSets, groups,
     isExpanded, setIsExpanded, activeClass,
     hasDualContext, activeClassType, onToggleContext,
-    isCollapsed: propCollapsed, onToggleCollapse
+    isCollapsed: propCollapsed, onToggleCollapse,
+    markPositioningMap
 }) => {
     const { t } = useLocale();
     const { visibility, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
@@ -257,7 +273,8 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
         markAttachmentRules,
         positioningRules,
         characterSets,
-        groups
+        groups,
+        markPositioningMap
     };
     
     // Check if a pair is the Pivot
