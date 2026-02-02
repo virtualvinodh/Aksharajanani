@@ -174,7 +174,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const mainContainerRef = useRef<HTMLElement>(null);
   const [gridPanelWidth, setGridPanelWidth] = useState<number>(() => {
     const savedWidth = localStorage.getItem('gridPanelWidth');
-    return savedWidth ? parseInt(savedWidth, 10) : window.innerWidth * 0.1;
+    // Ensure default isn't too small if calculating from %
+    return savedWidth ? parseInt(savedWidth, 10) : Math.max(200, window.innerWidth * 0.15);
   });
 
   const handleMouseDownResize = useCallback((e: React.MouseEvent) => {
@@ -186,7 +187,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
       const doDrag = (moveEvent: MouseEvent) => {
           const newWidth = startWidth + (moveEvent.clientX - startX);
-          const minWidth = mainContainer.clientWidth * 0.10; // 10% min
+          const minWidth = 200; // 220px min width (approx 2-3 columns)
           const maxWidth = mainContainer.clientWidth * 0.75; // 75% max
           setGridPanelWidth(Math.max(minWidth, Math.min(newWidth, maxWidth)));
       };
@@ -208,7 +209,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
       const doDrag = (moveEvent: TouchEvent) => {
           const newWidth = startWidth + (moveEvent.touches[0].clientX - startX);
-          const minWidth = mainContainer.clientWidth * 0.10; // 10% min
+          const minWidth = 220; // 220px min width
           const maxWidth = mainContainer.clientWidth * 0.75; // 75% max
           setGridPanelWidth(Math.max(minWidth, Math.min(newWidth, maxWidth)));
       };
@@ -465,10 +466,10 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                                 className="absolute top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 p-1 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
                                 style={{ left: `${gridPanelWidth}px`, transform: 'translateX(-50%)' }}
                             >
-                                <button onClick={() => setPanelLayout('editor')} title="Maximize editor" className="p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 rounded-full transition-colors">
+                                <button onClick={() => setPanelLayout('grid')} title="Maximize editor" className="p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 rounded-full transition-colors">
                                     <RightArrowIcon className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => setPanelLayout('grid')} title="Maximize grid" className="p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 rounded-full transition-colors">
+                                <button onClick={() => setPanelLayout('editor')} title="Maximize grid" className="p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 rounded-full transition-colors">
                                     <LeftArrowIcon className="w-4 h-4" />
                                 </button>
                             </div>
