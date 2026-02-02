@@ -39,6 +39,40 @@ export const useGlyphFilter = ({
                 return isAutoDerived && (!char.hidden || showHidden);
             }
 
+            // To Be Reviewed Logic: Auto-derived AND Incomplete AND Components Drawn
+            if (filterMode === 'toBeReviewed') {
+                if (char.position) {
+                    const [base, mark] = char.position;
+                    const baseC = allCharsByName.get(base);
+                    const markC = allCharsByName.get(mark);
+                    if (baseC?.unicode !== undefined && markC?.unicode !== undefined) {
+                         const key = `${baseC.unicode}-${markC.unicode}`;
+                         // Must NOT be saved
+                         if (markPositioningMap.has(key)) return false;
+                         
+                         // Components MUST be drawn
+                         const baseDrawn = isGlyphDrawn(glyphDataMap.get(baseC.unicode));
+                         const markDrawn = isGlyphDrawn(glyphDataMap.get(markC.unicode));
+                         return baseDrawn && markDrawn && (!char.hidden || showHidden);
+                    }
+                } else if (char.kern) {
+                    const [left, right] = char.kern;
+                    const leftC = allCharsByName.get(left);
+                    const rightC = allCharsByName.get(right);
+                    if (leftC?.unicode !== undefined && rightC?.unicode !== undefined) {
+                         const key = `${leftC.unicode}-${rightC.unicode}`;
+                         // Must NOT be saved
+                         if (kerningMap.has(key)) return false;
+                         
+                         // Components MUST be drawn
+                         const leftDrawn = isGlyphDrawn(glyphDataMap.get(leftC.unicode));
+                         const rightDrawn = isGlyphDrawn(glyphDataMap.get(rightC.unicode));
+                         return leftDrawn && rightDrawn && (!char.hidden || showHidden);
+                    }
+                }
+                return false;
+            }
+
             // Drawn (Sources) Logic: Show manual source glyphs (Base, Mark, etc.)
             // We do NOT check hasContent here, so empty source glyphs are visible for the user to find and draw.
             if (filterMode === 'drawn') {
