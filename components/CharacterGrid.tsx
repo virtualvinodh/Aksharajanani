@@ -1,17 +1,17 @@
-import React, { useMemo, forwardRef, useCallback } from 'react';
-import { Character, CharacterSet, KerningMap, MarkPositioningMap, FontMetrics, MarkAttachmentRules, PositioningRules } from '../types';
+
+import React, { useMemo, forwardRef, useCallback, useState } from 'react';
+import { Character, CharacterSet } from '../types';
 import UnifiedCard from './UnifiedCard';
 import { useLocale } from '../contexts/LocaleContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { VirtuosoGrid, Virtuoso, VirtuosoHandle } from 'react-virtuoso';
-import { AddIcon, SwitchScriptIcon, CheckCircleIcon } from '../constants';
+import { AddIcon, SwitchScriptIcon, CheckCircleIcon, EditIcon, CloseIcon, TrashIcon } from '../constants';
 import { isGlyphComplete } from '../utils/glyphUtils';
 import { useProject } from '../contexts/ProjectContext';
 import { useKerning } from '../contexts/KerningContext';
 import { usePositioning } from '../contexts/PositioningContext';
-import { useRules } from '../contexts/RulesContext';
 
 interface CharacterGridProps {
   characters?: Character[]; // For Flat View
@@ -23,6 +23,11 @@ interface CharacterGridProps {
   virtuosoRef?: React.RefObject<VirtuosoHandle>;
   onSectionVisibilityChange?: (index: number) => void;
   variant?: 'default' | 'compact' | 'overlay';
+  
+  // Group Management Props
+  onRenameGroup?: (index: number, newName: string) => void;
+  onDeleteGroup?: (index: number) => void;
+  onAddGroup?: () => void;
 }
 
 // --- Components for Flat Grid View ---
@@ -42,7 +47,10 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
     isFiltered,
     virtuosoRef,
     onSectionVisibilityChange,
-    variant
+    variant,
+    onRenameGroup,
+    onDeleteGroup,
+    onAddGroup
 }) => {
   const { t } = useLocale();
   const { settings } = useSettings();
@@ -53,6 +61,10 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
   const { markPositioningMap } = usePositioning();
 
   const characterSets = propCharacterSets || projectCharacterSets;
+  
+  // Local state for inline editing
+  const [editingGroupIndex, setEditingGroupIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   const ListContainer = useMemo(() => forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
     const gridClasses = variant === 'overlay'
@@ -80,6 +92,33 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
           return newSet;
       });
   }, [isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection]);
+
+  const startEditing = (index: number, currentName: string) => {
+      setEditingGroupIndex(index);
+      setEditValue(t(currentName) === currentName ? currentName : t(currentName)); // Use resolved name
+  };
+
+  const cancelEditing = () => {
+      setEditingGroupIndex(null);
+      setEditValue('');
+  };
+
+  const saveEditing = (index: number) => {
+      if (onRenameGroup && editValue.trim()) {
+          onRenameGroup(index, editValue.trim());
+      }
+      setEditingGroupIndex(null);
+  };
+  
+  const handleDelete = (index: number) => {
+      if (onDeleteGroup) {
+          onDeleteGroup(index);
+      }
+      // Note: We don't close edit mode immediately here because the modal in parent handles confirmation.
+      // If we close it, the UI might jump. We can leave it or close it. 
+      // Closing it is safer in case the modal cancels.
+      setEditingGroupIndex(null);
+  };
 
   if (!settings) return null;
 
@@ -142,16 +181,51 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                 const isGroupComplete = requiredChars.length > 0 && requiredChars.every(char => {
                     return isGlyphComplete(char, glyphDataMap, markPositioningMap, kerningMap, allCharsByName);
                 });
+                
+                const isEditing = editingGroupIndex === index;
 
                 return (
                     <div className="pb-6" id={`section-${index}`}>
                          {/* Sticky Header */}
-                        <div className="sticky top-0 z-10 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur py-2 px-6 border-b border-gray-200 dark:border-gray-700 shadow-sm mb-2 flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t(group.nameKey)}</h3>
-                                {isGroupComplete && <CheckCircleIcon className="w-5 h-5 text-green-500 animate-pop-in" />}
+                        <div className="sticky top-0 z-10 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur py-2 px-6 border-b border-gray-200 dark:border-gray-700 shadow-sm mb-2 flex justify-between items-center h-14">
+                            <div className="flex items-center gap-2 flex-grow">
+                                {isEditing ? (
+                                    <div className="flex items-center gap-2 w-full max-w-md animate-fade-in-up">
+                                        <input 
+                                            type="text" 
+                                            value={editValue} 
+                                            onChange={(e) => setEditValue(e.target.value)}
+                                            onKeyDown={(e) => { if(e.key === 'Enter') saveEditing(index); if(e.key === 'Escape') cancelEditing(); }}
+                                            autoFocus
+                                            className="px-2 py-1 text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 border border-indigo-300 dark:border-indigo-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
+                                        />
+                                        <button onClick={() => saveEditing(index)} className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors" title="Save Name">
+                                            <CheckCircleIcon className="w-5 h-5"/>
+                                        </button>
+                                        <button onClick={() => handleDelete(index)} className="p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors" title="Delete Group">
+                                            <TrashIcon className="w-4 h-4"/>
+                                        </button>
+                                        <button onClick={cancelEditing} className="p-1.5 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors" title="Cancel">
+                                            <CloseIcon className="w-5 h-5"/>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 group/header">
+                                        <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t(group.nameKey)}</h3>
+                                        {isGroupComplete && <CheckCircleIcon className="w-5 h-5 text-green-500 animate-pop-in" />}
+                                        {onRenameGroup && (
+                                            <button 
+                                                onClick={() => startEditing(index, group.nameKey)}
+                                                className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 opacity-0 group-hover/header:opacity-100 transition-opacity"
+                                                title="Edit Group Name"
+                                            >
+                                                <EditIcon className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">{visibleChars.length}</span>
+                            <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full flex-shrink-0">{visibleChars.length}</span>
                         </div>
                         
                         {/* Internal Grid */}
@@ -178,21 +252,36 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                                 <span className="text-[10px] font-bold uppercase tracking-wide opacity-50 group-hover:opacity-100 text-center transition-opacity">{t('addGlyph')}</span>
                             </div>
 
-                            {/* Ghost Button: Add Block */}
-                            <div
-                                onClick={onAddBlock}
-                                className={ghostButtonClass}
-                                title={t('addBlock')}
-                            >
-                                <SwitchScriptIcon className="w-8 h-8 mb-1 opacity-50 group-hover:opacity-100 transition-opacity" />
-                                <span className="text-[10px] font-bold uppercase tracking-wide opacity-50 group-hover:opacity-100 text-center transition-opacity">{t('addBlock')}</span>
-                            </div>
+                            {/* Ghost Button: Add Block (Only in last group) */}
+                            {index === (characterSets.length - 1) && (
+                                <div
+                                    onClick={onAddBlock}
+                                    className={ghostButtonClass}
+                                    title={t('addBlock')}
+                                >
+                                    <SwitchScriptIcon className="w-8 h-8 mb-1 opacity-50 group-hover:opacity-100 transition-opacity" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wide opacity-50 group-hover:opacity-100 text-center transition-opacity">{t('addBlock')}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
             }}
             components={{
-                Footer: () => <div className="pb-24" /> // Just padding for floating batch toolbar
+                Footer: () => (
+                    <div className="pb-24 px-6 pt-4 flex flex-col items-center gap-4">
+                        {onAddGroup && (
+                            <button
+                                onClick={onAddGroup}
+                                className="w-full max-w-md py-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex items-center justify-center gap-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-all group"
+                            >
+                                <AddIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                <span className="font-bold uppercase tracking-widest text-sm">{t('newGroup')}</span>
+                            </button>
+                        )}
+                        <div className="h-12"/> {/* Extra padding */}
+                    </div>
+                )
             }}
           />
       );

@@ -1,9 +1,9 @@
 
 import React, { useEffect, useCallback } from 'react';
-import { Character, CharacterSet, GlyphData, FilterMode } from '../../types';
+import { CharacterSet, GlyphData, FilterMode } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
-import { LeftArrowIcon, RightArrowIcon, AddIcon, CheckCircleIcon } from '../../constants';
+import { LeftArrowIcon, RightArrowIcon, CheckCircleIcon } from '../../constants';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
 
 interface DrawingWorkspaceHeaderProps {
@@ -17,8 +17,6 @@ interface DrawingWorkspaceHeaderProps {
     bannerText: string;
     resultCount: number;
     actionableCount?: number;
-    onAddGroup: () => void;
-    onTabContextMenu: (e: React.MouseEvent | React.TouchEvent, index: number) => void;
     filterMode: FilterMode;
     onAcceptAll: () => void;
 }
@@ -29,10 +27,9 @@ const CharacterSetTab: React.FC<{
     activeTab: number;
     setActiveTab: (index: number) => void;
     glyphDataMap: Map<number, GlyphData>;
-    onContextMenu: (e: React.MouseEvent | React.TouchEvent, index: number) => void;
     showHidden: boolean;
     glyphVersion: number;
-}> = ({ set, index, activeTab, setActiveTab, glyphDataMap, onContextMenu, showHidden, glyphVersion }) => {
+}> = ({ set, index, activeTab, setActiveTab, glyphDataMap, showHidden, glyphVersion }) => {
     const { t } = useLocale();
     const isSetComplete = React.useMemo(() => {
         const visibleChars = set.characters.filter(char => !char.hidden || showHidden);
@@ -45,7 +42,6 @@ const CharacterSetTab: React.FC<{
     return (
         <button
             onClick={() => setActiveTab(index)}
-            onContextMenu={(e) => onContextMenu(e, index)}
             className={`flex-shrink-0 flex items-center gap-2 py-2 px-4 text-sm font-bold rounded-full transition-all duration-200 select-none whitespace-nowrap border
                 ${isActive 
                     ? 'bg-indigo-100 border-indigo-200 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 dark:border-indigo-800 shadow-sm' 
@@ -128,18 +124,10 @@ const DrawingWorkspaceHeader: React.FC<DrawingWorkspaceHeaderProps> = (props) =>
                                 activeTab={props.activeTab} 
                                 setActiveTab={props.setActiveTab} 
                                 glyphDataMap={props.glyphDataMap} 
-                                onContextMenu={props.onTabContextMenu} 
                                 showHidden={props.showHidden} 
                                 glyphVersion={props.glyphVersion} 
                             />
                         ))}
-                        <button 
-                            onClick={props.onAddGroup} 
-                            title={t('addGroup')} 
-                            className="flex-shrink-0 flex items-center justify-center p-2 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all hover:scale-110 active:scale-95 border border-indigo-100 dark:border-indigo-800/50"
-                        >
-                            <AddIcon className="w-5 h-5" />
-                        </button>
                     </div>
 
                     {visibility.right && (
