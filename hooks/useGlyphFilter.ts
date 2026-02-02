@@ -118,7 +118,8 @@ export const useGlyphFilter = ({
             return (!char.hidden || showHidden);
         });
         
-        return isSearching ? filterAndSortCharacters(candidates, searchQuery) : candidates.sort((a, b) => (a.unicode || 0) - (b.unicode || 0));
+        // FIX: Removed .sort() when not searching to preserve logical grid order
+        return isSearching ? filterAndSortCharacters(candidates, searchQuery) : candidates;
     }, [characters, glyphDataMap, filterMode, showHidden, searchQuery, isSearching, markPositioningMap, kerningMap, allCharsByName]);
 
     return { filteredList, isFiltered };
