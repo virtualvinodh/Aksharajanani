@@ -87,6 +87,16 @@ export const FilterMenu: React.FC = () => {
                             <button onClick={() => handleFilterChange('drawn')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'drawn' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
                                 {t('filterDrawn')}
                             </button>
+                            <div className="border-t my-1 dark:border-gray-700"></div>
+                            <button onClick={() => handleFilterChange('base')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'base' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
+                                {t('filterBase')}
+                            </button>
+                            <button onClick={() => handleFilterChange('ligature')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'ligature' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
+                                {t('filterLigature')}
+                            </button>
+                            <button onClick={() => handleFilterChange('mark')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'mark' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
+                                {t('filterMark')}
+                            </button>
                         </>
                     )}
                 </div>
