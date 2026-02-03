@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -99,9 +98,11 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       stateClasses = `bg-gray-50 dark:bg-gray-900/40 border-2 border-dashed ${typeBorderClass} opacity-70 cursor-pointer`;
   } else if (!isDrawn) {
       stateClasses = `bg-white dark:bg-gray-800 border-2 border-dashed ${typeBorderClass} opacity-90 cursor-pointer`;
-  } else if (!isManuallySet) { // Pending Review
+  } else if (!isManuallySet) { // State 1: Pending Review (suggestion)
       stateClasses = "bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
-  } else { // Drawn & confirmed
+  } else if (isManuallySet && character.isAutoAccepted) { // State 2: Accepted Default
+      stateClasses = "bg-blue-50 dark:bg-blue-900/20 border-2 border-solid border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
+  } else { // State 3: Manually Drawn/Edited or Confirmed
       stateClasses = `bg-white dark:bg-gray-800 border-2 ${typeBorderClass} cursor-pointer`;
   }
 

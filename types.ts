@@ -82,6 +82,7 @@ export interface Character {
   if?: string;
   hidden?: boolean;
   optional?: boolean;
+  isAutoAccepted?: boolean;
 }
 
 export interface CharacterSet {
