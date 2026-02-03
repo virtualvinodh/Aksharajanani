@@ -7,11 +7,13 @@ import { useSettings } from './SettingsContext';
 
 type KerningState = {
     kerningMap: KerningMap;
+    suggestedKerningMap: KerningMap;
 };
 
 type KerningAction =
     | { type: 'SET_MAP'; payload: KerningMap }
     | { type: 'BATCH_UPDATE'; payload: Map<string, number> }
+    | { type: 'SET_SUGGESTIONS'; payload: Map<string, number> }
     | { type: 'RESET' };
 
 const kerningReducer = (state: KerningState, action: KerningAction): KerningState => {
@@ -23,8 +25,10 @@ const kerningReducer = (state: KerningState, action: KerningAction): KerningStat
             action.payload.forEach((val, key) => newMap.set(key, val));
             return { ...state, kerningMap: newMap };
         }
+        case 'SET_SUGGESTIONS':
+            return { ...state, suggestedKerningMap: action.payload };
         case 'RESET':
-            return { ...state, kerningMap: new Map() };
+            return { ...state, kerningMap: new Map(), suggestedKerningMap: new Map() };
         default:
             return state;
     }
@@ -38,6 +42,7 @@ export interface QueuedPair {
 
 interface KerningContextType {
     kerningMap: KerningMap;
+    suggestedKerningMap: KerningMap;
     dispatch: Dispatch<KerningAction>;
     queueAutoKern: (pairs: QueuedPair[]) => void;
 }
@@ -46,6 +51,7 @@ const KerningContext = createContext<KerningContextType | undefined>(undefined);
 
 const initialState: KerningState = {
     kerningMap: new Map(),
+    suggestedKerningMap: new Map(),
 };
 
 export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -67,7 +73,7 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
             if (results && Object.keys(results).length > 0) {
                 const updateMap = new Map<string, number>();
                 Object.entries(results).forEach(([key, val]) => updateMap.set(key, val as number));
-                dispatch({ type: 'BATCH_UPDATE', payload: updateMap });
+                dispatch({ type: 'SET_SUGGESTIONS', payload: updateMap });
             }
         };
 
@@ -139,9 +145,10 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     const value = useMemo(() => ({
         kerningMap: state.kerningMap,
+        suggestedKerningMap: state.suggestedKerningMap,
         dispatch,
         queueAutoKern
-    }), [state.kerningMap, queueAutoKern]);
+    }), [state.kerningMap, state.suggestedKerningMap, queueAutoKern]);
 
     return (
         <KerningContext.Provider value={value}>

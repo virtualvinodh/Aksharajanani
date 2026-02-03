@@ -12,13 +12,14 @@ interface PairCardProps {
     isRecommended: boolean;
     showRecommendedLabel: boolean;
     kerningValue: number | undefined;
+    isSuggested?: boolean;
     glyphDataMap: Map<number, GlyphData>;
     strokeThickness: number;
     metrics: FontMetrics;
     glyphVersion: number;
 }
 
-const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showRecommendedLabel, kerningValue, glyphDataMap, strokeThickness, metrics, glyphVersion }) => {
+const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showRecommendedLabel, kerningValue, isSuggested, glyphDataMap, strokeThickness, metrics, glyphVersion }) => {
     const { theme } = useTheme();
     const { t } = useLocale();
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -91,18 +92,23 @@ const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showR
 
     const hasKerning = kerningValue !== undefined;
     const cardClasses = `relative border-2 rounded-lg p-2 flex items-center justify-center cursor-pointer transition-all duration-200 aspect-square
-        ${hasKerning 
-            ? 'bg-indigo-100 dark:bg-indigo-900/40 border-indigo-400 dark:border-indigo-600' 
-            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:border-indigo-500'}`;
+        ${isSuggested
+            ? 'bg-blue-50 dark:bg-blue-900/20 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-600'
+            : hasKerning 
+                ? 'bg-indigo-100 dark:bg-indigo-900/40 border-indigo-400 dark:border-indigo-600' 
+                : 'bg-white dark:bg-gray-800 border-dashed border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:border-indigo-500'}`;
 
     return (
         <div onClick={onClick} className={cardClasses}>
             <canvas ref={canvasRef} width={KERNING_CARD_CANVAS_SIZE} height={KERNING_CARD_CANVAS_SIZE}></canvas>
-            {isRecommended && !hasKerning && showRecommendedLabel && (
+            {isSuggested && (
+                <span className="absolute top-1 right-1 text-xs bg-blue-500 text-white font-semibold px-2 py-0.5 rounded-full">Auto</span>
+            )}
+            {isRecommended && !hasKerning && !isSuggested && showRecommendedLabel && (
                 <span className="absolute top-1 right-1 text-xs bg-yellow-400 dark:bg-yellow-600 text-yellow-900 dark:text-yellow-100 font-semibold px-2 py-0.5 rounded-full">{t('recommended')}</span>
             )}
             {hasKerning && (
-                    <span className="absolute top-1 left-1 text-xs bg-indigo-500 text-white font-bold px-2 py-0.5 rounded-full">{kerningValue}</span>
+                <span className={`absolute top-1 left-1 text-xs font-bold px-2 py-0.5 rounded-full ${isSuggested ? 'bg-blue-500 text-white' : 'bg-indigo-500 text-white'}`}>{kerningValue}</span>
             )}
         </div>
     );

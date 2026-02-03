@@ -1,7 +1,8 @@
+
 import React, { useState, useMemo, useCallback } from 'react';
-import { Character, GlyphData, FontMetrics, RecommendedKerning } from '../../types';
+import { Character, GlyphData, FontMetrics, RecommendedKerning, KerningMap } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { SparklesIcon, UndoIcon } from '../../constants';
+import { SparklesIcon, UndoIcon, CheckCircleIcon } from '../../constants';
 import { calculateAutoKerning } from '../../services/kerningService';
 import PairCard from '../PairCard';
 import CharacterSelectionPanel from './CharacterSelectionPanel';
@@ -25,15 +26,18 @@ interface KerningSelectionViewProps {
     mode: 'recommended' | 'all';
     showRecommendedLabel: boolean;
     hasHiddenRecommended?: boolean;
+    kerningMap: KerningMap;
+    suggestedKerningMap: KerningMap;
+    onAcceptSuggestions: () => void;
 }
 
 const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({ 
     filteredPairs, onEditPair, selectedLeftChars, setSelectedLeftChars, selectedRightChars, setSelectedRightChars, mode, showRecommendedLabel,
-    hasHiddenRecommended
+    hasHiddenRecommended, kerningMap, suggestedKerningMap, onAcceptSuggestions
 }) => {
     const { t } = useLocale();
     const { showNotification, filterMode, searchQuery } = useLayout();
-    const { kerningMap, dispatch: kerningDispatch } = useKerning();
+    const { queueAutoKern, dispatch: kerningDispatch } = useKerning();
     const { characterSets } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { settings, metrics } = useSettings();
@@ -71,7 +75,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
         setIsProgressModalOpen(true);
         const results = await calculateAutoKerning(pairsToKern, glyphDataMap, metrics, settings.strokeThickness, setKerningProgressValue, recommendedKerning);
         if (results.size > 0) {
-            kerningDispatch({ type: 'SET_MAP', payload: new Map([...kerningMap, ...results]) });
+            kerningDispatch({ type: 'SET_SUGGESTIONS', payload: results });
             showNotification(t('autoKerningComplete', { count: results.size }), 'success');
         }
         setIsProgressModalOpen(false);
@@ -93,9 +97,18 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
     const isSearching = searchQuery.trim().length > 0;
     const isFiltered = filterMode !== 'none' || isSearching;
 
-    // Determine titles based on mode
     const leftTitle = mode === 'recommended' ? "kerningFilterLeftChars" : "kerningSelectLeftChars";
     const rightTitle = mode === 'recommended' ? "kerningFilterRightChars" : "kerningSelectRightChars";
+
+    const unreviewedCount = useMemo(() => {
+        let count = 0;
+        for (const key of suggestedKerningMap.keys()) {
+            if (!kerningMap.has(key)) {
+                count++;
+            }
+        }
+        return count;
+    }, [suggestedKerningMap, kerningMap]);
 
     return (
         <div className="w-full h-full flex flex-col">
@@ -122,15 +135,40 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
 
                     <div className="p-4 border-b dark:border-gray-700 flex items-center gap-4 flex-wrap bg-white dark:bg-gray-800">
                         <button onClick={handleAutoKern} disabled={isAutoKerning} className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors"><SparklesIcon /> {t('autoKern')}</button>
+                        {unreviewedCount > 0 && (
+                            <button onClick={onAcceptSuggestions} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
+                                <CheckCircleIcon className="w-4 h-4" />
+                                Accept Suggestions ({unreviewedCount})
+                            </button>
+                        )}
                         <button onClick={() => setIsResetVisibleConfirmOpen(true)} disabled={kerningMap.size === 0} className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 disabled:opacity-50 transition-colors"><UndoIcon /> {t('resetVisible')}</button>
                     </div>
 
                     <div className="flex-grow">
                         {paginatedPairs.length > 0 ? (
                             <div className="p-4 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4">
-                                {paginatedPairs.map(p => (
-                                    <PairCard key={`${p.left.unicode}-${p.right.unicode}`} pair={p} onClick={() => onEditPair(p)} isRecommended={mode === 'recommended'} showRecommendedLabel={showRecommendedLabel} kerningValue={kerningMap.get(`${p.left.unicode}-${p.right.unicode}`)} glyphDataMap={glyphDataMap} strokeThickness={settings!.strokeThickness} metrics={metrics!} glyphVersion={glyphVersion} />
-                                ))}
+                                {paginatedPairs.map(p => {
+                                    const key = `${p.left.unicode}-${p.right.unicode}`;
+                                    const savedValue = kerningMap.get(key);
+                                    const suggestedValue = suggestedKerningMap.get(key);
+                                    const isSuggested = savedValue === undefined && suggestedValue !== undefined;
+
+                                    return (
+                                        <PairCard 
+                                            key={key} 
+                                            pair={p} 
+                                            onClick={() => onEditPair(p)} 
+                                            isRecommended={mode === 'recommended'} 
+                                            showRecommendedLabel={showRecommendedLabel} 
+                                            kerningValue={savedValue ?? suggestedValue}
+                                            isSuggested={isSuggested}
+                                            glyphDataMap={glyphDataMap} 
+                                            strokeThickness={settings!.strokeThickness} 
+                                            metrics={metrics!} 
+                                            glyphVersion={glyphVersion} 
+                                        />
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="flex items-center justify-center p-20 text-gray-500 italic">{t('noResultsFound')}</div>

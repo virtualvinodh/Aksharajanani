@@ -23,10 +23,10 @@ interface KerningPageProps {
 
 const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMode, mode, showRecommendedLabel }) => {
     const { t } = useLocale();
-    const { pendingNavigationTarget, setPendingNavigationTarget, filterMode, searchQuery } = useLayout();
+    const { pendingNavigationTarget, setPendingNavigationTarget, filterMode, searchQuery, showNotification } = useLayout();
     const { characterSets, allCharsByName, allCharsByUnicode } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
-    const { kerningMap, dispatch: kerningDispatch } = useKerning();
+    const { kerningMap, suggestedKerningMap, dispatch: kerningDispatch } = useKerning();
     const { settings, metrics } = useSettings();
     const { state: rulesState } = useRules();
     
@@ -61,11 +61,22 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         let hasHidden = false;
         if (!characterSets) return { allPairsInContext: [], hasHiddenRecommended: false };
         const groups = rulesState.fontRules?.groups || {};
+        const seen = new Set<string>();
+
+        const addPair = (l: Character, r: Character) => {
+            if (l?.unicode !== undefined && r?.unicode !== undefined) {
+                const key = `${l.unicode}-${r.unicode}`;
+                if (!seen.has(key)) {
+                    pairs.push({ left: l, right: r });
+                    seen.add(key);
+                }
+            }
+        };
+
+        let pairs: { left: any, right: any }[] = [];
 
         if (mode === 'recommended') {
             if (!recommendedKerning) return { allPairsInContext: [], hasHiddenRecommended: false };
-            let pairs: { left: any, right: any }[] = [];
-            const seen = new Set<string>();
             
             recommendedKerning.forEach(([leftRule, rightRule]) => {
                 const lefts = expandMembers([leftRule], groups, characterSets);
@@ -75,20 +86,11 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                     rights.forEach(rName => {
                         const lChar = allCharsByName.get(lName);
                         const rChar = allCharsByName.get(rName);
-                        if (lChar?.unicode !== undefined && rChar?.unicode !== undefined) {
-                            const pairName = lChar.name + rChar.name;
-                            // FILTER: Redundancy check
-                            if (standardGridNames.has(pairName)) return;
-
-                            // Only include drawn pairs in recommended list
+                        if (lChar && rChar) {
+                            if (standardGridNames.has(lChar.name + rChar.name)) return;
                             if (isGlyphDrawn(lChar.unicode) && isGlyphDrawn(rChar.unicode)) {
-                                const key = `${lChar.unicode}-${rChar.unicode}`;
-                                if (!seen.has(key)) {
-                                    pairs.push({ left: lChar, right: rChar });
-                                    seen.add(key);
-                                }
+                                addPair(lChar, rChar);
                             } else {
-                                // One or both of the components in a valid recommended rule are undrawn
                                 hasHidden = true;
                             }
                         }
@@ -105,43 +107,34 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             }
 
             return { allPairsInContext: pairs, hasHiddenRecommended: hasHidden };
-        } else {
-            const combined: { left: any, right: any }[] = [];
-            if (selectedLeftChars.size === 0 && selectedRightChars.size === 0) {
-                // Review Mode: Show everything currently in the map
-                kerningMap.forEach((_, key) => {
-                    const [lId, rId] = key.split('-').map(Number);
-                    const l = allCharsByUnicode.get(lId);
-                    const r = allCharsByUnicode.get(rId);
-                    if (l && r) {
-                         const pairName = l.name + r.name;
-                         if (!standardGridNames.has(pairName)) {
-                            combined.push({ left: l, right: r });
-                         }
-                    }
-                });
-            } else if (selectedLeftChars.size > 0 && selectedRightChars.size > 0) {
-                // Generator Mode: Cross product
+        } else { // 'all' mode
+            if (selectedLeftChars.size > 0 && selectedRightChars.size > 0) {
                 for (const lId of selectedLeftChars) {
                     for (const rId of selectedRightChars) {
                         const l = allCharsByUnicode.get(lId);
                         const r = allCharsByUnicode.get(rId);
-                        if (l && r) {
-                            const pairName = l.name + r.name;
-                            if (!standardGridNames.has(pairName)) {
-                                // Only include drawn pairs in generated list
-                                if (isGlyphDrawn(l.unicode) && isGlyphDrawn(r.unicode)) {
-                                    combined.push({ left: l, right: r });
-                                }
+                        if (l && r && !standardGridNames.has(l.name + r.name)) {
+                            if (isGlyphDrawn(l.unicode) && isGlyphDrawn(r.unicode)) {
+                                addPair(l, r);
                             }
                         }
                     }
                 }
+            } else {
+                // Review mode for 'all' tab: universe is union of saved and suggested
+                kerningMap.forEach((_, key) => {
+                    const [lId, rId] = key.split('-').map(Number);
+                    addPair(allCharsByUnicode.get(lId)!, allCharsByUnicode.get(rId)!);
+                });
+                suggestedKerningMap.forEach((_, key) => {
+                    const [lId, rId] = key.split('-').map(Number);
+                    addPair(allCharsByUnicode.get(lId)!, allCharsByUnicode.get(rId)!);
+                });
             }
-            const sorted = combined.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
+            const sorted = pairs.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
             return { allPairsInContext: sorted, hasHiddenRecommended: false };
         }
-    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, kerningMap, allCharsByUnicode, standardGridNames, isGlyphDrawn]);
+    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, kerningMap, suggestedKerningMap, allCharsByUnicode, standardGridNames, isGlyphDrawn]);
 
     // 2. Filter list by search query and saved status
     const filteredPairs = useMemo(() => {
@@ -151,6 +144,11 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             result = result.filter(p => kerningMap.has(`${p.left.unicode}-${p.right.unicode}`));
         } else if (filterMode === 'incomplete') {
             result = result.filter(p => !kerningMap.has(`${p.left.unicode}-${p.right.unicode}`));
+        } else if (filterMode === 'toBeReviewed') {
+            result = result.filter(p => {
+                const key = `${p.left.unicode}-${p.right.unicode}`;
+                return suggestedKerningMap.has(key) && !kerningMap.has(key);
+            });
         }
         
         if (searchQuery.trim()) {
@@ -170,7 +168,20 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             }
         }
         return result;
-    }, [allPairsInContext, filterMode, kerningMap, searchQuery]);
+    }, [allPairsInContext, filterMode, kerningMap, searchQuery, suggestedKerningMap]);
+
+    const handleAcceptSuggestions = useCallback(() => {
+        if (suggestedKerningMap.size === 0) return;
+
+        const newEntries = Array.from(suggestedKerningMap.entries()).filter(([key]) => !kerningMap.has(key));
+
+        if (newEntries.length > 0) {
+            const updateMap = new Map(newEntries);
+            kerningDispatch({ type: 'BATCH_UPDATE', payload: updateMap });
+            kerningDispatch({ type: 'SET_SUGGESTIONS', payload: new Map() });
+            showNotification(t('acceptedAutoGenerated', { count: newEntries.length }), 'success');
+        }
+    }, [suggestedKerningMap, kerningMap, kerningDispatch, showNotification, t]);
 
     // Deep Link Handler
     useEffect(() => {
@@ -189,7 +200,6 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         if (direction === 'next' && editingIndex < filteredPairs.length - 1) setEditingIndex(editingIndex + 1);
     };
 
-    // FIX: Add onDelete handler and pass it down with other required props.
     const handleDeletePair = useCallback(() => {
         if (editingIndex === null) return;
         const pair = filteredPairs[editingIndex];
@@ -199,7 +209,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         const newMap = new Map(kerningMap);
         newMap.delete(key);
         kerningDispatch({ type: 'SET_MAP', payload: newMap });
-        setEditingIndex(null); // Close editor after delete
+        setEditingIndex(null);
     }, [editingIndex, filteredPairs, kerningMap, kerningDispatch]);
 
     if (editingIndex !== null) {
@@ -207,8 +217,8 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         if (!pair) { setEditingIndex(null); return null; }
         const key = `${pair.left.unicode}-${pair.right.unicode}`;
         const isKerned = kerningMap.has(key);
+        const initialValue = kerningMap.get(key) ?? suggestedKerningMap.get(key) ?? 0;
         
-        // Construct a virtual character for the pair to satisfy the editor's requirement
         const virtualName = pair.left.name + pair.right.name;
         const character: Character = allCharsByName.get(virtualName) || {
             name: virtualName,
@@ -218,7 +228,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
 
         return (
             <KerningEditorPage
-                pair={pair} initialValue={kerningMap.get(key) ?? 0}
+                pair={pair} initialValue={initialValue}
                 glyphDataMap={glyphDataMap} strokeThickness={settings!.strokeThickness}
                 metrics={metrics!} settings={settings!} recommendedKerning={recommendedKerning}
                 onSave={(val) => {
@@ -227,12 +237,9 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                     kerningDispatch({ type: 'SET_MAP', payload: newMap });
                 }}
                 onRemove={() => {
-                    // This function is for the 'Reset' button. It sets the value to 0.
                     const newMap = new Map(kerningMap);
                     newMap.set(key, 0);
                     kerningDispatch({ type: 'SET_MAP', payload: newMap });
-                    // By not calling setEditingIndex(null), the modal stays open.
-                    // The editor will re-render with the new value from the context.
                 }}
                 onClose={() => setEditingIndex(null)} onNavigate={handleNavigate}
                 hasPrev={editingIndex > 0} hasNext={editingIndex < filteredPairs.length - 1}
@@ -242,7 +249,7 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
                 allCharacterSets={characterSets!}
                 allCharsByName={allCharsByName}
                 character={character}
-                showPropertiesButton={false} // HIDE properties button in Kerning Workspace
+                showPropertiesButton={false}
             />
         );
     }
@@ -255,6 +262,9 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
             selectedRightChars={selectedRightChars} setSelectedRightChars={setSelectedRightChars}
             mode={mode} showRecommendedLabel={showRecommendedLabel}
             hasHiddenRecommended={hasHiddenRecommended}
+            kerningMap={kerningMap}
+            suggestedKerningMap={suggestedKerningMap}
+            onAcceptSuggestions={handleAcceptSuggestions}
         />
     );
 };
