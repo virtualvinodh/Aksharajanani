@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { CharacterSet, GlyphData, KerningMap, MarkPositioningMap, RecommendedKerning, Character, PositioningRules } from '../types';
 import { isGlyphDrawn, isGlyphComplete } from '../utils/glyphUtils';
@@ -207,10 +208,43 @@ export const useProgressCalculators = ({
         return { completed, total };
     }, [fontRules, characterSets, allCharsByName, glyphDataMap, glyphVersion]);
 
+    /**
+     * Has Kerning:
+     * Determines if the Kerning workspace should be enabled based on available glyphs.
+     * Logic moved here from App.tsx/useKerningStatus to ensure consistent hook ordering.
+     */
+    const hasKerning = useMemo(() => {
+        // Condition 1: Script has recommended pairs.
+        if (recommendedKerning && recommendedKerning.length > 0) {
+            // Use .some() for an efficient check. It stops as soon as it finds one valid pair.
+            return recommendedKerning.some(pair => {
+                const [leftName, rightName] = pair;
+                
+                const leftChar = allCharsByName.get(leftName);
+                const rightChar = allCharsByName.get(rightName);
+                
+                // Ensure both characters exist in the font definition
+                if (!leftChar || !rightChar || leftChar.unicode === undefined || rightChar.unicode === undefined) {
+                    return false;
+                }
+                
+                // Check if BOTH glyphs in the pair have been drawn.
+                return isGlyphDrawn(glyphDataMap.get(leftChar.unicode)) && isGlyphDrawn(glyphDataMap.get(rightChar.unicode));
+            });
+        } 
+        
+        // Condition 2: Fallback for scripts with no recommendations.
+        // At least 2 glyphs drawn to allow manual pairing
+        else {
+            return drawingProgress.completed >= 2;
+        }
+    }, [recommendedKerning, drawingProgress.completed, allCharsByName, glyphDataMap, glyphVersion]);
+
     return {
         drawingProgress,
         positioningProgress,
         kerningProgress,
         rulesProgress,
+        hasKerning,
     };
 };

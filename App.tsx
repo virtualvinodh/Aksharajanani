@@ -40,7 +40,6 @@ import { useAppActions } from './hooks/useAppActions';
 import { TOOL_RANGES, LeftArrowIcon, RightArrowIcon, GridViewIcon, SplitViewIcon, EditorViewIcon } from './constants';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import PositioningRulesModal from './components/PositioningRulesModal';
-import { useKerningStatus } from './hooks/useKerningStatus';
 
 const GUIDE_FONT_STYLE_ID = 'guide-font-face-style';
 
@@ -261,6 +260,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       positioningProgress,
       kerningProgress,
       rulesProgress,
+      hasKerning,
   } = useProgressCalculators({
       characterSets,
       glyphDataMap,
@@ -331,14 +331,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   }
 
   const hasPositioning = positioningProgress.total > 0;
-  
-  const hasKerning = useKerningStatus({
-      recommendedKerning,
-      allCharsByName,
-      glyphDataMap,
-      glyphVersion,
-      drawingProgress
-  });
   
   const showEditorPanel = isLargeScreen && characterForModal && workspace === 'drawing' && (panelLayout === 'split' || panelLayout === 'editor');
   const RESIZER_WIDTH = isLargeScreen ? 8 : 16; // px
