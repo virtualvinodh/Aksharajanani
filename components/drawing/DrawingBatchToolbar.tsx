@@ -30,10 +30,6 @@ const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
                         <span className="font-black text-sm">{props.selectionSize}</span>
                     </div>
                     <div className="flex flex-row gap-1">
-                        <button onClick={props.onSelectVisible} className="px-2 py-1 text-[10px] font-bold uppercase tracking-tight bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                            <span className="hidden sm:inline">{t('selectVisible')}</span>
-                            <span className="sm:hidden">{t('visible')}</span>
-                        </button>
                         <button onClick={props.onSelectAll} className="px-2 py-1 text-[10px] font-bold uppercase tracking-tight bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
                             <span className="hidden sm:inline">{t('selectAll')}</span>
                             <span className="sm:hidden">{t('showAll')}</span>
