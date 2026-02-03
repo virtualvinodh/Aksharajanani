@@ -752,6 +752,5 @@
 	"renameGroup": "Rename Group",
 	"deleteGroup": "Delete Group",
 	"confirmDeleteGroup": "Are you sure you want to delete the group '{name}' and all its characters? This action cannot be undone.",
-	"cannotDeleteLastGroup": "Cannot delete the last group.",
-	"selectVisible": "Select Visible"
+	"cannotDeleteLastGroup": "Cannot delete the last group."
 }

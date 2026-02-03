@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
@@ -463,18 +462,6 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
             {isMetricsSelectionMode && !isOverlayMode && (
                 <DrawingBatchToolbar 
                     selectionSize={metricsSelection.size}
-                    onSelectVisible={() => { 
-                        const v = new Set<number>(); 
-                        if (isFiltered) {
-                            filteredFlatList.forEach(c => c.unicode && v.add(c.unicode));
-                        } else {
-                            const currentGroup = visibleCharacterSets[activeTab];
-                            if (currentGroup) {
-                                currentGroup.characters.forEach(c => (!c.hidden || showHidden) && c.unicode && v.add(c.unicode));
-                            }
-                        }
-                        setMetricsSelection(v); 
-                    }}
                     onSelectAll={() => { const a = new Set<number>(); characterSets.flatMap(s => s.characters).forEach(c => c.unicode && a.add(c.unicode)); setMetricsSelection(a); }}
                     onSelectNone={() => setMetricsSelection(new Set())}
                     onTransform={() => setIsTransformOpen(true)}

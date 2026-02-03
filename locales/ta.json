@@ -752,6 +752,5 @@
 	"renameGroup": "குழுவின் பெயரை மாற்று",
 	"deleteGroup": "குழுவை நீக்கு",
 	"confirmDeleteGroup": "'{name}' குழுவை நீக்க விரும்புகிறீர்களா?",
-	"cannotDeleteLastGroup": "கடைசி குழுவை நீக்க முடியாது.",
-	"selectVisible": "காண்பவற்றைத் தேர்ந்தெடு"
+	"cannotDeleteLastGroup": "கடைசி குழுவை நீக்க முடியாது."
 }
