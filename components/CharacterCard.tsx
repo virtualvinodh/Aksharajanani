@@ -100,7 +100,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       stateClasses = `bg-white dark:bg-gray-800 border-2 border-dashed ${typeBorderClass} opacity-90 cursor-pointer`;
   } else if (!isManuallySet) { // State 1: Pending Review (suggestion)
       stateClasses = "bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
-  } else if (isManuallySet && character.isAutoAccepted) { // State 2: Accepted Default
+  } else if (isManuallySet) { // State 2: Accepted Default
       stateClasses = "bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
   } else { // State 3: Manually Drawn or Edited
       stateClasses = `bg-white dark:bg-gray-800 border-2 ${typeBorderClass} cursor-pointer`;
