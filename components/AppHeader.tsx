@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -266,6 +267,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                             </button>
                             
                             <FilterMenu />
+
+                            <button
+                                onClick={onCompareClick}
+                                title={t('compare')}
+                                className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
+                            >
+                                <CompareIcon className="w-5 h-5" />
+                                <span className="hidden sm:inline">{t('compare')}</span>
+                            </button>
 
                              {activeWorkspace === 'drawing' && (
                                  <button

@@ -1,15 +1,14 @@
+
 import React from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { TransformIcon, SettingsIcon, CompareIcon, TrashIcon, CloseIcon, CheckCircleIcon } from '../../constants';
 
 interface DrawingBatchToolbarProps {
     selectionSize: number;
-    onSelectVisible: () => void;
     onSelectAll: () => void;
     onSelectNone: () => void;
     onTransform: () => void;
     onProperties: () => void;
-    onCompare: () => void;
     onDelete: () => void;
     onClose: () => void;
     showAccept?: boolean;
@@ -71,14 +70,6 @@ const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
                     >
                         <SettingsIcon className="w-4 h-4" />
                         <span className="hidden lg:inline">{t('editProperties')}</span>
-                    </button>
-                    <button 
-                        onClick={props.onCompare} 
-                        disabled={props.selectionSize === 0}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-30 transition-all shadow-md active:scale-95"
-                    >
-                        <CompareIcon className="w-4 h-4" />
-                        <span className="hidden lg:inline">{t('compare')}</span>
                     </button>
                     <button 
                         onClick={props.onDelete} 

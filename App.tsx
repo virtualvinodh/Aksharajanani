@@ -298,6 +298,21 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
     };
   }, [script, guideFont]);
   
+  const handleCompareClick = () => {
+    if (layout.isMetricsSelectionMode && layout.metricsSelection.size > 0) {
+        layout.setComparisonCharacters(
+            characterSets?.flatMap(s => s.characters).filter(c => 
+                c.unicode !== undefined && layout.metricsSelection.has(c.unicode)
+            ) || []
+        );
+        // Turn off selection mode after using the selection
+        layout.setIsMetricsSelectionMode(false);
+        layout.setMetricsSelection(new Set());
+    }
+    // Always navigate to comparison view
+    setCurrentView('comparison');
+  };
+
   if (scriptDataError) {
     return (
         <div className="h-screen bg-white dark:bg-gray-900 text-red-500 dark:text-red-400 flex flex-col items-center justify-center p-4">
@@ -355,7 +370,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 onExportClick={startExportProcess}
                 onTestClick={handleTestClick}
                 onCreatorClick={handleCreatorClick}
-                onCompareClick={() => setCurrentView('comparison')}
+                onCompareClick={handleCompareClick}
                 onSettingsClick={() => setCurrentView('settings')}
                 onChangeScriptClick={handleChangeScriptClick}
                 onShowAbout={onShowAbout}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
@@ -466,11 +467,6 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     onSelectNone={() => setMetricsSelection(new Set())}
                     onTransform={() => setIsTransformOpen(true)}
                     onProperties={() => setIsPropertiesOpen(true)}
-                    onCompare={() => { 
-                        setComparisonCharacters(characterSets.flatMap(s => s.characters).filter(c => c.unicode !== undefined && metricsSelection.has(c.unicode))); 
-                        setIsMetricsSelectionMode(false); 
-                        setCurrentView('comparison'); 
-                    }}
                     onDelete={() => setIsDeleteOpen(true)}
                     onClose={() => { setIsMetricsSelectionMode(false); setMetricsSelection(new Set()); }}
                     showAccept={isSelectionVirtual}
