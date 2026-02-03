@@ -4,7 +4,7 @@ import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { usePositioning } from '../../contexts/PositioningContext';
-import { useKerning } from '../../contexts/KerningContext';
+import { useKerning, QueuedPair } from '../../contexts/KerningContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { Character, GlyphData, Path, Point, CharacterSet, ComponentTransform } from '../../types';
@@ -37,34 +37,27 @@ export const useGlyphActions = (
 ) => {
     const { t } = useLocale();
     const layout = useLayout();
-    // MIGRATION: Replaced useCharacter with useProject
-    const { characterSets, allCharsByUnicode, allCharsByName, dispatchCharacterAction: characterDispatch, markAttachmentRules, positioningRules } = useProject();
+    const { characterSets, allCharsByUnicode, allCharsByName, dispatchCharacterAction: characterDispatch, markAttachmentRules, positioningRules, recommendedKerning } = useProject();
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
     const { settings, metrics, dispatch: settingsDispatch } = useSettings();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
-    const { kerningMap, dispatch: kerningDispatch } = useKerning();
+    const { kerningMap, dispatch: kerningDispatch, queueAutoKern } = useKerning();
     const { state: rulesState } = useRules();
     const groups = rulesState.fontRules?.groups || {};
     
     // --- Atomic PUA Cursor ---
-    // Tracks the highest assigned PUA to prevent race conditions during rapid additions
     const puaCursorRef = useRef<number>(0xE000 - 1);
 
-    // Sync cursor with loaded data, but ensure it never moves backwards during a session
     useEffect(() => {
         let maxFound = 0xE000 - 1;
         allCharsByUnicode.forEach((char, unicode) => {
-            // Check BMP PUA (E000-F8FF)
             if (unicode >= 0xE000 && unicode <= 0xF8FF) {
                 maxFound = Math.max(maxFound, unicode);
             }
-            // Check Supplementary PUA-A (F0000-FFFFD)
             else if (unicode >= 0xF0000 && unicode <= 0xFFFFD) {
                 maxFound = Math.max(maxFound, unicode);
             }
         });
-        
-        // Only update if the found max is greater than current cursor to strictly increase
         if (maxFound > puaCursorRef.current) {
             puaCursorRef.current = maxFound;
         }
@@ -72,18 +65,13 @@ export const useGlyphActions = (
 
     const getNextAtomicPua = useCallback(() => {
         let next = puaCursorRef.current + 1;
-        
-        // Overflow Protection: If BMP PUA is full (hitting CJK Compatibility at F900), 
-        // jump to Plane 15 (Supplementary Private Use Area-A)
         if (next > 0xF8FF && next < 0xF0000) {
             next = 0xF0000;
         }
-        
         puaCursorRef.current = next;
         return next;
     }, []);
 
-    // Track mounting state to cancel async operations if the user leaves the project
     const isMounted = useRef(true);
     useEffect(() => {
         isMounted.current = true;
@@ -92,8 +80,64 @@ export const useGlyphActions = (
         };
     }, []);
 
-    // Helper for async time-slicing
     const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
+    
+    // --- Auto-Kern Trigger Logic ---
+    const triggerAutoKernForChar = useCallback((unicode: number) => {
+        if (!recommendedKerning || recommendedKerning.length === 0 || !characterSets) return;
+        
+        const char = allCharsByUnicode.get(unicode);
+        if (!char) return;
+        
+        const affectedPairs: QueuedPair[] = [];
+        
+        recommendedKerning.forEach(([leftRule, rightRule, val]) => {
+            const lefts = expandMembers([leftRule], groups, characterSets);
+            const rights = expandMembers([rightRule], groups, characterSets);
+            
+            const isLeft = lefts.includes(char.name);
+            const isRight = rights.includes(char.name);
+            
+            if (!isLeft && !isRight) return;
+            
+            // Parse target distance from rule
+            let targetDist: number | null = null;
+            if (val !== undefined) {
+                 if (typeof val === 'number') targetDist = val;
+                 else if (!isNaN(Number(val))) targetDist = Number(val);
+                 else if (val === 'lsb' || val === 'rsb') targetDist = null; // complex logic handled in worker? No, passing null uses default.
+                 // Ideally, worker needs resolved target. For now, we pass simple number or null.
+            }
+
+            if (isLeft) {
+                rights.forEach(rName => {
+                    const rChar = allCharsByName.get(rName);
+                    if (rChar && rChar.unicode !== undefined) {
+                        // Only add if partner is drawn
+                        if (isGlyphDrawn(glyphDataMap.get(rChar.unicode))) {
+                            affectedPairs.push({ left: char, right: rChar, targetDistance: targetDist });
+                        }
+                    }
+                });
+            }
+            
+            if (isRight) {
+                 lefts.forEach(lName => {
+                    const lChar = allCharsByName.get(lName);
+                    if (lChar && lChar.unicode !== undefined) {
+                         if (isGlyphDrawn(glyphDataMap.get(lChar.unicode))) {
+                            affectedPairs.push({ left: lChar, right: char, targetDistance: targetDist });
+                        }
+                    }
+                });
+            }
+        });
+        
+        if (affectedPairs.length > 0) {
+            queueAutoKern(affectedPairs);
+        }
+
+    }, [recommendedKerning, characterSets, allCharsByUnicode, allCharsByName, groups, glyphDataMap, queueAutoKern]);
 
     const handleSaveGlyph = useCallback(async (
         unicode: number,
@@ -103,7 +147,7 @@ export const useGlyphActions = (
             rsb?: number; 
             glyphClass?: Character['glyphClass']; 
             advWidth?: number | string;
-            label?: string; // Add label here
+            label?: string; 
             compositeTransform?: ComponentTransform[];
             link?: string[];
             composite?: string[];
@@ -125,13 +169,12 @@ export const useGlyphActions = (
         const newPathsJSON = JSON.stringify(newGlyphData.paths);
         const hasPathChanges = oldPathsJSON !== newPathsJSON;
         
-        // CRITICAL FIX: The dirty check for metadata must include label, liga and all construction fields
         const hasMetadataChanges = 
             newMetadata.lsb !== charToSave.lsb || 
             newMetadata.rsb !== charToSave.rsb ||
             newMetadata.glyphClass !== charToSave.glyphClass ||
             newMetadata.advWidth !== charToSave.advWidth ||
-            newMetadata.label !== charToSave.label || // Check label
+            newMetadata.label !== charToSave.label || 
             newMetadata.gpos !== charToSave.gpos ||
             newMetadata.gsub !== charToSave.gsub ||
             JSON.stringify(newMetadata.liga) !== JSON.stringify(charToSave.liga) ||
@@ -141,7 +184,6 @@ export const useGlyphActions = (
             JSON.stringify(newMetadata.position) !== JSON.stringify(charToSave.position) ||
             JSON.stringify(newMetadata.kern) !== JSON.stringify(charToSave.kern);
     
-        // 1. No Changes?
         if (!hasPathChanges && !hasMetadataChanges) {
             if (isDraft) {
                 if (onSuccess) onSuccess();
@@ -149,7 +191,6 @@ export const useGlyphActions = (
             }
         }
 
-        // 2. Commit updates to current state
         if (hasPathChanges) {
              glyphDataDispatch({ 
                  type: 'SET_GLYPH', 
@@ -161,13 +202,18 @@ export const useGlyphActions = (
             characterDispatch({ type: 'UPDATE_CHARACTER_METADATA', payload: { unicode, ...newMetadata } });
         }
 
-        // 3. If this is a DRAFT (Autosave), stop here.
+        // Trigger Auto-Kern if this is a real save (or significant edit)
+        if (hasPathChanges || (hasMetadataChanges && (newMetadata.lsb !== undefined || newMetadata.rsb !== undefined))) {
+             // We trigger this even for drafts to keep preview live, but debounced by the context
+             triggerAutoKernForChar(unicode);
+        }
+
         if (isDraft) {
             if (onSuccess) onSuccess();
             return;
         }
 
-        // 4. COMMIT Logic - Recursive Cascade (Async)
+        // ... [Dependency Cascade Logic remains the same] ...
         const rawDependents = dependencyMap.current.get(unicode);
         const linkedDependents = new Set<number>();
         if (rawDependents) {
@@ -322,7 +368,7 @@ export const useGlyphActions = (
         
         if (onSuccess) onSuccess();
 
-    }, [allCharsByUnicode, glyphDataMap, dependencyMap, markPositioningMap, characterSets, glyphDataDispatch, characterDispatch, positioningDispatch, layout, settings, metrics, markAttachmentRules, allCharsByName, t, groups]);
+    }, [allCharsByUnicode, glyphDataMap, dependencyMap, markPositioningMap, characterSets, glyphDataDispatch, characterDispatch, positioningDispatch, layout, settings, metrics, markAttachmentRules, allCharsByName, t, groups, triggerAutoKernForChar]);
 
     const handleDeleteGlyph = useCallback((unicode: number) => {
         const charToDelete = allCharsByUnicode.get(unicode); if (!charToDelete) return;
@@ -606,7 +652,9 @@ export const useGlyphActions = (
                      }
                  }
              }
-        } else { relinkedChar.link = relinkedChar.sourceLink; }
+        } else {
+            relinkedChar.link = relinkedChar.sourceLink;
+        }
 
         if (relinkedChar.sourceGlyphClass) {
              relinkedChar.glyphClass = relinkedChar.sourceGlyphClass;
@@ -673,7 +721,6 @@ export const useGlyphActions = (
         if (!characterSets) return;
         const visibleCharacterSets = characterSets.map(set => ({ ...set, characters: set.characters.filter(char => char.unicode !== 8205 && char.unicode !== 8204) })).filter(set => set.nameKey !== 'dynamicLigatures' && set.characters.length > 0);
         const activeTabNameKey = (layout.activeTab < visibleCharacterSets.length) ? visibleCharacterSets[layout.activeTab].nameKey : 'punctuationsAndOthers';
-        /* FIX: Corrected nesting of charsToAdd array in characterDispatch call to fix type mismatch error. */
         characterDispatch({ type: 'ADD_CHARACTERS', payload: { characters: charsToAdd, activeTabNameKey } });
         if (charsToAdd.length > 0) layout.showNotification(t('glyphsAddedFromBlock', { count: charsToAdd.length }), 'success');
         else layout.showNotification(t('allGlyphsFromBlockExist'), 'info');

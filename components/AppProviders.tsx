@@ -15,23 +15,23 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return (
     <ThemeProvider>
       <LocaleProvider>
-        <ProjectProvider>
-          <LayoutProvider>
-            <GlyphDataProvider>
+        <SettingsProvider>
+          <GlyphDataProvider>
+            <ProjectProvider>
+              <LayoutProvider>
                 <KerningProvider>
-                  <SettingsProvider>
-                    <ClipboardProvider>
-                      <PositioningProvider>
-                        <RulesProvider>
-                          {children}
-                        </RulesProvider>
-                      </PositioningProvider>
-                    </ClipboardProvider>
-                  </SettingsProvider>
+                  <ClipboardProvider>
+                    <PositioningProvider>
+                      <RulesProvider>
+                        {children}
+                      </RulesProvider>
+                    </PositioningProvider>
+                  </ClipboardProvider>
                 </KerningProvider>
-            </GlyphDataProvider>
-          </LayoutProvider>
-        </ProjectProvider>
+              </LayoutProvider>
+            </ProjectProvider>
+          </GlyphDataProvider>
+        </SettingsProvider>
       </LocaleProvider>
     </ThemeProvider>
   );

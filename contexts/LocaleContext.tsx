@@ -127,8 +127,8 @@ export const LocaleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     if (replacements) {
         Object.keys(replacements).forEach(rKey => {
-            // Use replaceAll to ensure all instances of the placeholder are replaced
-            translation = translation.replaceAll(`{${rKey}}`, String(replacements[rKey]));
+            // Use split/join to ensure all instances of the placeholder are replaced
+            translation = translation.split(`{${rKey}}`).join(String(replacements[rKey]));
         });
     }
     return translation;
