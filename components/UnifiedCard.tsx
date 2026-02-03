@@ -72,7 +72,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {
         }
     }
     
-    const constructed = !!(character.position || character.kern || character.link);
+    const constructed = !!(character.position || character.kern);
     
     const renderCtx: UnifiedRenderContext = {
       glyphDataMap,
