@@ -12,6 +12,7 @@ interface CharacterCardProps {
   glyphData: GlyphData | undefined;
   isAvailable: boolean;
   isManuallySet: boolean;
+  isConstructed: boolean;
   onSelect: (character: Character, rect: DOMRect) => void;
   isSelectionMode?: boolean;
   isSelected?: boolean;
@@ -21,7 +22,7 @@ interface CharacterCardProps {
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({ 
-    character, glyphData, isAvailable, isManuallySet, onSelect, 
+    character, glyphData, isAvailable, isManuallySet, isConstructed, onSelect, 
     isSelectionMode = false, isSelected = false, onToggleSelect,
     variant = 'default', disabledReason
 }) => {
@@ -85,6 +86,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const isSpacingMark = character.glyphClass === 'mark' && !isNonSpacingMark;
   const isCompositeTemplate = character.composite && !character.link && !character.position && !character.kern;
 
+  // This class is used for the empty/dashed state to hint at the glyph type
   let typeBorderClass = "border-gray-200 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-400";
   if (isNonSpacingMark) typeBorderClass = "border-amber-300 dark:border-amber-700 hover:border-amber-500 dark:hover:border-amber-500";
   else if (isSpacingMark) typeBorderClass = "border-sky-300 dark:border-sky-700 hover:border-sky-500 dark:hover:border-sky-500";
@@ -99,11 +101,19 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   } else if (!isDrawn) {
       stateClasses = `bg-white dark:bg-gray-800 border-2 border-dashed ${typeBorderClass} opacity-90 cursor-pointer`;
   } else if (!isManuallySet) { // State 1: Pending Review (suggestion)
-      stateClasses = "bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
-  } else if (isManuallySet) { // State 2: Accepted Default
-      stateClasses = "bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
-  } else { // State 3: Manually Drawn or Edited
-      stateClasses = `bg-white dark:bg-gray-800 border-2 ${typeBorderClass} cursor-pointer`;
+      stateClasses = "bg-white dark:bg-gray-800 border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
+  } else { // State 3: Manually Drawn or Accepted
+      if (isConstructed) {
+          // Confirmed Auto-Generated: Solid BLUE
+      stateClasses = "bg-white dark:bg-gray-800 border-2 border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
+      } else {
+          // Hand-Drawn: Solid border, respecting mark colors
+          let completedTypeBorderClass = "border-gray-400 dark:border-gray-500 hover:border-gray-500 dark:hover:border-gray-400"; // Default: Solid Gray
+          if (isNonSpacingMark) completedTypeBorderClass = "border-amber-400 dark:border-amber-600 hover:border-amber-500 dark:hover:border-amber-500"; // Solid Amber
+          else if (isSpacingMark) completedTypeBorderClass = "border-sky-400 dark:border-sky-600 hover:border-sky-500 dark:hover:border-sky-500"; // Solid Sky Blue
+          
+          stateClasses = `bg-white dark:bg-gray-800 border-2 border-solid ${completedTypeBorderClass} cursor-pointer`;
+      }
   }
 
   const showName = !!settings.showGlyphNames;

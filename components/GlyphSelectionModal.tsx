@@ -186,6 +186,8 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
 // FIX: Added missing props `isAvailable` and `isManuallySet` to satisfy the CharacterCard component's requirements.
                   isAvailable={true}
                   isManuallySet={true}
+                  // FIX: Added missing 'isConstructed' prop to satisfy CharacterCardProps.
+                  isConstructed={!!(char.position || char.kern || char.link)}
                 />
               )) : (
                 <p className="col-span-full text-center text-gray-500">{t('noResultsFound')}</p>
