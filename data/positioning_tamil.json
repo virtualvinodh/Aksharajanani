@@ -11,19 +11,19 @@
   {
     "markAttachment": {
       "க":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
-      "ங":  {  "ீ": ["topRight", "bottomCenter"],  "்": ["topCenter", "bottomCenter", "0", "-50"] },
-      "ச":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ங":  {  "ீ": ["topRight", "bottomCenter"],  "்": ["topCenter", "bottomCenter", "0", "-50"],  "": ["bottomRight", "topRight"],  "": ["bottomRight", "topRight"] },
+      "ச":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"],  "": ["bottomRight", "topRight"],  "": ["bottomRight", "topRight"] },
       "ஞ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
       "ட":  { "்": ["topRight", "bottomCenter"] },
       "ண":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
       "த":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
       "ந":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
-      "ப":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ப":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"],  "": ["bottomRight", "topRight"],  "": ["bottomRight", "topRight"] },
       "ம":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
-      "ய":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "ய":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"],  "": ["bottomRight", "topRight"],  "": ["bottomRight", "topRight"] },
       "ர":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
       "ல":  {  "ீ": ["topRight", "bottomCenter"],  "்": ["topCenter", "bottomCenter", "0", "-50"] },
-      "வ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "வ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"],  "": ["bottomRight", "topRight"],  "": ["bottomRight", "topRight"] },
       "ழ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
       "ள":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
       "ற":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
@@ -33,7 +33,8 @@
       "ஷ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
       "ஹ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
       "க்ஷ": {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
-      "ஶ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] }
+      "ஶ":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] },
+      "":  {  "ீ": ["topRight", "bottomCenter"], "்": ["topCenter", "bottomCenter", "0", "-50"] }
     }
   },
   {

@@ -67,11 +67,11 @@
         "isPrefillEnabled": true
       },
       "grid": {
-        "characterNameSize": 520
+        "characterNameSize": 580
       },
       "guideFont": {
-        "fontName": "Noto Sans Tamil",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansTamil/hinted/ttf/NotoSansTamil-Regular.ttf",
+        "fontName": "Mukta Malar",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/MuktaMalar-Regular-Modified.otf",
         "stylisticSet": ""
       },
       "testPage": {

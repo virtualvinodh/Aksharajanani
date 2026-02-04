@@ -215,7 +215,7 @@ export const useProgressCalculators = ({
      */
     const hasKerning = useMemo(() => {
         // Condition 1: Script has recommended pairs.
-        if (recommendedKerning && recommendedKerning.length > 0) {
+      /*  if (recommendedKerning && recommendedKerning.length > 0) {
             // Use .some() for an efficient check. It stops as soon as it finds one valid pair.
             return recommendedKerning.some(pair => {
                 const [leftName, rightName] = pair;
@@ -235,7 +235,7 @@ export const useProgressCalculators = ({
         
         // Condition 2: Fallback for scripts with no recommendations.
         // At least 2 glyphs drawn to allow manual pairing
-        else {
+        else */ {
             return drawingProgress.completed >= 2;
         }
     }, [recommendedKerning, drawingProgress.completed, allCharsByName, glyphDataMap, glyphVersion]);
