@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { ScriptConfig, ScriptsFile, ProjectData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
@@ -7,6 +8,7 @@ import App from '../App';
 import AboutPage from './AboutPage';
 import HelpPage from './HelpPage';
 import { initializePyodide } from '../services/pythonFontService';
+import { initPositioningHeuristics } from '../services/positioningHeuristicsService';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useKerning } from '../contexts/KerningContext';
@@ -42,6 +44,7 @@ const AppContainer: React.FC = () => {
 
     useEffect(() => {
         initializePyodide();
+        initPositioningHeuristics();
     }, []);
 
     useEffect(() => {

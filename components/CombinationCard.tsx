@@ -1,8 +1,10 @@
 
+
 import React, { useRef, useEffect, forwardRef, useMemo } from 'react';
 import { Character, GlyphData, Path, Point, MarkAttachmentRules, MarkPositioningMap, FontMetrics, CharacterSet, PositioningRules } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
-import { renderPaths, getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../services/glyphRenderService';
+import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderService';
+import { calculateDefaultMarkOffset } from '../services/positioningHeuristicsService';
 import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon } from '../constants';
 import { VEC } from '../utils/vectorUtils';
 import { useSettings } from '../contexts/SettingsContext';

@@ -1,9 +1,11 @@
 
+
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Path, KerningMap, MarkPositioningMap, PositioningRules, MarkAttachmentRules, Segment } from '../types';
 import { compileFeaturesAndPatch } from './pythonFontService';
 import { generateFea } from './feaService';
 import { VEC } from '../utils/vectorUtils';
-import { curveToPolyline, quadraticCurveToPolyline, getAccurateGlyphBBox, calculateDefaultMarkOffset, BoundingBox, getStrokeOutlinePoints } from './glyphRenderService';
+import { curveToPolyline, quadraticCurveToPolyline, getAccurateGlyphBBox, BoundingBox, getStrokeOutlinePoints } from './glyphRenderService';
+import { calculateDefaultMarkOffset } from './positioningHeuristicsService';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
 import { expandMembers } from './groupExpansionService';

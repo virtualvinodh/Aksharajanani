@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
     Character, GlyphData, Point, Path, AppSettings, FontMetrics, 
@@ -6,8 +5,9 @@ import {
     CharacterSet, AttachmentClass
 } from '../../types';
 import { 
-    calculateDefaultMarkOffset, getAccurateGlyphBBox, 
+    getAccurateGlyphBBox, 
 } from '../../services/glyphRenderService';
+import { calculateDefaultMarkOffset } from '../../services/positioningHeuristicsService';
 import { VEC } from '../../utils/vectorUtils';
 import { deepClone } from '../../utils/cloneUtils';
 import { expandMembers } from '../../services/groupExpansionService';
@@ -342,19 +342,19 @@ export const usePositioningSession = ({
     }, [lsb, rsb, glyphClass, advWidth, gpos, gsub, liga, position, kern, currentOffset, hasUnsavedChanges, settings.isAutosaveEnabled, handleSave]);
 
     const handleNavigationAttempt = useCallback((target: Character | 'prev' | 'next' | 'back') => {
-        const proceed = () => { 
-            if (target === 'back') onClose(); 
-            else onNavigate(target); 
-        };
         if (settings.isAutosaveEnabled) { 
             if (hasUnsavedChanges) handleSave(currentOffset, false, false); 
-            proceed(); 
+            if (target === 'back') onClose(); 
+            else onNavigate(target); 
         }
         else if (hasUnsavedChanges) { 
             setPendingNavigation(target); 
             setIsUnsavedModalOpen(true); 
         }
-        else proceed();
+        else { 
+            if (target === 'back') onClose(); 
+            else onNavigate(target); 
+        }
     }, [settings.isAutosaveEnabled, hasUnsavedChanges, onClose, onNavigate, handleSave, currentOffset]);
 
     const handleManualCommit = (xOverride?: string, yOverride?: string) => {
