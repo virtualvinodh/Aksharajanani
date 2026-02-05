@@ -138,20 +138,22 @@ const ComponentListEditor: React.FC<{
                                                 <input type="text" value={tr.y} onChange={e => handleTransformChange(index, 'y', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                             </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-[9px] text-gray-500 uppercase mb-1">Mode</label>
-                                            <div className="flex bg-gray-200 dark:bg-gray-600 rounded p-0.5">
-                                                {(['relative', 'absolute', 'touching'] as const).map(m => (
-                                                    <button
-                                                        key={m}
-                                                        onClick={() => handleTransformChange(index, 'mode', m)}
-                                                        className={`flex-1 py-0.5 rounded text-[10px] capitalize ${tr.mode === m ? 'bg-white dark:bg-gray-500 shadow text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-                                                    >
-                                                        {m.slice(0, 3)}
-                                                    </button>
-                                                ))}
+                                        {index > 0 && (
+                                            <div>
+                                                <label className="block text-[9px] text-gray-500 uppercase mb-1">Mode</label>
+                                                <div className="flex bg-gray-200 dark:bg-gray-600 rounded p-0.5">
+                                                    {(['relative', 'absolute', 'touching'] as const).map(m => (
+                                                        <button
+                                                            key={m}
+                                                            onClick={() => handleTransformChange(index, 'mode', m)}
+                                                            className={`flex-1 py-0.5 rounded text-[10px] capitalize ${tr.mode === m ? 'bg-white dark:bg-gray-500 shadow text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+                                                        >
+                                                            {m.slice(0, 3)}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 );
                              })}
