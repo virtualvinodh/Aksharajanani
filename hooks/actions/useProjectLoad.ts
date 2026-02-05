@@ -320,6 +320,7 @@ export const useProjectLoad = ({
                 settingsDispatch({ type: 'SET_METRICS', payload: { ...currentScript.metrics, ...projectToLoad.metrics } });
                 glyphDataDispatch({ type: 'SET_MAP', payload: new Map(projectToLoad.glyphs) });
                 if (projectToLoad.kerning) kerningDispatch({ type: 'SET_MAP', payload: new Map(projectToLoad.kerning) });
+                if (projectToLoad.suggestedKerning) kerningDispatch({ type: 'SET_SUGGESTIONS', payload: new Map(projectToLoad.suggestedKerning) });
                 if (projectToLoad.markPositioning) positioningDispatch({ type: 'SET_MAP', payload: new Map(projectToLoad.markPositioning) });
                 rulesDispatch({ type: 'SET_FEA_EDIT_MODE', payload: isFeaOnly ? true : (projectToLoad.isFeaEditMode ?? false) });
                 rulesDispatch({ type: 'SET_MANUAL_FEA_CODE', payload: isFeaOnly ? (feaFileData || '') : (projectToLoad.manualFeaCode ?? '') });

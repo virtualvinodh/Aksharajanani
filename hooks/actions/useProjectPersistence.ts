@@ -19,7 +19,7 @@ export const useProjectPersistence = (
     const layout = useLayout();
     const { script, characterSets } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
-    const { kerningMap } = useKerning();
+    const { kerningMap, suggestedKerningMap } = useKerning();
     const { settings, metrics } = useSettings();
     const { markPositioningMap } = usePositioning();
     const { state: rulesState, dispatch: rulesDispatch } = useRules();
@@ -54,6 +54,7 @@ export const useProjectPersistence = (
             manualFeaCode,
             glyphs: Array.from(glyphDataMap.entries()),
             kerning: Array.from(kerningMap.entries()),
+            suggestedKerning: Array.from(suggestedKerningMap.entries()),
             markPositioning: Array.from(markPositioningMap.entries()),
             
             // Unified Model Additions
@@ -65,7 +66,7 @@ export const useProjectPersistence = (
             groups: fontRules.groups || undefined,
             guideFont: script.guideFont || undefined
         };
-    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, glyphVersion]);
+    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, suggestedKerningMap, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, glyphVersion]);
 
     useEffect(() => {
         if (!isScriptDataLoading && lastSavedState !== null) {
@@ -75,7 +76,7 @@ export const useProjectPersistence = (
         // Trigger dependencies
         // glyphDataMap is a ref, so it's stable. glyphVersion changes on update.
         glyphVersion, 
-        kerningMap, markPositioningMap, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, projectName,
+        kerningMap, suggestedKerningMap, markPositioningMap, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, projectName,
         positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning,
         // Logic dependencies
         isScriptDataLoading, lastSavedState

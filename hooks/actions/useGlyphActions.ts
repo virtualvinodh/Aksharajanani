@@ -41,7 +41,7 @@ export const useGlyphActions = (
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
     const { settings, metrics, dispatch: settingsDispatch } = useSettings();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
-    const { kerningMap, dispatch: kerningDispatch, queueAutoKern } = useKerning();
+    const { kerningMap, suggestedKerningMap, dispatch: kerningDispatch, queueAutoKern } = useKerning();
     const { state: rulesState } = useRules();
     const groups = rulesState.fontRules?.groups || {};
     
@@ -84,6 +84,31 @@ export const useGlyphActions = (
     
     // --- Auto-Kern Trigger Logic ---
     const triggerAutoKernForChar = useCallback((unicode: number) => {
+        // Step 1: Clean Up Stale Suggestions
+        // Identify existing suggestions that involve this char and are not manually accepted (i.e. not in kerningMap)
+        // We remove them immediately to provide feedback that they are being recalculated.
+        const keysToDelete: string[] = [];
+        const stalePairsToRequeue: QueuedPair[] = [];
+        
+        for (const [key, _] of suggestedKerningMap) {
+             const [l, r] = key.split('-').map(Number);
+             if (l === unicode || r === unicode) {
+                 // Check if manual override exists. If it does, we don't touch it.
+                 if (!kerningMap.has(key)) {
+                     keysToDelete.push(key);
+                     
+                     // Optional: If we want to strictly re-queue only what was there, we could do it here.
+                     // But the rule-based scan below is more robust for finding NEW pairs too.
+                     // However, standard logic might not catch pairs if rules changed, so we rely on recommendedKerning below.
+                 }
+             }
+        }
+
+        if (keysToDelete.length > 0) {
+            kerningDispatch({ type: 'REMOVE_SUGGESTIONS', payload: keysToDelete });
+        }
+
+        // Step 2: Scan Rules to Find & Queue Affected Pairs
         if (!recommendedKerning || recommendedKerning.length === 0 || !characterSets) return;
         
         const char = allCharsByUnicode.get(unicode);
@@ -105,8 +130,7 @@ export const useGlyphActions = (
             if (val !== undefined) {
                  if (typeof val === 'number') targetDist = val;
                  else if (!isNaN(Number(val))) targetDist = Number(val);
-                 else if (val === 'lsb' || val === 'rsb') targetDist = null; // complex logic handled in worker? No, passing null uses default.
-                 // Ideally, worker needs resolved target. For now, we pass simple number or null.
+                 else if (val === 'lsb' || val === 'rsb') targetDist = null; 
             }
 
             if (isLeft) {
@@ -137,7 +161,7 @@ export const useGlyphActions = (
             queueAutoKern(affectedPairs);
         }
 
-    }, [recommendedKerning, characterSets, allCharsByUnicode, allCharsByName, groups, glyphDataMap, queueAutoKern]);
+    }, [recommendedKerning, characterSets, allCharsByUnicode, allCharsByName, groups, glyphDataMap, queueAutoKern, suggestedKerningMap, kerningMap, kerningDispatch]);
 
     const handleSaveGlyph = useCallback(async (
         unicode: number,
