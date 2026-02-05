@@ -33,7 +33,7 @@ export const useExportActions = ({
     const { settings, metrics } = useSettings();
     const { characterSets, allCharsByUnicode, allCharsByName } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
-    const { kerningMap } = useKerning();
+    const { kerningMap, suggestedKerningMap } = useKerning();
     const { markPositioningMap } = usePositioning();
     const { state: rulesState } = useRules();
     const { fontRules, isFeaEditMode, manualFeaCode } = rulesState;
@@ -153,7 +153,13 @@ export const useExportActions = ({
         }
     
         if (!fontBlob) {
-            const result = await exportToOtf(glyphDataMap, settings, t, fontRules, metrics, characterSets, kerningMap, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification);
+            // MERGE KERNING: Use suggested values as base, overwrite with manual values
+            const effectiveKerningMap = new Map(suggestedKerningMap);
+            kerningMap.forEach((value, key) => {
+                effectiveKerningMap.set(key, value);
+            });
+
+            const result = await exportToOtf(glyphDataMap, settings, t, fontRules, metrics, characterSets, effectiveKerningMap, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification);
             fontBlob = result.blob;
             feaError = result.feaError;
             if (projectId && fontBlob && !feaError) {
@@ -163,7 +169,7 @@ export const useExportActions = ({
         
         if (!fontBlob) return null;
         return { blob: fontBlob, feaError: feaError };
-    }, [getProjectState, projectId, settings, metrics, characterSets, glyphDataMap, t, fontRules, kerningMap, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification]);
+    }, [getProjectState, projectId, settings, metrics, characterSets, glyphDataMap, t, fontRules, kerningMap, suggestedKerningMap, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification]);
 
     const performExportAfterAnimation = useCallback(async () => {
         setExportingType('export');

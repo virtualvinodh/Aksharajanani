@@ -23,7 +23,11 @@ interface KerningPageProps {
 
 const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMode, mode, showRecommendedLabel }) => {
     const { t } = useLocale();
-    const { pendingNavigationTarget, setPendingNavigationTarget, filterMode, searchQuery, showNotification } = useLayout();
+    const { 
+        pendingNavigationTarget, setPendingNavigationTarget, 
+        filterMode, searchQuery, showNotification,
+        setWorkspace, selectCharacter 
+    } = useLayout();
     const { characterSets, allCharsByName, allCharsByUnicode } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap, suggestedKerningMap, dispatch: kerningDispatch } = useKerning();
@@ -194,10 +198,19 @@ const KerningPage: React.FC<KerningPageProps> = ({ recommendedKerning, editorMod
         }
     }, [pendingNavigationTarget, filteredPairs, setPendingNavigationTarget]);
 
-    const handleNavigate = (direction: 'prev' | 'next') => {
+    const handleNavigate = (target: 'prev' | 'next' | Character) => {
+        if (typeof target === 'object') {
+            // It's a Character object (from Source strip) - Switch to Drawing Workspace
+            setEditingIndex(null);
+            selectCharacter(target);
+            setWorkspace('drawing');
+            return;
+        }
+
+        // It's a direction string - Navigate within Kerning list
         if (editingIndex === null) return;
-        if (direction === 'prev' && editingIndex > 0) setEditingIndex(editingIndex - 1);
-        if (direction === 'next' && editingIndex < filteredPairs.length - 1) setEditingIndex(editingIndex + 1);
+        if (target === 'prev' && editingIndex > 0) setEditingIndex(editingIndex - 1);
+        if (target === 'next' && editingIndex < filteredPairs.length - 1) setEditingIndex(editingIndex + 1);
     };
 
     const handleDeletePair = useCallback(() => {
