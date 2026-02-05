@@ -4,10 +4,12 @@ import { Path, Character, GlyphData, AppSettings, FontMetrics, MarkAttachmentRul
 import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
-import { generateCompositeGlyphData, getAccurateGlyphBBox } from '../../services/glyphRenderService';
+import { generateCompositeGlyphData, getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../../services/glyphRenderService';
 import { SaveOptions } from '../actions/useGlyphActions';
 import { deepClone } from '../../utils/cloneUtils';
 import { useRules } from '../../contexts/RulesContext';
+import { useProject } from '../../contexts/ProjectContext';
+import { VEC } from '../../utils/vectorUtils';
 
 interface UseGlyphEditSessionProps {
     character: Character;
@@ -37,6 +39,7 @@ export const useGlyphEditSession = ({
     const { t } = useLocale();
     const { showNotification, checkAndSetFlag } = useLayout();
     const { state: rulesState } = useRules();
+    const { dispatch: characterDispatch } = useProject();
     const groups = rulesState.fontRules?.groups || {};
 
     // --- STATE INITIALIZATION ---
@@ -102,8 +105,105 @@ export const useGlyphEditSession = ({
         metaRef.current = { lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform };
     }, [lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform]);
 
+    // --- AUTOMATIC CONVERSION OF RELATIVE LINKS TO ABSOLUTE ---
+    useEffect(() => {
+        // Only run if Linked Glyph and transforms are NOT fully absolute yet.
+        // This ensures old projects migrate to the new independent-movement system automatically.
+        if (character.link && character.link.length > 0 && 
+           (!character.compositeTransform || character.compositeTransform.length !== character.link.length || character.compositeTransform.some(t => t.mode !== 'absolute'))) {
+            
+            const localCharsByName = new Map<string, Character>();
+            allCharacterSets.flatMap(set => set.characters).forEach(char => localCharsByName.set(char.name, char));
+            
+            const components = character.link;
+            const newTransforms: ComponentTransform[] = [];
+            let accumulatedPaths: Path[] = [];
+            let hasChanges = false;
+
+            components.forEach((name, index) => {
+                 const compChar = localCharsByName.get(name);
+                 const compGlyph = compChar?.unicode !== undefined ? allGlyphData.get(compChar.unicode) : undefined;
+                 
+                 // If component missing or empty, default to zero
+                 if (!compChar || !compGlyph || !isGlyphDrawn(compGlyph)) {
+                     const oldT = character.compositeTransform?.[index];
+                     newTransforms.push(oldT ? { ...oldT, mode: 'absolute' } : { x: 0, y: 0, scale: 1, mode: 'absolute' });
+                     return;
+                 }
+
+                 const compPaths = deepClone(compGlyph.paths);
+                 const oldT = character.compositeTransform?.[index];
+                 
+                 // If already absolute, preserve it and update accumulator
+                 if (oldT && oldT.mode === 'absolute') {
+                      newTransforms.push(oldT);
+                      const offset = { x: oldT.x || 0, y: oldT.y || 0 };
+                      const shifted = compPaths.map(p => ({
+                            ...p,
+                            points: p.points.map(pt => VEC.add(pt, offset)),
+                            segmentGroups: p.segmentGroups?.map(g => g.map(s => ({...s, point: VEC.add(s.point, offset)})))
+                        }));
+                      accumulatedPaths = [...accumulatedPaths, ...shifted];
+                      return;
+                 }
+                 
+                 hasChanges = true;
+                 
+                 // Calculate Absolute Position from Relative/Touching state
+                 let offset = { x: 0, y: 0 };
+                 
+                 if (oldT && oldT.mode === 'touching') {
+                      const prevBbox = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
+                      const markBbox = getAccurateGlyphBBox(compPaths, settings.strokeThickness);
+                      if (prevBbox && markBbox) {
+                          offset = { x: (prevBbox.x + prevBbox.width) - markBbox.x, y: 0 };
+                      }
+                      offset.x += (oldT.x || 0);
+                      offset.y += (oldT.y || 0);
+                 } else {
+                      // Relative (Default)
+                      if (index > 0) {
+                            const baseBbox = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
+                            const markBbox = getAccurateGlyphBBox(compPaths, settings.strokeThickness);
+                            const prevChar = localCharsByName.get(components[index-1]) || compChar;
+                            
+                            const autoOffset = calculateDefaultMarkOffset(
+                                prevChar, compChar, baseBbox, markBbox, markAttachmentRules, metrics, allCharacterSets, false, groups
+                            );
+                            offset = autoOffset;
+                      }
+                      offset.x += (oldT?.x || 0);
+                      offset.y += (oldT?.y || 0);
+                 }
+                 
+                 newTransforms.push({
+                     x: offset.x,
+                     y: offset.y,
+                     scale: oldT?.scale ?? 1,
+                     mode: 'absolute'
+                 });
+
+                 const shifted = compPaths.map(p => ({
+                    ...p,
+                    points: p.points.map(pt => VEC.add(pt, offset)),
+                    segmentGroups: p.segmentGroups?.map(g => g.map(s => ({...s, point: VEC.add(s.point, offset)})))
+                }));
+                accumulatedPaths = [...accumulatedPaths, ...shifted];
+            });
+            
+            if (hasChanges && character.unicode !== undefined) {
+                 characterDispatch({ 
+                     type: 'UPDATE_CHARACTER_METADATA', 
+                     payload: { 
+                         unicode: character.unicode, 
+                         compositeTransform: newTransforms 
+                     } 
+                 });
+            }
+        }
+    }, [character.link, character.compositeTransform, character.unicode, allCharacterSets, allGlyphData, settings.strokeThickness, metrics, markAttachmentRules, groups, characterDispatch]);
+
     // --- EXTERNAL PROP SYNC ---
-    // Critical: Listen for external updates (e.g. from Properties Panel) to avoid stale overwrites
     useEffect(() => {
         setLsbState(character.lsb);
         setRsbState(character.rsb);
@@ -119,8 +219,6 @@ export const useGlyphEditSession = ({
         setLigaState(character.liga);
         setCompositeTransformState(character.compositeTransform);
         
-        // Reset the "Saved Base" for path tracking to prevent the app from thinking 
-        // newly applied construction changes are unsaved local modifications.
         if (glyphData) {
             setInitialPathsOnLoad(deepClone(glyphData.paths || []));
         }

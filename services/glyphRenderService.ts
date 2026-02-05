@@ -305,7 +305,7 @@ export const getGlyphSubBBoxes = (
     let xHeightRaw = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
     let descenderRaw = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
 
-    const expandBox = (box: BBox, p: Point) => {
+    const expandBox = (box, p) => {
         box.minX = Math.min(box.minX, p.x);
         box.maxX = Math.max(box.maxX, p.x);
         box.minY = Math.min(box.minY, p.y);
@@ -498,7 +498,6 @@ export const calculateDefaultMarkOffset = (
     return offset;
 };
 
-// ... (keep rest of file: renderPaths, generateCompositeGlyphData, updateComponentInPaths) ...
 export const renderPaths = (ctx: CanvasRenderingContext2D, paths: Path[], options: RenderOptions) => {
   ctx.strokeStyle = options.color;
   ctx.fillStyle = options.color;
@@ -590,35 +589,57 @@ export const renderPaths = (ctx: CanvasRenderingContext2D, paths: Path[], option
 
 const generateId = () => `${Date.now()}-${Math.random()}`;
 
-// Helper: Normalize transform config to new object syntax
-const normalizeTransform = (config: any, index: number): ComponentTransform => {
-    // 1. New Syntax: Array of Objects
-    if (Array.isArray(config) && config.length > 0 && typeof config[0] === 'object' && !Array.isArray(config[0])) {
-         const entry = config[index];
-         if (!entry) return { scale: 1, x: 0, y: 0, mode: 'relative' };
-         return {
-             scale: entry.scale ?? 1,
-             x: entry.x ?? 0,
-             y: entry.y ?? 0,
-             mode: entry.mode ?? 'relative'
-         };
+// Replaced normalizeTransform with this robust accessor
+const getTransformForIndex = (config: any, index: number): ComponentTransform => {
+    // Basic safety
+    if (!Array.isArray(config)) {
+        return { scale: 1, x: 0, y: 0, mode: 'relative' };
+    }
+    
+    // Get the specific config for this component index
+    const item = config[index];
+
+    // Case 1: Sparse/Empty slot -> Default
+    if (item === undefined || item === null) {
+        // Special legacy check: If config[0] is a NUMBER, it means the whole array is a global legacy tuple [scale, y]
+        // that applies to ALL components (or specifically the mark).
+        // Since we are looking at index > 0 (likely), and item is undefined, we check root.
+        if (config.length > 0 && typeof config[0] === 'number') {
+             return {
+                 scale: config[0] ?? 1,
+                 y: config[1] ?? 0,
+                 mode: 'relative',
+                 x: 0
+             };
+        }
+        return { scale: 1, x: 0, y: 0, mode: 'relative' };
     }
 
-    // 2. Legacy: Array of Arrays [[1], [1, "touching"]]
-    if (Array.isArray(config) && Array.isArray(config[0])) {
-         const entry = config[index];
-         if (!entry) return { scale: 1, x: 0, y: 0, mode: 'relative' };
-         return {
-             scale: typeof entry[0] === 'number' ? entry[0] : 1,
-             y: typeof entry[1] === 'number' ? entry[1] : 0,
-             mode: entry.includes('touching') ? 'touching' : (entry.includes('absolute') ? 'absolute' : 'relative'),
+    // Case 2: New Object Syntax (Preferred)
+    if (typeof item === 'object' && !Array.isArray(item)) {
+        return {
+             scale: item.scale ?? 1,
+             x: item.x ?? 0,
+             y: item.y ?? 0,
+             mode: item.mode ?? 'relative'
+        };
+    }
+
+    // Case 3: Legacy Array Syntax for specific index [[scale], [scale, y, mode]]
+    if (Array.isArray(item)) {
+        return {
+             scale: typeof item[0] === 'number' ? item[0] : 1,
+             y: typeof item[1] === 'number' ? item[1] : 0,
+             mode: item.includes('touching') ? 'touching' : (item.includes('absolute') ? 'absolute' : 'relative'),
              x: 0
          };
     }
-
-    // 3. Legacy: Simple Array [0.6, 200] -> Applies to all components (or specific ones depending on context)
-    // In legacy logic, this array was typically used for single-component glyphs (marks)
-    if (Array.isArray(config) && typeof config[0] === 'number') {
+    
+    // Case 4: Legacy Global Tuple [scale, y] where item is a number (only valid if index 0)
+    // If index is 0 and it's a number, it returns this.
+    // If index > 0, we already checked the global case in Case 1 fallback.
+    // But if config is [0.6, 200] and we ask for index 0, item is 0.6.
+    if (typeof item === 'number' && index === 0) {
          return {
              scale: config[0] ?? 1,
              y: config[1] ?? 0,
@@ -664,7 +685,7 @@ export const generateCompositeGlyphData = ({
         const transformConfig = charDef.compositeTransform;
         
         // MODIFICATION: Only retrieve scale. Ignore X/Y here.
-        const { scale } = normalizeTransform(transformConfig, componentIndex);
+        const { scale } = getTransformForIndex(transformConfig, componentIndex);
 
         if (scale === 1.0) return paths;
 
@@ -700,7 +721,7 @@ export const generateCompositeGlyphData = ({
         const bbox = getAccurateGlyphBBox(transformedPaths, settings.strokeThickness);
 
         // MODIFICATION: Capture manual transform config
-        const { x, y, mode } = normalizeTransform(character.compositeTransform, index);
+        const { x, y, mode } = getTransformForIndex(character.compositeTransform, index);
         return { char, paths: transformedPaths, bbox, manualTransform: { x: x || 0, y: y || 0, mode } };
     });
     
@@ -815,7 +836,7 @@ export const updateComponentInPaths = (
 
     if (!oldBbox || !newSourceBbox) return null;
 
-    const { scale } = normalizeTransform(transformConfig, componentIndex);
+    const { scale } = getTransformForIndex(transformConfig, componentIndex);
 
     const oldAnchor = { x: oldBbox.x, y: oldBbox.y + oldBbox.height };
     const newSourceAnchor = { x: newSourceBbox.x, y: newSourceBbox.y + newSourceBbox.height };
