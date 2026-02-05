@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Point, Path, FontMetrics, AppSettings, Character } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -44,7 +43,7 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
         if (onLockedInteraction) onLockedInteraction();
     }, [onLockedInteraction]);
 
-    const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel, isPanning, isDragging } = usePositioningCanvas({
+    const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel, isPanning, isDragging, handleTouchStart, handleTouchMove, handleTouchEnd } = usePositioningCanvas({
         canvasRef, paths: markPaths, onPathsChange, tool, zoom, setZoom, viewOffset, setViewOffset, movementConstraint, canEdit,
         onLockedInteraction: handleLockedInteractionInternal
     });
@@ -192,6 +191,10 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
             onWheel={handleWheel}
         />
     );

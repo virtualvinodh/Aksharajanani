@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Point, FontMetrics, AppSettings, Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -33,7 +32,7 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
 
-    const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel, isPanning, isDragging } = useKerningCanvas({
+    const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel, isPanning, isDragging, handleTouchStart, handleTouchMove, handleTouchEnd } = useKerningCanvas({
         canvasRef, leftChar, rightChar, glyphDataMap, strokeThickness, metrics,
         kernValue, onKernChange, tool, zoom, setZoom, viewOffset, setViewOffset, baseScale
     });
@@ -171,6 +170,10 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
             onWheel={handleWheel}
         />
     );

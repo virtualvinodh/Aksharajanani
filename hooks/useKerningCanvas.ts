@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Point, Character, GlyphData, FontMetrics } from '../types';
 import { VEC } from '../utils/vectorUtils';
@@ -144,8 +143,55 @@ export const useKerningCanvas = ({
         setViewOffset(newViewOffset);
     }, [getViewportPoint, setZoom, setViewOffset]);
 
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        if (tool === 'pan' && e.touches.length > 1) {
+            panTool.startPan(getViewportPoint(e)!, viewOffsetRef.current);
+            return;
+        }
+        if (e.touches.length === 1) {
+            const viewportPoint = getViewportPoint(e);
+            if (!viewportPoint) return;
+    
+            const isOverRightGlyph = rightGlyphHitBox.current ? (
+                viewportPoint.x >= rightGlyphHitBox.current.x && viewportPoint.x <= rightGlyphHitBox.current.x + rightGlyphHitBox.current.w &&
+                viewportPoint.y >= rightGlyphHitBox.current.y && viewportPoint.y <= rightGlyphHitBox.current.y + rightGlyphHitBox.current.h
+            ) : false;
+    
+            if (isOverRightGlyph) {
+                e.preventDefault();
+                setIsDragging(true);
+                dragStartPointRef.current = viewportPoint;
+                kernAtStartRef.current = parseInt(kernValue, 10) || 0;
+            }
+        }
+    }, [tool, kernValue, getViewportPoint, panTool, viewOffset]);
+    
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        if (panTool.isPanning) {
+            panTool.move(getViewportPoint(e)!);
+            return;
+        }
+
+        if (e.touches.length === 1 && isDragging) {
+            e.preventDefault();
+            const viewportPoint = getViewportPoint(e);
+            if (!viewportPoint) return;
+    
+            const finalScale = baseScale * zoomRef.current;
+            const deltaViewportX = viewportPoint.x - dragStartPointRef.current.x;
+            const deltaDesignX = Math.round(deltaViewportX / finalScale);
+            onKernChange(String(kernAtStartRef.current + deltaDesignX));
+        }
+    }, [isDragging, panTool, getViewportPoint, baseScale, onKernChange]);
+
+    const handleTouchEnd = useCallback(() => {
+        if (panTool.isPanning) panTool.end();
+        setIsDragging(false);
+    }, [panTool]);
+
     return {
         handleMouseDown, handleMouseMove, handleMouseUp, handleWheel,
+        handleTouchStart, handleTouchMove, handleTouchEnd,
         isPanning: panTool.isPanning, isDragging
     };
 };
