@@ -1,4 +1,3 @@
-
 import React, { createContext, useReducer, useContext, ReactNode, useMemo, Dispatch, useEffect, useRef, useCallback } from 'react';
 import { KerningMap, GlyphData, FontMetrics, AppSettings, Character } from '../types';
 import { initAutoKernWorker, terminateAutoKernWorker } from '../services/autoKerningService';
@@ -14,6 +13,8 @@ type KerningAction =
     | { type: 'SET_MAP'; payload: KerningMap }
     | { type: 'BATCH_UPDATE'; payload: Map<string, number> }
     | { type: 'SET_SUGGESTIONS'; payload: Map<string, number> }
+    | { type: 'MERGE_SUGGESTIONS'; payload: Map<string, number> }
+    | { type: 'REMOVE_SUGGESTIONS'; payload: string[] }
     | { type: 'RESET' };
 
 const kerningReducer = (state: KerningState, action: KerningAction): KerningState => {
@@ -27,6 +28,16 @@ const kerningReducer = (state: KerningState, action: KerningAction): KerningStat
         }
         case 'SET_SUGGESTIONS':
             return { ...state, suggestedKerningMap: action.payload };
+        case 'MERGE_SUGGESTIONS':
+            return {
+                ...state,
+                suggestedKerningMap: new Map([...state.suggestedKerningMap, ...action.payload])
+            };
+        case 'REMOVE_SUGGESTIONS': {
+            const newMap = new Map(state.suggestedKerningMap);
+            action.payload.forEach(key => newMap.delete(key));
+            return { ...state, suggestedKerningMap: newMap };
+        }
         case 'RESET':
             return { ...state, kerningMap: new Map(), suggestedKerningMap: new Map() };
         default:
@@ -73,7 +84,7 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
             if (results && Object.keys(results).length > 0) {
                 const updateMap = new Map<string, number>();
                 Object.entries(results).forEach(([key, val]) => updateMap.set(key, val as number));
-                dispatch({ type: 'SET_SUGGESTIONS', payload: updateMap });
+                dispatch({ type: 'MERGE_SUGGESTIONS', payload: updateMap });
             }
         };
 

@@ -193,6 +193,7 @@ export interface ProjectData {
   settings: AppSettings;
   glyphs: [number, GlyphData][];
   kerning?: [string, number][];
+  suggestedKerning?: [string, number][];
   markPositioning?: [string, Point][];
   characterSets?: CharacterSet[];
   fontRules?: any;

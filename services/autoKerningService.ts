@@ -1,4 +1,3 @@
-
 import { GlyphData, FontMetrics, Character } from '../types';
 
 // Define the worker script as a string
@@ -220,67 +219,73 @@ self.onmessage = (e) => {
     const { batchId, pairs, glyphDataMap, metrics, strokeThickness } = e.data;
     const results = {}; // Map<string, number> as obj
 
-    pairs.forEach(pair => {
-        const { leftId, rightId, targetDistance, leftRsb, rightLsb } = pair;
-        const leftGlyph = glyphDataMap[leftId];
-        const rightGlyph = glyphDataMap[rightId];
+    try {
+        pairs.forEach(pair => {
+            const { leftId, rightId, targetDistance, leftRsb, rightLsb } = pair;
+            const leftGlyph = glyphDataMap[leftId];
+            const rightGlyph = glyphDataMap[rightId];
 
-        if (!leftGlyph || !rightGlyph) return;
+            if (!leftGlyph || !rightGlyph) return;
 
-        const leftBoxes = getGlyphSubBBoxes(leftGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
-        const rightBoxes = getGlyphSubBBoxes(rightGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
+            const leftBoxes = getGlyphSubBBoxes(leftGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
+            const rightBoxes = getGlyphSubBBoxes(rightGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
 
-        if (!leftBoxes || !rightBoxes || !leftBoxes.full || !rightBoxes.full) return;
-        
-        // Binary Search
-        let low = -Math.round(metrics.unitsPerEm / 2); 
-        let high = 0; 
-        let bestK = 0; 
-        
-        // Fallback or explicit target distance
-        const effectiveTarget = targetDistance !== null ? targetDistance : (leftRsb + rightLsb);
-
-        while (low <= high) {
-            const kMid = Math.floor((low + high) / 2);
+            if (!leftBoxes || !rightBoxes || !leftBoxes.full || !rightBoxes.full) return;
             
-            // X position of right glyph in the test configuration
-            const rightStartX = leftBoxes.full.maxX + leftRsb + rightLsb + kMid;
-            const deltaX = rightStartX - rightBoxes.full.minX;
+            // Binary Search
+            let low = -Math.round(metrics.unitsPerEm / 2); 
+            let high = 0; 
+            let bestK = 0; 
             
-            // Translate right boxes
-            const rBoxAscenderT = rightBoxes.ascender ? { ...rightBoxes.ascender, minX: rightBoxes.ascender.minX + deltaX, maxX: rightBoxes.ascender.maxX + deltaX } : null;
-            const rBoxXHeightT = rightBoxes.xHeight ? { ...rightBoxes.xHeight, minX: rightBoxes.xHeight.minX + deltaX, maxX: rightBoxes.xHeight.maxX + deltaX } : null;
-            const rBoxDescenderT = rightBoxes.descender ? { ...rightBoxes.descender, minX: rightBoxes.descender.minX + deltaX, maxX: rightBoxes.descender.maxX + deltaX } : null;
+            // Fallback or explicit target distance
+            const effectiveTarget = targetDistance !== null ? targetDistance : (leftRsb + rightLsb);
 
-            let isInvalid = false;
-            
-            // Collision Check
-            if (doBBoxesCollide(leftBoxes.ascender, rBoxAscenderT) || doBBoxesCollide(leftBoxes.descender, rBoxDescenderT)) {
-                isInvalid = true;
-            } else if (rBoxXHeightT && leftBoxes.xHeight) {
-                const currentGap = rBoxXHeightT.minX - leftBoxes.xHeight.maxX;
-                if (currentGap < effectiveTarget) {
-                    isInvalid = true; 
-                }
-            } else {
-                 const rBoxFullT = { ...rightBoxes.full, minX: rightBoxes.full.minX + deltaX, maxX: rightBoxes.full.maxX + deltaX };
-                 if (doBBoxesCollide(leftBoxes.full, rBoxFullT)) {
+            while (low <= high) {
+                const kMid = Math.floor((low + high) / 2);
+                
+                // X position of right glyph in the test configuration
+                const rightStartX = leftBoxes.full.maxX + leftRsb + rightLsb + kMid;
+                const deltaX = rightStartX - rightBoxes.full.minX;
+                
+                // Translate right boxes
+                const rBoxAscenderT = rightBoxes.ascender ? { ...rightBoxes.ascender, minX: rightBoxes.ascender.minX + deltaX, maxX: rightBoxes.ascender.maxX + deltaX } : null;
+                const rBoxXHeightT = rightBoxes.xHeight ? { ...rightBoxes.xHeight, minX: rightBoxes.xHeight.minX + deltaX, maxX: rightBoxes.xHeight.maxX + deltaX } : null;
+                const rBoxDescenderT = rightBoxes.descender ? { ...rightBoxes.descender, minX: rightBoxes.descender.minX + deltaX, maxX: rightBoxes.descender.maxX + deltaX } : null;
+
+                let isInvalid = false;
+                
+                // Collision Check
+                if (doBBoxesCollide(leftBoxes.ascender, rBoxAscenderT) || doBBoxesCollide(leftBoxes.descender, rBoxDescenderT)) {
                     isInvalid = true;
+                } else if (rBoxXHeightT && leftBoxes.xHeight) {
+                    const currentGap = rBoxXHeightT.minX - leftBoxes.xHeight.maxX;
+                    if (currentGap < effectiveTarget) {
+                        isInvalid = true; 
+                    }
+                } else {
+                     const rBoxFullT = { ...rightBoxes.full, minX: rightBoxes.full.minX + deltaX, maxX: rightBoxes.full.maxX + deltaX };
+                     if (doBBoxesCollide(leftBoxes.full, rBoxFullT)) {
+                        isInvalid = true;
+                    }
+                }
+
+                if (isInvalid) {
+                    low = kMid + 1; // Too tight, need less negative
+                } else {
+                    bestK = kMid;
+                    high = kMid - 1; // Try tighter
                 }
             }
-
-            if (isInvalid) {
-                low = kMid + 1; // Too tight, need less negative
-            } else {
-                bestK = kMid;
-                high = kMid - 1; // Try tighter
+            
+            if (bestK <= 0) {
+                 results[\`\${leftId}-\${rightId}\`] = bestK;
             }
-        }
-        
-        if (bestK <= 0) {
-             results[\`\${leftId}-\${rightId}\`] = bestK;
-        }
-    });
+        });
+    } catch (error) {
+        // Log the error inside the worker for debugging, but don't crash.
+        console.error('Error during auto-kerning batch:', error);
+        // Post back empty or partial results. The main thread will know the job is done.
+    }
     
     self.postMessage({ batchId, results });
 };
