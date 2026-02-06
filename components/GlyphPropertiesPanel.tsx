@@ -206,6 +206,9 @@ interface GlyphPropertiesPanelProps {
   characterDispatch?: any;
   glyphDataDispatch?: (action: GlyphDataAction) => void;
   onPathsChange?: (paths: Path[]) => void;
+
+  // New: Hide structural editing for Positioning Workspace
+  disableStructuralEditing?: boolean;
 }
 
 const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({ 
@@ -216,7 +219,8 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   liga, setLiga,
   position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
   compositeTransform, setCompositeTransform,
-  characterDispatch, glyphDataDispatch, onPathsChange
+  characterDispatch, glyphDataDispatch, onPathsChange,
+  disableStructuralEditing = false
 }) => {
   const { t } = useLocale();
   const { state: rulesState } = useRules();
@@ -457,7 +461,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
           </div>
       </div>
       
-      {setGlyphClass && (
+      {!disableStructuralEditing && setGlyphClass && (
         <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex-shrink-0">
             <button 
                 onClick={() => setIsClassificationExpanded(!isClassificationExpanded)}
@@ -534,7 +538,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
         </div>
       )}
 
-      {showConstruction && (
+      {!disableStructuralEditing && showConstruction && (
       <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex-shrink-0">
         <button 
             onClick={() => setIsConstructionExpanded(!isConstructionExpanded)}

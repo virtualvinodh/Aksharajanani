@@ -1,3 +1,4 @@
+
 import { useMemo, useCallback } from 'react';
 import { PositioningRules, Character, GlyphData, CharacterSet, AttachmentClass, MarkPositioningMap } from '../../types';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
@@ -133,11 +134,18 @@ export const usePositioningData = ({
                                 targetLigature = existingChar;
                             } else {
                                 virtualPuaCounter++;
+                                // Logic: GSUB implies a specific Ligature glyph. GPOS implies a Virtual pairing.
+                                const derivedClass = rule.gsub ? 'ligature' : 'virtual';
+
                                 targetLigature = {
                                     name: finalLigatureName,
                                     unicode: virtualPuaCounter,
-                                    glyphClass: 'ligature',
-                                    composite: [baseName, markName]
+                                    glyphClass: derivedClass,
+                                    // Use 'position' property to indicate this is a positioned pair
+                                    position: [baseName, markName],
+                                    // Inherit feature tags from the rule
+                                    gpos: rule.gpos,
+                                    gsub: rule.gsub
                                 };
                             }
                         }

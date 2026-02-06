@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, FontMetrics, CharacterSet, Path } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -261,6 +262,9 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                     kern={kern} setKern={setKern}
                     gpos={gpos} setGpos={setGpos}
                     gsub={gsub} setGsub={setGsub}
+                    
+                    // Hide structural editing in this specific workspace
+                    disableStructuralEditing={true}
                 />
                 )}
             </div>
