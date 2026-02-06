@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
 import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
@@ -38,13 +39,14 @@ interface DrawingToolbarProps {
   setPreviewTransform: (transform: TransformState | null) => void;
 }
 
-const ToolButton: React.FC<{ tool: Tool, currentTool: Tool, label: string, onClick: (tool: Tool) => void, children: React.ReactNode, disabled?: boolean }> = React.memo(({ tool, currentTool, label, onClick, children, disabled = false }) => {
+const ToolButton: React.FC<{ tool: Tool, currentTool: Tool, label: string, onClick: (tool: Tool) => void, children: React.ReactNode, disabled?: boolean, dataTour?: string }> = React.memo(({ tool, currentTool, label, onClick, children, disabled = false, dataTour }) => {
   const isActive = currentTool === tool;
   return (
     <button
       onClick={() => onClick(tool)}
       title={label}
       disabled={disabled}
+      data-tour={dataTour}
       className={`p-2 rounded-lg transition-all shadow-sm ${
         isActive
           ? 'bg-indigo-600 text-white ring-2 ring-indigo-500/30'
@@ -106,14 +108,14 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     
     const commonTools = (
         <>
-            <ToolButton tool="select" currentTool={currentTool} label="Select" onClick={setCurrentTool}><SelectIcon /></ToolButton>
+            <ToolButton tool="select" currentTool={currentTool} label="Select" onClick={setCurrentTool} dataTour="toolbar-select"><SelectIcon /></ToolButton>
             <ToolButton tool="pan" currentTool={currentTool} label={t('pan')} onClick={setCurrentTool}><PanIcon /></ToolButton>
         </>
     );
 
     const drawingTools = (
         <>
-            <ToolButton tool="pen" currentTool={currentTool} label="Pen" onClick={setCurrentTool} disabled={isLocked}><PenIcon /></ToolButton>
+            <ToolButton tool="pen" currentTool={currentTool} label="Pen" onClick={setCurrentTool} disabled={isLocked} dataTour="toolbar-pen"><PenIcon /></ToolButton>
             
             <div className="relative" ref={calligraphyToolButtonRef}>
                 <button

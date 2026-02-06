@@ -190,7 +190,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         </button>
                     )}
                     
-                    <button onClick={onExportClick} disabled={isAnyExporting} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:cursor-wait text-sm sm:text-base">
+                    <button onClick={onExportClick} disabled={isAnyExporting} data-tour="header-export" className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400 disabled:cursor-wait text-sm sm:text-base">
                         {exportingType === 'export' ? <SpinnerIcon /> : <ExportIcon />}
                         <span className="hidden md:inline">{exportingType === 'export' ? t('exporting') : t('exportOtf')}</span>
                     </button>
@@ -243,7 +243,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
                 <div className="order-3 w-full flex items-center justify-center p-1 border-t border-gray-200 dark:border-gray-700 relative">
                     <div className="flex items-center justify-center gap-2 sm:gap-4">
-                        <div className="text-center flex-grow md:flex-grow-0">
+                        <div className="text-center flex-grow md:flex-grow-0" data-tour="header-title">
                              {isEditingFontName ? (
                                 <input type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} onBlur={() => setIsEditingFontName(false)} onKeyDown={(e) => e.key === 'Enter' && setIsEditingFontName(false)} className="text-lg sm:text-xl font-bold text-center bg-transparent border-b-2 border-indigo-500 focus:outline-none w-full md:w-auto" autoFocus />
                             ) : (

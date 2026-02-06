@@ -116,6 +116,7 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
       <div className="flex-1 flex justify-end items-center gap-2 relative">
           <button
               id="glyph-properties-button"
+              data-tour="editor-metrics"
               onClick={() => setIsPropertiesPanelOpen(p => !p)}
               className={`p-2 rounded-lg transition-all active:scale-95 ${isPropertiesPanelOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300'}`}
               title={t('glyphProperties')}
@@ -161,7 +162,7 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
           </div>
 
           {!props.settings.isAutosaveEnabled && (
-              <button onClick={props.onSave} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 shadow-md transition-all active:scale-95">
+              <button onClick={props.onSave} data-tour="editor-save" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 shadow-md transition-all active:scale-95">
                   <SaveIcon /> <span className="hidden xl:inline">{t('saveGlyph')}</span>
               </button>
           )}

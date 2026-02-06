@@ -506,6 +506,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   return (
     <canvas
       ref={canvasRef}
+      data-tour="drawing-canvas"
       width={width}
       height={height}
       className="bg-white dark:bg-gray-900 max-w-full max-h-full block mx-auto shadow-inner"

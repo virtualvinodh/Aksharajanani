@@ -14,7 +14,8 @@
     "idb": "8.0.0",
     "paper": "0.12.18",
     "react-virtuoso": "4.6.2",
-    "vitest": "^4.0.15"
+    "vitest": "^4.0.15",
+    "react-joyride": "^2.9.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

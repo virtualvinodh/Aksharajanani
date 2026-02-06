@@ -26,6 +26,7 @@ import SnapshotRestoreModal from './components/SnapshotRestoreModal';
 import SaveAsModal from './components/SaveAsModal';
 import CreatorPage from './components/CreatorPage';
 import MobileNavDrawer from './components/MobileNavDrawer';
+import TutorialManager from './components/TutorialManager';
 import { useLocale } from './contexts/LocaleContext';
 import { useLayout } from './contexts/LayoutContext';
 import { useGlyphData } from './contexts/GlyphDataContext';
@@ -339,6 +340,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
     <div className="h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
        
+       <TutorialManager />
+
        {currentView === 'creator' ? (
            <CreatorPage 
                 onClose={() => setCurrentView('grid')}

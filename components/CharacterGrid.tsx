@@ -137,15 +137,17 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
             itemContent={(index) => {
                 const char = characters[index];
                 return (
-                    <UnifiedCard
-                        key={char.unicode || char.name}
-                        character={char}
-                        onSelect={onSelectCharacter}
-                        isSelectionMode={isMetricsSelectionMode}
-                        isSelected={char.unicode !== undefined && metricsSelection.has(char.unicode)}
-                        onToggleSelect={toggleSelection}
-                        variant={variant}
-                    />
+                    <div data-tour={index === 0 ? "grid-item-0" : undefined}>
+                        <UnifiedCard
+                            key={char.unicode || char.name}
+                            character={char}
+                            onSelect={onSelectCharacter}
+                            isSelectionMode={isMetricsSelectionMode}
+                            isSelected={char.unicode !== undefined && metricsSelection.has(char.unicode)}
+                            onToggleSelect={toggleSelection}
+                            variant={variant}
+                        />
+                    </div>
                 );
             }}
             overscan={400}
@@ -183,6 +185,8 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                 });
                 
                 const isEditing = editingGroupIndex === index;
+                // Identify the very first item of the first group for the tutorial
+                const isFirstGroup = index === 0;
 
                 return (
                     <div className="pb-6" id={`section-${index}`}>
@@ -230,16 +234,17 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                         
                         {/* Internal Grid */}
                         <div className={gridClasses}>
-                            {visibleChars.map(char => (
-                                <UnifiedCard
-                                    key={char.unicode || char.name}
-                                    character={char}
-                                    onSelect={onSelectCharacter}
-                                    isSelectionMode={isMetricsSelectionMode}
-                                    isSelected={char.unicode !== undefined && metricsSelection.has(char.unicode)}
-                                    onToggleSelect={toggleSelection}
-                                    variant={variant}
-                                />
+                            {visibleChars.map((char, charIndex) => (
+                                <div key={char.unicode || char.name} data-tour={isFirstGroup && charIndex === 0 ? "grid-item-0" : undefined}>
+                                    <UnifiedCard
+                                        character={char}
+                                        onSelect={onSelectCharacter}
+                                        isSelectionMode={isMetricsSelectionMode}
+                                        isSelected={char.unicode !== undefined && metricsSelection.has(char.unicode)}
+                                        onToggleSelect={toggleSelection}
+                                        variant={variant}
+                                    />
+                                </div>
                             ))}
                             
                             {/* Ghost Button: Add Glyph */}
