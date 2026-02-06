@@ -2,9 +2,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Joyride, { CallBackProps, STATUS, Step, EVENTS, ACTIONS, TooltipRenderProps } from 'react-joyride';
 import { useProject } from '../contexts/ProjectContext';
+import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { isGlyphDrawn } from '../utils/glyphUtils';
 
 // Custom Tooltip Component to handle "Don't Show Again" vs "Skip"
 const CustomTooltip = ({
@@ -66,7 +68,8 @@ const CustomTooltip = ({
   };
 
 const TutorialManager: React.FC = () => {
-    const { script } = useProject();
+    const { script, allCharsByName } = useProject();
+    const { glyphDataMap, version } = useGlyphData(); 
     const { selectedCharacter, activeModal } = useLayout();
     const { theme } = useTheme();
     const { locale } = useLocale();
@@ -116,9 +119,7 @@ const TutorialManager: React.FC = () => {
         if (!run) return;
 
         // Step 1: "Click the first character" -> Wait for Editor
-        // Move to Step 2 (Pen Tool Highlight)
         if (stepIndex === 1 && selectedCharacter) {
-            // Short delay to ensure DOM is ready
             setTimeout(() => setStepIndex(2), 600); 
         }
 
@@ -132,22 +133,17 @@ const TutorialManager: React.FC = () => {
              setTimeout(() => setStepIndex(7), 300);
         }
         
-        // Step 7: "Click Back to Grid" -> Wait for Editor Close
-        if (stepIndex === 7 && !selectedCharacter) {
+        // Step 7 (New): "Select 'F'" -> Wait for F to be selected
+        if (stepIndex === 7 && selectedCharacter?.name === 'F') {
             setTimeout(() => setStepIndex(8), 500);
         }
 
-        // Step 8: "Click Next Character" -> Wait for Editor
-        if (stepIndex === 8 && selectedCharacter) {
-            setTimeout(() => setStepIndex(9), 500);
-        }
-        
         // Step 13: "Click Next Arrow" -> Wait for next character 'E'
         if (stepIndex === 13 && selectedCharacter?.name === 'E') {
              setTimeout(() => setStepIndex(14), 500);
         }
 
-    }, [stepIndex, selectedCharacter, activeModal, run]);
+    }, [stepIndex, selectedCharacter, activeModal, run, glyphDataMap, allCharsByName, version]);
 
     const steps: Step[] = useMemo(() => {
         if (!translations) return [];
@@ -171,23 +167,23 @@ const TutorialManager: React.FC = () => {
                 content: translations.clickFirstChar,
                 spotlightClicks: true,
                 disableBeacon: true,
-                hideFooter: true, // User must click element to advance
+                hideFooter: true, 
             },
-            // 2. Highlight Pen Tool (Red Dot/Beacon Enabled)
+            // 2. Highlight Pen Tool
             {
                 target: '[data-tour="toolbar-pen"]',
                 content: translations.toolbarPenContent,
                 placement: 'right',
-                disableBeacon: false, // Show beacon first
+                disableBeacon: true, 
                 spotlightClicks: true, 
             },
-            // 3. Draw on Canvas (Red Dot/Beacon Enabled)
+            // 3. Draw on Canvas (Wait for draw)
             {
                 target: '[data-tour="drawing-canvas"]',
                 content: translations.drawContent,
                 placement: 'right',
-                disableBeacon: false, // Show beacon first
-                spotlightClicks: true, // Allow user to draw
+                disableBeacon: true,
+                spotlightClicks: true,
                 disableOverlayClose: true,
             },
             // 4. Click Test (Interaction)
@@ -196,7 +192,7 @@ const TutorialManager: React.FC = () => {
                 content: translations.clickTest,
                 spotlightClicks: true,
                 disableBeacon: true,
-                hideFooter: true, // User must click element
+                hideFooter: true,
             },
             // 5. Test Input
             {
@@ -212,25 +208,27 @@ const TutorialManager: React.FC = () => {
                 content: translations.closeTestPage,
                 spotlightClicks: true,
                 disableBeacon: true,
-                hideFooter: true, // User must click element
+                hideFooter: true,
             },
-            // 7. Go Back to Grid (Interaction)
+            // 7. Select 'F' (Interaction - Replaces "Back")
             {
-                target: '[data-tour="header-back"]',
-                content: translations.goBackToGrid,
+                target: '[data-tour="grid-item-1"]', // Targets F in the grid (sidebar or main)
+                content: translations.selectCharF,
                 spotlightClicks: true,
                 disableBeacon: true,
-                hideFooter: true, // User must click element
+                hideFooter: true, // User must click 'F'
+                placement: 'right'
             },
-            // 8. Click Next Char (Interaction)
+            // 8. Draw 'F' (Interaction - Wait for draw)
             {
-                target: '[data-tour="grid-item-1"]', // Target the second item explicitly
-                content: translations.clickNextChar,
-                spotlightClicks: true,
+                target: '[data-tour="drawing-canvas"]',
+                content: translations.drawCharF,
+                placement: 'right',
                 disableBeacon: true,
-                hideFooter: true, // User must click element
+                spotlightClicks: true,
+                disableOverlayClose: true,
             },
-            // 9. Select/Pan
+            // 9. Select/Pan (Tools start)
             {
                 target: '[data-tour="tool-select"]',
                 content: translations.toolSelectPan,
@@ -264,7 +262,7 @@ const TutorialManager: React.FC = () => {
                 content: translations.clickNextForComposite,
                 spotlightClicks: true,
                 disableBeacon: true,
-                hideFooter: true, // User must click element
+                hideFooter: true,
             },
             // 14. Explain Composite
             {
@@ -278,6 +276,7 @@ const TutorialManager: React.FC = () => {
                 target: 'body',
                 content: translations.finish,
                 placement: 'center',
+                disableBeacon: true,
             }
         ];
     }, [translations]);
@@ -289,9 +288,9 @@ const TutorialManager: React.FC = () => {
             setRun(false);
             setStepIndex(0);
         } else if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
-            // Updated indices requiring user interaction (clicking a specific app button to advance)
-            // Steps 2 (Pen) and 3 (Canvas) are NOT here because we want the user to click the "Next" button in the tooltip after they are done.
-            const isInteractionStep = [1, 4, 6, 7, 8, 13].includes(index);
+            // Steps requiring specific user interactions to advance.
+            // Removed 3 (Draw A) and 8 (Draw F) from this list to allow the 'Next' button to function.
+            const isInteractionStep = [1, 4, 6, 7, 13].includes(index);
             
             if (action === ACTIONS.NEXT) {
                  if (!isInteractionStep) {
@@ -325,7 +324,6 @@ const TutorialManager: React.FC = () => {
                     backgroundColor: 'rgba(0, 0, 0, 0.6)'
                 },
                 beacon: {
-                    // Make beacon red/prominent as requested
                     inner: '#EF4444', 
                     outer: '#EF4444'
                 }
