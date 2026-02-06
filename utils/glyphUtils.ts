@@ -1,3 +1,4 @@
+
 import { GlyphData, Character, MarkPositioningMap, KerningMap } from '../types';
 
 /**
@@ -13,6 +14,44 @@ export const isGlyphDrawn = (glyphData: GlyphData | undefined): boolean => {
   return glyphData.paths.some(
     p => (p.points?.length || 0) > 0 || (p.segmentGroups?.length || 0) > 0
   );
+};
+
+/**
+ * Checks if a glyph can be rendered visually.
+ * - If it's a base glyph, checks if it is drawn.
+ * - If it's a constructed glyph (link/position/kern), checks if ALL its components are drawn.
+ */
+export const isGlyphRenderable = (
+    char: Character,
+    glyphDataMap: Map<number, GlyphData>,
+    allCharsByName: Map<string, Character>
+): boolean => {
+    // 1. If it has direct drawing data, it is renderable.
+    if (char.unicode !== undefined && isGlyphDrawn(glyphDataMap.get(char.unicode))) {
+        return true;
+    }
+
+    // 2. Helper to check a list of component names
+    const areComponentsReady = (names: string[]): boolean => {
+        return names.every(name => {
+            const comp = allCharsByName.get(name);
+            // We verify the component exists, has a unicode, and that unicode slot has drawing data.
+            // Note: This does not currently support deep recursion (linked glyphs linking to linked glyphs),
+            // but fits the current flat architecture where components are usually base glyphs.
+            return comp && comp.unicode !== undefined && isGlyphDrawn(glyphDataMap.get(comp.unicode));
+        });
+    };
+
+    // 3. Check specific construction types
+    if (char.position) return areComponentsReady(char.position);
+    if (char.kern) return areComponentsReady(char.kern);
+    if (char.link) return areComponentsReady(char.link);
+    if (char.composite) return areComponentsReady(char.composite);
+
+    // 4. Special Case: ZWJ/ZWNJ/Space are always "renderable" (though invisible)
+    if (char.unicode === 32 || char.unicode === 8204 || char.unicode === 8205) return true;
+
+    return false;
 };
 
 /**

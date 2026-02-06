@@ -1,18 +1,21 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Character, CharacterSet, GlyphData, FontMetrics } from '../types';
-import { BackIcon, ZoomInIcon, ZoomOutIcon, LeftArrowIcon, RightArrowIcon, DRAWING_CANVAS_SIZE, COMPARISON_CELL_HEIGHT, COMPARISON_CELL_WIDTH } from '../constants';
+import { Character, CharacterSet, GlyphData, FontMetrics, UnifiedRenderContext, Path } from '../types';
+import { BackIcon, ZoomInIcon, ZoomOutIcon, LeftArrowIcon, RightArrowIcon, DRAWING_CANVAS_SIZE, COMPARISON_CELL_HEIGHT, COMPARISON_CELL_WIDTH, ClearIcon } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
 import { useTheme } from '../contexts/ThemeContext';
 import Footer from './Footer';
-import { renderPaths } from '../services/glyphRenderService';
+import { renderPaths, getUnifiedPaths } from '../services/glyphRenderService';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useHorizontalScroll } from '../hooks/useHorizontalScroll';
-import { isGlyphDrawn } from '../utils/glyphUtils';
+import { isGlyphRenderable } from '../utils/glyphUtils';
+import { usePositioning } from '../contexts/PositioningContext';
+import { useKerning } from '../contexts/KerningContext';
+import { useRules } from '../contexts/RulesContext';
 
 interface ComparisonViewProps {
   onClose: () => void;
@@ -23,41 +26,50 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { t } = useLocale();
   const { theme } = useTheme();
-  const { characterSets } = useProject();
+  const { characterSets, allCharsByName, markAttachmentRules, positioningRules } = useProject();
   const { glyphDataMap, version: glyphVersion } = useGlyphData();
   const { settings, metrics } = useSettings();
   const { comparisonCharacters, setComparisonCharacters } = useLayout();
+  const { markPositioningMap } = usePositioning();
+  const { kerningMap } = useKerning();
+  const { state: rulesState } = useRules();
+  const groups = rulesState.fontRules?.groups || {};
   
   const [isFolded, setIsFolded] = useState(true);
   const [zoom, setZoom] = useState(1);
-  const didRunAutoSelect = useRef(false);
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
   const { visibility: showHorizontalArrows, handleScroll: handleHorizontalScroll, scrollRef: horizontalScrollRef } = useHorizontalScroll();
   const { visibility: showCategoryArrows, handleScroll: handleCategoryScroll, scrollRef: categoryScrollRef } = useHorizontalScroll();
 
+  // View Mode: 'all' means implicit show all (dynamic). 'custom' means respect comparisonCharacters array explicitly.
+  // We initialize to 'custom' if there is already a selection, otherwise 'all'.
+  const [viewMode, setViewMode] = useState<'all' | 'custom'>(
+      comparisonCharacters.length > 0 ? 'custom' : 'all'
+  );
 
-  useEffect(() => {
-    if (didRunAutoSelect.current || !characterSets) {
-        return;
-    }
-    
-    // If the comparison set is already populated (e.g., from DrawingWorkspace selection), do not overwrite it.
-    if (comparisonCharacters.length > 0) {
-        didRunAutoSelect.current = true;
-        return;
-    }
-
-    if (isLargeScreen) {
-      const completedChars = characterSets
+  // 1. Calculate all currently valid/renderable glyphs derived from the project state
+  const allRenderableChars = useMemo(() => {
+      if (!characterSets) return [];
+      return characterSets
         .flatMap(set => set.characters)
-        .filter(char => !char.hidden && isGlyphDrawn(glyphDataMap.get(char.unicode)));
-      setComparisonCharacters(completedChars.sort((a,b) => a.unicode - b.unicode));
-    } else {
-      setComparisonCharacters([]);
-    }
-    didRunAutoSelect.current = true;
-  }, [characterSets, glyphDataMap, setComparisonCharacters, isLargeScreen]); // comparisonCharacters.length is checked inside, but we only want to run once on mount essentially.
+        .filter(char => {
+            if (char.hidden) return false;
+            // Only include glyphs that are visually renderable (have content or valid dependencies)
+            return isGlyphRenderable(char, glyphDataMap, allCharsByName);
+        })
+        .sort((a,b) => (a.unicode || 0) - (b.unicode || 0));
+  }, [characterSets, glyphDataMap, allCharsByName, glyphVersion]);
+
+  // 2. Determine active characters based on View Mode
+  const activeCharacters = useMemo(() => {
+      if (viewMode === 'all') {
+          return allRenderableChars;
+      }
+      
+      const validUnicodes = new Set(allRenderableChars.map(c => c.unicode));
+      return comparisonCharacters.filter(c => validUnicodes.has(c.unicode));
+  }, [comparisonCharacters, allRenderableChars, viewMode]);
 
   const handleZoom = (factor: number) => {
     setZoom(prev => Math.max(0.2, Math.min(5, prev * factor)));
@@ -67,7 +79,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     const ctx = canvas?.getContext('2d');
-    if (!ctx || !canvas || !container || !settings || !metrics) return;
+    if (!ctx || !canvas || !container || !settings || !metrics || !characterSets) return;
 
     const { strokeThickness, showUnicodeValues } = settings;
 
@@ -79,7 +91,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
       const containerWidth = container.clientWidth;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      if (comparisonCharacters.length === 0) return;
+      if (activeCharacters.length === 0) return;
 
       const TOP_LINE_Y = metrics.topLineY * scale;
       const BASE_LINE_Y = metrics.baseLineY * scale;
@@ -91,20 +103,36 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
       const glyphColor = theme === 'dark' ? '#E2E8F0' : '#1F2937';
       const guideFontFamily = getComputedStyle(document.documentElement).getPropertyValue('--guide-font-family').trim() || 'sans-serif';
       
-      const drawCell = (char: Character, cellStartX: number, cellStartY: number) => {
+      const renderCtx: UnifiedRenderContext = {
+          glyphDataMap,
+          allCharsByName,
+          markPositioningMap,
+          kerningMap,
+          characterSets,
+          groups,
+          metrics,
+          markAttachmentRules,
+          strokeThickness,
+          positioningRules
+      };
+
+      // Pre-calculate paths and filter out empty items (e.g. space char) to prevent gaps in the grid
+      const validItems = activeCharacters.map(char => ({
+          char,
+          paths: getUnifiedPaths(char, renderCtx)
+      })).filter(item => item.paths.length > 0);
+
+      const drawCell = (char: Character, paths: Path[], cellStartX: number, cellStartY: number) => {
         const glyphDrawOrigin = {
           x: cellStartX + (CELL_WIDTH - (DRAWING_CANVAS_SIZE * scale)) / 2,
           y: cellStartY + (CELL_HEIGHT - (DRAWING_CANVAS_SIZE * scale)) / 2
         };
         
-        const glyph = glyphDataMap.get(char.unicode);
-        if (isGlyphDrawn(glyph)) {
-            ctx.save();
-            ctx.translate(glyphDrawOrigin.x, glyphDrawOrigin.y);
-            ctx.scale(scale, scale);
-            renderPaths(ctx, glyph!.paths, { strokeThickness, color: glyphColor });
-            ctx.restore();
-        }
+        ctx.save();
+        ctx.translate(glyphDrawOrigin.x, glyphDrawOrigin.y);
+        ctx.scale(scale, scale);
+        renderPaths(ctx, paths, { strokeThickness, color: glyphColor });
+        ctx.restore();
         
         ctx.fillStyle = textColor;
         ctx.font = `${14 * zoom}px ${guideFontFamily}`;
@@ -112,7 +140,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
         const textX = cellStartX + CELL_WIDTH / 2;
         ctx.fillText(char.name, textX, cellStartY + CELL_HEIGHT - (22 * zoom));
         
-        if (showUnicodeValues && char.unicode !== undefined) {
+        if (showUnicodeValues && char.unicode !== undefined && char.glyphClass !== 'virtual') {
           ctx.font = `${10 * zoom}px ${guideFontFamily}`;
           ctx.fillText(`U+${char.unicode.toString(16).toUpperCase().padStart(4, '0')}`, textX, cellStartY + CELL_HEIGHT - (8 * zoom));
         }
@@ -120,7 +148,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
       
       if (isFolded) {
           const cols = Math.max(1, Math.floor(containerWidth / CELL_WIDTH));
-          const rows = Math.ceil(comparisonCharacters.length / cols);
+          const rows = Math.ceil(validItems.length / cols);
           
           canvas.width = containerWidth;
           canvas.height = rows * CELL_HEIGHT;
@@ -155,14 +183,14 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
           }
           ctx.setLineDash([]);
 
-          comparisonCharacters.forEach((char, index) => {
+          validItems.forEach(({char, paths}, index) => {
               const col = index % cols;
               const row = Math.floor(index / cols);
-              drawCell(char, col * CELL_WIDTH, row * CELL_HEIGHT);
+              drawCell(char, paths, col * CELL_WIDTH, row * CELL_HEIGHT);
           });
       } else {
           // UNFOLDED VIEW
-          canvas.width = comparisonCharacters.length * CELL_WIDTH;
+          canvas.width = validItems.length * CELL_WIDTH;
           canvas.height = CELL_HEIGHT;
           
           ctx.strokeStyle = guideColor;
@@ -180,8 +208,8 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
           if (SUB_BASE_LINE_Y !== null) drawLine(SUB_BASE_LINE_Y, [4 / zoom, 4 / zoom]);
           ctx.setLineDash([]);
 
-          comparisonCharacters.forEach((char, index) => {
-              drawCell(char, index * CELL_WIDTH, 0);
+          validItems.forEach(({char, paths}, index) => {
+              drawCell(char, paths, index * CELL_WIDTH, 0);
           });
       }
     };
@@ -196,43 +224,72 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
     return () => {
         resizeObserver.disconnect();
     };
-  }, [comparisonCharacters, glyphDataMap, settings, metrics, t, isFolded, theme, zoom, glyphVersion]);
+  }, [activeCharacters, glyphDataMap, settings, metrics, t, isFolded, theme, zoom, glyphVersion, markPositioningMap, kerningMap, allCharsByName, markAttachmentRules, positioningRules, characterSets, groups]);
 
   const handleToggleCharacter = (character: Character, isSelected: boolean) => {
-    if (isSelected) {
-      setComparisonCharacters([...comparisonCharacters, character].sort((a,b) => a.unicode - b.unicode));
+    if (viewMode === 'all') {
+        // If we are in "All" mode and user deselects something, we switch to custom mode
+        // and populate the list with everything EXCEPT the deselected one.
+        if (!isSelected) {
+            const newSelection = allRenderableChars.filter(c => c.unicode !== character.unicode);
+            setComparisonCharacters(newSelection);
+            setViewMode('custom');
+        }
     } else {
-      setComparisonCharacters(comparisonCharacters.filter(c => c.unicode !== character.unicode));
+        // Standard toggle in custom mode
+        if (isSelected) {
+            setComparisonCharacters([...comparisonCharacters, character].sort((a,b) => (a.unicode||0) - (b.unicode||0)));
+        } else {
+            setComparisonCharacters(comparisonCharacters.filter(c => c.unicode !== character.unicode));
+        }
     }
   };
 
   const handleToggleCategory = (categorySet: CharacterSet, shouldDeselect: boolean) => {
     const categoryUnicodes = new Set(categorySet.characters.map(c => c.unicode));
+    
+    if (viewMode === 'all') {
+        if (shouldDeselect) {
+             // Deselecting a category from "All" view -> Switch to Custom, select everything else
+             const newSelection = allRenderableChars.filter(c => !categoryUnicodes.has(c.unicode));
+             setComparisonCharacters(newSelection);
+             setViewMode('custom');
+        }
+        return;
+    }
+
     setComparisonCharacters(prev => {
         let newSelection;
         if (shouldDeselect) {
             // Deselect all from this category
             newSelection = prev.filter(c => !categoryUnicodes.has(c.unicode));
         } else {
-            // Select all from this category, avoiding duplicates
-            const charsToAdd = categorySet.characters.filter(c => !c.hidden && !prev.some(pc => pc.unicode === c.unicode));
+            // Select all valid characters from this category, avoiding duplicates
+            const charsToAdd = categorySet.characters.filter(c => 
+                !c.hidden && 
+                !prev.some(pc => pc.unicode === c.unicode) &&
+                isGlyphRenderable(c, glyphDataMap, allCharsByName) // Only add valid glyphs
+            );
             newSelection = [...prev, ...charsToAdd];
         }
-        return newSelection.sort((a, b) => a.unicode - b.unicode);
+        return newSelection.sort((a, b) => (a.unicode||0) - (b.unicode||0));
     });
   };
 
   const isCharacterSelected = (character: Character) => {
+    if (viewMode === 'all') return true;
     return comparisonCharacters.some(c => c.unicode === character.unicode);
   };
 
   const handleSelectAll = () => {
-    if (!characterSets) return;
-    const allChars = characterSets.flatMap(set => set.characters).filter(char => !char.hidden);
-    setComparisonCharacters(allChars.sort((a,b) => a.unicode - b.unicode));
+    // Switch to Implicit All mode, clear specific selection list to keep it clean
+    setViewMode('all');
+    setComparisonCharacters([]);
   };
 
-  const handleSelectNone = () => {
+  const handleClear = () => {
+    // Switch to Custom mode, clear selection list -> Screen becomes blank
+    setViewMode('custom');
     setComparisonCharacters([]);
   };
 
@@ -240,16 +297,21 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
     const checkboxRef = useRef<HTMLInputElement>(null);
 
     const selectionStatus = useMemo(() => {
-        const visibleChars = categorySet.characters.filter(c => !c.hidden);
-        if (!visibleChars || visibleChars.length === 0) return 'none';
+        // Only consider characters that CAN be selected (are renderable)
+        const visibleRenderableChars = categorySet.characters.filter(c => 
+            !c.hidden && isGlyphRenderable(c, glyphDataMap, allCharsByName)
+        );
         
-        const categoryUnicodes = new Set(visibleChars.map(c => c.unicode));
-        const selectedInCategory = comparisonCharacters.filter(c => categoryUnicodes.has(c.unicode));
+        if (!visibleRenderableChars || visibleRenderableChars.length === 0) return 'none';
+        
+        // Use activeCharacters (the resolved list) to determine checked status
+        const categoryUnicodes = new Set(visibleRenderableChars.map(c => c.unicode));
+        const selectedInCategory = activeCharacters.filter(c => categoryUnicodes.has(c.unicode));
 
         if (selectedInCategory.length === 0) return 'none';
-        if (selectedInCategory.length === visibleChars.length) return 'all';
+        if (selectedInCategory.length === visibleRenderableChars.length) return 'all';
         return 'some';
-    }, [categorySet, comparisonCharacters]);
+    }, [categorySet, activeCharacters]);
 
     useEffect(() => {
         if (checkboxRef.current) {
@@ -260,9 +322,13 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
     const isChecked = selectionStatus === 'all';
     const shouldDeselect = selectionStatus !== 'none';
     
+    // Check if category has ANY renderable items. If not, disable it.
+    const hasAnyRenderable = categorySet.characters.some(c => !c.hidden && isGlyphRenderable(c, glyphDataMap, allCharsByName));
+    const isDisabled = !hasAnyRenderable;
+
     const labelClasses = isChip
-      ? `flex-shrink-0 flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors whitespace-nowrap border ${isChecked ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'}`
-      : "flex items-center gap-3 p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer text-sm";
+      ? `flex-shrink-0 flex items-center gap-2 p-2 rounded-md transition-colors whitespace-nowrap border ${isDisabled ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-60' : (isChecked ? 'bg-indigo-600 border-indigo-600 text-white cursor-pointer' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer')}`
+      : `flex items-center gap-3 p-2 rounded-md text-sm ${isDisabled ? 'text-gray-400 cursor-not-allowed opacity-60' : 'hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer'}`;
     
     return (
         <label className={labelClasses}>
@@ -270,8 +336,9 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
                 ref={checkboxRef}
                 type="checkbox"
                 checked={isChecked}
-                onChange={() => handleToggleCategory(categorySet, shouldDeselect)}
-                className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 focus:ring-indigo-500 accent-indigo-500"
+                disabled={isDisabled}
+                onChange={() => !isDisabled && handleToggleCategory(categorySet, shouldDeselect)}
+                className={`h-4 w-4 rounded border-gray-400 dark:border-gray-500 focus:ring-indigo-500 accent-indigo-500 ${isDisabled ? 'bg-gray-200' : 'bg-gray-300 dark:bg-gray-600'}`}
             />
             <span className={`font-semibold ${isChip ? 'text-sm' : ''}`}>{t(categorySet.nameKey)}</span>
         </label>
@@ -316,10 +383,11 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
                       {t('selectAll')}
                     </button>
                     <button
-                      onClick={handleSelectNone}
-                      className="w-full text-center px-3 py-1.5 text-sm bg-gray-500 text-white font-semibold rounded-md hover:bg-gray-600 transition-colors"
+                      onClick={handleClear}
+                      className="w-full text-center px-3 py-1.5 text-sm bg-gray-200 text-gray-700 font-semibold rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center gap-1"
                     >
-                      {t('selectNone')}
+                      <ClearIcon className="w-4 h-4"/>
+                      {t('clear')}
                     </button>
                   </div>
                   <div className="flex items-center gap-2">
@@ -352,26 +420,30 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
                     <div key={set.nameKey} className="mb-4">
                         <h4 className="font-bold text-indigo-600 dark:text-indigo-400 mb-2">{t(set.nameKey)}</h4>
                         <div className="flex flex-col gap-1">
-                            {set.characters.map(char => (
-                                <label key={char.unicode} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer text-sm">
-                                    <input
-                                        type="checkbox"
-                                        className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 accent-indigo-500"
-                                        checked={isCharacterSelected(char)}
-                                        onChange={(e) => handleToggleCharacter(char, e.target.checked)}
-                                    />
-                                    <span
-                                        className="text-lg font-semibold text-gray-800 dark:text-gray-200"
-                                        style={{
-                                          fontFamily: 'var(--guide-font-family)',
-                                          fontFeatureSettings: 'var(--guide-font-feature-settings)'
-                                        }}
-                                    >
-                                      {char.name}
-                                    </span>
-                                    <span className="ml-auto text-gray-500 dark:text-gray-400 text-xs">U+{char.unicode.toString(16).toUpperCase().padStart(4, '0')}</span>
-                                </label>
-                            ))}
+                            {set.characters.map(char => {
+                                const canRender = isGlyphRenderable(char, glyphDataMap, allCharsByName);
+                                return (
+                                    <label key={char.unicode} className={`flex items-center gap-3 p-2 rounded-md text-sm ${canRender ? 'hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer' : 'opacity-40 cursor-not-allowed grayscale'}`}>
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 accent-indigo-500"
+                                            checked={isCharacterSelected(char)}
+                                            onChange={(e) => canRender && handleToggleCharacter(char, e.target.checked)}
+                                            disabled={!canRender}
+                                        />
+                                        <span
+                                            className="text-lg font-semibold text-gray-800 dark:text-gray-200"
+                                            style={{
+                                              fontFamily: 'var(--guide-font-family)',
+                                              fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                                            }}
+                                        >
+                                          {char.name}
+                                        </span>
+                                        {char.unicode !== undefined && <span className="ml-auto text-gray-500 dark:text-gray-400 text-xs">U+{char.unicode.toString(16).toUpperCase().padStart(4, '0')}</span>}
+                                    </label>
+                                );
+                            })}
                         </div>
                     </div>
                 ))}
@@ -384,7 +456,10 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                         <div className="flex items-center gap-2">
                             <button onClick={handleSelectAll} className="px-3 py-1.5 text-xs bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 transition-colors">{t('selectAll')}</button>
-                            <button onClick={handleSelectNone} className="px-3 py-1.5 text-xs bg-gray-500 text-white font-semibold rounded-md hover:bg-gray-600 transition-colors">{t('selectNone')}</button>
+                            <button onClick={handleClear} className="px-3 py-1.5 text-xs bg-gray-200 text-gray-700 font-semibold rounded-md hover:bg-gray-300 transition-colors flex items-center gap-1">
+                                <ClearIcon className="w-3 h-3"/>
+                                {t('clear')}
+                            </button>
                         </div>
                         <div className="flex items-center gap-2">
                             <button onClick={() => handleZoom(1.2)} title={t('zoomIn')} className="p-2 text-sm bg-gray-500 text-white font-semibold rounded-md hover:bg-gray-600 transition-colors"><ZoomInIcon /></button>
@@ -422,19 +497,23 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
                             </button>
                         )}
                         <div ref={horizontalScrollRef} className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                           {visibleCharacterSets.flatMap(set => set.characters).map(char => (
-                               <label key={char.unicode} className={`flex-shrink-0 flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors whitespace-nowrap border ${isCharacterSelected(char) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'}`}>
+                           {visibleCharacterSets.flatMap(set => set.characters).map(char => {
+                               const canRender = isGlyphRenderable(char, glyphDataMap, allCharsByName);
+                               return (
+                               <label key={char.unicode} className={`flex-shrink-0 flex items-center gap-2 p-2 rounded-md transition-colors whitespace-nowrap border ${canRender ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600' : 'opacity-50 cursor-not-allowed grayscale bg-gray-100 dark:bg-gray-700/50'} ${isCharacterSelected(char) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'}`}>
                                     <input
                                         type="checkbox"
                                         checked={isCharacterSelected(char)}
-                                        onChange={(e) => handleToggleCharacter(char, e.target.checked)}
+                                        onChange={(e) => canRender && handleToggleCharacter(char, e.target.checked)}
+                                        disabled={!canRender}
                                         className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 focus:ring-indigo-500 accent-indigo-500"
                                     />
                                     <span className="text-sm" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
                                         {char.name}
                                     </span>
                                 </label>
-                           ))}
+                               )
+                           })}
                         </div>
                         {showHorizontalArrows.right && (
                             <button onClick={() => handleHorizontalScroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/70 dark:bg-gray-900/70 p-1 rounded-full shadow-md hover:bg-white dark:hover:bg-gray-900">
@@ -444,7 +523,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
                     </div>
                  </div>
             )}
-            {comparisonCharacters.length > 0 ? (
+            {activeCharacters.length > 0 ? (
                 <div ref={containerRef} className="flex-1 p-4 overflow-auto">
                     <canvas ref={canvasRef} style={{ width: isFolded ? '100%' : 'auto' }}/>
                 </div>

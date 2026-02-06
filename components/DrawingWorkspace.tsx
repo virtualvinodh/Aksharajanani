@@ -463,7 +463,28 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
             {isMetricsSelectionMode && !isOverlayMode && (
                 <DrawingBatchToolbar 
                     selectionSize={metricsSelection.size}
-                    onSelectAll={() => { const a = new Set<number>(); characterSets.flatMap(s => s.characters).forEach(c => c.unicode && a.add(c.unicode)); setMetricsSelection(a); }}
+                    onSelectAll={() => { 
+                        const newSelection = new Set<number>();
+                        
+                        if (isFiltered) {
+                            // In filtered mode (search or category filter), select from the flat list results
+                            filteredFlatList.forEach(c => {
+                                if (c.unicode !== undefined) newSelection.add(c.unicode);
+                            });
+                        } else {
+                            // In default grouped view, select from visible sets, respecting hidden status
+                            visibleCharacterSets.forEach(set => {
+                                set.characters.forEach(c => {
+                                    const isVisible = !c.hidden || showHidden;
+                                    if (isVisible && c.unicode !== undefined) {
+                                        newSelection.add(c.unicode);
+                                    }
+                                });
+                            });
+                        }
+                        
+                        setMetricsSelection(newSelection); 
+                    }}
                     onSelectNone={() => setMetricsSelection(new Set())}
                     onTransform={() => setIsTransformOpen(true)}
                     onProperties={() => setIsPropertiesOpen(true)}
