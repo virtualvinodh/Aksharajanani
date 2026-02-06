@@ -18,5 +18,7 @@
   "compositeExplanation": "This is 'E'. It has been **pre-filled** with the shape of 'F'. You can now add strokes to finish the letter. Unlike linked glyphs, changes here are independent and won't affect the original 'F'.",
   "finish": "You are ready to create! Explore the other workspaces for Positioning and Kerning when you are done drawing.",
   "last": "Finish Tour",
-  "skip": "Skip Tutorial"
+  "skip": "Skip Tutorial",
+  "hintGridSelect": "Welcome! Select a character card to start drawing your font.",
+  "hintEditorDraw": "The **Pen Tool** is active. Click and drag on the canvas to draw your character shape."
 }
