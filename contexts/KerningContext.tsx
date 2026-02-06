@@ -1,3 +1,4 @@
+
 import React, { createContext, useReducer, useContext, ReactNode, useMemo, Dispatch, useEffect, useRef, useCallback } from 'react';
 import { KerningMap, GlyphData, FontMetrics, AppSettings, Character } from '../types';
 import { initAutoKernWorker, terminateAutoKernWorker } from '../services/autoKerningService';
@@ -7,6 +8,7 @@ import { useSettings } from './SettingsContext';
 type KerningState = {
     kerningMap: KerningMap;
     suggestedKerningMap: KerningMap;
+    ignoredPairs: Set<string>;
 };
 
 type KerningAction =
@@ -15,6 +17,9 @@ type KerningAction =
     | { type: 'SET_SUGGESTIONS'; payload: Map<string, number> }
     | { type: 'MERGE_SUGGESTIONS'; payload: Map<string, number> }
     | { type: 'REMOVE_SUGGESTIONS'; payload: string[] }
+    | { type: 'IGNORE_PAIR'; payload: string }
+    | { type: 'UNIGNORE_PAIR'; payload: string }
+    | { type: 'SET_IGNORED'; payload: Set<string> }
     | { type: 'RESET' };
 
 const kerningReducer = (state: KerningState, action: KerningAction): KerningState => {
@@ -38,8 +43,22 @@ const kerningReducer = (state: KerningState, action: KerningAction): KerningStat
             action.payload.forEach(key => newMap.delete(key));
             return { ...state, suggestedKerningMap: newMap };
         }
+        case 'IGNORE_PAIR': {
+            const newIgnored = new Set(state.ignoredPairs);
+            newIgnored.add(action.payload);
+            const newSuggested = new Map(state.suggestedKerningMap);
+            newSuggested.delete(action.payload);
+            return { ...state, ignoredPairs: newIgnored, suggestedKerningMap: newSuggested };
+        }
+        case 'UNIGNORE_PAIR': {
+            const newIgnored = new Set(state.ignoredPairs);
+            newIgnored.delete(action.payload);
+            return { ...state, ignoredPairs: newIgnored };
+        }
+        case 'SET_IGNORED':
+            return { ...state, ignoredPairs: action.payload };
         case 'RESET':
-            return { ...state, kerningMap: new Map(), suggestedKerningMap: new Map() };
+            return { ...state, kerningMap: new Map(), suggestedKerningMap: new Map(), ignoredPairs: new Set() };
         default:
             return state;
     }
@@ -54,6 +73,7 @@ export interface QueuedPair {
 interface KerningContextType {
     kerningMap: KerningMap;
     suggestedKerningMap: KerningMap;
+    ignoredPairs: Set<string>;
     dispatch: Dispatch<KerningAction>;
     queueAutoKern: (pairs: QueuedPair[]) => void;
 }
@@ -63,6 +83,7 @@ const KerningContext = createContext<KerningContextType | undefined>(undefined);
 const initialState: KerningState = {
     kerningMap: new Map(),
     suggestedKerningMap: new Map(),
+    ignoredPairs: new Set(),
 };
 
 export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -139,9 +160,12 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
     const queueAutoKern = useCallback((pairs: QueuedPair[]) => {
         if (!settings || !metrics) return;
         
-        // Deduplicate
+        // Deduplicate and filter ignored
         const existingKeys = new Set(pendingPairsRef.current.map(p => `${p.left.unicode}-${p.right.unicode}`));
-        const newPairs = pairs.filter(p => !existingKeys.has(`${p.left.unicode}-${p.right.unicode}`));
+        const newPairs = pairs.filter(p => {
+             const key = `${p.left.unicode}-${p.right.unicode}`;
+             return !existingKeys.has(key) && !state.ignoredPairs.has(key);
+        });
         
         if (newPairs.length > 0) {
             pendingPairsRef.current.push(...newPairs);
@@ -152,14 +176,15 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
             // Debounce for 2 seconds to gather burst edits
             debounceTimerRef.current = window.setTimeout(processQueue, 2000);
         }
-    }, [processQueue, settings, metrics]);
+    }, [processQueue, settings, metrics, state.ignoredPairs]);
 
     const value = useMemo(() => ({
         kerningMap: state.kerningMap,
         suggestedKerningMap: state.suggestedKerningMap,
+        ignoredPairs: state.ignoredPairs,
         dispatch,
         queueAutoKern
-    }), [state.kerningMap, state.suggestedKerningMap, queueAutoKern]);
+    }), [state.kerningMap, state.suggestedKerningMap, state.ignoredPairs, queueAutoKern]);
 
     return (
         <KerningContext.Provider value={value}>

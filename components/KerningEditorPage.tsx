@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning, CharacterSet, ComponentTransform, Path } from '../types';
 import KerningEditorHeader from './kerning/KerningEditorHeader';
@@ -35,6 +36,8 @@ interface KerningEditorPageProps {
     allCharsByName: Map<string, Character>;
     character: Character; // The virtual/real character representing this pair
     showPropertiesButton?: boolean; // New optional prop
+    onIgnore?: () => void;
+    isIgnored?: boolean;
 }
 
 const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
@@ -246,6 +249,8 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 gpos={gpos} setGpos={setGpos}
                 gsub={gsub} setGsub={setGsub}
                 liga={liga} setLiga={setLiga}
+                onIgnore={props.onIgnore!}
+                isIgnored={!!props.isIgnored}
             />
             
             <KerningEditorWorkspace 

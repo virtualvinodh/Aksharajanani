@@ -33,7 +33,7 @@ export const useExportActions = ({
     const { settings, metrics } = useSettings();
     const { characterSets, allCharsByUnicode, allCharsByName } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
-    const { kerningMap, suggestedKerningMap } = useKerning();
+    const { kerningMap, suggestedKerningMap, ignoredPairs } = useKerning();
     const { markPositioningMap } = usePositioning();
     const { state: rulesState } = useRules();
     const { fontRules, isFeaEditMode, manualFeaCode } = rulesState;
@@ -158,6 +158,8 @@ export const useExportActions = ({
             kerningMap.forEach((value, key) => {
                 effectiveKerningMap.set(key, value);
             });
+            // Ensure ignored pairs are NOT in the export
+            ignoredPairs.forEach(key => effectiveKerningMap.delete(key));
 
             const result = await exportToOtf(glyphDataMap, settings, t, fontRules, metrics, characterSets, effectiveKerningMap, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification);
             fontBlob = result.blob;
@@ -169,7 +171,7 @@ export const useExportActions = ({
         
         if (!fontBlob) return null;
         return { blob: fontBlob, feaError: feaError };
-    }, [getProjectState, projectId, settings, metrics, characterSets, glyphDataMap, t, fontRules, kerningMap, suggestedKerningMap, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification]);
+    }, [getProjectState, projectId, settings, metrics, characterSets, glyphDataMap, t, fontRules, kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification]);
 
     const performExportAfterAnimation = useCallback(async () => {
         setExportingType('export');

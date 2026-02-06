@@ -321,6 +321,7 @@ export const useProjectLoad = ({
                 glyphDataDispatch({ type: 'SET_MAP', payload: new Map(projectToLoad.glyphs) });
                 if (projectToLoad.kerning) kerningDispatch({ type: 'SET_MAP', payload: new Map(projectToLoad.kerning) });
                 if (projectToLoad.suggestedKerning) kerningDispatch({ type: 'SET_SUGGESTIONS', payload: new Map(projectToLoad.suggestedKerning) });
+                if (projectToLoad.ignoredKerning) kerningDispatch({ type: 'SET_IGNORED', payload: new Set(projectToLoad.ignoredKerning) });
                 if (projectToLoad.markPositioning) positioningDispatch({ type: 'SET_MAP', payload: new Map(projectToLoad.markPositioning) });
                 rulesDispatch({ type: 'SET_FEA_EDIT_MODE', payload: isFeaOnly ? true : (projectToLoad.isFeaEditMode ?? false) });
                 rulesDispatch({ type: 'SET_MANUAL_FEA_CODE', payload: isFeaOnly ? (feaFileData || '') : (projectToLoad.manualFeaCode ?? '') });

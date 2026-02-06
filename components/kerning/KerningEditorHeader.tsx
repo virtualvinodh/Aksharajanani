@@ -1,7 +1,8 @@
+
 import React, {useState, useRef, useEffect} from 'react';
 import { Character, AppSettings, CharacterSet, Path, FontMetrics } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon, PropertiesIcon, TrashIcon, MoreIcon, BrokenLinkIcon, LinkIcon, RefreshIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon, PropertiesIcon, TrashIcon, MoreIcon, BrokenLinkIcon, LinkIcon, RefreshIcon, EyeOffIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
 import { GlyphDataAction } from '../../contexts/GlyphDataContext';
 
@@ -34,6 +35,9 @@ interface KerningEditorHeaderProps {
     setRsb: (v: number | undefined) => void;
     metrics: FontMetrics;
     showPropertiesButton?: boolean;
+    
+    onIgnore: () => void;
+    isIgnored: boolean;
 
     // ADD: Accept all construction-related props to pass down
     position?: [string, string];
@@ -211,9 +215,20 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                     </button>
                     {isMoreMenuOpen && (
                         <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 z-50">
-                            <button onClick={() => { props.onDelete(); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
-                                <TrashIcon /> <span>{t('deleteGlyph')}</span>
-                            </button>
+                            {props.isIgnored ? (
+                                <button onClick={() => { props.onDelete(); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                                    <CheckIcon /> <span>{t('unignorePair')}</span>
+                                </button>
+                            ) : (
+                                <>
+                                    <button onClick={() => { props.onIgnore(); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                                        <EyeOffIcon /> <span>{t('ignorePair')}</span>
+                                    </button>
+                                    <button onClick={() => { props.onDelete(); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                                        <TrashIcon /> <span>{t('deleteGlyph')}</span>
+                                    </button>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>
