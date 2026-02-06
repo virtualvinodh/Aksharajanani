@@ -59,11 +59,12 @@ const ToolButton: React.FC<{ tool: Tool, currentTool: Tool, label: string, onCli
   );
 });
 
-const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: boolean, children: React.ReactNode }> = React.memo(({ onClick, title, disabled, children }) => (
+const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: boolean, children: React.ReactNode, dataTour?: string }> = React.memo(({ onClick, title, disabled, children, dataTour }) => (
   <button
     onClick={onClick}
     title={title}
     disabled={disabled}
+    data-tour={dataTour}
     className="p-2 rounded-lg transition-all bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
   >
     {/* Fix: Casting children to React.ReactElement with explicit prop type for cloneElement */}
@@ -108,8 +109,8 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     
     const commonTools = (
         <>
-            <ToolButton tool="select" currentTool={currentTool} label="Select" onClick={setCurrentTool} dataTour="toolbar-select"><SelectIcon /></ToolButton>
-            <ToolButton tool="pan" currentTool={currentTool} label={t('pan')} onClick={setCurrentTool}><PanIcon /></ToolButton>
+            <ToolButton tool="select" currentTool={currentTool} label="Select" onClick={setCurrentTool} dataTour="tool-select"><SelectIcon /></ToolButton>
+            <ToolButton tool="pan" currentTool={currentTool} label={t('pan')} onClick={setCurrentTool} dataTour="tool-pan"><PanIcon /></ToolButton>
         </>
     );
 
@@ -153,21 +154,21 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
             <ToolButton tool="dot" currentTool={currentTool} label="Dot" onClick={setCurrentTool} disabled={isLocked}><DotIcon /></ToolButton>
             
             <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
-            <ToolButton tool="eraser" currentTool={currentTool} label="Eraser" onClick={setCurrentTool} disabled={isLocked}><EraserIcon /></ToolButton>
+            <ToolButton tool="eraser" currentTool={currentTool} label="Eraser" onClick={setCurrentTool} disabled={isLocked} dataTour="tool-eraser"><EraserIcon /></ToolButton>
             <ToolButton tool="slice" currentTool={currentTool} label="Slice" onClick={setCurrentTool} disabled={isLocked}><SliceIcon /></ToolButton>
         </>
     );
 
     const actionTools = (
         <>
-            <ActionButton onClick={onUndo} title="Undo" disabled={!canUndo}><UndoIcon /></ActionButton>
-            <ActionButton onClick={onRedo} title="Redo" disabled={!canRedo}><RedoIcon /></ActionButton>
+            <ActionButton onClick={onUndo} title="Undo" disabled={!canUndo} dataTour="action-undo"><UndoIcon /></ActionButton>
+            <ActionButton onClick={onRedo} title="Redo" disabled={!canRedo} dataTour="action-redo"><RedoIcon /></ActionButton>
             <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ActionButton onClick={onCut} title={t('cut')} disabled={selectedPathIds.size === 0 || isLocked}><CutIcon /></ActionButton>
             <ActionButton onClick={onCopy} title={t('copy')} disabled={isLocked}><CopyIcon /></ActionButton>
             <ActionButton onClick={onPaste} title={t('paste')} disabled={!clipboard || isLocked}><PasteIcon /></ActionButton>
-            <ActionButton onClick={onGroup} title={t('group')} disabled={!canGroup || isLocked}><GroupIcon /></ActionButton>
-            <ActionButton onClick={onUngroup} title={t('ungroup')} disabled={!canUngroup || isLocked}><UngroupIcon /></ActionButton>
+            <ActionButton onClick={onGroup} title={t('group')} disabled={!canGroup || isLocked} dataTour="action-group"><GroupIcon /></ActionButton>
+            <ActionButton onClick={onUngroup} title={t('ungroup')} disabled={!canUngroup || isLocked} dataTour="action-ungroup"><UngroupIcon /></ActionButton>
             <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ActionButton onClick={() => onZoom(1.25)} title={t('zoomIn')}><ZoomInIcon /></ActionButton>
             <ActionButton onClick={() => onZoom(0.8)} title={t('zoomOut')}><ZoomOutIcon /></ActionButton>

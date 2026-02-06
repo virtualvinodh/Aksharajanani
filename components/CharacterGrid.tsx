@@ -235,7 +235,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                         {/* Internal Grid */}
                         <div className={gridClasses}>
                             {visibleChars.map((char, charIndex) => (
-                                <div key={char.unicode || char.name} data-tour={isFirstGroup && charIndex === 0 ? "grid-item-0" : undefined}>
+                                <div key={char.unicode || char.name} data-tour={isFirstGroup && charIndex <= 1 ? `grid-item-${charIndex}` : undefined}>
                                     <UnifiedCard
                                         character={char}
                                         onSelect={onSelectCharacter}

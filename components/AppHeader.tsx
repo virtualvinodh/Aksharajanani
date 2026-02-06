@@ -205,7 +205,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         <span className="hidden md:inline">Create</span>
                     </button>
                     
-                    <button onClick={onTestClick} disabled={isAnyExporting} title={t('testFont')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-wait">
+                    <button onClick={onTestClick} disabled={isAnyExporting} data-tour="header-test" title={t('testFont')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-wait">
                         {exportingType === 'test' ? <SpinnerIcon /> : <TestIcon />}
                         <span className="hidden md:inline">{t('testFont')}</span>
                     </button>

@@ -14,7 +14,7 @@
         { "name": "g", "glyphClass": "base" },          
         { "name": "n", "glyphClass": "base" },        
         { "name": "̃", "glyphClass": "mark", "advWidth":0 },
-        { "name": "Ñ", "glyphClass": "base", "link": ["N", "̃"] },
+        { "name": "Ñ", "glyphClass": "base", "position": ["N", "̃"] },
         { "name": "ñ", "glyphClass": "base", "link": ["n", "̃"] },                
         { "name": "ͤ", "glyphClass": "mark", "advWidth":0, "link": ["e"], "compositeTransform": [{ "scale": 0.5, "y": -400 }] }
     ]

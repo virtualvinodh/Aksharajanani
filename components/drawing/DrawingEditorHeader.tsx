@@ -79,6 +79,7 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
       <div className="flex-1 flex justify-start">
           <button
             onClick={props.onBackClick}
+            data-tour="header-back"
             className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all active:scale-95"
           >
             <BackIcon />
@@ -106,6 +107,7 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
            <button
               onClick={() => props.onNavigate(props.nextCharacter!)}
               disabled={!props.nextCharacter}
+              data-tour="header-next"
               title={t('nextGlyph')}
               className="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors"
           >

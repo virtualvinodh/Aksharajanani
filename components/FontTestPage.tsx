@@ -101,13 +101,7 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
 
   const handleReset = () => {
       const newSettings = { ...settings };
-      
-      // Reset Text
-      // We update the settings directly to ensure atomic update with the sliders.
-      // The parent App component will propagate this change back to the 'testText' prop.
       newSettings.customSampleText = defaults.sampleText;
-      
-      // Reset Sliders
       if (!newSettings.testPage) {
            newSettings.testPage = JSON.parse(JSON.stringify(testPageConfig));
       }
@@ -158,6 +152,7 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
             </label>
             <textarea
               id="font-test-input"
+              data-tour="test-page-input"
               value={testText}
               onChange={(e) => onTestTextChange(e.target.value)}
               className="w-full min-h-[160px] bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-4 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500 resize-y"
@@ -197,6 +192,7 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
       <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 flex justify-between items-center shadow-md w-full flex-shrink-0">
         <button
           onClick={onClose}
+          data-tour="test-page-close"
           className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
         >
           <BackIcon />
