@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import KerningPage from './KerningPage';
 import { RecommendedKerning } from '../types';
@@ -72,6 +73,7 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
                     editorMode={settings.editorMode}
                     mode={activeTab}
                     showRecommendedLabel={activeTab === 'all'}
+                    onSwitchToAllPairs={() => setActiveTab('all')}
                 />
             </div>
         </div>

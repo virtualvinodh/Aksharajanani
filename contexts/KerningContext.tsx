@@ -4,6 +4,8 @@ import { KerningMap, GlyphData, FontMetrics, AppSettings, Character } from '../t
 import { initAutoKernWorker, terminateAutoKernWorker } from '../services/autoKerningService';
 import { useGlyphData } from './GlyphDataContext';
 import { useSettings } from './SettingsContext';
+import { useProject } from './ProjectContext';
+import { isGlyphDrawn } from '../utils/glyphUtils';
 
 type KerningState = {
     kerningMap: KerningMap;
@@ -76,6 +78,7 @@ interface KerningContextType {
     ignoredPairs: Set<string>;
     dispatch: Dispatch<KerningAction>;
     queueAutoKern: (pairs: QueuedPair[]) => void;
+    discoverKerning: (onProgress: (p: number) => void) => Promise<number>;
 }
 
 const KerningContext = createContext<KerningContextType | undefined>(undefined);
@@ -90,22 +93,42 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [state, dispatch] = useReducer(kerningReducer, initialState);
     const { glyphDataMap } = useGlyphData();
     const { settings, metrics } = useSettings();
+    const { characterSets } = useProject();
 
     const workerRef = useRef<Worker | null>(null);
     const pendingPairsRef = useRef<QueuedPair[]>([]);
     const debounceTimerRef = useRef<number | null>(null);
     const batchIdRef = useRef(0);
-
+    
+    // Discovery Refs
+    const onDiscoveryProgressRef = useRef<((p: number) => void) | null>(null);
+    const discoveryResolveRef = useRef<((count: number) => void) | null>(null);
+    
     // Initialize worker
     useEffect(() => {
         workerRef.current = initAutoKernWorker();
         
         workerRef.current.onmessage = (e) => {
-            const { results } = e.data;
+            const { results, batchId: resultBatchId, type, progress } = e.data;
+            
+            if (type === 'progress') {
+                 if (onDiscoveryProgressRef.current) {
+                     onDiscoveryProgressRef.current(progress);
+                 }
+                 return;
+            }
+
             if (results && Object.keys(results).length > 0) {
                 const updateMap = new Map<string, number>();
                 Object.entries(results).forEach(([key, val]) => updateMap.set(key, val as number));
                 dispatch({ type: 'MERGE_SUGGESTIONS', payload: updateMap });
+            }
+            
+            // If this was a discovery batch, resolve the promise
+            if (type === 'complete' && discoveryResolveRef.current) {
+                 discoveryResolveRef.current(Object.keys(results || {}).length);
+                 discoveryResolveRef.current = null;
+                 onDiscoveryProgressRef.current = null;
             }
         };
 
@@ -120,13 +143,12 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
         const batch = pendingPairsRef.current;
         pendingPairsRef.current = [];
         
-        // Prepare data payload (Minimize transfer size)
+        // Prepare data payload
         const relevantGlyphs: Record<string, GlyphData> = {};
         const pairPayloads = batch.map(p => {
              const lId = p.left.unicode!;
              const rId = p.right.unicode!;
              
-             // Only send drawn glyphs
              const lData = glyphDataMap.get(lId);
              const rData = glyphDataMap.get(rId);
              
@@ -173,18 +195,60 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
             if (debounceTimerRef.current) {
                 clearTimeout(debounceTimerRef.current);
             }
-            // Debounce for 2 seconds to gather burst edits
             debounceTimerRef.current = window.setTimeout(processQueue, 2000);
         }
     }, [processQueue, settings, metrics, state.ignoredPairs]);
+
+    // NEW: Discovery Logic
+    const discoverKerning = useCallback(async (onProgress: (p: number) => void): Promise<number> => {
+        if (!workerRef.current || !settings || !metrics || !characterSets) return 0;
+        
+        onProgress(0); // Start
+        
+        const allDrawnChars: any[] = [];
+        const relevantGlyphData: Record<string, GlyphData> = {};
+
+        // 1. Gather all drawn base glyphs
+        characterSets.flatMap(s => s.characters).forEach(char => {
+             if (char.unicode && !char.hidden && (char.glyphClass === 'base' || !char.glyphClass)) {
+                 const data = glyphDataMap.get(char.unicode);
+                 if (isGlyphDrawn(data)) {
+                     allDrawnChars.push({ 
+                         unicode: char.unicode, 
+                         lsb: char.lsb ?? metrics.defaultLSB, 
+                         rsb: char.rsb ?? metrics.defaultRSB,
+                         name: char.name
+                     });
+                     relevantGlyphData[char.unicode] = data!;
+                 }
+             }
+        });
+        
+        return new Promise((resolve) => {
+            onDiscoveryProgressRef.current = onProgress;
+            discoveryResolveRef.current = resolve;
+            
+            batchIdRef.current += 1;
+            workerRef.current!.postMessage({
+                batchId: batchIdRef.current,
+                type: 'discover',
+                allGlyphDefs: allDrawnChars,
+                glyphDataMap: relevantGlyphData,
+                metrics,
+                strokeThickness: settings.strokeThickness
+            });
+        });
+
+    }, [characterSets, glyphDataMap, metrics, settings]);
 
     const value = useMemo(() => ({
         kerningMap: state.kerningMap,
         suggestedKerningMap: state.suggestedKerningMap,
         ignoredPairs: state.ignoredPairs,
         dispatch,
-        queueAutoKern
-    }), [state.kerningMap, state.suggestedKerningMap, state.ignoredPairs, queueAutoKern]);
+        queueAutoKern,
+        discoverKerning
+    }), [state.kerningMap, state.suggestedKerningMap, state.ignoredPairs, queueAutoKern, discoverKerning]);
 
     return (
         <KerningContext.Provider value={value}>

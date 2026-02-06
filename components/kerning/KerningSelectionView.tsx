@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Character, GlyphData, FontMetrics, RecommendedKerning, KerningMap } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { SparklesIcon, UndoIcon, CheckCircleIcon } from '../../constants';
+import { SparklesIcon, UndoIcon, CheckCircleIcon, SearchIcon } from '../../constants';
 import { calculateAutoKerning } from '../../services/kerningService';
 import PairCard from '../PairCard';
 import CharacterSelectionPanel from './CharacterSelectionPanel';
@@ -28,16 +28,17 @@ interface KerningSelectionViewProps {
     hasHiddenRecommended?: boolean;
     kerningMap: KerningMap;
     suggestedKerningMap: KerningMap;
-    onAcceptSuggestions: () => void;
+    onAcceptSuggestions: (keys: string[]) => void;
+    onSwitchToAllPairs?: () => void;
 }
 
 const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({ 
     filteredPairs, onEditPair, selectedLeftChars, setSelectedLeftChars, selectedRightChars, setSelectedRightChars, mode, showRecommendedLabel,
-    hasHiddenRecommended, kerningMap, suggestedKerningMap, onAcceptSuggestions
+    hasHiddenRecommended, kerningMap, suggestedKerningMap, onAcceptSuggestions, onSwitchToAllPairs
 }) => {
     const { t } = useLocale();
-    const { showNotification, filterMode, searchQuery } = useLayout();
-    const { queueAutoKern, dispatch: kerningDispatch } = useKerning();
+    const { showNotification, filterMode, searchQuery, setFilterMode } = useLayout();
+    const { queueAutoKern, dispatch: kerningDispatch, discoverKerning } = useKerning();
     const { characterSets } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { settings, metrics } = useSettings();
@@ -81,6 +82,27 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
         setIsProgressModalOpen(false);
         setIsAutoKerning(false);
     };
+    
+    const handleDiscoverKerning = async () => {
+        setIsAutoKerning(true);
+        setIsProgressModalOpen(true);
+        setKerningProgressValue(0);
+
+        const count = await discoverKerning((progress) => {
+            setKerningProgressValue(progress);
+        });
+
+        setIsProgressModalOpen(false);
+        setIsAutoKerning(false);
+        
+        if (count > 0) {
+            if (onSwitchToAllPairs) onSwitchToAllPairs();
+            setFilterMode('toBeReviewed');
+            showNotification(`Scan complete. Found ${count} new pairs. Check 'To Be Reviewed' filter.`, 'success');
+        } else {
+            showNotification("Scan complete. No new collisions found.", 'info');
+        }
+    };
 
     const handleResetVisible = () => {
         const newMap = new Map(kerningMap);
@@ -102,13 +124,28 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
 
     const unreviewedCount = useMemo(() => {
         let count = 0;
-        for (const key of suggestedKerningMap.keys()) {
-            if (!kerningMap.has(key)) {
+        for (const p of filteredPairs) {
+            const key = `${p.left.unicode}-${p.right.unicode}`;
+            // It matches if it has a suggestion but no manual kerning
+            if (suggestedKerningMap.has(key) && !kerningMap.has(key)) {
                 count++;
             }
         }
         return count;
-    }, [suggestedKerningMap, kerningMap]);
+    }, [filteredPairs, suggestedKerningMap, kerningMap]);
+    
+    const handleAcceptVisibleSuggestions = () => {
+        const keysToAccept: string[] = [];
+        for (const p of filteredPairs) {
+            const key = `${p.left.unicode}-${p.right.unicode}`;
+            if (suggestedKerningMap.has(key) && !kerningMap.has(key)) {
+                keysToAccept.push(key);
+            }
+        }
+        if (keysToAccept.length > 0) {
+            onAcceptSuggestions(keysToAccept);
+        }
+    };
 
     return (
         <div className="w-full h-full flex flex-col">
@@ -135,8 +172,14 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
 
                     <div className="p-4 border-b dark:border-gray-700 flex items-center gap-4 flex-wrap bg-white dark:bg-gray-800">
                         <button onClick={handleAutoKern} disabled={isAutoKerning} className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors"><SparklesIcon /> {t('autoKern')}</button>
+                        
+                        <button onClick={handleDiscoverKerning} disabled={isAutoKerning} className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors" title="Scan all characters for geometric collisions">
+                             <SearchIcon className="w-4 h-4" />
+                             <span>Scan Collisions</span>
+                        </button>
+
                         {unreviewedCount > 0 && (
-                            <button onClick={onAcceptSuggestions} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
+                            <button onClick={handleAcceptVisibleSuggestions} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
                                 <CheckCircleIcon className="w-4 h-4" />
                                 Accept Suggestions ({unreviewedCount})
                             </button>

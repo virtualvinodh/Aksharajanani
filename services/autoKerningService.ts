@@ -1,3 +1,4 @@
+
 import { GlyphData, FontMetrics, Character } from '../types';
 
 // Define the worker script as a string
@@ -214,80 +215,172 @@ const doBBoxesCollide = (boxA, boxB) => {
     );
 };
 
+// --- Solver Logic ---
+const solvePair = (leftGlyph, rightGlyph, metrics, strokeThickness, leftRsb, rightLsb, targetDistance) => {
+    const leftBoxes = getGlyphSubBBoxes(leftGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
+    const rightBoxes = getGlyphSubBBoxes(rightGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
+
+    if (!leftBoxes || !rightBoxes || !leftBoxes.full || !rightBoxes.full) return 0;
+    
+    // Binary Search
+    let low = -Math.round(metrics.unitsPerEm / 2); 
+    let high = 0; 
+    let bestK = 0; 
+    
+    // Fallback or explicit target distance
+    const effectiveTarget = targetDistance !== null ? targetDistance : (leftRsb + rightLsb);
+
+    while (low <= high) {
+        const kMid = Math.floor((low + high) / 2);
+        
+        // X position of right glyph in the test configuration
+        const rightStartX = leftBoxes.full.maxX + leftRsb + rightLsb + kMid;
+        const deltaX = rightStartX - rightBoxes.full.minX;
+        
+        // Translate right boxes
+        const rBoxAscenderT = rightBoxes.ascender ? { ...rightBoxes.ascender, minX: rightBoxes.ascender.minX + deltaX, maxX: rightBoxes.ascender.maxX + deltaX } : null;
+        const rBoxXHeightT = rightBoxes.xHeight ? { ...rightBoxes.xHeight, minX: rightBoxes.xHeight.minX + deltaX, maxX: rightBoxes.xHeight.maxX + deltaX } : null;
+        const rBoxDescenderT = rightBoxes.descender ? { ...rightBoxes.descender, minX: rightBoxes.descender.minX + deltaX, maxX: rightBoxes.descender.maxX + deltaX } : null;
+
+        let isInvalid = false;
+        
+        // Collision Check
+        if (doBBoxesCollide(leftBoxes.ascender, rBoxAscenderT) || doBBoxesCollide(leftBoxes.descender, rBoxDescenderT)) {
+            isInvalid = true;
+        } else if (rBoxXHeightT && leftBoxes.xHeight) {
+            const currentGap = rBoxXHeightT.minX - leftBoxes.xHeight.maxX;
+            if (currentGap < effectiveTarget) {
+                isInvalid = true; 
+            }
+        } else {
+             const rBoxFullT = { ...rightBoxes.full, minX: rightBoxes.full.minX + deltaX, maxX: rightBoxes.full.maxX + deltaX };
+             if (doBBoxesCollide(leftBoxes.full, rBoxFullT)) {
+                isInvalid = true;
+            }
+        }
+
+        if (isInvalid) {
+            low = kMid + 1; // Too tight, need less negative
+        } else {
+            bestK = kMid;
+            high = kMid - 1; // Try tighter
+        }
+    }
+    return bestK;
+}
+
 // --- Main Calculation ---
-self.onmessage = (e) => {
-    const { batchId, pairs, glyphDataMap, metrics, strokeThickness } = e.data;
+self.onmessage = async (e) => {
+    const { batchId, type, pairs, glyphDataMap, metrics, strokeThickness, allGlyphDefs } = e.data;
     const results = {}; // Map<string, number> as obj
 
     try {
-        pairs.forEach(pair => {
-            const { leftId, rightId, targetDistance, leftRsb, rightLsb } = pair;
-            const leftGlyph = glyphDataMap[leftId];
-            const rightGlyph = glyphDataMap[rightId];
-
-            if (!leftGlyph || !rightGlyph) return;
-
-            const leftBoxes = getGlyphSubBBoxes(leftGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
-            const rightBoxes = getGlyphSubBBoxes(rightGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
-
-            if (!leftBoxes || !rightBoxes || !leftBoxes.full || !rightBoxes.full) return;
+        if (type === 'discover') {
+            // --- DISCOVERY MODE ---
+            // 1. Analyze Geometry of all glyphs to identify overhangs
+            const profiles = {};
+            const candidates = allGlyphDefs; // array of {unicode, lsb, rsb, name}
             
-            // Binary Search
-            let low = -Math.round(metrics.unitsPerEm / 2); 
-            let high = 0; 
-            let bestK = 0; 
+            candidates.forEach(char => {
+                const glyph = glyphDataMap[char.unicode];
+                if (!glyph) return;
+                
+                const zones = getGlyphSubBBoxes(glyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
+                if (!zones || !zones.xHeight) return;
+                
+                const xRight = zones.xHeight.maxX;
+                const xLeft = zones.xHeight.minX;
+                const threshold = 10; // units
+                
+                // Profile: Does it protrude?
+                const p = {
+                    r_asc: (zones.ascender && zones.ascender.maxX > xRight + threshold),
+                    r_desc: (zones.descender && zones.descender.maxX > xRight + threshold),
+                    l_asc: (zones.ascender && zones.ascender.minX < xLeft - threshold),
+                    l_desc: (zones.descender && zones.descender.minX < xLeft - threshold),
+                    // Also flag if it has empty space (tuckable)
+                    l_asc_space: (!zones.ascender || zones.ascender.minX > xLeft + threshold),
+                    l_desc_space: (!zones.descender || zones.descender.minX > xLeft + threshold),
+                    r_asc_space: (!zones.ascender || zones.ascender.maxX < xRight - threshold),
+                    r_desc_space: (!zones.descender || zones.descender.maxX < xRight - threshold)
+                };
+                
+                // Only store if it has meaningful features
+                if (Object.values(p).some(Boolean)) {
+                    profiles[char.unicode] = p;
+                }
+            });
             
-            // Fallback or explicit target distance
-            const effectiveTarget = targetDistance !== null ? targetDistance : (leftRsb + rightLsb);
+            // 2. Cross-reference candidates
+            const totalOps = candidates.length * candidates.length;
+            let ops = 0;
+            let lastProgress = 0;
+            
+            for (let i = 0; i < candidates.length; i++) {
+                for (let j = 0; j < candidates.length; j++) {
+                    const L = candidates[i];
+                    const R = candidates[j];
+                    const pL = profiles[L.unicode];
+                    const pR = profiles[R.unicode];
+                    
+                    ops++;
+                    
+                    if (pL && pR) {
+                        let checkNeeded = false;
+                        
+                        // Case 1: L protrudes Right, R has space on Left
+                        if ((pL.r_asc && pR.l_asc_space) || (pL.r_desc && pR.l_desc_space)) checkNeeded = true;
+                        
+                        // Case 2: R protrudes Left, L has space on Right
+                        if ((pR.l_asc && pL.r_asc_space) || (pR.l_desc && pL.r_desc_space)) checkNeeded = true;
+                        
+                        // Case 3: Double Overhang (Collision risk)
+                        if ((pL.r_asc && pR.l_asc) || (pL.r_desc && pR.l_desc)) checkNeeded = true;
 
-            while (low <= high) {
-                const kMid = Math.floor((low + high) / 2);
-                
-                // X position of right glyph in the test configuration
-                const rightStartX = leftBoxes.full.maxX + leftRsb + rightLsb + kMid;
-                const deltaX = rightStartX - rightBoxes.full.minX;
-                
-                // Translate right boxes
-                const rBoxAscenderT = rightBoxes.ascender ? { ...rightBoxes.ascender, minX: rightBoxes.ascender.minX + deltaX, maxX: rightBoxes.ascender.maxX + deltaX } : null;
-                const rBoxXHeightT = rightBoxes.xHeight ? { ...rightBoxes.xHeight, minX: rightBoxes.xHeight.minX + deltaX, maxX: rightBoxes.xHeight.maxX + deltaX } : null;
-                const rBoxDescenderT = rightBoxes.descender ? { ...rightBoxes.descender, minX: rightBoxes.descender.minX + deltaX, maxX: rightBoxes.descender.maxX + deltaX } : null;
-
-                let isInvalid = false;
-                
-                // Collision Check
-                if (doBBoxesCollide(leftBoxes.ascender, rBoxAscenderT) || doBBoxesCollide(leftBoxes.descender, rBoxDescenderT)) {
-                    isInvalid = true;
-                } else if (rBoxXHeightT && leftBoxes.xHeight) {
-                    const currentGap = rBoxXHeightT.minX - leftBoxes.xHeight.maxX;
-                    if (currentGap < effectiveTarget) {
-                        isInvalid = true; 
-                    }
-                } else {
-                     const rBoxFullT = { ...rightBoxes.full, minX: rightBoxes.full.minX + deltaX, maxX: rightBoxes.full.maxX + deltaX };
-                     if (doBBoxesCollide(leftBoxes.full, rBoxFullT)) {
-                        isInvalid = true;
+                        if (checkNeeded) {
+                            const leftGlyph = glyphDataMap[L.unicode];
+                            const rightGlyph = glyphDataMap[R.unicode];
+                            if (leftGlyph && rightGlyph) {
+                                 const k = solvePair(leftGlyph, rightGlyph, metrics, strokeThickness, L.rsb, R.lsb, null);
+                                 if (k <= -10) { // Threshold to ignore micro-adjustments
+                                     results[\`\${L.unicode}-\${R.unicode}\`] = k;
+                                 }
+                            }
+                        }
                     }
                 }
-
-                if (isInvalid) {
-                    low = kMid + 1; // Too tight, need less negative
-                } else {
-                    bestK = kMid;
-                    high = kMid - 1; // Try tighter
+                
+                // Report progress
+                const currentProgress = Math.round((ops / totalOps) * 100);
+                if (currentProgress > lastProgress) {
+                    self.postMessage({ type: 'progress', progress: currentProgress });
+                    lastProgress = currentProgress;
                 }
+                
+                // Yield to main thread
+                if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
             }
-            
-            if (bestK <= 0) {
-                 results[\`\${leftId}-\${rightId}\`] = bestK;
-            }
-        });
+
+        } else {
+            // --- STANDARD MODE (Explicit List) ---
+            pairs.forEach(pair => {
+                const { leftId, rightId, targetDistance, leftRsb, rightLsb } = pair;
+                const leftGlyph = glyphDataMap[leftId];
+                const rightGlyph = glyphDataMap[rightId];
+
+                if (leftGlyph && rightGlyph) {
+                    const bestK = solvePair(leftGlyph, rightGlyph, metrics, strokeThickness, leftRsb, rightLsb, targetDistance);
+                    if (bestK <= 0) {
+                        results[\`\${leftId}-\${rightId}\`] = bestK;
+                    }
+                }
+            });
+        }
     } catch (error) {
-        // Log the error inside the worker for debugging, but don't crash.
         console.error('Error during auto-kerning batch:', error);
-        // Post back empty or partial results. The main thread will know the job is done.
     }
     
-    self.postMessage({ batchId, results });
+    self.postMessage({ batchId, results, type: type === 'discover' ? 'complete' : undefined });
 };
 `;
 
