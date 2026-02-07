@@ -6,6 +6,7 @@ import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 // Custom Tooltip Component to handle "Don't Show Again" vs "Skip"
 const CustomTooltip = ({
@@ -110,15 +111,17 @@ const CustomTooltip = ({
                    </div>
               </div>
               
-              {/* Show for both Tutorial AND JIT hints now */}
-              <div className="border-t border-gray-100 dark:border-gray-700 pt-3 text-center">
-                  <button 
-                      onClick={(e) => performDismiss(e)}
-                      className="text-[10px] text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
-                  >
-                      Don't show me this again
-                  </button>
-              </div>
+              {/* Show for JIT hints only, NOT for main tutorial */}
+              {!step.data?.isTutorial && (
+                  <div className="border-t border-gray-100 dark:border-gray-700 pt-3 text-center">
+                      <button 
+                          onClick={(e) => performDismiss(e)}
+                          className="text-[10px] text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
+                      >
+                          Don't show me this again
+                      </button>
+                  </div>
+              )}
          </div>
       </div>
     );
@@ -126,7 +129,7 @@ const CustomTooltip = ({
 
 const TutorialManager: React.FC = () => {
     const { script } = useProject();
-    const { selectedCharacter, activeModal, workspace, currentView } = useLayout();
+    const { selectedCharacter, activeModal, workspace, currentView, isNavDrawerOpen } = useLayout();
     const { theme } = useTheme();
     const { locale } = useLocale();
     
@@ -135,6 +138,8 @@ const TutorialManager: React.FC = () => {
     const [translations, setTranslations] = useState<Record<string, string> | null>(null);
     const [activeSteps, setActiveSteps] = useState<Step[]>([]);
     
+    const isLargeScreen = useMediaQuery('(min-width: 1024px)');
+
     // Dynamic offset state
     const [scrollOffset, setScrollOffset] = useState(150);
     
@@ -203,7 +208,8 @@ const TutorialManager: React.FC = () => {
     // 1. Define Linear Tutorial Steps
     const linearTutorialSteps: Step[] = useMemo(() => {
         if (!translations) return [];
-        return [
+        
+        const steps: Step[] = [
             // 0. Welcome
             {
                 target: 'body',
@@ -224,7 +230,7 @@ const TutorialManager: React.FC = () => {
                 spotlightClicks: true,
                 disableBeacon: true,
                 hideFooter: true, 
-                data: { isTutorial: true }
+                data: { isTutorial: true, advanceOn: 'selected-A' }
             },
             // 2. Highlight Pen Tool
             {
@@ -244,113 +250,161 @@ const TutorialManager: React.FC = () => {
                 spotlightClicks: true,
                 disableOverlayClose: true,
                 data: { isTutorial: true }
-            },
-            // 4. Click Test (Interaction)
-            {
-                target: '[data-tour="header-test"]',
-                content: translations.clickTest,
+            }
+        ];
+
+        // --- BRANCH: TEST PAGE ACCESS ---
+        if (!isLargeScreen) {
+             // Mobile: Must go back to dashboard first
+             steps.push({
+                target: '[data-tour="header-back"]',
+                content: "Click Back to return to the dashboard.",
                 spotlightClicks: true,
                 disableBeacon: true,
                 hideFooter: true,
-                data: { isTutorial: true }
-            },
-            // 5. Test Input
-            {
-                target: '[data-tour="test-page-input"]',
-                content: translations.testPageInput,
-                placement: 'bottom',
-                disableBeacon: true,
-                spotlightClicks: true,
-                data: { isTutorial: true }
-            },
-            // 6. Close Test (Interaction)
-            {
-                target: '[data-tour="test-page-close"]',
-                content: translations.closeTestPage,
+                data: { isTutorial: true, advanceOn: 'back-to-dashboard' }
+             });
+        }
+        
+        steps.push({
+            target: '[data-tour="header-test"]',
+            content: translations.clickTest,
+            spotlightClicks: true,
+            disableBeacon: true,
+            hideFooter: true,
+            data: { isTutorial: true, advanceOn: 'test-modal-open' }
+        });
+
+        steps.push({
+            target: '[data-tour="test-page-input"]',
+            content: translations.testPageInput,
+            placement: 'bottom',
+            disableBeacon: true,
+            spotlightClicks: true,
+            data: { isTutorial: true }
+        });
+
+        steps.push({
+            target: '[data-tour="test-page-close"]',
+            content: translations.closeTestPage,
+            spotlightClicks: true,
+            disableBeacon: true,
+            hideFooter: true,
+            data: { isTutorial: true, advanceOn: 'test-modal-close' }
+        });
+
+        // --- BRANCH: SELECT 'F' ---
+        if (!isLargeScreen) {
+            // Mobile: Must re-enter editor via 'A' (or any), then open drawer
+            steps.push({
+                target: '[data-tour="grid-item-0"]', // Use A as entry point again
+                content: "Select 'A' again to return to the editor.",
                 spotlightClicks: true,
                 disableBeacon: true,
                 hideFooter: true,
-                data: { isTutorial: true }
-            },
-            // 7. Select 'F' (Interaction - Replaces "Back")
-            {
-                target: '[data-tour="grid-item-1"]', // Targets F in the grid (sidebar or main)
+                data: { isTutorial: true, advanceOn: 're-enter-editor' }
+            });
+            steps.push({
+                target: '[data-tour="floating-grid-btn"]',
+                content: "Open the Character Grid.",
+                spotlightClicks: true,
+                disableBeacon: true,
+                hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'drawer-open' }
+            });
+            // Drawer open -> Select F
+             steps.push({
+                target: '#mobile-nav-drawer [data-tour="grid-item-1"]', // Scoped to Drawer ID to avoid conflict
                 content: translations.selectCharF,
                 spotlightClicks: true,
                 disableBeacon: true,
-                hideFooter: true, // User must click 'F'
-                placement: 'right',
-                data: { isTutorial: true }
-            },
-            // 8. Draw 'F' (Interaction - Wait for draw)
-            {
-                target: '[data-tour="drawing-canvas"]',
-                content: translations.drawCharF,
-                placement: 'right',
-                disableBeacon: true,
-                spotlightClicks: true,
-                disableOverlayClose: true,
-                data: { isTutorial: true }
-            },
-            // 9. Select/Pan (Tools start)
-            {
-                target: '[data-tour="tool-select"]',
-                content: translations.toolSelectPan,
-                placement: 'top',
-                disableBeacon: true,
-                data: { isTutorial: true }
-            },
-            // 10. Eraser
-            {
-                target: '[data-tour="tool-eraser"]',
-                content: translations.toolEraser,
-                placement: 'top',
-                disableBeacon: true,
-                data: { isTutorial: true }
-            },
-            // 11. Undo/Redo
-            {
-                target: '[data-tour="action-undo"]',
-                content: translations.actionUndo,
-                placement: 'top',
-                disableBeacon: true,
-                data: { isTutorial: true }
-            },
-            // 12. Group/Copy
-            {
-                target: '[data-tour="action-group"]',
-                content: translations.actionGroup,
-                placement: 'top',
-                disableBeacon: true,
-                data: { isTutorial: true }
-            },
-            // 13. Click Next Arrow (Interaction)
-            {
-                target: '[data-tour="header-next"]',
-                content: translations.clickNextForComposite,
+                hideFooter: true,
+                placement: 'right', // Drawer is on left, so tooltip goes right
+                data: { isTutorial: true, advanceOn: 'selected-F' }
+            });
+        } else {
+            // Desktop: Select F from sidebar directly
+             steps.push({
+                target: '[data-tour="grid-item-1"]', // F in sidebar
+                content: translations.selectCharF,
                 spotlightClicks: true,
                 disableBeacon: true,
                 hideFooter: true,
-                data: { isTutorial: true }
-            },
-            // 14. Explain Composite
-            {
-                target: 'body',
-                content: translations.compositeExplanation,
-                placement: 'center',
-                disableBeacon: true,
-                data: { isTutorial: true }
-            },
-            // 15. Finish
-            {
-                target: 'body',
-                content: translations.finish,
-                placement: 'center',
-                disableBeacon: true,
-                data: { isTutorial: true }
-            }
-        ];
-    }, [translations]);
+                placement: 'right',
+                data: { isTutorial: true, advanceOn: 'selected-F' }
+            });
+        }
+
+        // Common Finish
+        steps.push({
+            target: '[data-tour="drawing-canvas"]',
+            content: translations.drawCharF,
+            placement: 'right',
+            disableBeacon: true,
+            spotlightClicks: true,
+            disableOverlayClose: true,
+            data: { isTutorial: true }
+        });
+        
+        steps.push({
+            target: '[data-tour="tool-select"]',
+            content: translations.toolSelectPan,
+            placement: 'top',
+            disableBeacon: true,
+            data: { isTutorial: true }
+        });
+
+        steps.push({
+            target: '[data-tour="tool-eraser"]',
+            content: translations.toolEraser,
+            placement: 'top',
+            disableBeacon: true,
+            data: { isTutorial: true }
+        });
+
+        steps.push({
+            target: '[data-tour="action-undo"]',
+            content: translations.actionUndo,
+            placement: 'top',
+            disableBeacon: true,
+            data: { isTutorial: true }
+        });
+
+        steps.push({
+            target: '[data-tour="action-group"]',
+            content: translations.actionGroup,
+            placement: 'top',
+            disableBeacon: true,
+            data: { isTutorial: true }
+        });
+
+        steps.push({
+            target: '[data-tour="header-next"]',
+            content: translations.clickNextForComposite,
+            spotlightClicks: true,
+            disableBeacon: true,
+            hideFooter: true,
+            data: { isTutorial: true, advanceOn: 'selected-E' }
+        });
+
+        steps.push({
+            target: 'body',
+            content: translations.compositeExplanation,
+            placement: 'center',
+            disableBeacon: true,
+            data: { isTutorial: true }
+        });
+
+        steps.push({
+            target: 'body',
+            content: translations.finish,
+            placement: 'center',
+            disableBeacon: true,
+            data: { isTutorial: true }
+        });
+
+        return steps;
+    }, [translations, isLargeScreen]);
 
     // 2. Initialize Linear Tutorial if active
     useEffect(() => {
@@ -370,28 +424,19 @@ const TutorialManager: React.FC = () => {
         }
     }, [script?.id, linearTutorialSteps]);
 
-    // 3. JIT Hint Logic
+    // 3. JIT Hint Logic (unchanged)
     useEffect(() => {
         if (!translations) return;
-        
-        // Disable hints if we are in the main tutorial script (to avoid conflicts)
         if (script?.id === 'tutorial') return;
-
-        // Hint 1: Select Character (Grid View)
-        // Trigger: Drawing Workspace + Grid View + No Selection
+        // Hint 1: Select Character
         if (workspace === 'drawing' && currentView === 'grid' && !selectedCharacter && !activeModal) {
             const storageKey = 'hint_grid_select_seen';
-            const permanentlyDismissed = localStorage.getItem(storageKey);
-            const sessionSeen = sessionStorage.getItem(storageKey);
-            
-            if (!permanentlyDismissed && !sessionSeen) {
-                // Ensure grid items are rendered. React-Virtuoso might take a tick.
+            if (!localStorage.getItem(storageKey) && !sessionStorage.getItem(storageKey)) {
                 const checkExist = setInterval(() => {
                    if (document.querySelector('.tutorial-glyph-item')) {
                        clearInterval(checkExist);
-                       
                        setActiveSteps([{
-                           target: '.tutorial-glyph-item', // Targets first card regardless of ID
+                           target: '.tutorial-glyph-item',
                            content: translations.hintGridSelect || "Select a character to start.",
                            disableBeacon: true,
                            placement: 'bottom',
@@ -400,60 +445,43 @@ const TutorialManager: React.FC = () => {
                        }]);
                        setStepIndex(0);
                        setRun(true);
-                       
-                       // Mark as seen for this session immediately to prevent loop
                        sessionStorage.setItem(storageKey, 'true');
                    }
                 }, 500);
-                setTimeout(() => clearInterval(checkExist), 5000); // 5s timeout
-                
+                setTimeout(() => clearInterval(checkExist), 5000);
                 return () => clearInterval(checkExist);
             }
         }
-
-        // Hint 2: Start Drawing (Editor View)
-        // Trigger: Drawing Workspace + Character Selected
+        // Hint 2: Start Drawing
         if (workspace === 'drawing' && selectedCharacter && !activeModal) {
             const storageKey = 'hint_editor_draw_seen';
-            const permanentlyDismissed = localStorage.getItem(storageKey);
-            const sessionSeen = sessionStorage.getItem(storageKey);
-            
-            if (!permanentlyDismissed && !sessionSeen) {
-                // Wait for transition/animation
+            if (!localStorage.getItem(storageKey) && !sessionStorage.getItem(storageKey)) {
                 const timer = setTimeout(() => {
                     setActiveSteps([{
                        target: '[data-tour="drawing-canvas"]',
                        content: translations.hintEditorDraw || "Start drawing here.",
                        disableBeacon: true,
-                       placement: 'top', // Or 'center' if canvas is large
+                       placement: 'top',
                        spotlightClicks: true,
                        data: { isTutorial: false, storageKey: storageKey }
                     }]);
                     setStepIndex(0);
                     setRun(true);
-                    
-                    // Mark as seen for this session
                     sessionStorage.setItem(storageKey, 'true');
                 }, 800);
                 return () => clearTimeout(timer);
             }
         }
-
     }, [script?.id, workspace, currentView, selectedCharacter, activeModal, translations]);
     
     // 4. JIT Cleanup Logic
-    // If a hint is active but the condition is no longer met (e.g. user selected character), stop the tour immediately.
     useEffect(() => {
         if (run && activeSteps.length > 0 && !activeSteps[0].data?.isTutorial) {
              const currentStepTarget = activeSteps[0].target as string;
-             
-             // If hinting "Select Grid" but user has selected a character, stop.
              if (currentStepTarget === '.tutorial-glyph-item' && selectedCharacter) {
                  setRun(false);
                  setActiveSteps([]);
              }
-             
-             // If hinting "Draw" but user navigates away, stop.
              if (currentStepTarget === '[data-tour="drawing-canvas"]' && !selectedCharacter) {
                  setRun(false);
                  setActiveSteps([]);
@@ -463,30 +491,47 @@ const TutorialManager: React.FC = () => {
 
     // 5. Linear Tutorial State Machine (Advancement Logic)
     useEffect(() => {
-        // Only run this logic if we are running the main tutorial
-        if (!run || script?.id !== 'tutorial') return;
+        if (!run || script?.id !== 'tutorial' || activeSteps.length === 0) return;
 
-        // Step 1: "Click the first character" -> Wait for Editor
-        if (stepIndex === 1 && selectedCharacter) {
-            setTimeout(() => setStepIndex(2), 600); 
+        const currentStep = activeSteps[stepIndex];
+        if (!currentStep) return; // FIX: Guard against out-of-bounds or undefined steps
+
+        const advanceRule = currentStep.data?.advanceOn;
+
+        if (!advanceRule) return;
+
+        const advance = () => setTimeout(() => setStepIndex(prev => prev + 1), 500);
+
+        switch (advanceRule) {
+            case 'selected-A':
+                if (selectedCharacter) advance();
+                break;
+            case 'back-to-dashboard':
+                if (!activeModal && !selectedCharacter) advance();
+                break;
+            case 'test-modal-open':
+                if (activeModal?.name === 'testPage') advance();
+                break;
+            case 'test-modal-close':
+                if (activeModal === null) advance();
+                break;
+            case 're-enter-editor':
+                if (selectedCharacter) advance();
+                break;
+            case 'drawer-open':
+                if (isNavDrawerOpen) advance();
+                break;
+            case 'selected-F':
+                if (selectedCharacter?.name === 'F') {
+                     // Close drawer implicitly if on mobile so user can see canvas
+                     advance();
+                }
+                break;
+            case 'selected-E':
+                if (selectedCharacter?.name === 'E') advance();
+                break;
         }
-        // Step 4: "Click Test Button" -> Wait for Test Modal
-        if (stepIndex === 4 && activeModal?.name === 'testPage') {
-            setTimeout(() => setStepIndex(5), 500);
-        }
-        // Step 6: "Close Test Page" -> Wait for Modal Close
-        if (stepIndex === 6 && activeModal === null) {
-             setTimeout(() => setStepIndex(7), 300);
-        }
-        // Step 7: "Select 'F'" -> Wait for F
-        if (stepIndex === 7 && selectedCharacter?.name === 'F') {
-            setTimeout(() => setStepIndex(8), 500);
-        }
-        // Step 13: "Click Next Arrow" -> Wait for next character 'E'
-        if (stepIndex === 13 && selectedCharacter?.name === 'E') {
-             setTimeout(() => setStepIndex(14), 500);
-        }
-    }, [stepIndex, selectedCharacter, activeModal, run, script?.id]);
+    }, [stepIndex, selectedCharacter, activeModal, run, script?.id, activeSteps, isNavDrawerOpen]);
 
     const handleCallback = (data: CallBackProps) => {
         const { status, type, action, index } = data;
@@ -501,12 +546,16 @@ const TutorialManager: React.FC = () => {
         } else if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
             // Logic only applies to linear tutorial multi-step flow
             if (script?.id === 'tutorial') {
-                const isInteractionStep = [1, 4, 6, 7, 13].includes(index);
-                if (action === ACTIONS.NEXT) {
-                     if (!isInteractionStep) {
+                const currentStep = activeSteps[index];
+                if (!currentStep) return; // FIX: Guard against undefined currentStep
+
+                // Only advance if NOT waiting for a specific event
+                if (!currentStep.data?.advanceOn) {
+                    if (action === ACTIONS.NEXT) {
                         setStepIndex(index + 1);
-                     }
-                } else if (action === ACTIONS.PREV) {
+                    }
+                }
+                if (action === ACTIONS.PREV) {
                     setStepIndex(index - 1);
                 }
             }
@@ -526,6 +575,11 @@ const TutorialManager: React.FC = () => {
             callback={handleCallback}
             tooltipComponent={CustomTooltip}
             scrollOffset={scrollOffset}
+            // CRITICAL: Disable closing when clicking outside the tooltip
+            disableOverlayClose={true}
+            // CRITICAL: Spotlight clicks are generally allowed per step config above,
+            // but setting padding helps with "finicky" clicks
+            spotlightPadding={4}
             styles={{
                 options: {
                     arrowColor: theme === 'dark' ? '#1f2937' : '#fff',

@@ -7,16 +7,13 @@
         { "name": "A", "glyphClass": "base" },
         { "name": "F", "glyphClass": "base" },
         { "name": "E", "glyphClass": "base", "composite": ["F"] },
-        { "name": "N", "glyphClass": "base" },
-        { "name": "T", "glyphClass": "base" },
-        { "name": "a", "glyphClass": "base" },       
-        { "name": "e", "glyphClass": "base" },             
-        { "name": "g", "glyphClass": "base" },          
-        { "name": "n", "glyphClass": "base" },        
+        { "name": "n", "glyphClass": "base" },
         { "name": "̃", "glyphClass": "mark", "advWidth":0 },
-        { "name": "Ñ", "glyphClass": "base", "position": ["N", "̃"] },
-        { "name": "ñ", "glyphClass": "base", "link": ["n", "̃"] },                
-        { "name": "ͤ", "glyphClass": "mark", "advWidth":0, "link": ["e"], "compositeTransform": [{ "scale": 0.5, "y": -400 }] }
+        { "name": "ñ", "glyphClass": "base", "position": ["n", "̃"] },
+        { "name": "e", "glyphClass": "base" },  
+        { "name": "ͤ", "glyphClass": "mark", "advWidth":0, "link": ["e"], "compositeTransform": [{ "scale": 0.5, "y": -400 }] },        
+        { "name": "T", "glyphClass": "base" }
+
     ]
   }
 ]

@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import { Character, CharacterSet } from '../types';
 import DrawingWorkspace from './DrawingWorkspace';
@@ -35,6 +36,7 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
         aria-hidden="true"
       />
       <div
+        id="mobile-nav-drawer"
         className={`fixed top-0 left-0 bottom-0 w-[60%] max-w-[280px] bg-gray-50 dark:bg-gray-900 z-[70] shadow-2xl flex flex-col ${isAnimatingOut ? 'animate-slide-out-left' : 'animate-slide-in-left'}`}
         role="dialog"
         aria-modal="true"

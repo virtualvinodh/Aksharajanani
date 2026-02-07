@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, CharacterSet, MarkAttachmentRules, Point, Path, ComponentTransform } from '../types';
 import { useLayout } from '../contexts/LayoutContext';
@@ -281,6 +282,7 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
         {/* Floating Nav Button */}
         <button
             onClick={openNavDrawer}
+            data-tour="floating-grid-btn"
             className="absolute top-1/2 -translate-y-1/2 left-0 z-[60] w-6 h-20 bg-indigo-600/80 backdrop-blur-sm text-white rounded-r-lg shadow-lg flex items-center justify-center transition-transform hover:bg-indigo-500 active:translate-x-1"
             title="Open Character Grid"
         >
