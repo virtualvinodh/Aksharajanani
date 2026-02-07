@@ -23,8 +23,8 @@ This table explains what happens when a character is defined with a `position` p
 | **2** | `virtual` | `gpos: 'abvm'` | **Skipped** | Generates `pos` rule inside `feature abvm`. | **Specific Positioning.** Same as above, but scoped to a specific feature. | ✅ **Valid** |
 | **3** | `virtual` | `gsub: 'liga'` | **Skipped** | Generates `sub Base Mark by Name`. | **Invisible Substitution.** The engine substitutes Base+Mark with "Name", but "Name" has no outline (because it is virtual). Text disappears. | ❌ **Invalid** |
 | **4** | `virtual` | `gpos` + `gsub` | **Skipped** | Generates **BOTH** rules. | **Conflict.** The engine might try to position them AND substitute them. Usually, GSUB takes precedence, resulting in invisible text (see Case 3). | ❌ **Invalid** |
-| **5** | `ligature` | None | **Bakes Geometry** | Infers `liga`. Generates `sub Base Mark by Name`. | **Standard Ligature.** Typing Base + Mark replaces them with a single new glyph containing the merged shapes. | ✅ **Standard** |
-| **6** | `ligature` | `gsub: 'akhn'` | **Bakes Geometry** | Generates `sub Base Mark by Name` inside `feature akhn`. | **Feature Ligature.** Substitution happens only when the `akhn` feature is active. | ✅ **Valid** |
+| **5** | `ligature` | None | **Bakes Geometry** | **No Rule.** | **Orphaned Glyph.** A new glyph is created in the font, but no OpenType rule maps to it. It cannot be typed unless a rule is added manually. | ⚠️ **Warning** |
+| **6** | `ligature` | `gsub: 'liga'` | **Bakes Geometry** | Generates `sub Base Mark by Name` inside `feature liga`. | **Standard Ligature.** Typing Base + Mark replaces them with a single new glyph containing the merged shapes. | ✅ **Standard** |
 | **7** | `ligature` | `gpos: 'mark'` | **Bakes Geometry** | Generates `pos base <anchor> mark <anchor>`. | **Redundant/Confusing.** A new glyph is baked (wasting file size), but the font engine executes a Move command on the original components. The baked glyph is never used. | ⚠️ **Inefficient** |
 | **8** | `base` | None | **Bakes Geometry** | **No Rule.** | **Pre-composed Character.** A new glyph is created. It must be typed directly (via keyboard or palette) or referenced by *other* rules. It does not automatically substitute. | ✅ **Valid** |
 
@@ -39,7 +39,7 @@ This table explains what happens when a character is defined with a `kern` pair.
 | **1** | `virtual` | None | **Skipped** | Infers `kern` / `dist`. Generates `pos Left Right <value>`. | **Standard Kerning.** Typing Left then Right adjusts the spacing between them. | ✅ **Standard** |
 | **2** | `virtual` | `gpos: 'dist'` | **Skipped** | Generates `pos` rule inside `feature dist`. | **Distance Adjustment.** Used for script-specific spacing (e.g., Indic). | ✅ **Valid** |
 | **3** | `virtual` | `gsub` | **Skipped** | Generates `sub Left Right by Name`. | **Invisible Substitution.** Replaces the pair with a ghost glyph. Text disappears. | ❌ **Invalid** |
-| **4** | `ligature` | None | **Bakes Geometry** | Infers `liga`. Generates `sub Left Right by Name`. | **Fused Ligature.** Visual result looks like kerning, but it is actually a substitution of a single baked glyph. Useful for connecting scripts or "touching" kerning. | ✅ **Valid** |
+| **4** | `ligature` | `gsub: 'liga'` | **Bakes Geometry** | Generates `sub Left Right by Name`. | **Fused Ligature.** Visual result looks like kerning, but it is actually a substitution of a single baked glyph. Useful for connecting scripts or "touching" kerning. | ✅ **Valid** |
 | **5** | `ligature` | `gpos: 'kern'` | **Bakes Geometry** | Generates `pos Left Right <value>`. | **Redundant.** A fused glyph is created but never used. The system just kerns the originals. | ⚠️ **Inefficient** |
 
 ---
@@ -50,13 +50,37 @@ This logic applies when the `liga` array is explicitly defined.
 
 | Case | `glyphClass` | Tags | FontService (Baking) | FEA Service (Code) | Resulting Behavior | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1** | `ligature` | None | **Bakes** (if `composite` set) | Infers `liga`. Generates `sub A B C by Name`. | **Standard Ligature.** Requires `composite` or `link` to define visual geometry separately from logical components. | ✅ **Standard** |
-| **2** | `ligature` | `gsub: 'dlig'` | **Bakes** | Generates `sub A B C by Name` inside `dlig`. | **Discretionary Ligature.** | ✅ **Valid** |
-| **3** | `virtual` | Any | **Skipped** | Generates `sub A B C by Name`. | **Invisible Substitution.** The sequence is replaced by a glyph with no outlines. | ❌ **Invalid** |
+| **1** | `ligature` | None | **Bakes** (if `composite` set) | **No Rule.** | **Orphaned Glyph.** A new glyph is created but never substituted. | ⚠️ **Warning** |
+| **2** | `ligature` | `gsub: 'liga'` | **Bakes** | Generates `sub A B C by Name`. | **Standard Ligature.** | ✅ **Standard** |
+| **3** | `virtual` | `gsub: 'liga'` | **Skipped** | Generates `sub A B C by Name`. | **Invisible Substitution.** The sequence is replaced by a glyph with no outlines. | ❌ **Invalid** |
 
 ---
 
-## 4. Summary of Invalid Configurations
+## 4. GSUB Generation Precedence
+
+When generating substitution rules (GSUB), the system checks character properties in a specific order. Once a match is found for a specific feature tag, it generates the rule and stops checking further properties for that character.
+
+**Prerequisite:** `char.gsub` must equal the current feature tag (e.g., `'liga'`, `'akhn'`) being processed.
+
+1.  **Explicit `liga` Property**
+    *   *Input:* `char.liga` (Array of component names).
+    *   *Rule:* `sub [liga components] by [char name];`
+    *   *Use Case:* Complex ligatures with 3+ components or components different from the visual construction.
+
+2.  **Positioning Pair (`position` + No GPOS)**
+    *   *Input:* `char.position` (Tuple: `[Base, Mark]`).
+    *   *Condition:* `!char.gpos` (Must not have a GPOS tag defined).
+    *   *Rule:* `sub Base Mark by [char name];`
+    *   *Use Case:* "Baked" positioning where the result is a single pre-composed glyph (e.g., Indic conjuncts `ka`+`virama` -> `k_virama`).
+
+3.  **Visual Components (`composite` or `link`)**
+    *   *Input:* `char.composite` OR `char.link`.
+    *   *Rule:* `sub [components] by [char name];`
+    *   *Use Case:* Standard ligatures where the logical components match the visual components (e.g., `f` + `i` -> `fi`).
+
+---
+
+## 5. Summary of Invalid Configurations
 
 1.  **Virtual + GSUB (`gsub` tag present):**
     *   *Why:* Virtual glyphs have no geometry. Substituting existing characters with a virtual character deletes them visually.
@@ -72,19 +96,5 @@ This logic applies when the `liga` array is explicitly defined.
 4.  **Mark Class + Non-Zero Advance Width:**
     *   *Why:* While not strictly a "Virtual" error, marks intended for GPOS should usually have `advWidth: 0` to prevent them from pushing subsequent characters forward.
 
-## 5. System Handling of Conflicts
-
-The system currently enforces the following hierarchy in `feaService.ts` and `fontService.ts`:
-
-1.  **Baking Check:**
-    *   `if (char.position && char.glyphClass !== 'virtual')` -> **BAKE**.
-    *   `else` -> **DO NOT BAKE**.
-
-2.  **GPOS Generation:**
-    *   `if (char.position && char.glyphClass === 'virtual')` -> **GENERATE GPOS**.
-    *   `else if (explicit gpos tag exists)` -> **GENERATE GPOS**.
-
-3.  **GSUB Generation:**
-    *   `if (char.liga)` -> **GENERATE GSUB**.
-    *   `else if (explicit gsub tag exists)` -> **GENERATE GSUB**.
-    *   `else if (char.position && !char.gpos)` -> **GENERATE GSUB (Ligature Fallback)**.
+5.  **Ligature + No GSUB Tag:**
+    *   *Why:* The system does **not** auto-infer `gsub: 'liga'` for concrete ligatures. If you create a ligature but don't set the `gsub` property, the glyph is exported but no substitution rule is written. The user cannot type it.
