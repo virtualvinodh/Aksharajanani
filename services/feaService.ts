@@ -110,8 +110,10 @@ export const generateFea = (
     clonedCharsByUnicode.forEach(char => allCharsByNameForFea.set(char.name, char));
     
     // 1. GPOS Inference: Automatically assign 'mark' or 'mkmk' if not specified
+    // CRITICAL UPDATE: Only infer GPOS tags for VIRTUAL glyphs. 
+    // Non-virtual glyphs with 'position' are treated as baked composites by fontService.
     clonedCharsByUnicode.forEach(char => {
-        if (char.position && !char.gpos) {
+        if (char.position && !char.gpos && char.glyphClass === 'virtual') {
             const [baseName, markName] = char.position;
             const baseChar = allCharsByNameForFea.get(baseName);
             const markChar = allCharsByNameForFea.get(markName);
