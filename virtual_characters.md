@@ -73,7 +73,13 @@ When generating substitution rules (GSUB), the system checks character propertie
     *   *Rule:* `sub Base Mark by [char name];`
     *   *Use Case:* "Baked" positioning where the result is a single pre-composed glyph (e.g., Indic conjuncts `ka`+`virama` -> `k_virama`).
 
-3.  **Visual Components (`composite` or `link`)**
+3.  **Kerning Pair (`kern` + No GPOS)**
+    *   *Input:* `char.kern` (Tuple: `[Left, Right]`).
+    *   *Condition:* `!char.gpos` (Must not have a GPOS tag defined, which would imply distance positioning).
+    *   *Rule:* `sub Left Right by [char name];`
+    *   *Use Case:* Fused ligatures created via the kerning tool interface (e.g., `A` + `V` -> `AV` ligature).
+
+4.  **Visual Components (`composite` or `link`)**
     *   *Input:* `char.composite` OR `char.link`.
     *   *Rule:* `sub [components] by [char name];`
     *   *Use Case:* Standard ligatures where the logical components match the visual components (e.g., `f` + `i` -> `fi`).
