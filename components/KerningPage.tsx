@@ -87,26 +87,41 @@ const KerningPage: React.FC<KerningPageProps> = ({
         let pairs: { left: any, right: any }[] = [];
 
         if (mode === 'recommended') {
-            if (!recommendedKerning) return { allPairsInContext: [], hasHiddenRecommended: false };
-            
-            recommendedKerning.forEach(([leftRule, rightRule]) => {
-                const lefts = expandMembers([leftRule], groups, characterSets);
-                const rights = expandMembers([rightRule], groups, characterSets);
-                
-                lefts.forEach(lName => {
-                    rights.forEach(rName => {
-                        const lChar = allCharsByName.get(lName);
-                        const rChar = allCharsByName.get(rName);
-                        if (lChar && rChar) {
-                            if (standardGridNames.has(lChar.name + rChar.name)) return;
-                            if (isGlyphDrawn(lChar.unicode) && isGlyphDrawn(rChar.unicode)) {
-                                addPair(lChar, rChar);
-                            } else {
-                                hasHidden = true;
+            // A. Static Rules from JSON
+            if (recommendedKerning) {
+                recommendedKerning.forEach(([leftRule, rightRule]) => {
+                    const lefts = expandMembers([leftRule], groups, characterSets);
+                    const rights = expandMembers([rightRule], groups, characterSets);
+                    
+                    lefts.forEach(lName => {
+                        rights.forEach(rName => {
+                            const lChar = allCharsByName.get(lName);
+                            const rChar = allCharsByName.get(rName);
+                            if (lChar && rChar) {
+                                if (standardGridNames.has(lChar.name + rChar.name)) return;
+                                if (isGlyphDrawn(lChar.unicode) && isGlyphDrawn(rChar.unicode)) {
+                                    addPair(lChar, rChar);
+                                } else {
+                                    hasHidden = true;
+                                }
                             }
-                        }
+                        });
                     });
                 });
+            }
+
+            // B. Auto-detected suggestions (Dynamic)
+            // Merge suggestions into the "Recommended" tab as they serve the same "To-Do" purpose
+            suggestedKerningMap.forEach((_, key) => {
+                 const [lId, rId] = key.split('-').map(Number);
+                 const lChar = allCharsByUnicode.get(lId);
+                 const rChar = allCharsByUnicode.get(rId);
+                 if (lChar && rChar) {
+                     // Check drawn status to be safe, though auto-kerning only generates for drawn glyphs
+                     if (isGlyphDrawn(lChar.unicode) && isGlyphDrawn(rChar.unicode)) {
+                         addPair(lChar, rChar);
+                     }
+                 }
             });
 
             // FILTER: If side panels have selections, filter the recommended list

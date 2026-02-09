@@ -96,9 +96,8 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
         setIsAutoKerning(false);
         
         if (count > 0) {
-            if (onSwitchToAllPairs) onSwitchToAllPairs();
-            setFilterMode('toBeReviewed');
-            showNotification(`Scan complete. Found ${count} new pairs. Check 'To Be Reviewed' filter.`, 'success');
+            // Merged into 'Suggestions' tab, so we don't force a filter anymore.
+            showNotification(`Scan complete. Found ${count} new pairs added to Suggestions.`, 'success');
         } else {
             showNotification("Scan complete. No new collisions found.", 'info');
         }
@@ -175,7 +174,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
                         
                         <button onClick={handleDiscoverKerning} disabled={isAutoKerning} className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors" title="Scan all characters for geometric collisions">
                              <SearchIcon className="w-4 h-4" />
-                             <span>Scan Collisions</span>
+                             <span>Detect new pairs</span>
                         </button>
 
                         {unreviewedCount > 0 && (

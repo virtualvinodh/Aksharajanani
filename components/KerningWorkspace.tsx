@@ -5,6 +5,7 @@ import { RecommendedKerning } from '../types';
 import ProgressIndicator from './ProgressIndicator';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { useKerning } from '../contexts/KerningContext';
 
 interface KerningWorkspaceProps {
     recommendedKerning: RecommendedKerning[] | null;
@@ -15,16 +16,15 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
     const { kerningProgress, recommendedKerning } = props;
     const { settings } = useSettings();
     const { t } = useLocale();
+    const { suggestedKerningMap } = useKerning();
     
-    const hasRecommended = recommendedKerning && recommendedKerning.length > 0;
-    const [activeTab, setActiveTab] = useState<'recommended' | 'all'>(hasRecommended ? 'recommended' : 'all');
-
-    useEffect(() => {
-        // If recommended pairs disappear (e.g., due to project load), switch to the 'all' tab.
-        if (!hasRecommended && activeTab === 'recommended') {
-            setActiveTab('all');
-        }
-    }, [hasRecommended, activeTab]);
+    // Default to 'recommended' (Suggestions) only if there are actual suggestions (static or dynamic).
+    // Otherwise, default to 'all' (All Pairs) to avoid showing an empty list initially.
+    const [activeTab, setActiveTab] = useState<'recommended' | 'all'>(() => {
+        const hasStatic = recommendedKerning && recommendedKerning.length > 0;
+        const hasDynamic = suggestedKerningMap && suggestedKerningMap.size > 0;
+        return (hasStatic || hasDynamic) ? 'recommended' : 'all';
+    });
 
     if (!settings) return null;
 
@@ -37,18 +37,16 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
                 data-tour="kerning-nav"
              >
                 <nav className="flex space-x-2 px-2 sm:px-4">
-                    {hasRecommended && (
-                        <button
-                            onClick={() => setActiveTab('recommended')}
-                            className={`flex-shrink-0 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors ${
-                                activeTab === 'recommended'
-                                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                            }`}
-                        >
-                            {t('kerningRecommended')}
-                        </button>
-                    )}
+                    <button
+                        onClick={() => setActiveTab('recommended')}
+                        className={`flex-shrink-0 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors ${
+                            activeTab === 'recommended'
+                                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        Suggestions
+                    </button>
                     <button
                         onClick={() => setActiveTab('all')}
                         className={`flex-shrink-0 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors ${
