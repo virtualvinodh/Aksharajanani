@@ -19,6 +19,9 @@ const CustomTooltip = ({
     isLastStep,
 }: TooltipRenderProps) => {
     
+    // Access translations passed via step.data
+    const labels = step.data?.translations || {};
+
     // 1. Define the action logic closing over current props
     const performDismiss = (e?: React.SyntheticEvent) => {
         // Main Tutorial Logic
@@ -88,14 +91,14 @@ const CustomTooltip = ({
                    <div className="flex items-center">
                       {!isLastStep && (
                            <button {...skipProps} onClick={(e) => performDismiss(e)} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs font-bold uppercase tracking-wider transition-colors">
-                               {step.data?.isTutorial ? 'Skip' : 'Close'}
+                               {step.data?.isTutorial ? (labels.skip || 'Skip') : (labels.close || 'Close')}
                            </button>
                       )}
                    </div>
                    <div className="flex gap-2">
                        {index > 0 && (
                           <button {...backProps} className="px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                             Back
+                             {labels.back || 'Back'}
                           </button>
                        )}
                        {/* Hide "Next" button if the step requires interaction (hideFooter is not enough for custom tooltips) */}
@@ -105,7 +108,7 @@ const CustomTooltip = ({
                                 onClick={handlePrimaryClick}
                                 className="px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md transition-all active:scale-95"
                            >
-                              {isLastStep ? (step.data?.isTutorial ? 'Finish' : 'OK') : 'Next'}
+                              {isLastStep ? (step.data?.isTutorial ? (labels.finishBtn || 'Finish') : (labels.ok || 'OK')) : (labels.next || 'Next')}
                            </button>
                        )}
                    </div>
@@ -118,7 +121,7 @@ const CustomTooltip = ({
                           onClick={(e) => performDismiss(e)}
                           className="text-[10px] text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
                       >
-                          Don't show me this again
+                          {labels.dontShowAgain || "Don't show me this again"}
                       </button>
                   </div>
               )}
@@ -221,7 +224,7 @@ const TutorialManager: React.FC = () => {
                 ),
                 placement: 'center',
                 disableBeacon: true,
-                data: { isTutorial: true }
+                data: { isTutorial: true, translations }
             },
             // 1. Click 'A' (Interaction)
             {
@@ -230,7 +233,7 @@ const TutorialManager: React.FC = () => {
                 spotlightClicks: true,
                 disableBeacon: true,
                 hideFooter: true, 
-                data: { isTutorial: true, advanceOn: 'selected-A' }
+                data: { isTutorial: true, advanceOn: 'selected-A', translations }
             },
             // 2. Highlight Pen Tool
             {
@@ -239,7 +242,7 @@ const TutorialManager: React.FC = () => {
                 placement: 'right',
                 disableBeacon: true, 
                 spotlightClicks: true, 
-                data: { isTutorial: true }
+                data: { isTutorial: true, translations }
             },
             // 3. Draw on Canvas (Wait for draw)
             {
@@ -249,7 +252,7 @@ const TutorialManager: React.FC = () => {
                 disableBeacon: true,
                 spotlightClicks: true,
                 disableOverlayClose: true,
-                data: { isTutorial: true }
+                data: { isTutorial: true, translations }
             }
         ];
 
@@ -258,11 +261,11 @@ const TutorialManager: React.FC = () => {
              // Mobile: Must go back to dashboard first
              steps.push({
                 target: '[data-tour="header-back"]',
-                content: "Click Back to return to the dashboard.",
+                content: translations.clickBackToDashboard,
                 spotlightClicks: true,
                 disableBeacon: true,
                 hideFooter: true,
-                data: { isTutorial: true, advanceOn: 'back-to-dashboard' }
+                data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations }
              });
         }
         
@@ -272,7 +275,7 @@ const TutorialManager: React.FC = () => {
             spotlightClicks: true,
             disableBeacon: true,
             hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'test-modal-open' }
+            data: { isTutorial: true, advanceOn: 'test-modal-open', translations }
         });
 
         steps.push({
@@ -281,7 +284,7 @@ const TutorialManager: React.FC = () => {
             placement: 'bottom',
             disableBeacon: true,
             spotlightClicks: true,
-            data: { isTutorial: true }
+            data: { isTutorial: true, translations }
         });
 
         steps.push({
@@ -290,7 +293,7 @@ const TutorialManager: React.FC = () => {
             spotlightClicks: true,
             disableBeacon: true,
             hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'test-modal-close' }
+            data: { isTutorial: true, advanceOn: 'test-modal-close', translations }
         });
 
         // --- BRANCH: SELECT 'F' ---
@@ -298,19 +301,19 @@ const TutorialManager: React.FC = () => {
             // Mobile: Must re-enter editor via 'A' (or any), then open drawer
             steps.push({
                 target: '[data-tour="grid-item-0"]', // Use A as entry point again
-                content: "Select 'A' again to return to the editor.",
+                content: translations.clickAAgain,
                 spotlightClicks: true,
                 disableBeacon: true,
                 hideFooter: true,
-                data: { isTutorial: true, advanceOn: 're-enter-editor' }
+                data: { isTutorial: true, advanceOn: 're-enter-editor', translations }
             });
             steps.push({
                 target: '[data-tour="floating-grid-btn"]',
-                content: "Open the Character Grid.",
+                content: translations.openGrid,
                 spotlightClicks: true,
                 disableBeacon: true,
                 hideFooter: true,
-                data: { isTutorial: true, advanceOn: 'drawer-open' }
+                data: { isTutorial: true, advanceOn: 'drawer-open', translations }
             });
             // Drawer open -> Select F
              steps.push({
@@ -320,7 +323,7 @@ const TutorialManager: React.FC = () => {
                 disableBeacon: true,
                 hideFooter: true,
                 placement: 'right', // Drawer is on left, so tooltip goes right
-                data: { isTutorial: true, advanceOn: 'selected-F' }
+                data: { isTutorial: true, advanceOn: 'selected-F', translations }
             });
         } else {
             // Desktop: Select F from sidebar directly
@@ -331,7 +334,7 @@ const TutorialManager: React.FC = () => {
                 disableBeacon: true,
                 hideFooter: true,
                 placement: 'right',
-                data: { isTutorial: true, advanceOn: 'selected-F' }
+                data: { isTutorial: true, advanceOn: 'selected-F', translations }
             });
         }
 
@@ -343,7 +346,7 @@ const TutorialManager: React.FC = () => {
             disableBeacon: true,
             spotlightClicks: true,
             disableOverlayClose: true,
-            data: { isTutorial: true }
+            data: { isTutorial: true, translations }
         });
         
         steps.push({
@@ -351,7 +354,7 @@ const TutorialManager: React.FC = () => {
             content: translations.toolSelectPan,
             placement: 'top',
             disableBeacon: true,
-            data: { isTutorial: true }
+            data: { isTutorial: true, translations }
         });
 
         steps.push({
@@ -359,7 +362,7 @@ const TutorialManager: React.FC = () => {
             content: translations.toolEraser,
             placement: 'top',
             disableBeacon: true,
-            data: { isTutorial: true }
+            data: { isTutorial: true, translations }
         });
 
         steps.push({
@@ -367,7 +370,7 @@ const TutorialManager: React.FC = () => {
             content: translations.actionUndo,
             placement: 'top',
             disableBeacon: true,
-            data: { isTutorial: true }
+            data: { isTutorial: true, translations }
         });
 
         steps.push({
@@ -375,7 +378,7 @@ const TutorialManager: React.FC = () => {
             content: translations.actionGroup,
             placement: 'top',
             disableBeacon: true,
-            data: { isTutorial: true }
+            data: { isTutorial: true, translations }
         });
 
         steps.push({
@@ -384,7 +387,7 @@ const TutorialManager: React.FC = () => {
             spotlightClicks: true,
             disableBeacon: true,
             hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'selected-E' }
+            data: { isTutorial: true, advanceOn: 'selected-E', translations }
         });
 
         steps.push({
@@ -392,7 +395,7 @@ const TutorialManager: React.FC = () => {
             content: translations.compositeExplanation,
             placement: 'center',
             disableBeacon: true,
-            data: { isTutorial: true }
+            data: { isTutorial: true, translations }
         });
 
         steps.push({
@@ -400,7 +403,7 @@ const TutorialManager: React.FC = () => {
             content: translations.finish,
             placement: 'center',
             disableBeacon: true,
-            data: { isTutorial: true }
+            data: { isTutorial: true, translations }
         });
 
         return steps;
@@ -442,7 +445,7 @@ const TutorialManager: React.FC = () => {
                            disableBeacon: true,
                            placement: 'bottom',
                            spotlightClicks: true,
-                           data: { isTutorial: false, storageKey: storageKey }
+                           data: { isTutorial: false, storageKey: storageKey, translations }
                        }]);
                        setStepIndex(0);
                        setRun(true);
@@ -465,7 +468,7 @@ const TutorialManager: React.FC = () => {
                        disableBeacon: true,
                        placement: 'top',
                        spotlightClicks: true,
-                       data: { isTutorial: false, storageKey: storageKey }
+                       data: { isTutorial: false, storageKey: storageKey, translations }
                     }]);
                     setStepIndex(0);
                     setRun(true);
@@ -488,14 +491,14 @@ const TutorialManager: React.FC = () => {
                              target: '[data-tour="drawing-canvas"]',
                              content: (
                                  <div>
-                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Composite Glyph</h3>
-                                     <p>This glyph is constructed from components. It has been pre-filled for you. You can edit the paths, or use the <strong>Refresh</strong> button to update it if the source components change.</p>
+                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintCompositeTitle}</h3>
+                                     <p dangerouslySetInnerHTML={{__html: translations.hintCompositeContent}}></p>
                                  </div>
                              ),
                              placement: 'top',
                              disableBeacon: true,
                              spotlightClicks: true,
-                             data: { isTutorial: false, storageKey: storageKey }
+                             data: { isTutorial: false, storageKey: storageKey, translations }
                          }]);
                          setStepIndex(0);
                          setRun(true);
@@ -518,21 +521,21 @@ const TutorialManager: React.FC = () => {
                                  target: '[data-tour="drawing-canvas"]',
                                  content: (
                                      <div>
-                                         <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Linked Glyph</h3>
-                                         <p>This is a <strong>Linked Glyph</strong>. Its shape is automatically constructed from other characters (e.g. Base + Mark). It updates live when the source characters change.</p>
+                                         <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintLinkedTitle}</h3>
+                                         <p dangerouslySetInnerHTML={{__html: translations.hintLinkedContent}}></p>
                                      </div>
                                  ),
                                  placement: 'top',
                                  disableBeacon: true,
                                  spotlightClicks: true,
-                                 data: { isTutorial: false } // No key yet, set on last step
+                                 data: { isTutorial: false, translations } 
                              },
                              {
                                  target: '[data-tour="header-unlink"]',
-                                 content: "To edit the shape manually, you must **Unlink** it first. This breaks the connection to the source components and converts it to a standard glyph.",
+                                 content: translations.hintUnlinkContent,
                                  placement: 'bottom',
                                  disableBeacon: true,
-                                 data: { isTutorial: false, storageKey: storageKey }
+                                 data: { isTutorial: false, storageKey: storageKey, translations }
                              }
                          ]);
                          setStepIndex(0);
@@ -552,11 +555,11 @@ const TutorialManager: React.FC = () => {
                      const timer = setTimeout(() => {
                          setActiveSteps([{
                              target: '[data-tour="header-relink"]',
-                             content: "You have unlinked this glyph. It is now independent. If you want to revert to the automatic shape, click the **Relink** button here. Note: This will discard your manual edits.",
+                             content: translations.hintRelinkContent,
                              placement: 'bottom',
                              disableBeacon: true,
                              spotlightClicks: true,
-                             data: { isTutorial: false, storageKey: storageKey }
+                             data: { isTutorial: false, storageKey: storageKey, translations }
                          }]);
                          setStepIndex(0);
                          setRun(true);
@@ -577,29 +580,29 @@ const TutorialManager: React.FC = () => {
                                 target: '[data-tour="drawing-canvas"]',
                                 content: (
                                     <div>
-                                        <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Positioned Pair</h3>
-                                        <p>This is a <strong>Positioned Pair</strong>. It is dynamically generated by placing a Mark relative to a Base character. You can adjust the position coordinates here.</p>
+                                        <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintPositionedTitle}</h3>
+                                        <p dangerouslySetInnerHTML={{__html: translations.hintPositionedContent}}></p>
                                     </div>
                                 ),
                                 placement: 'top',
                                 disableBeacon: true,
                                 spotlightClicks: true,
-                                data: { isTutorial: false }
+                                data: { isTutorial: false, translations }
                             },
                             {
                                 target: '[data-tour="header-detach-pos"]',
-                                content: "Need to edit the shape itself? Click **Detach** to convert this live pair into an **Independent Glyph**. You can then edit the shape manually.",
+                                content: translations.hintDetachContent,
                                 placement: 'bottom',
                                 disableBeacon: true,
-                                data: { isTutorial: false }
+                                data: { isTutorial: false, translations }
                             },
                             {
                                 target: '[data-tour="header-accept-pos"]',
-                                content: "Looks good? Clicking **Accept** will save this default calculated position as correct.",
+                                content: translations.hintAcceptPosition,
                                 placement: 'bottom',
                                 spotlightClicks: true,
                                 disableBeacon: true,
-                                data: { isTutorial: false, storageKey: storageKey }
+                                data: { isTutorial: false, storageKey: storageKey, translations }
                             }
                          ]);
                          setStepIndex(0);
@@ -621,29 +624,29 @@ const TutorialManager: React.FC = () => {
                                 target: '[data-tour="drawing-canvas"]',
                                 content: (
                                     <div>
-                                        <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Kerned Pair</h3>
-                                        <p>This is a <strong>Kerned Pair</strong>. It represents a specific spacing adjustment between two characters.</p>
+                                        <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKernedTitle}</h3>
+                                        <p dangerouslySetInnerHTML={{__html: translations.hintKernedContent}}></p>
                                     </div>
                                 ),
                                 placement: 'top',
                                 disableBeacon: true,
                                 spotlightClicks: true,
-                                data: { isTutorial: false }
+                                data: { isTutorial: false, translations }
                             },
                             {
                                 target: '[data-tour="header-detach-kern"]',
-                                content: "Need to edit the shape itself? Click **Detach** to convert this live pair into an **Independent Glyph**. You can then edit the shape manually.",
+                                content: translations.hintDetachContent,
                                 placement: 'bottom',
                                 disableBeacon: true,
-                                data: { isTutorial: false }
+                                data: { isTutorial: false, translations }
                             },
                             {
                                 target: '[data-tour="header-accept-kern"]',
-                                content: "Looks good? Clicking **Accept** will save this default calculated spacing as correct.",
+                                content: translations.hintAcceptKerning,
                                 placement: 'bottom',
                                 spotlightClicks: true,
                                 disableBeacon: true,
-                                data: { isTutorial: false, storageKey: storageKey }
+                                data: { isTutorial: false, storageKey: storageKey, translations }
                             }
                          ]);
                          setStepIndex(0);
@@ -663,14 +666,14 @@ const TutorialManager: React.FC = () => {
                         target: '[data-tour="kerning-nav"]',
                         content: (
                             <div>
-                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Spacing & Kerning</h3>
-                                <p>This is where character pairs can be adjusted to have custom spacing.</p>
+                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKerningWorkspaceTitle}</h3>
+                                <p>{translations.hintKerningWorkspaceContent}</p>
                             </div>
                         ),
                         placement: 'bottom',
                         disableBeacon: true,
                         spotlightClicks: true,
-                        data: { isTutorial: false, storageKey: storageKey }
+                        data: { isTutorial: false, storageKey: storageKey, translations }
                     }]);
                     setStepIndex(0);
                     setRun(true);
@@ -700,7 +703,7 @@ const TutorialManager: React.FC = () => {
                          placement: 'top',
                          disableBeacon: true,
                          spotlightClicks: true,
-                         data: { isTutorial: false }
+                         data: { isTutorial: false, translations }
                      },
                      {
                          target: '[data-tour="strip-link-toggle"]',
@@ -708,7 +711,7 @@ const TutorialManager: React.FC = () => {
                          content: translations.hintOverrideContent,
                          placement: 'top', // 'right' might be off-screen on mobile, 'top' is safer for bottom strips
                          disableBeacon: true,
-                         data: { isTutorial: false, storageKey: storageKey }
+                         data: { isTutorial: false, storageKey: storageKey, translations }
                      }
                  ]);
                  setStepIndex(0);
@@ -717,7 +720,7 @@ const TutorialManager: React.FC = () => {
         }, 1000); // Check every second
 
         return () => clearInterval(checkExist);
-    }, [run, activeModal, translations]); // Dependencies: if run state changes (tour finishes), we might need to re-check if logic was complex, but here we just check once per session load essentially until seen.
+    }, [run, activeModal, translations]); 
 
     // 4. JIT Cleanup Logic
     useEffect(() => {
