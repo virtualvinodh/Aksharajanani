@@ -66,6 +66,7 @@ interface DrawingEditorWorkspaceProps {
     gridConfig: { characterNameSize: number };
     kerningMap: KerningMap;
     markPositioningMap: MarkPositioningMap;
+    onTransformComponent?: (index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => void;
 }
 
 const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) => {
@@ -157,7 +158,9 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
                                     isImageSelected={props.isImageSelected} onImageSelectionChange={props.setIsImageSelected}
                                     lsb={props.lsb} rsb={props.rsb} onMetricsChange={props.onMetricsChange} 
                                     calligraphyAngle={props.calligraphyAngle} isInitiallyDrawn={!props.wasEmptyOnLoad}
-                                    transformMode={props.isLocked ? 'move-only' : 'all'} previewTransform={props.previewTransform}
+                                    transformMode={props.isLocked && !props.onTransformComponent ? 'move-only' : 'all'} 
+                                    previewTransform={props.previewTransform}
+                                    onTransformComponent={props.onTransformComponent}
                                 />
                             </div>
                         </div>

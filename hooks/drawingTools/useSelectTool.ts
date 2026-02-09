@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Point, Path, ImageTransform, Segment } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { VEC } from '../../utils/vectorUtils';
@@ -12,7 +12,7 @@ export const useSelectTool = ({
     isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange,
     zoom, settings, imageTransform, onImageTransformChange, selectedPathIds, onSelectionChange,
     isImageSelected, onImageSelectionChange, disableTransformations, lockedMessage, transformMode = 'all', movementConstraint = 'none',
-    findPathAtPoint, showNotification
+    findPathAtPoint, showNotification, onTransformComponent
 }: ToolHookProps) => {
     const { theme } = useTheme();
     const [selectionBox, setSelectionBox] = useState<BoundingBox | null>(null);
@@ -21,7 +21,9 @@ export const useSelectTool = ({
     const [lastPoint, setLastPoint] = useState<Point | null>(null);
     const [isMobile, setIsMobile] = useState(false);
     const [hoveredHandle, setHoveredHandle] = useState<Handle | null>(null);
-
+    
+    // Tracks if we are currently manipulating a linked component group
+    const activeComponentIndex = useRef<number | null>(null);
 
     // Consolidated size configuration for visual AND hit-testing consistency.
     // Mobile handles increased to 30px for better touch accessibility.
@@ -162,6 +164,26 @@ export const useSelectTool = ({
     const start = (point: Point, e: React.MouseEvent) => {
         const handle = getHandleAtPoint(point);
 
+        // --- COMPONENT DETECTION ---
+        // If transformations are not disabled and onTransformComponent is provided
+        if (!disableTransformations && onTransformComponent && selectedPathIds.size > 0 && !isImageSelected) {
+            // Check if all selected paths belong to the same component group
+            const selectedPaths = currentPaths.filter(p => selectedPathIds.has(p.id));
+            const firstGroupId = selectedPaths[0]?.groupId;
+            const componentMatch = firstGroupId?.match(/^component-(\d+)$/);
+            
+            if (componentMatch) {
+                const index = parseInt(componentMatch[1], 10);
+                const isSingleComponent = selectedPaths.every(p => p.groupId === firstGroupId);
+                
+                if (isSingleComponent) {
+                    activeComponentIndex.current = index;
+                    // Notify session to snapshot initial transform state
+                    onTransformComponent(index, 'start', { x: 0, y: 0, scale: 1, rotation: 0 });
+                }
+            }
+        }
+
         if (handle) {
             setIsDrawing(true);
             setTransformAction({
@@ -266,6 +288,21 @@ export const useSelectTool = ({
                 // Only start move if transformations are enabled
                 if (!disableTransformations) {
                     const newSelectedPaths = currentPaths.filter(p => newSelection.has(p.id));
+                    
+                    // --- COMPONENT DETECTION FOR CLICK-TO-MOVE ---
+                    if (onTransformComponent && newSelectedPaths.length > 0) {
+                         const firstGroupId = newSelectedPaths[0].groupId;
+                         const componentMatch = firstGroupId?.match(/^component-(\d+)$/);
+                         if (componentMatch) {
+                              const index = parseInt(componentMatch[1], 10);
+                              const isSingleComponent = newSelectedPaths.every(p => p.groupId === firstGroupId);
+                              if (isSingleComponent) {
+                                  activeComponentIndex.current = index;
+                                  onTransformComponent(index, 'start', { x: 0, y: 0, scale: 1, rotation: 0 });
+                              }
+                         }
+                    }
+
                     const box = getAccurateGlyphBBox(newSelectedPaths, settings.strokeThickness);
                     if (box) {
                          setIsDrawing(true);
@@ -303,6 +340,34 @@ export const useSelectTool = ({
         if (!transformAction) return;
         
         const { type, target, startPoint, initialPaths, initialTransform, initialBox, handle } = transformAction;
+
+        // --- COMPONENT INTERCEPTION ---
+        // If we are manipulating a component, calculate deltas and delegate to session hook
+        if (target === 'paths' && activeComponentIndex.current !== null && onTransformComponent) {
+            if (type === 'move') {
+                const delta = VEC.sub(point, startPoint);
+                onTransformComponent(activeComponentIndex.current, 'move', { x: delta.x, y: delta.y });
+            } else if (type === 'rotate') {
+                const center = { x: initialBox.x + initialBox.width / 2, y: initialBox.y + initialBox.height / 2 };
+                const startVector = VEC.sub(startPoint, center);
+                const currentVector = VEC.sub(point, center);
+                const angleDelta = (Math.atan2(currentVector.y, currentVector.x) - Math.atan2(startVector.y, startVector.x)) * (180 / Math.PI);
+                onTransformComponent(activeComponentIndex.current, 'move', { rotation: angleDelta });
+            } else if (type === 'scale') {
+                 // Calculate uniform scale based on distance from center (simplified for standard bounding box handles)
+                 const center = { x: initialBox.x + initialBox.width / 2, y: initialBox.y + initialBox.height / 2 };
+                 const startDist = VEC.len(VEC.sub(startPoint, center));
+                 const currentDist = VEC.len(VEC.sub(point, center));
+                 
+                 // Avoid division by zero
+                 if (startDist > 0.1) {
+                     const scaleRatio = currentDist / startDist;
+                     onTransformComponent(activeComponentIndex.current, 'move', { scale: scaleRatio });
+                 }
+            }
+            return; // Skip standard path manipulation
+        }
+
 
         if (type === 'move') {
             let delta = VEC.sub(point, startPoint);
@@ -464,9 +529,15 @@ export const useSelectTool = ({
     const end = () => {
         if (!isDrawing) return;
         setIsDrawing(false);
+        
+        // Notify session to cleanup component transform tracking
+        if (activeComponentIndex.current !== null && onTransformComponent) {
+             onTransformComponent(activeComponentIndex.current, 'end', { x: 0, y: 0, scale: 1, rotation: 0 });
+             activeComponentIndex.current = null;
+        }
 
         if (transformAction) {
-            if (transformAction.target === 'paths') {
+            if (transformAction.target === 'paths' && activeComponentIndex.current === null) {
                 onPathsChange(currentPaths);
             }
         } else if (marqueeBox) {

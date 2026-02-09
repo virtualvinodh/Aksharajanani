@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet, ComponentTransform, Path } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, LinkIcon, BrokenLinkIcon, RefreshIcon, MoreIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, LinkIcon, BrokenLinkIcon, UndoIcon, MoreIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
 import { GlyphDataAction } from '../../contexts/GlyphDataContext';
 
@@ -24,7 +24,7 @@ interface DrawingEditorHeaderProps {
   onSave: () => void;
   isLocked?: boolean;
   isComposite?: boolean;
-  onRefresh?: () => void;
+  onReset?: () => void;
   allCharacterSets: CharacterSet[];
   onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]) => void;
   onUnlock: () => void;
@@ -139,8 +139,8 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
           )}
 
           {(props.isLocked || props.isComposite) && (
-              <button onClick={props.onRefresh} title={t('refresh')} className="p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95">
-                  <RefreshIcon />
+              <button onClick={props.onReset} title={t('reset')} className="p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95">
+                  <UndoIcon />
               </button>
           )}
 

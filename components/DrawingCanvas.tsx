@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
-import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment } from '../types';
+import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment, ComponentTransform } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { VEC } from '../utils/vectorUtils';
 import { renderPaths } from '../services/glyphRenderService';
@@ -47,6 +47,7 @@ interface DrawingCanvasProps {
   lockedMessage?: string;
   transformMode?: 'all' | 'move-only';
   movementConstraint?: 'horizontal' | 'vertical' | 'none';
+  onTransformComponent?: (index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => void;
 }
 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 
@@ -56,7 +57,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     lsb, rsb, onMetricsChange, backgroundPaths, backgroundPathsColor, showBearingGuides = true,
     calligraphyAngle = 45, isInitiallyDrawn = false,
     previewTransform = null, disableAutoFit = false,
-    disableTransformations, lockedMessage, transformMode, movementConstraint
+    disableTransformations, lockedMessage, transformMode, movementConstraint, onTransformComponent
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
@@ -75,7 +76,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     lsb, rsb, onMetricsChange, metrics,
     disableAutoFit,
     disableTransformations, lockedMessage, transformMode, movementConstraint,
-    currentCharacter
+    currentCharacter,
+    onTransformComponent
   });
 
   const drawControlPoints = useCallback((ctx: CanvasRenderingContext2D, pathsToDraw: Path[], focusedId: string | null, selectedPoint: DraggedPointInfo | null) => {

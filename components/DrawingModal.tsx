@@ -31,7 +31,7 @@ const DrawingModal: React.FC<any> = ({
   const { t } = useLocale();
   const { showNotification, modalOriginRect, checkAndSetFlag } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
-  const { dispatch: characterDispatch, allCharsByName, allCharsByUnicode } = useProject();
+  const { dispatch: characterDispatch, allCharsByName, allCharsByUnicode, script } = useProject();
   const { dispatch: glyphDataDispatch } = useGlyphDataContext();
   const { state: rulesState } = useRules();
   const { kerningMap } = useKerning();
@@ -56,8 +56,6 @@ const DrawingModal: React.FC<any> = ({
   const [isRelinkConfirmOpen, setIsRelinkConfirmOpen] = useState(false);
   
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
-  
-  // NOTE: Removed local neighbor calculation. Now using props 'prevCharacter' and 'nextCharacter' passed from UnifiedEditorModal.
 
   const {
     currentPaths, handlePathsChange, undo, redo, canUndo, canRedo,
@@ -65,17 +63,18 @@ const DrawingModal: React.FC<any> = ({
     glyphClass, setGlyphClass, advWidth, setAdvWidth,
     label, setLabel,
     position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
+    link, setLink, composite, setComposite, liga, setLiga, compositeTransform, setCompositeTransform,
     isTransitioning,
-    handleSave, handleRefresh, handleNavigationAttempt,
+    handleSave, handleRefresh, handleResetGlyph, handleNavigationAttempt,
     wasEmptyOnLoad,
-    isUnsavedModalOpen, closeUnsavedModal, confirmSave, confirmDiscard
+    isUnsavedModalOpen, closeUnsavedModal, confirmSave, confirmDiscard,
+    handleTransformComponent
   } = useGlyphEditSession({
       character, glyphData, allGlyphData, allCharacterSets, settings, metrics, markAttachmentRules,
-      onSave, onNavigate, onClose
+      onSave, onNavigate, onClose, script
   });
 
   // Create a transient character object that includes the live label state
-  // This allows the canvas ghost text to update instantly before saving
   const liveCharacter = useMemo(() => ({
     ...character,
     label: label ?? character.label
@@ -236,6 +235,7 @@ const DrawingModal: React.FC<any> = ({
         settings={settings} metrics={metrics} lsb={lsb} setLsb={setLsb} rsb={rsb} setRsb={setRsb}
         onDeleteClick={() => setIsDeleteConfirmOpen(true)} onClear={() => handlePathsChange([])} onSave={handleSave} 
         isLocked={isLocked} isComposite={isComposite} onRefresh={handleRefresh}
+        onReset={handleResetGlyph}
         allCharacterSets={allCharacterSets} onSaveConstruction={handleSaveConstruction}
         onUnlock={() => setIsUnlockConfirmOpen(true)} onRelink={() => setIsRelinkConfirmOpen(true)}
         glyphClass={glyphClass} setGlyphClass={setGlyphClass} advWidth={advWidth} setAdvWidth={setAdvWidth}
@@ -273,6 +273,7 @@ const DrawingModal: React.FC<any> = ({
         gridConfig={gridConfig}
         kerningMap={kerningMap}
         markPositioningMap={markPositioningMap}
+        onTransformComponent={handleTransformComponent}
       />
 
       <ImageControlPanel backgroundImage={backgroundImage} backgroundImageOpacity={backgroundImageOpacity} setBackgroundImageOpacity={setBackgroundImageOpacity} onClearImage={() => { setBackgroundImage(null); setImageTransform(null); }} />

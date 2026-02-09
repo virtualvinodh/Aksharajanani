@@ -26,7 +26,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         canvasRef, initialPaths, onPathsChange, tool, onToolChange, zoom, setZoom, viewOffset,
         setViewOffset, settings, onSelectionChange, 
         lsb, rsb, onMetricsChange, metrics, disableAutoFit = false,
-        currentCharacter
+        currentCharacter, onTransformComponent
     } = props;
     
     const [isDrawing, setIsDrawing] = useState(false);
@@ -227,7 +227,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         onSelectionChange(ids);
     }, [onSelectionChange]);
     
-    const toolProps = { ...props, isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, previewPath, setPreviewPath, getCanvasPoint, showNotification, t, findPathAtPoint, onSelectionChange: handleSelectionChangeWrapper };
+    const toolProps = { ...props, isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, previewPath, setPreviewPath, getCanvasPoint, showNotification, t, findPathAtPoint, onSelectionChange: handleSelectionChangeWrapper, onTransformComponent };
     
     const handlePan = useCallback((newOffset: Point) => {
         targetZoomRef.current = zoomRef.current; 

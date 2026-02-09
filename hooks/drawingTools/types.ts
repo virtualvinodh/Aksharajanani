@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Point, Path, Tool, AppSettings, ImageTransform, Character } from '../../types';
+import { Point, Path, Tool, AppSettings, ImageTransform, Character, ComponentTransform } from '../../types';
 import { BoundingBox } from '../../services/glyphRenderService';
 
 export const generateId = () => `${Date.now()}-${Math.random()}`;
@@ -68,6 +68,7 @@ export interface UseDrawingCanvasProps {
     transformMode?: 'all' | 'move-only';
     movementConstraint?: 'horizontal' | 'vertical' | 'none';
     currentCharacter?: Character;
+    onTransformComponent?: (index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => void;
 }
 
 export interface ToolHookProps extends UseDrawingCanvasProps {

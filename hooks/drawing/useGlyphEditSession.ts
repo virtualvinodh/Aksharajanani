@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Path, Character, GlyphData, AppSettings, FontMetrics, MarkAttachmentRules, CharacterSet, ComponentTransform } from '../../types';
+import { Path, Character, GlyphData, AppSettings, FontMetrics, MarkAttachmentRules, CharacterSet, ComponentTransform, ScriptConfig } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
@@ -22,6 +22,7 @@ interface UseGlyphEditSessionProps {
     onSave: (unicode: number, newGlyphData: GlyphData, newMetadata: any, onSuccess?: () => void, options?: SaveOptions) => void;
     onNavigate: (character: Character) => void;
     onClose: () => void;
+    script?: ScriptConfig | null;
 }
 
 export const useGlyphEditSession = ({
@@ -34,7 +35,8 @@ export const useGlyphEditSession = ({
     markAttachmentRules,
     onSave,
     onNavigate,
-    onClose
+    onClose,
+    script
 }: UseGlyphEditSessionProps) => {
     const { t } = useLocale();
     const { showNotification, checkAndSetFlag } = useLayout();
@@ -97,18 +99,73 @@ export const useGlyphEditSession = ({
     const [composite, setCompositeState] = useState<string[] | undefined>(character.composite);
     const [liga, setLigaState] = useState<string[] | undefined>(character.liga);
     const [compositeTransform, setCompositeTransformState] = useState<ComponentTransform[] | undefined>(character.compositeTransform);
+    
+    const transformSnapshot = useRef<ComponentTransform[]>([]);
 
-    // --- SYNCHRONOUS METADATA TRACKING ---
     const metaRef = useRef({ lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform });
     
     useEffect(() => {
         metaRef.current = { lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform };
     }, [lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform]);
+    
+    const handleTransformComponent = useCallback((index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => {
+        if (!character.link && !character.composite) return;
+        
+        if (action === 'start') {
+            transformSnapshot.current = deepClone(compositeTransform || []);
+            const componentCount = (character.link || character.composite || []).length;
+            while (transformSnapshot.current.length < componentCount) {
+                transformSnapshot.current.push({ scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' });
+            }
+        } else if (action === 'move') {
+            const initial = transformSnapshot.current[index] || { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
+            const updated = { ...initial };
+            
+            if (delta.x !== undefined) updated.x = (initial.x || 0) + delta.x;
+            if (delta.y !== undefined) updated.y = (initial.y || 0) + delta.y;
+            if (delta.rotation !== undefined) updated.rotation = (initial.rotation || 0) + delta.rotation;
+            if (delta.scale !== undefined) updated.scale = (initial.scale || 1) * delta.scale;
+            
+            const newTransforms = [...transformSnapshot.current];
+            newTransforms[index] = updated;
+            
+            setCompositeTransformState(newTransforms);
+            hasPendingCascade.current = true;
+            
+            const tempChar: Character = { 
+                ...character, 
+                compositeTransform: newTransforms,
+                link: character.link,
+                composite: character.composite
+            };
+            
+            const allCharsByName = new Map<string, Character>();
+            allCharacterSets.flatMap(set => set.characters).forEach(char => allCharsByName.set(char.name, char));
 
-    // --- AUTOMATIC CONVERSION OF RELATIVE LINKS TO ABSOLUTE ---
+            const newData = generateCompositeGlyphData({
+                character: tempChar,
+                allCharsByName,
+                allGlyphData,
+                settings,
+                metrics,
+                markAttachmentRules,
+                allCharacterSets,
+                groups
+            });
+            
+            if (newData) {
+                setCurrentPaths(newData.paths);
+            }
+        } else if (action === 'end') {
+            transformSnapshot.current = [];
+            if (settings.isAutosaveEnabled) {
+                if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
+                autosaveTimeout.current = window.setTimeout(() => performSave(currentPaths, { isDraft: true, silent: true }), 500);
+            }
+        }
+    }, [character, compositeTransform, allCharacterSets, allGlyphData, settings, metrics, markAttachmentRules, groups]);
+
     useEffect(() => {
-        // Only run if Linked Glyph and transforms are NOT fully absolute yet.
-        // This ensures old projects migrate to the new independent-movement system automatically.
         if (character.link && character.link.length > 0 && 
            (!character.compositeTransform || character.compositeTransform.length !== character.link.length || character.compositeTransform.some(t => t.mode !== 'absolute'))) {
             
@@ -124,7 +181,6 @@ export const useGlyphEditSession = ({
                  const compChar = localCharsByName.get(name);
                  const compGlyph = compChar?.unicode !== undefined ? allGlyphData.get(compChar.unicode) : undefined;
                  
-                 // If component missing or empty, default to zero
                  if (!compChar || !compGlyph || !isGlyphDrawn(compGlyph)) {
                      const oldT = character.compositeTransform?.[index];
                      newTransforms.push(oldT ? { ...oldT, mode: 'absolute' } : { x: 0, y: 0, scale: 1, mode: 'absolute' });
@@ -134,7 +190,6 @@ export const useGlyphEditSession = ({
                  const compPaths = deepClone(compGlyph.paths);
                  const oldT = character.compositeTransform?.[index];
                  
-                 // If already absolute, preserve it and update accumulator
                  if (oldT && oldT.mode === 'absolute') {
                       newTransforms.push(oldT);
                       const offset = { x: oldT.x || 0, y: oldT.y || 0 };
@@ -149,7 +204,6 @@ export const useGlyphEditSession = ({
                  
                  hasChanges = true;
                  
-                 // Calculate Absolute Position from Relative/Touching state
                  let offset = { x: 0, y: 0 };
                  
                  if (oldT && oldT.mode === 'touching') {
@@ -161,7 +215,6 @@ export const useGlyphEditSession = ({
                       offset.x += (oldT.x || 0);
                       offset.y += (oldT.y || 0);
                  } else {
-                      // Relative (Default)
                       if (index > 0) {
                             const baseBbox = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
                             const markBbox = getAccurateGlyphBBox(compPaths, settings.strokeThickness);
@@ -203,7 +256,6 @@ export const useGlyphEditSession = ({
         }
     }, [character.link, character.compositeTransform, character.unicode, allCharacterSets, allGlyphData, settings.strokeThickness, metrics, markAttachmentRules, groups, characterDispatch]);
 
-    // --- EXTERNAL PROP SYNC ---
     useEffect(() => {
         setLsbState(character.lsb);
         setRsbState(character.rsb);
@@ -226,74 +278,22 @@ export const useGlyphEditSession = ({
         hasPendingCascade.current = false;
     }, [character, glyphData]);
 
-    const setLsb = (val: number | undefined) => {
-        setLsbState(val);
-        hasPendingCascade.current = true;
-    };
-    
-    const setRsb = (val: number | undefined) => {
-        setRsbState(val);
-        hasPendingCascade.current = true;
-    };
-
-    const setGlyphClass = (val: Character['glyphClass']) => {
-        setGlyphClassState(val);
-        hasPendingCascade.current = true;
-    };
-    
-    const setAdvWidth = (val: number | string | undefined) => {
-        setAdvWidthState(val);
-        hasPendingCascade.current = true;
-    };
-
-    const setLabel = (val: string | undefined) => {
-        setLabelState(val);
-        hasPendingCascade.current = true;
-    };
-
-    const setGpos = (val: string | undefined) => {
-        setGposState(val);
-        hasPendingCascade.current = true;
-    };
-
-    const setGsub = (val: string | undefined) => {
-        setGsubState(val);
-        hasPendingCascade.current = true;
-    };
-
-    const setLink = (val: string[] | undefined) => {
-        setLinkState(val);
-        hasPendingCascade.current = true;
-    };
-
-    const setComposite = (val: string[] | undefined) => {
-        setCompositeState(val);
-        hasPendingCascade.current = true;
-    };
-
-    const setLiga = (val: string[] | undefined) => {
-        setLigaState(val);
-        hasPendingCascade.current = true;
-    };
-
-    const setPosition = (val: [string, string] | undefined) => {
-        setPositionState(val);
-        hasPendingCascade.current = true;
-    };
-
-    const setKern = (val: [string, string] | undefined) => {
-        setKernState(val);
-        hasPendingCascade.current = true;
-    };
-
-    const setCompositeTransform = (val: ComponentTransform[] | undefined) => {
-        setCompositeTransformState(val);
-        hasPendingCascade.current = true;
-    };
+    const setLsb = (val: number | undefined) => { setLsbState(val); hasPendingCascade.current = true; };
+    const setRsb = (val: number | undefined) => { setRsbState(val); hasPendingCascade.current = true; };
+    const setGlyphClass = (val: Character['glyphClass']) => { setGlyphClassState(val); hasPendingCascade.current = true; };
+    const setAdvWidth = (val: number | string | undefined) => { setAdvWidthState(val); hasPendingCascade.current = true; };
+    const setLabel = (val: string | undefined) => { setLabelState(val); hasPendingCascade.current = true; };
+    const setGpos = (val: string | undefined) => { setGposState(val); hasPendingCascade.current = true; };
+    const setGsub = (val: string | undefined) => { setGsubState(val); hasPendingCascade.current = true; };
+    const setLink = (val: string[] | undefined) => { setLinkState(val); hasPendingCascade.current = true; };
+    const setComposite = (val: string[] | undefined) => { setCompositeState(val); hasPendingCascade.current = true; };
+    const setLiga = (val: string[] | undefined) => { setLigaState(val); hasPendingCascade.current = true; };
+    const setPosition = (val: [string, string] | undefined) => { setPositionState(val); hasPendingCascade.current = true; };
+    const setKern = (val: [string, string] | undefined) => { setKernState(val); hasPendingCascade.current = true; };
+    const setCompositeTransform = (val: ComponentTransform[] | undefined) => { setCompositeTransformState(val); hasPendingCascade.current = true; };
     
     const [isTransitioning] = useState(false);
     const autosaveTimeout = useRef<number | null>(null);
-    
     const [pendingNavigation, setPendingNavigation] = useState<Character | null>(null);
     const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
 
@@ -352,11 +352,9 @@ export const useGlyphEditSession = ({
         onSave(character.unicode, { paths: pathsToSave }, metadata, onSuccess, options);
     }, [onSave, character.unicode, currentPaths]);
 
-
     const handlePathsChange = useCallback((newPaths: Path[]) => {
         let updatedTransforms = metaRef.current.compositeTransform ? [...metaRef.current.compositeTransform] : [];
         
-        // Only update transforms for LINKED glyphs. Composite glyphs are static copies, so we don't track component movement metadata.
         if (character.link && character.link.length > 0) {
             const componentsList = character.link;
             let metadataChanged = false;
@@ -417,7 +415,6 @@ export const useGlyphEditSession = ({
             const newPaths = history[newIndex];
             setCurrentPaths(newPaths);
             hasPendingCascade.current = true;
-            
             if (settings.isAutosaveEnabled) {
                 if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
                 autosaveTimeout.current = window.setTimeout(() => performSave(newPaths, { isDraft: true, silent: true }), 500);
@@ -432,7 +429,6 @@ export const useGlyphEditSession = ({
             const newPaths = history[newIndex];
             setCurrentPaths(newPaths);
             hasPendingCascade.current = true;
-
             if (settings.isAutosaveEnabled) {
                 if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
                 autosaveTimeout.current = window.setTimeout(() => performSave(newPaths, { isDraft: true, silent: true }), 500);
@@ -488,7 +484,6 @@ export const useGlyphEditSession = ({
             else onClose();
         };
 
-        // Check against current local variables AND the metaRef for the most accurate dirty check
         const isDirty = hasUnsavedChanges || (JSON.stringify(metaRef.current.compositeTransform) !== JSON.stringify(character.compositeTransform));
 
         if (settings.isAutosaveEnabled) {
@@ -524,7 +519,7 @@ export const useGlyphEditSession = ({
         const allCharsByName = new Map<string, Character>();
         allCharacterSets.flatMap(set => set.characters).forEach(char => allCharsByName.set(char.name, char));
         
-        const compositeGlyphData = generateCompositeGlyphData({
+        const compositeData = generateCompositeGlyphData({
             character,
             allCharsByName,
             allGlyphData,
@@ -535,11 +530,63 @@ export const useGlyphEditSession = ({
             groups
         });
         
-        if (compositeGlyphData) {
-            handlePathsChange(compositeGlyphData.paths);
+        if (compositeData) {
+            handlePathsChange(compositeData.paths);
         }
         showNotification(t('glyphRefreshedSuccess'), 'info');
     }, [character, allCharacterSets, allGlyphData, settings, metrics, markAttachmentRules, handlePathsChange, showNotification, t, groups]);
+    
+    // NEW: Handle Reset to Original Script Defaults
+    const handleResetGlyph = useCallback(() => {
+        let newTransforms: ComponentTransform[] | undefined;
+
+        // Try to find original defaults from script config if available
+        if (script && script.characterSetData) {
+            let originalDef: Character | undefined;
+            for (const def of script.characterSetData) {
+                if ('characters' in def) {
+                    const found = def.characters.find(c => c.unicode === character.unicode);
+                    if (found) {
+                        originalDef = found;
+                        break;
+                    }
+                }
+            }
+            if (originalDef?.compositeTransform) {
+                 newTransforms = deepClone(originalDef.compositeTransform);
+            }
+        }
+        
+        characterDispatch({
+             type: 'UPDATE_CHARACTER_METADATA',
+             payload: {
+                 unicode: character.unicode!,
+                 compositeTransform: newTransforms
+             }
+        });
+        
+        const tempChar = { ...character, compositeTransform: newTransforms };
+        const allCharsByName = new Map<string, Character>();
+        allCharacterSets.flatMap(set => set.characters).forEach(char => allCharsByName.set(char.name, char));
+
+        const compositeData = generateCompositeGlyphData({
+            character: tempChar,
+            allCharsByName,
+            allGlyphData,
+            settings,
+            metrics,
+            markAttachmentRules,
+            allCharacterSets,
+            groups
+        });
+        
+        if (compositeData) {
+            handlePathsChange(compositeData.paths);
+        }
+        
+        showNotification(t('glyphResetSuccess') || 'Glyph reset to original defaults', 'success');
+
+    }, [script, character, allCharacterSets, allGlyphData, settings, metrics, markAttachmentRules, groups, characterDispatch, handlePathsChange, showNotification, t]);
 
     useEffect(() => {
         return () => {
@@ -576,12 +623,14 @@ export const useGlyphEditSession = ({
         isTransitioning,
         hasUnsavedChanges,
         handleSave: () => performSave(currentPaths, { isDraft: false }), 
-        handleRefresh,
+        handleRefresh, // Still available for legacy calls
+        handleResetGlyph, // Exposed for UI
         handleNavigationAttempt,
         wasEmptyOnLoad,
         isUnsavedModalOpen,
         closeUnsavedModal: () => setIsUnsavedModalOpen(false),
         confirmSave: handleConfirmSave,
-        confirmDiscard: handleConfirmDiscard
+        confirmDiscard: handleConfirmDiscard,
+        handleTransformComponent
     };
 };

@@ -1,5 +1,4 @@
 
-
 {
 	"about": "About",
 	"aboutAdvancedContent": "While designed for simplicity, the tool does not sacrifice capability. For experts who require granular control, Aksharajanani offers a full suite of advanced features, including a precise Bézier curve editor, detailed kerning workspaces, and a manual OpenType feature code editor.",
@@ -294,6 +293,7 @@
 	"glyphNamePlaceholder": "e.g., ksha",
 	"glyphProperties": "Properties",
 	"glyphRefreshedSuccess": "Glyph has been refreshed.",
+	"glyphResetSuccess": "Glyph reset to default configuration.",
 	"glyphRelinkedSuccess": "Glyph relinked successfully. Manual edits have been discarded.",
 	"glyphUnlockedSuccess": "Glyph unlinked and is now fully editable.",
 	"glyphUpdateReverted": "Glyph update reverted.",
