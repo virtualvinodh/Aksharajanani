@@ -23,7 +23,7 @@ interface KerningEditorHeaderProps {
     allCharacterSets: CharacterSet[];
     character: Character; // The virtual character for this pair
     onDetach?: () => void;
-    onSaveConstruction: (...args: any) => void;
+    onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: any) => void;
     characterDispatch: any;
     glyphDataDispatch: (action: GlyphDataAction) => void;
     onPathsChange: (paths: Path[]) => void;
@@ -175,6 +175,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                 {props.onDetach && (
                     <button 
                         onClick={props.onDetach}
+                        data-tour="header-detach-kern"
                         className="flex items-center gap-2 px-3 py-2 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 font-semibold rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-all active:scale-95 shadow-sm border border-orange-200 dark:border-orange-800"
                         title="Detach and Convert to Composite Glyph"
                     >
@@ -251,7 +252,6 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                         gpos={props.gpos}
                         setGpos={props.setGpos}
                         gsub={props.gsub}
-                        /* FIX: Corrected typo 'setGsub' to 'props.setGsub' to resolve the 'Cannot find name' error. */
                         setGsub={props.setGsub}
                         liga={props.liga}
                         setLiga={props.setLiga}

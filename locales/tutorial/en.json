@@ -20,5 +20,9 @@
   "last": "Finish Tour",
   "skip": "Skip Tutorial",
   "hintGridSelect": "Welcome! Select a character card to start drawing your font.",
-  "hintEditorDraw": "The **Pen Tool** is active. Click and drag on the canvas to draw your character shape."
+  "hintEditorDraw": "The **Pen Tool** is active. Click and drag on the canvas to draw your character shape.",
+  "hintRelatedPairsTitle": "Smart Positioning",
+  "hintRelatedPairsContent": "This pair belongs to a **Smart Class**. Any position changes you make here will automatically sync to all **Related Pairs** shown in this strip.",
+  "hintOverrideTitle": "Creating Exceptions",
+  "hintOverrideContent": "Need a unique position for this specific pair? Click this button to **Unlink**. This creates an **Override**, allowing you to move this mark independently without affecting the rest of the class."
 }

@@ -32,7 +32,7 @@ interface PositioningEditorHeaderProps {
     onConfirmPosition: () => void;
     onDetach?: () => void;
     allCharacterSets: CharacterSet[];
-    onSaveConstruction: (...args: any) => void;
+    onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: any) => void;
     characterDispatch: any;
     glyphDataDispatch: (action: GlyphDataAction) => void;
     onPathsChange: (paths: Path[]) => void;
@@ -196,6 +196,7 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                 {onDetach && (
                     <button 
                         onClick={onDetach}
+                        data-tour="header-detach-pos"
                         className="flex items-center gap-2 px-3 py-2 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 font-semibold rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-all active:scale-95 shadow-sm border border-orange-200 dark:border-orange-800"
                         title="Detach and Convert to Composite Glyph"
                     >

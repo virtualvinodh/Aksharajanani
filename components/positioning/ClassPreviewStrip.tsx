@@ -335,7 +335,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
         <>
             {expandedView && createPortal(expandedView, document.body)}
 
-            <div className="flex flex-col w-full max-w-5xl mx-auto items-center">
+            <div className="flex flex-col w-full max-w-5xl mx-auto items-center" data-tour="related-pairs-strip">
                  {/* Context Switcher (Dual Context Toggle) */}
                  {hasDualContext && onToggleContext && (
                      <div className="flex justify-center -mb-px z-10">
@@ -370,6 +370,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                      <div className={`flex items-center transition-all duration-300 ${collapsed ? 'flex-row w-full justify-between px-2 border-r-0' : 'flex-col justify-center pr-3 border-r border-gray-300 dark:border-gray-600 mr-2 gap-2 flex-shrink-0 self-stretch'}`}>
                         <button 
                             onClick={onToggleLink}
+                            data-tour="strip-link-toggle"
                             className={`p-2 rounded-lg transition-all shadow-sm ${
                                 isLinked 
                                 ? 'bg-indigo-600 text-white hover:bg-indigo-700 ring-2 ring-indigo-200 dark:ring-indigo-900' 
