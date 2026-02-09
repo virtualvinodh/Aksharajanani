@@ -32,7 +32,10 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-             <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+             <div 
+                className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                data-tour="kerning-nav"
+             >
                 <nav className="flex space-x-2 px-2 sm:px-4">
                     {hasRecommended && (
                         <button
