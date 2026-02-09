@@ -1,24 +1,25 @@
 
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { useLocale } from '../contexts/LocaleContext';
-import { useLayout } from '../contexts/LayoutContext';
-import { DRAWING_CANVAS_SIZE } from '../constants';
-import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Point, PositioningRules, CharacterSet, ComponentTransform } from '../types';
+import { useLocale } from '../../contexts/LocaleContext';
+import { useLayout } from '../../contexts/LayoutContext';
+import { DRAWING_CANVAS_SIZE } from '../../constants';
+import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Point, PositioningRules, CharacterSet, ComponentTransform } from '../../types';
 import ReusePreviewCard from './ReusePreviewCard';
 import UnsavedChangesModal from './UnsavedChangesModal';
-import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import Modal from './Modal';
-import { useRules } from '../contexts/RulesContext';
-import { useProject } from '../contexts/ProjectContext';
+import { useRules } from '../../contexts/RulesContext';
+import { useProject } from '../../contexts/ProjectContext';
 import PositioningEditorHeader from './positioning/PositioningEditorHeader';
 import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace';
-import { CloseIcon } from '../constants';
-import { VEC } from '../utils/vectorUtils';
-import { usePositioningSession } from '../hooks/positioning/usePositioningSession';
-import { deepClone } from '../utils/cloneUtils';
-import { expandMembers } from '../services/groupExpansionService';
-import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
-import { usePositioning } from '../contexts/PositioningContext';
+import { CloseIcon } from '../../constants';
+import { VEC } from '../../utils/vectorUtils';
+import { usePositioningSession } from '../../hooks/positioning/usePositioningSession';
+import { deepClone } from '../../utils/cloneUtils';
+import { expandMembers } from '../../services/groupExpansionService';
+import { useGlyphData as useGlyphDataContext } from '../../contexts/GlyphDataContext';
+import { usePositioning } from '../../contexts/PositioningContext';
+import { isGlyphDrawn } from '../../utils/glyphUtils';
 
 interface PositioningEditorPageProps {
     baseChar: Character;
@@ -164,7 +165,14 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                  let sBase = props.baseChar; let sMark = props.markChar;
                  if (session.activeClassType === 'mark') { const c = props.allChars.get(memberName); if (c) sMark = c; }
                  else { const c = props.allChars.get(memberName); if (c) sBase = c; }
+                 
                  if (sBase.unicode === undefined || sMark.unicode === undefined) return;
+                 
+                 // Filter out pairs where either component is not drawn
+                 const baseDrawn = isGlyphDrawn(props.glyphDataMap.get(sBase.unicode));
+                 const markDrawn = isGlyphDrawn(props.glyphDataMap.get(sMark.unicode));
+                 if (!baseDrawn || !markDrawn) return;
+
                  const key = `${sBase.unicode}-${sMark.unicode}`;
                  const lig = props.allLigaturesByKey.get(key);
                  if (lig) siblings.push({ base: sBase, mark: sMark, ligature: lig });
@@ -172,7 +180,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
              return siblings;
         }
         return [];
-    }, [session.activeAttachmentClass, session.activeClassType, props.baseChar, props.markChar, groups, props.characterSets, props.allChars, props.allLigaturesByKey]);
+    }, [session.activeAttachmentClass, session.activeClassType, props.baseChar, props.markChar, groups, props.characterSets, props.allChars, props.allLigaturesByKey, props.glyphDataMap]);
 
     const handleToggleLink = () => {
         const newIsLinked = !session.isLinked;
