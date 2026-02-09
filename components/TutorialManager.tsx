@@ -44,10 +44,10 @@ const CustomTooltip = ({
 
     const handlePrimaryClick = (e: React.SyntheticEvent) => {
         // For JIT hints (single step), treat "OK" as a dismissal to ensure it closes reliably.
-        if (!step.data?.isTutorial) {
+        if (!step.data?.isTutorial && isLastStep) {
             performDismiss(e);
         } else {
-            // For the main linear tutorial, use the standard navigation
+            // For the main linear tutorial or multi-step JIT, use the standard navigation
             primaryProps.onClick(e);
         }
     };
@@ -70,7 +70,7 @@ const CustomTooltip = ({
             if (dismissRef.current) {
                 dismissRef.current();
             }
-        }, 10000); // 10 seconds
+        }, 15000); // 15 seconds (increased for multi-step readability)
 
         return () => clearTimeout(timer);
         // Empty dependency array: We only start the timer when this specific tooltip MOUNTS.
@@ -428,6 +428,7 @@ const TutorialManager: React.FC = () => {
     useEffect(() => {
         if (!translations) return;
         if (script?.id === 'tutorial') return;
+        
         // Hint 1: Select Character
         if (workspace === 'drawing' && currentView === 'grid' && !selectedCharacter && !activeModal) {
             const storageKey = 'hint_grid_select_seen';
@@ -452,6 +453,7 @@ const TutorialManager: React.FC = () => {
                 return () => clearInterval(checkExist);
             }
         }
+        
         // Hint 2: Start Drawing
         if (workspace === 'drawing' && selectedCharacter && !activeModal) {
             const storageKey = 'hint_editor_draw_seen';
@@ -472,12 +474,103 @@ const TutorialManager: React.FC = () => {
                 return () => clearTimeout(timer);
             }
         }
+        
+        // Hint 3: First Composite Glyph (Exclude Linked Glyphs)
+        if (workspace === 'drawing' && selectedCharacter && !activeModal) {
+             // Logic Check: 'composite' array exists AND 'link' array does NOT exist.
+             const isStaticComposite = (selectedCharacter.composite && selectedCharacter.composite.length > 0) && (!selectedCharacter.link);
+             
+             if (isStaticComposite) {
+                 const storageKey = 'hint_composite_seen';
+                 if (!localStorage.getItem(storageKey)) {
+                     const timer = setTimeout(() => {
+                         setActiveSteps([{
+                             target: 'body',
+                             content: (
+                                 <div>
+                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Composite Glyph</h3>
+                                     <p>This glyph is constructed from components. It has been pre-filled for you. You can edit the paths, or use the <strong>Refresh</strong> button to update it if the source components change.</p>
+                                 </div>
+                             ),
+                             placement: 'center',
+                             disableBeacon: true,
+                             data: { isTutorial: false, storageKey: storageKey }
+                         }]);
+                         setStepIndex(0);
+                         setRun(true);
+                     }, 1200); 
+                     
+                     return () => clearTimeout(timer);
+                 }
+             }
+        }
+
+        // Hint 4: First Linked Glyph Intro (Multi-step)
+        if (workspace === 'drawing' && selectedCharacter && !activeModal) {
+            // Check for Linked Glyph presence
+            if (selectedCharacter.link && selectedCharacter.link.length > 0) {
+                const storageKey = 'hint_linked_intro_seen';
+                if (!localStorage.getItem(storageKey)) {
+                     const timer = setTimeout(() => {
+                         setActiveSteps([
+                             {
+                                 target: 'body',
+                                 content: (
+                                     <div>
+                                         <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Linked Glyph</h3>
+                                         <p>This is a <strong>Linked Glyph</strong>. Its shape is automatically constructed from other characters (e.g. Base + Mark). It updates live when the source characters change.</p>
+                                     </div>
+                                 ),
+                                 placement: 'center',
+                                 disableBeacon: true,
+                                 data: { isTutorial: false } // No key yet, set on last step
+                             },
+                             {
+                                 target: '[data-tour="header-unlink"]',
+                                 content: "To edit the shape manually, you must **Unlink** it first. This breaks the connection to the source components and converts it to a standard glyph.",
+                                 placement: 'bottom',
+                                 disableBeacon: true,
+                                 data: { isTutorial: false, storageKey: storageKey }
+                             }
+                         ]);
+                         setStepIndex(0);
+                         setRun(true);
+                     }, 1200);
+                     return () => clearTimeout(timer);
+                }
+            }
+        }
+
+        // Hint 5: Relink Action (After Unlinking)
+        if (workspace === 'drawing' && selectedCharacter && !activeModal) {
+            // Check if sourceLink exists (glyph remembers its origin)
+            if (selectedCharacter.sourceLink) {
+                const storageKey = 'hint_relink_action_seen';
+                if (!localStorage.getItem(storageKey)) {
+                     const timer = setTimeout(() => {
+                         setActiveSteps([{
+                             target: '[data-tour="header-relink"]',
+                             content: "You have unlinked this glyph. It is now independent. If you want to revert to the automatic shape, click the **Relink** button here. Note: This will discard your manual edits.",
+                             placement: 'bottom',
+                             disableBeacon: true,
+                             spotlightClicks: true,
+                             data: { isTutorial: false, storageKey: storageKey }
+                         }]);
+                         setStepIndex(0);
+                         setRun(true);
+                     }, 1000);
+                     return () => clearTimeout(timer);
+                }
+            }
+        }
+
     }, [script?.id, workspace, currentView, selectedCharacter, activeModal, translations]);
     
     // 4. JIT Cleanup Logic
     useEffect(() => {
         if (run && activeSteps.length > 0 && !activeSteps[0].data?.isTutorial) {
              const currentStepTarget = activeSteps[0].target as string;
+             // Only auto-close single-step simple hints if context changes
              if (currentStepTarget === '.tutorial-glyph-item' && selectedCharacter) {
                  setRun(false);
                  setActiveSteps([]);
@@ -494,7 +587,7 @@ const TutorialManager: React.FC = () => {
         if (!run || script?.id !== 'tutorial' || activeSteps.length === 0) return;
 
         const currentStep = activeSteps[stepIndex];
-        if (!currentStep) return; // FIX: Guard against out-of-bounds or undefined steps
+        if (!currentStep) return;
 
         const advanceRule = currentStep.data?.advanceOn;
 
@@ -544,10 +637,17 @@ const TutorialManager: React.FC = () => {
                 setActiveSteps([]); // Clear JIT steps
             }
         } else if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
+            // Handle Multi-step JIT advancement (Hint 4)
+            const currentStep = activeSteps[index];
+            if (!currentStep.data?.isTutorial && action === ACTIONS.NEXT) {
+                 setStepIndex(index + 1);
+                 return;
+            }
+
             // Logic only applies to linear tutorial multi-step flow
             if (script?.id === 'tutorial') {
                 const currentStep = activeSteps[index];
-                if (!currentStep) return; // FIX: Guard against undefined currentStep
+                if (!currentStep) return;
 
                 // Only advance if NOT waiting for a specific event
                 if (!currentStep.data?.advanceOn) {

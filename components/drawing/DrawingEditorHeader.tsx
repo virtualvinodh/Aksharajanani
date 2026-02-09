@@ -127,13 +127,13 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
           </button>
           
           {props.isLocked && (
-             <button onClick={props.onUnlock} title={t('unlockForDetailedEditing')} className="flex items-center gap-2 justify-center p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-semibold rounded-lg hover:bg-orange-200 transition-all active:scale-95">
+             <button onClick={props.onUnlock} title={t('unlockForDetailedEditing')} className="flex items-center gap-2 justify-center p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-semibold rounded-lg hover:bg-orange-200 transition-all active:scale-95" data-tour="header-unlink">
                 <BrokenLinkIcon className="w-5 h-5" />
             </button>
           )}
 
           {!!props.character.sourceLink && (
-             <button onClick={props.onRelink} title={t('relinkGlyphTitle')} className="flex items-center gap-2 justify-center p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-blue-200 transition-all active:scale-95">
+             <button onClick={props.onRelink} title={t('relinkGlyphTitle')} className="flex items-center gap-2 justify-center p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-blue-200 transition-all active:scale-95" data-tour="header-relink">
                 <LinkIcon className="w-5 h-5" />
             </button>
           )}
