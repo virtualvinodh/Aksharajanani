@@ -193,6 +193,9 @@ export const useGlyphActions = (
         const newPathsJSON = JSON.stringify(newGlyphData.paths);
         const hasPathChanges = oldPathsJSON !== newPathsJSON;
         
+        // --- CLEANUP REMOVED --- 
+        // We now allow saving compositeTransform for composites so they act as templates.
+
         const hasMetadataChanges = 
             newMetadata.lsb !== charToSave.lsb || 
             newMetadata.rsb !== charToSave.rsb ||

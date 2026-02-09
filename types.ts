@@ -1,7 +1,4 @@
 
-
-
-
 export interface Point {
   x: number;
   y: number;
@@ -53,6 +50,7 @@ export type PositioningMode = 'relative' | 'absolute' | 'touching';
 
 export interface ComponentTransform {
   scale?: number;       // Default: 1.0
+  rotation?: number;    // Default: 0 (degrees)
   x?: number;           // Default: 0
   y?: number;           // Default: 0
   mode?: PositioningMode; // Default: 'relative'

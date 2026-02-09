@@ -1,3 +1,4 @@
+
 import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings, ComponentTransform, PositioningRules, UnifiedRenderContext } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -593,7 +594,7 @@ const generateId = () => `${Date.now()}-${Math.random()}`;
 const getTransformForIndex = (config: any, index: number): ComponentTransform => {
     // Basic safety
     if (!Array.isArray(config)) {
-        return { scale: 1, x: 0, y: 0, mode: 'relative' };
+        return { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
     }
     
     // Get the specific config for this component index
@@ -609,16 +610,18 @@ const getTransformForIndex = (config: any, index: number): ComponentTransform =>
                  scale: config[0] ?? 1,
                  y: config[1] ?? 0,
                  mode: 'relative',
+                 rotation: 0,
                  x: 0
              };
         }
-        return { scale: 1, x: 0, y: 0, mode: 'relative' };
+        return { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
     }
 
     // Case 2: New Object Syntax (Preferred)
     if (typeof item === 'object' && !Array.isArray(item)) {
         return {
              scale: item.scale ?? 1,
+             rotation: item.rotation ?? 0,
              x: item.x ?? 0,
              y: item.y ?? 0,
              mode: item.mode ?? 'relative'
@@ -631,6 +634,7 @@ const getTransformForIndex = (config: any, index: number): ComponentTransform =>
              scale: typeof item[0] === 'number' ? item[0] : 1,
              y: typeof item[1] === 'number' ? item[1] : 0,
              mode: item.includes('touching') ? 'touching' : (item.includes('absolute') ? 'absolute' : 'relative'),
+             rotation: 0,
              x: 0
          };
     }
@@ -644,11 +648,12 @@ const getTransformForIndex = (config: any, index: number): ComponentTransform =>
              scale: config[0] ?? 1,
              y: config[1] ?? 0,
              mode: 'relative',
+             rotation: 0,
              x: 0
          };
     }
 
-    return { scale: 1, x: 0, y: 0, mode: 'relative' };
+    return { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
 };
 
 interface GenerateCompositeGlyphDataArgs {
@@ -684,19 +689,31 @@ export const generateCompositeGlyphData = ({
     const transformComponentPaths = (paths: Path[], charDef: Character, componentIndex: number): Path[] => {
         const transformConfig = charDef.compositeTransform;
         
-        // MODIFICATION: Only retrieve scale. Ignore X/Y here.
-        const { scale } = getTransformForIndex(transformConfig, componentIndex);
+        // MODIFICATION: Retrieve rotation as well
+        const { scale, rotation } = getTransformForIndex(transformConfig, componentIndex);
 
-        if (scale === 1.0) return paths;
+        if (scale === 1.0 && rotation === 0) return paths;
 
         const componentBbox = getAccurateGlyphBBox(paths, settings.strokeThickness);
         if (!componentBbox) return paths;
 
         const centerX = componentBbox.x + componentBbox.width / 2;
         const centerY = componentBbox.y + componentBbox.height / 2;
+        const angleRad = ((rotation || 0) * Math.PI) / 180;
         
-        // Apply Scale around center
-        const transformPoint = (p: Point) => VEC.add(VEC.scale(VEC.sub(p, { x: centerX, y: centerY }), scale!), { x: centerX, y: centerY });
+        // Apply Scale & Rotation around center
+        const transformPoint = (p: Point) => {
+            // 1. Center
+            let vec = VEC.sub(p, { x: centerX, y: centerY });
+            // 2. Scale
+            vec = VEC.scale(vec, scale!);
+            // 3. Rotate
+            if (angleRad !== 0) {
+                 vec = VEC.rotate(vec, angleRad);
+            }
+            // 4. De-center
+            return VEC.add(vec, { x: centerX, y: centerY });
+        };
 
         let transformed = paths.map((p: Path) => ({
             ...p,
@@ -704,8 +721,8 @@ export const generateCompositeGlyphData = ({
             segmentGroups: p.segmentGroups ? p.segmentGroups.map((group: Segment[]) => group.map(seg => ({
                 ...seg,
                 point: transformPoint(seg.point),
-                handleIn: VEC.scale(seg.handleIn, scale!),
-                handleOut: VEC.scale(seg.handleOut, scale!)
+                handleIn: angleRad !== 0 ? VEC.rotate(VEC.scale(seg.handleIn, scale!), angleRad) : VEC.scale(seg.handleIn, scale!),
+                handleOut: angleRad !== 0 ? VEC.rotate(VEC.scale(seg.handleOut, scale!), angleRad) : VEC.scale(seg.handleOut, scale!)
             }))) : undefined
         }));
 

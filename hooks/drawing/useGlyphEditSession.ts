@@ -355,9 +355,10 @@ export const useGlyphEditSession = ({
 
     const handlePathsChange = useCallback((newPaths: Path[]) => {
         let updatedTransforms = metaRef.current.compositeTransform ? [...metaRef.current.compositeTransform] : [];
-        const componentsList = character.link || character.composite;
-
-        if (componentsList && componentsList.length > 0) {
+        
+        // Only update transforms for LINKED glyphs. Composite glyphs are static copies, so we don't track component movement metadata.
+        if (character.link && character.link.length > 0) {
+            const componentsList = character.link;
             let metadataChanged = false;
 
             for (let i = 0; i < componentsList.length; i++) {

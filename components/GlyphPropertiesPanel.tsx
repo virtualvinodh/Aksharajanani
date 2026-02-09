@@ -30,7 +30,7 @@ const ComponentListEditor: React.FC<{
         if (val && !components.includes(val)) {
             setComponents([...components, val]);
             if (setTransforms && transforms) {
-                setTransforms([...transforms, { scale: 1, x: 0, y: 0, mode: 'relative' }]);
+                setTransforms([...transforms, { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' }]);
             }
             setInputValue('');
             setShowInput(false);
@@ -47,7 +47,7 @@ const ComponentListEditor: React.FC<{
     const handleTransformChange = (index: number, field: keyof ComponentTransform, value: any) => {
         if (!setTransforms || !transforms) return;
         const newTransforms = [...transforms];
-        if (!newTransforms[index]) newTransforms[index] = { scale: 1, x: 0, y: 0, mode: 'relative' };
+        if (!newTransforms[index]) newTransforms[index] = { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
         const current = { ...newTransforms[index] };
         (current as any)[field] = value;
         newTransforms[index] = current;
@@ -120,7 +120,7 @@ const ComponentListEditor: React.FC<{
                     {isAdvancedOpen && (
                         <div className="mt-2 space-y-2 max-h-60 overflow-y-auto pr-1">
                              {components.map((comp, index) => {
-                                const tr = transforms[index] || { scale: 1, x: 0, y: 0, mode: 'relative' };
+                                const tr = transforms[index] || { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
                                 return (
                                     <div key={index} className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded text-xs space-y-2">
                                         <div className="font-bold text-gray-700 dark:text-gray-300 truncate">{comp}</div>
@@ -128,6 +128,10 @@ const ComponentListEditor: React.FC<{
                                             <div className="flex-1">
                                                 <label className="block text-[9px] text-gray-500 uppercase">Scale</label>
                                                 <input type="text" value={tr.scale} onChange={e => handleTransformChange(index, 'scale', parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="block text-[9px] text-gray-500 uppercase">Rot (°)</label>
+                                                <input type="text" value={tr.rotation || 0} onChange={e => handleTransformChange(index, 'rotation', parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                             </div>
                                             <div className="flex-1">
                                                 <label className="block text-[9px] text-gray-500 uppercase">X</label>
@@ -288,7 +292,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
               setTransforms(newTransforms.slice(0, components.length));
           } else {
               while (newTransforms.length < components.length) {
-                  newTransforms.push({ scale: 1, x: 0, y: 0, mode: 'relative' });
+                  newTransforms.push({ scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' });
               }
               setTransforms(newTransforms);
           }
@@ -378,6 +382,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
            return;
       }
 
+      // Allow saving transforms for both composites and links
       onSaveConstruction(type as 'drawing' | 'composite' | 'link', components, transforms);
       onClose();
   };
@@ -391,7 +396,6 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
 
     <div 
       ref={panelRef} 
-      // Removed animation classes: animate-pop-in, sm:animate-fade-in-up
       className="
         fixed top-20 left-0 right-0 mx-auto w-[90vw] max-h-[70vh] z-[100] flex flex-col gap-4 p-4
         bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-y-auto
@@ -581,6 +585,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                     setTransforms={setTransforms}
                     characterSets={allCharacterSets!}
                     groups={groups}
+                    showAdvanced={true} // Enable advanced UI for composites too
                 />
             )}
 
