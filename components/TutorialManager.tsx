@@ -427,7 +427,7 @@ const TutorialManager: React.FC = () => {
         }
     }, [script?.id, linearTutorialSteps]);
 
-    // 3. JIT Hint Logic (unchanged)
+    // 3. JIT Hint Logic
     useEffect(() => {
         if (!translations) return;
         if (script?.id === 'tutorial') return;
@@ -480,7 +480,6 @@ const TutorialManager: React.FC = () => {
         
         // Hint 3: First Composite Glyph (Exclude Linked Glyphs)
         if (workspace === 'drawing' && selectedCharacter && !activeModal) {
-             // Logic Check: 'composite' array exists AND 'link' array does NOT exist.
              const isStaticComposite = (selectedCharacter.composite && selectedCharacter.composite.length > 0) && (!selectedCharacter.link);
              
              if (isStaticComposite) {
@@ -511,7 +510,6 @@ const TutorialManager: React.FC = () => {
 
         // Hint 4: First Linked Glyph Intro (Multi-step)
         if (workspace === 'drawing' && selectedCharacter && !activeModal) {
-            // Check for Linked Glyph presence
             if (selectedCharacter.link && selectedCharacter.link.length > 0) {
                 const storageKey = 'hint_linked_intro_seen';
                 if (!localStorage.getItem(storageKey)) {
@@ -548,7 +546,6 @@ const TutorialManager: React.FC = () => {
 
         // Hint 5: Relink Action (After Unlinking)
         if (workspace === 'drawing' && selectedCharacter && !activeModal) {
-            // Check if sourceLink exists (glyph remembers its origin)
             if (selectedCharacter.sourceLink) {
                 const storageKey = 'hint_relink_action_seen';
                 if (!localStorage.getItem(storageKey)) {
@@ -663,7 +660,7 @@ const TutorialManager: React.FC = () => {
             if (!localStorage.getItem(storageKey)) {
                 const timer = setTimeout(() => {
                     setActiveSteps([{
-                        target: '[data-tour="kerning-nav"]',
+                        target: '[data-tour="nav-kerning"]', // Updated target
                         content: (
                             <div>
                                 <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKerningWorkspaceTitle}</h3>
@@ -682,19 +679,42 @@ const TutorialManager: React.FC = () => {
             }
         }
 
+        // Hint 9: Positioning Workspace Intro (NEW)
+        if (workspace === 'positioning' && !activeModal) {
+            const storageKey = 'hint_positioning_workspace_seen';
+            if (!localStorage.getItem(storageKey)) {
+                const timer = setTimeout(() => {
+                    setActiveSteps([{
+                        target: '[data-tour="nav-positioning"]', // Target the tab in header
+                        content: (
+                            <div>
+                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintPositioningWorkspaceTitle}</h3>
+                                <p>{translations.hintPositioningWorkspaceContent}</p>
+                            </div>
+                        ),
+                        placement: 'bottom',
+                        disableBeacon: true,
+                        spotlightClicks: true,
+                        data: { isTutorial: false, storageKey: storageKey, translations }
+                    }]);
+                    setStepIndex(0);
+                    setRun(true);
+                }, 500);
+                return () => clearTimeout(timer);
+            }
+        }
+
     }, [script?.id, workspace, currentView, selectedCharacter, activeModal, translations]);
 
-    // Hint: Related Pairs (Smart Class) - Polling approach
+    // Hint: Related Pairs (Smart Class) - Polling approach (unchanged)
     useEffect(() => {
         const storageKey = 'hint_related_pairs_seen';
         if (localStorage.getItem(storageKey) || !translations) return;
 
         const checkExist = setInterval(() => {
-            // Check if element exists AND no modal blocking AND tour not running
             const strip = document.querySelector('[data-tour="related-pairs-strip"]');
             if (strip && !activeModal && !run) {
                 clearInterval(checkExist);
-                // Trigger
                  setActiveSteps([
                      {
                          target: '[data-tour="related-pairs-strip"]',
@@ -709,7 +729,7 @@ const TutorialManager: React.FC = () => {
                          target: '[data-tour="strip-link-toggle"]',
                          title: translations.hintOverrideTitle,
                          content: translations.hintOverrideContent,
-                         placement: 'top', // 'right' might be off-screen on mobile, 'top' is safer for bottom strips
+                         placement: 'top', 
                          disableBeacon: true,
                          data: { isTutorial: false, storageKey: storageKey, translations }
                      }
@@ -717,7 +737,7 @@ const TutorialManager: React.FC = () => {
                  setStepIndex(0);
                  setRun(true);
             }
-        }, 1000); // Check every second
+        }, 1000); 
 
         return () => clearInterval(checkExist);
     }, [run, activeModal, translations]); 
@@ -736,7 +756,12 @@ const TutorialManager: React.FC = () => {
                  setActiveSteps([]);
              }
              // Auto-close kerning hint if workspace changes
-             if (currentStepTarget === '[data-tour="kerning-nav"]' && workspace !== 'kerning') {
+             if (currentStepTarget === '[data-tour="nav-kerning"]' && workspace !== 'kerning') {
+                 setRun(false);
+                 setActiveSteps([]);
+             }
+             // Auto-close positioning hint if workspace changes
+             if (currentStepTarget === '[data-tour="nav-positioning"]' && workspace !== 'positioning') {
                  setRun(false);
                  setActiveSteps([]);
              }
@@ -777,7 +802,6 @@ const TutorialManager: React.FC = () => {
                 break;
             case 'selected-F':
                 if (selectedCharacter?.name === 'F') {
-                     // Close drawer implicitly if on mobile so user can see canvas
                      advance();
                 }
                 break;
@@ -798,19 +822,16 @@ const TutorialManager: React.FC = () => {
                 setActiveSteps([]); // Clear JIT steps
             }
         } else if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
-            // Handle Multi-step JIT advancement (Hint 4)
             const currentStep = activeSteps[index];
             if (!currentStep.data?.isTutorial && action === ACTIONS.NEXT) {
                  setStepIndex(index + 1);
                  return;
             }
 
-            // Logic only applies to linear tutorial multi-step flow
             if (script?.id === 'tutorial') {
                 const currentStep = activeSteps[index];
                 if (!currentStep) return;
 
-                // Only advance if NOT waiting for a specific event
                 if (!currentStep.data?.advanceOn) {
                     if (action === ACTIONS.NEXT) {
                         setStepIndex(index + 1);
@@ -836,10 +857,7 @@ const TutorialManager: React.FC = () => {
             callback={handleCallback}
             tooltipComponent={CustomTooltip}
             scrollOffset={scrollOffset}
-            // CRITICAL: Disable closing when clicking outside the tooltip
             disableOverlayClose={true}
-            // CRITICAL: Spotlight clicks are generally allowed per step config above,
-            // but setting padding helps with "finicky" clicks
             spotlightPadding={4}
             styles={{
                 options: {

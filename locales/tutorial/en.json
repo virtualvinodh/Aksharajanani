@@ -49,5 +49,7 @@
   "hintKernedContent": "This is a <strong>Kerned Pair</strong>. It represents a specific spacing adjustment between two characters.",
   "hintAcceptKerning": "Looks good? Clicking **Accept** will save this default calculated spacing as correct.",
   "hintKerningWorkspaceTitle": "Spacing & Kerning",
-  "hintKerningWorkspaceContent": "This is where character pairs can be adjusted to have custom spacing."
+  "hintKerningWorkspaceContent": "This is where character pairs can be adjusted to have custom spacing.",
+  "hintPositioningWorkspaceTitle": "Positioning & Alignment",
+  "hintPositioningWorkspaceContent": "This is where characters are positioned to create perfect alignment."
 }

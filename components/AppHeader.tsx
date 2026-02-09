@@ -65,7 +65,8 @@ const WorkspaceTab: React.FC<{
     onWorkspaceChange: (workspace: Workspace) => void;
     activeWorkspace: Workspace;
     progress: Progress;
-}> = React.memo(({ workspaceId, label, icon, showUnsavedIndicator = false, onWorkspaceChange, activeWorkspace, progress }) => {
+    dataTour?: string;
+}> = React.memo(({ workspaceId, label, icon, showUnsavedIndicator = false, onWorkspaceChange, activeWorkspace, progress, dataTour }) => {
     const isActive = activeWorkspace === workspaceId;
     const isComplete = progress.total > 0 && progress.completed >= progress.total;
     const showCompletion = workspaceId !== 'metrics' && isComplete;
@@ -74,6 +75,7 @@ const WorkspaceTab: React.FC<{
       <button
         onClick={() => onWorkspaceChange(workspaceId)}
         title={label}
+        data-tour={dataTour}
         className={`flex-shrink-0 flex items-center gap-2 py-3 px-4 text-sm font-medium border-b-2 transition-colors relative ${
           isActive
             ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
@@ -296,8 +298,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             <div className="w-full flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <nav className="flex justify-center space-x-2 px-2 sm:px-4 overflow-x-auto no-scrollbar">
                     <WorkspaceTab workspaceId="drawing" label={t('workspaceDrawing')} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<EditIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={drawingProgress} />
-                    {hasPositioning && <WorkspaceTab workspaceId="positioning" label={t('workspacePositioning')} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<PositioningIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={positioningProgress} />}
-                    {hasKerning && <WorkspaceTab workspaceId="kerning" label={kerningLabel} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<KerningIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={kerningProgress} />}
+                    {hasPositioning && <WorkspaceTab workspaceId="positioning" label={t('workspacePositioning')} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<PositioningIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={positioningProgress} dataTour="nav-positioning" />}
+                    {hasKerning && <WorkspaceTab workspaceId="kerning" label={kerningLabel} icon={<>{visibleTabCount > 1 && `${tabIndex++}. `}<KerningIcon /></>} onWorkspaceChange={onWorkspaceChange} activeWorkspace={activeWorkspace} progress={kerningProgress} dataTour="nav-kerning" />}
                 </nav>
             </div>
         </header>
