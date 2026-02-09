@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Point, Path, FontMetrics, AppSettings, Character } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -183,6 +184,7 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
     return (
         <canvas
             ref={canvasRef}
+            data-tour="drawing-canvas"
             width={width}
             height={height}
             className={`bg-white dark:bg-gray-900 max-w-full max-h-full block mx-auto shadow-inner ${isShake ? 'animate-shake' : ''}`}

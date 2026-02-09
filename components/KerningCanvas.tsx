@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Point, FontMetrics, AppSettings, Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -162,6 +163,7 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
     return (
         <canvas
             ref={canvasRef}
+            data-tour="drawing-canvas"
             width={width}
             height={height}
             className="w-full h-full block mx-auto touch-none"

@@ -80,7 +80,8 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
             if (!props.isKerned) {
                 return (
                     <button 
-                        onClick={props.onSave} 
+                        onClick={props.onSave}
+                        data-tour="header-accept-kern"
                         title="Accept Default" 
                         className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
                     >
@@ -94,7 +95,8 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
             if (!props.isKerned && !props.isDirty) {
                  return (
                     <button 
-                        onClick={props.onSave} 
+                        onClick={props.onSave}
+                        data-tour="header-accept-kern"
                         title="Accept Default Value" 
                         className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
                     >
@@ -107,8 +109,8 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                  return (
                     <button 
                         onClick={props.onSave} 
-                        title={t('save')} 
                         className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
+                        title={t('save')}
                     >
                         <SaveIcon />
                         <span className="hidden xl:inline font-semibold">Save Changes</span>

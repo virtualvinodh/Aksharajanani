@@ -591,6 +591,14 @@ const TutorialManager: React.FC = () => {
                                 content: "Need to edit the shape itself? Click **Detach** to convert this live pair into an **Independent Glyph**. You can then edit the shape manually.",
                                 placement: 'bottom',
                                 disableBeacon: true,
+                                data: { isTutorial: false }
+                            },
+                            {
+                                target: '[data-tour="header-accept-pos"]',
+                                content: "Looks good? Clicking **Accept** will save this default calculated position as correct.",
+                                placement: 'bottom',
+                                spotlightClicks: true,
+                                disableBeacon: true,
                                 data: { isTutorial: false, storageKey: storageKey }
                             }
                          ]);
@@ -626,6 +634,14 @@ const TutorialManager: React.FC = () => {
                                 target: '[data-tour="header-detach-kern"]',
                                 content: "Need to edit the shape itself? Click **Detach** to convert this live pair into an **Independent Glyph**. You can then edit the shape manually.",
                                 placement: 'bottom',
+                                disableBeacon: true,
+                                data: { isTutorial: false }
+                            },
+                            {
+                                target: '[data-tour="header-accept-kern"]',
+                                content: "Looks good? Clicking **Accept** will save this default calculated spacing as correct.",
+                                placement: 'bottom',
+                                spotlightClicks: true,
                                 disableBeacon: true,
                                 data: { isTutorial: false, storageKey: storageKey }
                             }

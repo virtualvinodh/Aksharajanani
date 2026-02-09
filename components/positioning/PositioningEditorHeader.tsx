@@ -89,7 +89,8 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
             if (!isPositioned) {
                 return (
                     <button 
-                        onClick={onConfirmPosition} 
+                        onClick={onConfirmPosition}
+                        data-tour="header-accept-pos"
                         title="Accept Default Position"
                         className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
                     >
@@ -104,7 +105,8 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
             if (!isPositioned && !isDirty) {
                  return (
                     <button 
-                        onClick={onConfirmPosition} 
+                        onClick={onConfirmPosition}
+                        data-tour="header-accept-pos"
                         title="Accept Default Position"
                         className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
                     >
