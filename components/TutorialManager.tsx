@@ -263,7 +263,7 @@ const TutorialManager: React.FC = () => {
                 target: '[data-tour="header-back"]',
                 content: translations.clickBackToDashboard,
                 spotlightClicks: true,
-                disableBeacon: true,
+                // disableBeacon: false, // Default is false, show beacon on mobile back button
                 hideFooter: true,
                 data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations }
              });
@@ -273,7 +273,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-test"]',
             content: translations.clickTest,
             spotlightClicks: true,
-            disableBeacon: true,
+            // disableBeacon: false, // Default is false
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'test-modal-open', translations }
         });
@@ -385,7 +385,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForComposite,
             spotlightClicks: true,
-            disableBeacon: true,
+            // disableBeacon: false, // Default is false, enabling beacon for Next button
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-E', translations }
         });
@@ -416,7 +416,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForLowerE,
             spotlightClicks: true,
-            disableBeacon: true,
+            // disableBeacon: false,
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-e', translations }
         });
@@ -437,7 +437,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForLinked,
             spotlightClicks: true,
-            disableBeacon: true,
+            // disableBeacon: false,
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-combining', translations }
         });
@@ -447,6 +447,15 @@ const TutorialManager: React.FC = () => {
             target: 'body',
             content: translations.linkedExplanation,
             placement: 'center',
+            disableBeacon: true,
+            data: { isTutorial: true, translations }
+        });
+
+        // New Step: Point out the bottom strip for navigation
+        steps.push({
+            target: '[data-tour="linked-source-strip"]',
+            content: translations.linkedStripNav,
+            placement: 'top',
             disableBeacon: true,
             data: { isTutorial: true, translations }
         });
@@ -466,7 +475,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-prev"]',
             content: translations.clickPrevForModification,
             spotlightClicks: true,
-            disableBeacon: true,
+            // disableBeacon: false,
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-e', translations }
         });
@@ -487,7 +496,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextToVerify,
             spotlightClicks: true,
-            disableBeacon: true,
+            // disableBeacon: false,
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-combining', translations }
         });
@@ -508,7 +517,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForN,
             spotlightClicks: true,
-            disableBeacon: true,
+            // disableBeacon: false,
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-n', translations }
         });
@@ -529,7 +538,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForTilde,
             spotlightClicks: true,
-            disableBeacon: true,
+            // disableBeacon: false,
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-tilde', translations }
         });
@@ -550,7 +559,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForMacron,
             spotlightClicks: true,
-            disableBeacon: true,
+            // disableBeacon: false,
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-macron', translations }
         });
@@ -571,7 +580,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForNTilde,
             spotlightClicks: true,
-            disableBeacon: true,
+            // disableBeacon: false,
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-ntilde', translations }
         });
@@ -610,6 +619,16 @@ const TutorialManager: React.FC = () => {
             placement: 'bottom',
             disableBeacon: true,
             data: { isTutorial: true, translations }
+        });
+        
+        // Go back to dashboard (Final Action Step)
+        steps.push({
+            target: '[data-tour="header-back"]',
+            content: translations.explainBack,
+            spotlightClicks: true,
+            // disableBeacon: false,
+            hideFooter: true,
+            data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations }
         });
 
         // Final Step

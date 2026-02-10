@@ -25,6 +25,7 @@
   "drawLowerE": "Draw a simple 'e' on the canvas.",
   "clickNextForLinked": "Click Next again to see the magic of Linked Glyphs.",
   "linkedExplanation": "This is a combining mark. Notice it is already drawn! It is a **Linked Glyph** derived directly from the 'e' you just drew, scaled down automatically.",
+  "linkedStripNav": "You can also navigate quickly between the Linked Glyph and its source components using this strip at the bottom.",
   "transformLinked": "Linked glyphs track the source shape, but their **position and size** are editable! Select the shape and try scaling or rotating it.",
   "clickPrevForModification": "Now, let's change the source. Click the **Previous Glyph** arrow to go back to 'e'.",
   "modifyLowerE": "Modify the 'e' significantly (e.g. add a circle around it).",
@@ -42,6 +43,7 @@
   "smartClassExpl": "Look at the bottom strip. It shows **Related Pairs**. Tilde and Macron are in the same **Smart Class**, so positioning one updates the other automatically!",
   "unlinkExpl": "Need this specific pair to be different? Click **Unlink** to move this mark independently without affecting the Macron.",
   "detachExpl": "If you need to change the *shape* of the mark just for this letter (e.g. to squash it), click **Detach** to bake it into a new composite glyph.",
+  "explainBack": "Click the **Back** button to return to the Character Grid and view your entire font.",
 
   "finish": "You are ready to create! Explore the other workspaces for Positioning and Kerning when you are done drawing.",
   "last": "Finish Tour",

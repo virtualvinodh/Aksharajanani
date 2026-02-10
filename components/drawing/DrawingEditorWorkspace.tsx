@@ -169,7 +169,7 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
 
                 <div className="w-full max-w-5xl px-4 pb-4 flex flex-col gap-1 flex-shrink-0 z-20">
                     {props.sourceGlyphs.length > 0 && (
-                        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden" data-tour="linked-source-strip">
                             <LinkedGlyphsStrip 
                                 title="Sources" items={props.sourceGlyphs} glyphDataMap={props.allGlyphData} 
                                 settings={props.settings} onSelect={props.handleNavigationAttempt} variant="sources"
