@@ -587,10 +587,12 @@ const TutorialManager: React.FC = () => {
 
         // Explain Positioning
         steps.push({
-            target: '[data-tour="drawing-canvas"]',
+            target: '[data-tour="positioning-canvas"]',
             content: translations.positioningIntro,
             placement: 'right',
             disableBeacon: true,
+            spotlightClicks: true,
+            disableOverlayClose: true,
             data: { isTutorial: true, translations }
         });
 

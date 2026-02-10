@@ -184,7 +184,7 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
     return (
         <canvas
             ref={canvasRef}
-            data-tour="drawing-canvas"
+            data-tour="positioning-canvas"
             width={width}
             height={height}
             className={`bg-white dark:bg-gray-900 max-w-full max-h-full block mx-auto shadow-inner ${isShake ? 'animate-shake' : ''}`}

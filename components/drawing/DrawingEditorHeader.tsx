@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet, ComponentTransform, Path } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, LinkIcon, BrokenLinkIcon, UndoIcon, MoreIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, LinkIcon, BrokenLinkIcon, UndoIcon, MoreIcon, RefreshIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
 import { GlyphDataAction } from '../../contexts/GlyphDataContext';
 
@@ -25,6 +25,7 @@ interface DrawingEditorHeaderProps {
   isLocked?: boolean;
   isComposite?: boolean;
   onReset?: () => void;
+  onRefresh?: () => void;
   allCharacterSets: CharacterSet[];
   onSaveConstruction: (type: 'drawing' | 'composite' | 'link', components: string[], transforms?: ComponentTransform[]) => void;
   onUnlock: () => void;
@@ -137,6 +138,12 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
              <button onClick={props.onRelink} title={t('relinkGlyphTitle')} className="flex items-center gap-2 justify-center p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-blue-200 transition-all active:scale-95" data-tour="header-relink">
                 <LinkIcon className="w-5 h-5" />
             </button>
+          )}
+
+          {(props.isLocked || props.isComposite) && props.onRefresh && (
+             <button onClick={props.onRefresh} title={t('refresh')} className="p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95">
+                <RefreshIcon />
+             </button>
           )}
 
           {(props.isLocked || props.isComposite) && (
