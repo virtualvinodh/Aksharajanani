@@ -43,7 +43,12 @@
   "smartClassExpl": "Look at the bottom strip. It shows **Related Pairs**. Tilde and Macron are in the same **Smart Class**, so positioning one updates the other automatically!",
   "unlinkExpl": "Need this specific pair to be different? Click **Unlink** to move this mark independently without affecting the Macron.",
   "detachExpl": "If you need to change the *shape* of the mark just for this letter (e.g. to squash it), click **Detach** to bake it into a new composite glyph.",
-  "explainBack": "Click the **Back** button to return to the Character Grid and view your entire font.",
+  
+  "explainCreator": "Open the **Creator Studio** to create artwork, stickers, and social media posts using your font.",
+  "explainCompare": "Use **Compare** to view multiple characters side-by-side. Useful for checking consistency.",
+  "explainSettings": "Adjust global font settings, metadata (like designer name), and view metrics here.",
+  "explainExport": "When you are ready, click **Export** to generate and download your installable OpenType (.otf) font file.",
+  "explainBack": "Now, click **Back** to return to the Character Grid so we can explore the final tools.",
 
   "finish": "You are ready to create! Explore the other workspaces for Positioning and Kerning when you are done drawing.",
   "last": "Finish Tour",

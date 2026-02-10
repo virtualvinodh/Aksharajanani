@@ -263,7 +263,7 @@ const TutorialManager: React.FC = () => {
                 target: '[data-tour="header-back"]',
                 content: translations.clickBackToDashboard,
                 spotlightClicks: true,
-                // disableBeacon: false, // Default is false, show beacon on mobile back button
+                // Beacon enabled
                 hideFooter: true,
                 data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations }
              });
@@ -273,7 +273,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-test"]',
             content: translations.clickTest,
             spotlightClicks: true,
-            // disableBeacon: false, // Default is false
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'test-modal-open', translations }
         });
@@ -385,7 +385,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForComposite,
             spotlightClicks: true,
-            // disableBeacon: false, // Default is false, enabling beacon for Next button
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-E', translations }
         });
@@ -416,7 +416,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForLowerE,
             spotlightClicks: true,
-            // disableBeacon: false,
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-e', translations }
         });
@@ -437,7 +437,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForLinked,
             spotlightClicks: true,
-            // disableBeacon: false,
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-combining', translations }
         });
@@ -475,7 +475,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-prev"]',
             content: translations.clickPrevForModification,
             spotlightClicks: true,
-            // disableBeacon: false,
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-e', translations }
         });
@@ -496,7 +496,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextToVerify,
             spotlightClicks: true,
-            // disableBeacon: false,
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-combining', translations }
         });
@@ -517,7 +517,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForN,
             spotlightClicks: true,
-            // disableBeacon: false,
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-n', translations }
         });
@@ -538,7 +538,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForTilde,
             spotlightClicks: true,
-            // disableBeacon: false,
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-tilde', translations }
         });
@@ -559,7 +559,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForMacron,
             spotlightClicks: true,
-            // disableBeacon: false,
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-macron', translations }
         });
@@ -580,7 +580,7 @@ const TutorialManager: React.FC = () => {
             target: '[data-tour="header-next"]',
             content: translations.clickNextForNTilde,
             spotlightClicks: true,
-            // disableBeacon: false,
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'selected-ntilde', translations }
         });
@@ -621,14 +621,52 @@ const TutorialManager: React.FC = () => {
             data: { isTutorial: true, translations }
         });
         
-        // Go back to dashboard (Final Action Step)
+        // Go back to dashboard (Transition Step)
         steps.push({
             target: '[data-tour="header-back"]',
             content: translations.explainBack,
             spotlightClicks: true,
-            // disableBeacon: false,
+            // Beacon enabled
             hideFooter: true,
             data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations }
+        });
+        
+        // --- FINAL HEADER TOUR (After returning to grid) ---
+        
+        // Creator Studio
+        steps.push({
+            target: '[data-tour="header-creator"]',
+            content: translations.explainCreator,
+            spotlightClicks: true,
+            // Beacon enabled
+            data: { isTutorial: true, translations }
+        });
+
+        // Compare
+        steps.push({
+            target: '[data-tour="header-compare"]',
+            content: translations.explainCompare,
+            spotlightClicks: true,
+            // Beacon enabled
+            data: { isTutorial: true, translations }
+        });
+
+        // Settings
+        steps.push({
+            target: '[data-tour="header-settings"]',
+            content: translations.explainSettings,
+            spotlightClicks: true,
+            // Beacon enabled
+            data: { isTutorial: true, translations }
+        });
+
+        // Export (The Big Finish)
+        steps.push({
+            target: '[data-tour="header-export"]',
+            content: translations.explainExport,
+            spotlightClicks: true,
+            // Beacon enabled
+            data: { isTutorial: true, translations }
         });
 
         // Final Step

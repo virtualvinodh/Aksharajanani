@@ -200,6 +200,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     <button 
                         onClick={onCreatorClick} 
                         disabled={isAnyExporting} 
+                        data-tour="header-creator"
                         title="Creator Studio" 
                         className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base disabled:bg-purple-400 disabled:cursor-wait"
                     >
@@ -212,7 +213,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         <span className="hidden md:inline">{t('testFont')}</span>
                     </button>
                     
-                    <button onClick={onSettingsClick} title={t('settings')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><SettingsIcon /><span className="hidden md:inline">{t('settings')}</span></button>
+                    <button onClick={onSettingsClick} data-tour="header-settings" title={t('settings')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><SettingsIcon /><span className="hidden md:inline">{t('settings')}</span></button>
                     
                     <div className="relative" ref={moreMenuRef}>
                         <button onClick={() => setIsMoreMenuOpen(prev => !prev)} className="p-2 sm:p-2.5 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"><MoreIcon /></button>
@@ -273,6 +274,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                             <button
                                 onClick={onCompareClick}
                                 title={t('compare')}
+                                data-tour="header-compare"
                                 className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
                             >
                                 <CompareIcon className="w-5 h-5" />
