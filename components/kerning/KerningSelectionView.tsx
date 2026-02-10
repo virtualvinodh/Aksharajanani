@@ -23,7 +23,7 @@ interface KerningSelectionViewProps {
     setSelectedLeftChars: React.Dispatch<React.SetStateAction<Set<number>>>;
     selectedRightChars: Set<number>;
     setSelectedRightChars: React.Dispatch<React.SetStateAction<Set<number>>>;
-    mode: 'recommended' | 'all';
+    mode: 'recommended' | 'all' | 'spaced';
     showRecommendedLabel: boolean;
     hasHiddenRecommended?: boolean;
     kerningMap: KerningMap;
@@ -168,8 +168,9 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
     const isSearching = searchQuery.trim().length > 0;
     const isFiltered = filterMode !== 'none' || isSearching;
 
-    const leftTitle = mode === 'recommended' ? "kerningFilterLeftChars" : "kerningSelectLeftChars";
-    const rightTitle = mode === 'recommended' ? "kerningFilterRightChars" : "kerningSelectRightChars";
+    // Use "Filter" title for both Recommended and Spaced modes
+    const leftTitle = mode === 'all' ? "kerningSelectLeftChars" : "kerningFilterLeftChars";
+    const rightTitle = mode === 'all' ? "kerningSelectRightChars" : "kerningFilterRightChars";
 
     const unreviewedCount = useMemo(() => {
         let count = 0;
@@ -273,7 +274,11 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
                                         <p className="text-lg max-w-md mx-auto">{emptyStateMessage}</p>
                                      </>
                                 ) : (
-                                     <span className="italic text-lg">{t('noResultsFound')}</span>
+                                     mode === 'spaced' ? (
+                                          <p className="italic text-lg">No manually spaced pairs yet.</p>
+                                     ) : (
+                                          <span className="italic text-lg">{t('noResultsFound')}</span>
+                                     )
                                 )}
                             </div>
                         )}

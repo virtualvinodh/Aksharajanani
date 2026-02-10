@@ -17,7 +17,7 @@ import { isGlyphDrawn as isGlyphDrawnUtil } from '../utils/glyphUtils';
 interface KerningPageProps {
   recommendedKerning: RecommendedKerning[] | null;
   editorMode: 'simple' | 'advanced';
-  mode: 'recommended' | 'all';
+  mode: 'recommended' | 'all' | 'spaced';
   showRecommendedLabel: boolean;
   onSwitchToAllPairs?: () => void;
 }
@@ -86,7 +86,32 @@ const KerningPage: React.FC<KerningPageProps> = ({
 
         let pairs: { left: any, right: any }[] = [];
 
-        if (mode === 'recommended') {
+        if (mode === 'spaced') {
+            kerningMap.forEach((_, key) => {
+                const [lId, rId] = key.split('-').map(Number);
+                const lChar = allCharsByUnicode.get(lId);
+                const rChar = allCharsByUnicode.get(rId);
+                
+                if (lChar && rChar) {
+                     // Check if drawn, usually yes if kerned, but good to be safe
+                     if (isGlyphDrawn(lChar.unicode) && isGlyphDrawn(rChar.unicode)) {
+                         addPair(lChar, rChar);
+                     }
+                }
+            });
+            
+             // FILTER: If side panels have selections, filter the list
+            if (selectedLeftChars.size > 0) {
+                pairs = pairs.filter(p => selectedLeftChars.has(p.left.unicode));
+            }
+            if (selectedRightChars.size > 0) {
+                pairs = pairs.filter(p => selectedRightChars.has(p.right.unicode));
+            }
+            
+            const sorted = pairs.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
+            return { allPairsInContext: sorted, hasHiddenRecommended: false };
+
+        } else if (mode === 'recommended') {
             // A. Static Rules from JSON
             if (recommendedKerning) {
                 recommendedKerning.forEach(([leftRule, rightRule]) => {
@@ -155,7 +180,7 @@ const KerningPage: React.FC<KerningPageProps> = ({
             const sorted = pairs.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
             return { allPairsInContext: sorted, hasHiddenRecommended: false };
         }
-    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, suggestedKerningMap, allCharsByUnicode, standardGridNames, isGlyphDrawn]);
+    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, suggestedKerningMap, allCharsByUnicode, standardGridNames, isGlyphDrawn, kerningMap]);
 
     // 2. Filter list by search query and saved status
     const filteredPairs = useMemo(() => {

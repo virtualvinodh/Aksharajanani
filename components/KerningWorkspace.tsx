@@ -20,7 +20,7 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
     
     // Default to 'recommended' (Suggestions) only if there are actual suggestions (static or dynamic).
     // Otherwise, default to 'all' (All Pairs) to avoid showing an empty list initially.
-    const [activeTab, setActiveTab] = useState<'recommended' | 'all'>(() => {
+    const [activeTab, setActiveTab] = useState<'recommended' | 'all' | 'spaced'>(() => {
         const hasStatic = recommendedKerning && recommendedKerning.length > 0;
         const hasDynamic = suggestedKerningMap && suggestedKerningMap.size > 0;
         return (hasStatic || hasDynamic) ? 'recommended' : 'all';
@@ -28,7 +28,9 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
 
     if (!settings) return null;
 
+    const useKerningTerm = settings.editorMode === 'advanced' || settings.preferKerningTerm;
     const progressTextKey = (settings.editorMode === 'simple' && !settings.preferKerningTerm) ? "spacingProgress" : "kerningProgress";
+    const spacedTabLabel = useKerningTerm ? "Kerned" : "Spaced";
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -45,6 +47,16 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
                         }`}
                     >
                         Suggestions
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('spaced')}
+                        className={`flex-shrink-0 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors ${
+                            activeTab === 'spaced'
+                                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        {spacedTabLabel}
                     </button>
                     <button
                         onClick={() => setActiveTab('all')}
