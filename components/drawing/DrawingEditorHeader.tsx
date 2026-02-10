@@ -91,6 +91,7 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
           <button
               onClick={() => props.onNavigate(props.prevCharacter!)}
               disabled={!props.prevCharacter}
+              data-tour="header-prev"
               title={t('prevGlyph')}
               className="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors"
           >

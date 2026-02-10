@@ -1,3 +1,4 @@
+
 {
   "welcomeTitle": "Welcome to Aksharajanani!",
   "welcomeContent": "This tutorial will guide you through the process of drawing, testing, and refining your font.",
@@ -18,6 +19,30 @@
   "actionGroup": "Use Group to combine paths into a single object for easier moving.",
   "clickNextForComposite": "Let's see a powerful feature. Click the Next Glyph arrow (top right).",
   "compositeExplanation": "This is 'E'. It has been **pre-filled** with the shape of 'F'. You can now add strokes to finish the letter. Unlike linked glyphs, changes here are independent and won't affect the original 'F'.",
+  "drawComposite": "Now, draw the bottom stroke to complete the 'E'. Notice how your new stroke combines with the pre-filled 'F' shape.",
+  
+  "clickNextForLowerE": "Let's create a lowercase 'e'. Click the Next Glyph arrow.",
+  "drawLowerE": "Draw a simple 'e' on the canvas.",
+  "clickNextForLinked": "Click Next again to see the magic of Linked Glyphs.",
+  "linkedExplanation": "This is a combining mark. Notice it is already drawn! It is a **Linked Glyph** derived directly from the 'e' you just drew, scaled down automatically.",
+  "transformLinked": "Linked glyphs track the source shape, but their **position and size** are editable! Select the shape and try scaling or rotating it.",
+  "clickPrevForModification": "Now, let's change the source. Click the **Previous Glyph** arrow to go back to 'e'.",
+  "modifyLowerE": "Modify the 'e' significantly (e.g. add a circle around it).",
+  "clickNextToVerify": "Go back to the linked glyph (Next).",
+  "verifyLink": "See? The linked glyph updated automatically to match your changes!",
+
+  "clickNextForN": "Let's explore **Smart Positioning**. Click Next to go to 'n'.",
+  "drawN": "Draw the base letter 'n'.",
+  "clickNextForTilde": "Click Next to go to the Tilde mark.",
+  "drawTilde": "Draw the Tilde (~).",
+  "clickNextForMacron": "Click Next to go to the Macron.",
+  "drawMacron": "Draw the Macron (¯). We need two marks to demonstrate how they sync.",
+  "clickNextForNTilde": "Click Next to go to 'ñ'.",
+  "positioningIntro": "This is the **Positioning Editor**. Drag the Tilde on the canvas to place it correctly above the 'n'.",
+  "smartClassExpl": "Look at the bottom strip. It shows **Related Pairs**. Tilde and Macron are in the same **Smart Class**, so positioning one updates the other automatically!",
+  "unlinkExpl": "Need this specific pair to be different? Click **Unlink** to move this mark independently without affecting the Macron.",
+  "detachExpl": "If you need to change the *shape* of the mark just for this letter (e.g. to squash it), click **Detach** to bake it into a new composite glyph.",
+
   "finish": "You are ready to create! Explore the other workspaces for Positioning and Kerning when you are done drawing.",
   "last": "Finish Tour",
   "skip": "Skip Tutorial",

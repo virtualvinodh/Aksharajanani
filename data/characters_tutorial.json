@@ -7,12 +7,13 @@
         { "name": "A", "glyphClass": "base" },
         { "name": "F", "glyphClass": "base" },
         { "name": "E", "glyphClass": "base", "composite": ["F"] },
-        { "name": "n", "glyphClass": "base" },
-        { "name": "̃", "glyphClass": "mark", "advWidth":0 },
-        { "name": "ñ", "glyphClass": "base", "position": ["n", "̃"] },
         { "name": "e", "glyphClass": "base" },  
         { "name": "ͤ", "glyphClass": "mark", "advWidth":0, "link": ["e"], "compositeTransform": [{ "scale": 0.5, "y": -400 }] },        
-        { "name": "T", "glyphClass": "base" }
+        { "name": "n", "glyphClass": "base" },
+        { "name": "̃", "glyphClass": "mark", "advWidth":0 },
+        { "name": "̄", "glyphClass": "mark", "advWidth":0 },
+        { "name": "ñ", "glyphClass": "base", "position": ["n", "̃"] },
+        { "name": "n̄", "glyphClass": "virtual", "position": ["n", "̄"], "gpos": "mark", "gsub": "liga" }
 
     ]
   }

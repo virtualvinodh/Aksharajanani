@@ -2,7 +2,7 @@
     {
     "positioning": [                
       {
-        "base": ["A", "a"],
+        "base": ["A", "E"],
         "mark": ["ͤ"],
         "gpos": "abvm"
       }
@@ -13,9 +13,16 @@
         "A":  {  "ͤ": ["topCenter", "bottomCenter"] },
         "a":  {  "ͤ": ["topCenter", "bottomCenter"] },
         "N":  {  "̃": ["topCenter", "bottomCenter"] },        
-        "n":  {  "̃": ["topCenter", "bottomCenter"] }     
+        "n":  {  "̃": ["topCenter", "bottomCenter"],  "̄": ["topCenter", "bottomCenter"] }         
     }
    },
+  {
+    "markAttachmentClass": [  
+      {
+        "members": ["̃", "̄"]
+      }
+    ]
+  },   
 {
     "recommendedKerning": [
       ["T", "a"],
