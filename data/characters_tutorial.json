@@ -5,6 +5,8 @@
     "nameKey": "letters",
     "characters": [
         { "name": "A", "glyphClass": "base" },
+        { "name": "a", "glyphClass": "base" },  
+        { "name": "T", "glyphClass": "base" },  
         { "name": "F", "glyphClass": "base" },
         { "name": "E", "glyphClass": "base", "composite": ["F"] },
         { "name": "e", "glyphClass": "base" },  

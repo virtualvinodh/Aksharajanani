@@ -271,7 +271,7 @@ const solvePair = (leftGlyph, rightGlyph, metrics, strokeThickness, leftRsb, rig
 
 // --- Main Calculation ---
 self.onmessage = async (e) => {
-    const { batchId, type, pairs, glyphDataMap, metrics, strokeThickness, allGlyphDefs } = e.data;
+    const { batchId, type, pairs, glyphDataMap, metrics, strokeThickness, allGlyphDefs, shouldCalculateValues } = e.data;
     const results = {}; // Map<string, number> as obj
 
     try {
@@ -341,9 +341,14 @@ self.onmessage = async (e) => {
                             const leftGlyph = glyphDataMap[L.unicode];
                             const rightGlyph = glyphDataMap[R.unicode];
                             if (leftGlyph && rightGlyph) {
-                                 const k = solvePair(leftGlyph, rightGlyph, metrics, strokeThickness, L.rsb, R.lsb, null);
-                                 if (k <= -10) { // Threshold to ignore micro-adjustments
-                                     results[\`\${L.unicode}-\${R.unicode}\`] = k;
+                                if (shouldCalculateValues) {
+                                     const k = solvePair(leftGlyph, rightGlyph, metrics, strokeThickness, L.rsb, R.lsb, null);
+                                     if (k <= -10) { // Threshold to ignore micro-adjustments
+                                         results[\`\${L.unicode}-\${R.unicode}\`] = k;
+                                     }
+                                 } else {
+                                     // Just add to list with 0 value
+                                     results[\`\${L.unicode}-\${R.unicode}\`] = 0;
                                  }
                             }
                         }

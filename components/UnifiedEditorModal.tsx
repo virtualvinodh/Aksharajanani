@@ -234,8 +234,18 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
                 <KerningEditorPage
                     key={pageKey} pair={{ left: kernLeftChar!, right: kernRightChar! }} initialValue={kerningMap.get(key) ?? 0}
                     glyphDataMap={allGlyphData} strokeThickness={settings.strokeThickness} metrics={metrics} settings={settings}
-                    recommendedKerning={recommendedKerning} onSave={(val) => { const newMap = new Map(kerningMap); newMap.set(key, val); kerningDispatch({ type: 'SET_MAP', payload: newMap }); }}
-                    onRemove={() => { const newMap = new Map(kerningMap); newMap.delete(key); kerningDispatch({ type: 'SET_MAP', payload: newMap }); onClose(); }}
+                    recommendedKerning={recommendedKerning} 
+                    onSave={(val) => { 
+                        const newMap = new Map(kerningMap); 
+                        newMap.set(key, val); 
+                        kerningDispatch({ type: 'SET_MAP', payload: newMap }); 
+                    }}
+                    onRemove={() => { 
+                        const newMap = new Map(kerningMap); 
+                        newMap.delete(key); 
+                        kerningDispatch({ type: 'SET_MAP', payload: newMap }); 
+                        kerningDispatch({ type: 'REMOVE_SUGGESTIONS', payload: [key] });
+                    }}
                     onClose={() => onClose()} onDelete={() => onDelete(character.unicode!)} onNavigate={handlePageNavigate}
                     hasPrev={!!prevCharacter} hasNext={!!nextCharacter} glyphVersion={glyphVersion} isKerned={kerningMap.has(key)}
                     allCharacterSets={allCharacterSets} onConvertToComposite={handleConvertToComposite} allCharsByName={allCharsByName} character={character}

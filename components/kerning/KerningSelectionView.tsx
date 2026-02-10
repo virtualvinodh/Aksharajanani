@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Character, GlyphData, FontMetrics, RecommendedKerning, KerningMap } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { SparklesIcon, UndoIcon, CheckCircleIcon, SearchIcon } from '../../constants';
+import { SparklesIcon, UndoIcon, CheckCircleIcon, SearchIcon, GridViewIcon } from '../../constants';
 import { calculateAutoKerning } from '../../services/kerningService';
 import PairCard from '../PairCard';
 import CharacterSelectionPanel from './CharacterSelectionPanel';
@@ -30,19 +30,21 @@ interface KerningSelectionViewProps {
     suggestedKerningMap: KerningMap;
     onAcceptSuggestions: (keys: string[]) => void;
     onSwitchToAllPairs?: () => void;
+    emptyStateTitle?: string;
+    emptyStateMessage?: string;
 }
 
 const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({ 
     filteredPairs, onEditPair, selectedLeftChars, setSelectedLeftChars, selectedRightChars, setSelectedRightChars, mode, showRecommendedLabel,
-    hasHiddenRecommended, kerningMap, suggestedKerningMap, onAcceptSuggestions, onSwitchToAllPairs
+    hasHiddenRecommended, kerningMap, suggestedKerningMap, onAcceptSuggestions, onSwitchToAllPairs,
+    emptyStateTitle, emptyStateMessage
 }) => {
     const { t } = useLocale();
     const { showNotification, filterMode, searchQuery, setFilterMode } = useLayout();
     const { queueAutoKern, dispatch: kerningDispatch, discoverKerning } = useKerning();
-    const { characterSets } = useProject();
+    const { characterSets, allCharsByUnicode, setRecommendedKerning, recommendedKerning } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { settings, metrics } = useSettings();
-    const { recommendedKerning } = useProject();
 
     const [isAutoKerning, setIsAutoKerning] = useState(false);
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
@@ -88,16 +90,42 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
         setIsProgressModalOpen(true);
         setKerningProgressValue(0);
 
-        const count = await discoverKerning((progress) => {
+        // Determine calculation mode based on settings
+        const shouldCalculateValues = settings?.isBackgroundAutoKerningEnabled ?? false;
+
+        const resultsMap = await discoverKerning((progress) => {
             setKerningProgressValue(progress);
-        });
+        }, shouldCalculateValues, true); // Return results, do NOT dispatch to suggestions
 
         setIsProgressModalOpen(false);
         setIsAutoKerning(false);
         
-        if (count > 0) {
-            // Merged into 'Suggestions' tab, so we don't force a filter anymore.
-            showNotification(`Scan complete. Found ${count} new pairs added to Suggestions.`, 'success');
+        if (resultsMap.size > 0) {
+            // Merge results into recommendedKerning list
+            const newPairs: RecommendedKerning[] = [];
+            const existingSet = new Set(recommendedKerning?.map(r => `${r[0]}-${r[1]}`));
+
+            resultsMap.forEach((val, key) => {
+                 const [lUni, rUni] = key.split('-').map(Number);
+                 const lChar = allCharsByUnicode.get(lUni);
+                 const rChar = allCharsByUnicode.get(rUni);
+                 
+                 if (lChar && rChar) {
+                     const pairKey = `${lChar.name}-${rChar.name}`;
+                     if (!existingSet.has(pairKey)) {
+                         newPairs.push([lChar.name, rChar.name]);
+                         existingSet.add(pairKey);
+                     }
+                 }
+            });
+
+            if (newPairs.length > 0) {
+                setRecommendedKerning([...(recommendedKerning || []), ...newPairs]);
+                showNotification(`Scan complete. ${newPairs.length} new pairs added to Recommendations.`, 'success');
+            } else {
+                showNotification("Scan complete. All colliding pairs are already in recommendations.", 'info');
+            }
+
         } else {
             showNotification("Scan complete. No new collisions found.", 'info');
         }
@@ -105,12 +133,34 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
 
     const handleResetVisible = () => {
         const newMap = new Map(kerningMap);
+        const keysToRemove: string[] = [];
         let count = 0;
+        
         filteredPairs.forEach(p => {
             const key = `${p.left.unicode}-${p.right.unicode}`;
-            if (newMap.has(key)) { newMap.delete(key); count++; }
+            let modified = false;
+
+            // 1. Remove from saved map
+            if (newMap.has(key)) { 
+                newMap.delete(key); 
+                modified = true; 
+            }
+            
+            // 2. Remove from suggestions map
+            if (suggestedKerningMap.has(key)) {
+                keysToRemove.push(key);
+                modified = true;
+            }
+
+            if (modified) count++;
         });
+
         kerningDispatch({ type: 'SET_MAP', payload: newMap });
+        
+        if (keysToRemove.length > 0) {
+            kerningDispatch({ type: 'REMOVE_SUGGESTIONS', payload: keysToRemove });
+        }
+        
         showNotification(t('kerningResetSuccess', { count }), 'success');
         setIsResetVisibleConfirmOpen(false);
     };
@@ -183,7 +233,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
                                 Accept Suggestions ({unreviewedCount})
                             </button>
                         )}
-                        <button onClick={() => setIsResetVisibleConfirmOpen(true)} disabled={kerningMap.size === 0} className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 disabled:opacity-50 transition-colors"><UndoIcon /> {t('resetVisible')}</button>
+                        <button onClick={() => setIsResetVisibleConfirmOpen(true)} disabled={kerningMap.size === 0 && suggestedKerningMap.size === 0} className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 disabled:opacity-50 transition-colors"><UndoIcon /> {t('resetVisible')}</button>
                     </div>
 
                     <div className="flex-grow">
@@ -213,7 +263,19 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
                                 })}
                             </div>
                         ) : (
-                            <div className="flex items-center justify-center p-20 text-gray-500 italic">{t('noResultsFound')}</div>
+                            <div className="flex flex-col items-center justify-center p-20 text-gray-400 dark:text-gray-500 text-center h-full">
+                                {emptyStateMessage ? (
+                                     <>
+                                        <div className="mb-4 opacity-10">
+                                            <GridViewIcon className="w-24 h-24" />
+                                        </div> 
+                                        {emptyStateTitle && <h3 className="text-xl font-bold mb-2 text-gray-600 dark:text-gray-300">{emptyStateTitle}</h3>}
+                                        <p className="text-lg max-w-md mx-auto">{emptyStateMessage}</p>
+                                     </>
+                                ) : (
+                                     <span className="italic text-lg">{t('noResultsFound')}</span>
+                                )}
+                            </div>
                         )}
                     </div>
 

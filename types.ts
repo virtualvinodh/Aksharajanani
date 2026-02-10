@@ -149,6 +149,7 @@ export interface AppSettings {
   isAutosaveEnabled: boolean;
   editorMode: 'simple' | 'advanced';
   isPrefillEnabled?: boolean;
+  isBackgroundAutoKerningEnabled?: boolean;
   showHiddenGlyphs: boolean;
   showUnicodeValues: boolean;
   showGlyphNames?: boolean;

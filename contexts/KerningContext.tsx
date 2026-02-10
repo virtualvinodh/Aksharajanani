@@ -78,7 +78,7 @@ interface KerningContextType {
     ignoredPairs: Set<string>;
     dispatch: Dispatch<KerningAction>;
     queueAutoKern: (pairs: QueuedPair[]) => void;
-    discoverKerning: (onProgress: (p: number) => void) => Promise<number>;
+    discoverKerning: (onProgress: (p: number) => void, shouldCalculateValues: boolean, returnResultsOnly?: boolean) => Promise<Map<string, number>>;
 }
 
 const KerningContext = createContext<KerningContextType | undefined>(undefined);
@@ -102,7 +102,8 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
     
     // Discovery Refs
     const onDiscoveryProgressRef = useRef<((p: number) => void) | null>(null);
-    const discoveryResolveRef = useRef<((count: number) => void) | null>(null);
+    const discoveryResolveRef = useRef<((results: Map<string, number>) => void) | null>(null);
+    const shouldDispatchDiscoveryRef = useRef(true);
     
     // Initialize worker
     useEffect(() => {
@@ -118,17 +119,22 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
                  return;
             }
 
+            const resultMap = new Map<string, number>();
             if (results && Object.keys(results).length > 0) {
-                const updateMap = new Map<string, number>();
-                Object.entries(results).forEach(([key, val]) => updateMap.set(key, val as number));
-                dispatch({ type: 'MERGE_SUGGESTIONS', payload: updateMap });
+                Object.entries(results).forEach(([key, val]) => resultMap.set(key, val as number));
+                
+                // Only dispatch if allowed (default true)
+                if (shouldDispatchDiscoveryRef.current) {
+                    dispatch({ type: 'MERGE_SUGGESTIONS', payload: resultMap });
+                }
             }
             
-            // If this was a discovery batch, resolve the promise
+            // If this was a discovery batch, resolve the promise with the map
             if (type === 'complete' && discoveryResolveRef.current) {
-                 discoveryResolveRef.current(Object.keys(results || {}).length);
+                 discoveryResolveRef.current(resultMap);
                  discoveryResolveRef.current = null;
                  onDiscoveryProgressRef.current = null;
+                 shouldDispatchDiscoveryRef.current = true; // Reset
             }
         };
 
@@ -200,8 +206,8 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
     }, [processQueue, settings, metrics, state.ignoredPairs]);
 
     // NEW: Discovery Logic
-    const discoverKerning = useCallback(async (onProgress: (p: number) => void): Promise<number> => {
-        if (!workerRef.current || !settings || !metrics || !characterSets) return 0;
+    const discoverKerning = useCallback(async (onProgress: (p: number) => void, shouldCalculateValues: boolean, returnResultsOnly: boolean = false): Promise<Map<string, number>> => {
+        if (!workerRef.current || !settings || !metrics || !characterSets) return new Map();
         
         onProgress(0); // Start
         
@@ -227,6 +233,7 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
         return new Promise((resolve) => {
             onDiscoveryProgressRef.current = onProgress;
             discoveryResolveRef.current = resolve;
+            shouldDispatchDiscoveryRef.current = !returnResultsOnly;
             
             batchIdRef.current += 1;
             workerRef.current!.postMessage({
@@ -235,7 +242,8 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
                 allGlyphDefs: allDrawnChars,
                 glyphDataMap: relevantGlyphData,
                 metrics,
-                strokeThickness: settings.strokeThickness
+                strokeThickness: settings.strokeThickness,
+                shouldCalculateValues
             });
         });
 

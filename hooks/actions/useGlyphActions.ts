@@ -84,6 +84,9 @@ export const useGlyphActions = (
     
     // --- Auto-Kern Trigger Logic ---
     const triggerAutoKernForChar = useCallback((unicode: number) => {
+        // Optimization: Only run if background auto-kerning is explicitly enabled
+        if (!settings?.isBackgroundAutoKerningEnabled) return;
+
         // Step 1: Clean Up Stale Suggestions
         // Identify existing suggestions that involve this char and are not manually accepted (i.e. not in kerningMap)
         // We remove them immediately to provide feedback that they are being recalculated.
@@ -161,7 +164,7 @@ export const useGlyphActions = (
             queueAutoKern(affectedPairs);
         }
 
-    }, [recommendedKerning, characterSets, allCharsByUnicode, allCharsByName, groups, glyphDataMap, queueAutoKern, suggestedKerningMap, kerningMap, kerningDispatch]);
+    }, [recommendedKerning, characterSets, allCharsByUnicode, allCharsByName, groups, glyphDataMap, queueAutoKern, suggestedKerningMap, kerningMap, kerningDispatch, settings?.isBackgroundAutoKerningEnabled]);
 
     const handleSaveGlyph = useCallback(async (
         unicode: number,

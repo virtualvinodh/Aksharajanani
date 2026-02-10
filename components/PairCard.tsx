@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Character, GlyphData, FontMetrics } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -31,8 +30,8 @@ const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showR
 
         ctx.clearRect(0, 0, KERNING_CARD_CANVAS_SIZE, KERNING_CARD_CANVAS_SIZE);
 
-        const leftGlyph = glyphDataMap.get(pair.left.unicode);
-        const rightGlyph = glyphDataMap.get(pair.right.unicode);
+        const leftGlyph = glyphDataMap.get(pair.left.unicode!);
+        const rightGlyph = glyphDataMap.get(pair.right.unicode!);
         if (!leftGlyph || !rightGlyph) return;
 
         const leftBox = getAccurateGlyphBBox(leftGlyph.paths, strokeThickness);
@@ -43,10 +42,10 @@ const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showR
         const rightMinX = rightBox.x;
 
         const kernVal = kerningValue ?? 0;
-        const rsbLeft = pair.left.rsb ?? metrics.defaultRSB;
-        const lsbRight = pair.right.lsb ?? metrics.defaultLSB;
+        const rsbL = pair.left.rsb ?? metrics.defaultRSB;
+        const lsbR = pair.right.lsb ?? metrics.defaultLSB;
         
-        const totalContentWidth = (leftMaxX - leftBox.x) + rsbLeft + kernVal + lsbRight + (rightBox.width);
+        const totalContentWidth = (leftMaxX - leftBox.x) + rsbL + kernVal + lsbR + (rightBox.width);
         if (totalContentWidth <= 0) return;
     
         const scaleFactor = Math.min(
@@ -80,7 +79,7 @@ const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showR
         ctx.restore();
         
         // Draw right glyph
-        const rightStartTranslateX = leftMaxX + rsbLeft + kernVal + lsbRight - rightMinX;
+        const rightStartTranslateX = leftMaxX + rsbL + kernVal + lsbR - rightMinX;
         ctx.save();
         ctx.translate(rightStartTranslateX, 0);
         renderPaths(ctx, rightGlyph.paths, { strokeThickness, color: glyphColor });
@@ -91,6 +90,9 @@ const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showR
     }, [pair, kerningValue, glyphDataMap, strokeThickness, theme, metrics, glyphVersion]);
 
     const hasKerning = kerningValue !== undefined;
+    // Don't show value if it is 0 and it is a suggestion (likely just a "Detected" pair)
+    const shouldShowValue = hasKerning && !(isSuggested && kerningValue === 0);
+
     const cardClasses = `relative border-2 rounded-lg p-2 flex items-center justify-center cursor-pointer transition-all duration-200 aspect-square
         ${isSuggested
             ? 'bg-blue-50 dark:bg-blue-900/20 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-600'
@@ -101,13 +103,14 @@ const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showR
     return (
         <div onClick={onClick} className={cardClasses}>
             <canvas ref={canvasRef} width={KERNING_CARD_CANVAS_SIZE} height={KERNING_CARD_CANVAS_SIZE}></canvas>
-            {isSuggested && (
-                <span className="absolute top-1 right-1 text-xs bg-blue-500 text-white font-semibold px-2 py-0.5 rounded-full">Auto</span>
-            )}
+            
+            {/* Logic Change: "Auto" label removed entirely per request to merge visually */}
+            
             {isRecommended && !hasKerning && !isSuggested && showRecommendedLabel && (
                 <span className="absolute top-1 right-1 text-xs bg-yellow-400 dark:bg-yellow-600 text-yellow-900 dark:text-yellow-100 font-semibold px-2 py-0.5 rounded-full">{t('recommended')}</span>
             )}
-            {hasKerning && (
+            
+            {shouldShowValue && (
                 <span className={`absolute top-1 left-1 text-xs font-bold px-2 py-0.5 rounded-full ${isSuggested ? 'bg-blue-500 text-white' : 'bg-indigo-500 text-white'}`}>{kerningValue}</span>
             )}
         </div>

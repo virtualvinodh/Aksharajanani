@@ -310,6 +310,7 @@ export const useProjectLoad = ({
                     ...baseSettings, 
                     showUnicodeValues: projectToLoad.settings.showUnicodeValues ?? false, 
                     gridGhostSize: projectToLoad.settings.gridGhostSize ?? currentScript.grid.characterNameSize,
+                    isBackgroundAutoKerningEnabled: projectToLoad.settings.isBackgroundAutoKerningEnabled ?? false,
                     ...projectToLoad.settings 
                 };
                 newSettings.testPage = { ...currentScript.testPage, ...(newSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(newSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(newSettings.testPage?.lineHeight || {}) } };
@@ -336,6 +337,7 @@ export const useProjectLoad = ({
                     ...baseSettings, 
                     showUnicodeValues: false, 
                     gridGhostSize: currentScript.grid.characterNameSize,
+                    isBackgroundAutoKerningEnabled: false,
                     ...savedSettings 
                 };
                 newSettings.testPage = { ...currentScript.testPage, ...(savedSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(savedSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(savedSettings.testPage?.lineHeight || {}) } };

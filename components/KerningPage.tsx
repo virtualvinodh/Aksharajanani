@@ -134,6 +134,7 @@ const KerningPage: React.FC<KerningPageProps> = ({
 
             return { allPairsInContext: pairs, hasHiddenRecommended: hasHidden };
         } else { // 'all' mode
+            // Strict Generator Mode: Only show results if user has selected characters on both sides.
             if (selectedLeftChars.size > 0 && selectedRightChars.size > 0) {
                 for (const lId of selectedLeftChars) {
                     for (const rId of selectedRightChars) {
@@ -147,20 +148,14 @@ const KerningPage: React.FC<KerningPageProps> = ({
                     }
                 }
             } else {
-                // Review mode for 'all' tab: universe is union of saved and suggested
-                kerningMap.forEach((_, key) => {
-                    const [lId, rId] = key.split('-').map(Number);
-                    addPair(allCharsByUnicode.get(lId)!, allCharsByUnicode.get(rId)!);
-                });
-                suggestedKerningMap.forEach((_, key) => {
-                    const [lId, rId] = key.split('-').map(Number);
-                    addPair(allCharsByUnicode.get(lId)!, allCharsByUnicode.get(rId)!);
-                });
+                // If selection is incomplete, return empty list.
+                // The view will show the "Select characters..." placeholder.
+                return { allPairsInContext: [], hasHiddenRecommended: false };
             }
             const sorted = pairs.sort((a,b) => a.left.name.localeCompare(b.left.name) || a.right.name.localeCompare(b.right.name));
             return { allPairsInContext: sorted, hasHiddenRecommended: false };
         }
-    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, kerningMap, suggestedKerningMap, allCharsByUnicode, standardGridNames, isGlyphDrawn]);
+    }, [mode, recommendedKerning, characterSets, rulesState.fontRules, allCharsByName, selectedLeftChars, selectedRightChars, suggestedKerningMap, allCharsByUnicode, standardGridNames, isGlyphDrawn]);
 
     // 2. Filter list by search query and saved status
     const filteredPairs = useMemo(() => {
@@ -310,8 +305,9 @@ const KerningPage: React.FC<KerningPageProps> = ({
                 }}
                 onRemove={() => {
                     const newMap = new Map(kerningMap);
-                    newMap.set(key, 0);
+                    newMap.delete(key);
                     kerningDispatch({ type: 'SET_MAP', payload: newMap });
+                    kerningDispatch({ type: 'REMOVE_SUGGESTIONS', payload: [key] });
                 }}
                 onClose={() => setEditingIndex(null)} onNavigate={handleNavigate}
                 hasPrev={editingIndex > 0} hasNext={editingIndex < filteredPairs.length - 1}
@@ -340,6 +336,9 @@ const KerningPage: React.FC<KerningPageProps> = ({
             suggestedKerningMap={suggestedKerningMap}
             onAcceptSuggestions={handleAcceptSuggestions}
             onSwitchToAllPairs={onSwitchToAllPairs}
+            // Pass localized strings for empty state
+            emptyStateTitle={mode === 'all' ? t('kerningGeneratePairsTitle') : undefined}
+            emptyStateMessage={mode === 'all' ? t('kerningGeneratePairsBody') : undefined}
         />
     );
 };
