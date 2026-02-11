@@ -21,8 +21,6 @@ interface RulesWorkspaceProps {
 
 const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
     const { t } = useLocale();
-    // FIX: Import `markAttachmentRules` from the `useProject` hook.
-    // This provides the necessary data for generating font features and resolves a missing prop error in the `RulesPage` component.
     const { characterSets, allCharsByName, allCharsByUnicode, positioningGroupNames, markAttachmentRules } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { kerningMap } = useKerning();
@@ -65,8 +63,6 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
                     fontName={settings.fontName}
                     settings={settings}
                     metrics={metrics}
-                    // FIX: Pass the `markAttachmentRules` prop to the `RulesPage` component.
-                    // This resolves a TypeScript error where the prop was expected but not provided, ensuring that feature generation functions receive all required arguments.
                     markAttachmentRules={markAttachmentRules}
                     isFeaEditMode={state.isFeaEditMode}
                     onIsFeaEditModeChange={(isEditMode) => dispatch({ type: 'SET_FEA_EDIT_MODE', payload: isEditMode })}
@@ -74,7 +70,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
                     onManualFeaCodeChange={(code) => dispatch({ type: 'SET_MANUAL_FEA_CODE', payload: code })}
                     onHasUnsavedChanges={(isDirty) => dispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: isDirty })}
                     glyphVersion={glyphVersion}
-                    hiddenGroupNames={positioningGroupNames}
+                    lockedGroupNames={positioningGroupNames} // Passing positioning groups as locked
                 />
             </div>
             <Footer hideOnMobile={true} />

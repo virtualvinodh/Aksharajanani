@@ -26,11 +26,12 @@ const PositioningRulesModal: React.FC<PositioningRulesModalProps> = ({ isOpen, o
         baseAttachmentClasses, setBaseAttachmentClasses,
         recommendedKerning, setRecommendedKerning,
         characterSets,
+        positioningGroupNames, // Get the tracking set
         setPositioningGroupNames
     } = useProject();
 
     const { state: rulesState, dispatch: rulesDispatch } = useRules();
-    const groups = rulesState.fontRules?.groups || {};
+    const globalGroups = rulesState.fontRules?.groups || {};
 
     // Local state for the modal to allow "Cancel" behavior
     const [localPosRules, setLocalPosRules] = useState<PositioningRules[]>([]);
@@ -54,19 +55,28 @@ const PositioningRulesModal: React.FC<PositioningRulesModalProps> = ({ isOpen, o
         const mClass = JSON.parse(JSON.stringify(markAttachmentClasses || []));
         const bClass = JSON.parse(JSON.stringify(baseAttachmentClasses || []));
         const kern = JSON.parse(JSON.stringify(recommendedKerning || []));
-        const grps = JSON.parse(JSON.stringify(groups));
+        
+        // FILTER: Only load groups that are tagged as Positioning Groups
+        // If positioningGroupNames is empty (legacy project), we might load nothing, 
+        // but new groups created here will be added to the set.
+        const filteredGroups: Record<string, string[]> = {};
+        Object.keys(globalGroups).forEach(key => {
+            if (positioningGroupNames.has(key)) {
+                filteredGroups[key] = globalGroups[key];
+            }
+        });
 
         setLocalPosRules(pos);
         setLocalMarkAttach(mark);
         setLocalMarkClasses(mClass);
         setLocalBaseClasses(bClass);
         setLocalKerning(kern);
-        setLocalGroups(grps);
+        setLocalGroups(filteredGroups);
 
         // Snapshot for dirty check
-        const snapshot = { pos, mark, mClass, bClass, kern, grps };
+        const snapshot = { pos, mark, mClass, bClass, kern, grps: filteredGroups };
         setInitialStateJson(JSON.stringify(snapshot));
-    }, [positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, groups]);
+    }, [positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, globalGroups, positioningGroupNames]);
 
     // Hydrate local state on open
     useEffect(() => {
@@ -82,15 +92,27 @@ const PositioningRulesModal: React.FC<PositioningRulesModalProps> = ({ isOpen, o
         setBaseAttachmentClasses(localBaseClasses);
         setRecommendedKerning(localKerning);
         
-        // --- FIX STALE STATE REGRESSION ---
-        // Any group existing in the Positioning workspace manager is considered a Positioning group.
-        // This Set is used by the Rules tab to filter out Positioning groups from the general list,
-        // and by the Drawing tab to provide specific collision error messages.
-        setPositioningGroupNames(new Set(Object.keys(localGroups)));
+        // 1. Identify current Positioning Groups
+        const newPosGroupKeys = new Set(Object.keys(localGroups));
         
-        // Save Global Groups back to Rules Context
+        // 2. Update the tracking set in ProjectContext
+        setPositioningGroupNames(newPosGroupKeys);
+        
+        // 3. Merge Strategy for Global Rules
         if (rulesState.fontRules) {
-             const newRules = { ...rulesState.fontRules, groups: localGroups };
+             const currentGlobalGroups = { ...rulesState.fontRules.groups };
+             
+             // A. Remove any groups that were previously positioning groups but are now deleted from localGroups
+             positioningGroupNames.forEach(oldKey => {
+                 if (!newPosGroupKeys.has(oldKey)) {
+                     delete currentGlobalGroups[oldKey];
+                 }
+             });
+
+             // B. Add/Update current local groups into global
+             Object.assign(currentGlobalGroups, localGroups);
+
+             const newRules = { ...rulesState.fontRules, groups: currentGlobalGroups };
              rulesDispatch({ type: 'SET_FONT_RULES', payload: newRules });
         }
         
