@@ -55,6 +55,7 @@ export const useGlyphConstruction = ({
                          x: manualT?.x ?? 0, 
                          y: manualT?.y ?? 0, 
                          scale: manualT?.scale ?? 1, 
+                         rotation: manualT?.rotation ?? 0,
                          mode: 'absolute' 
                      });
                      return;
@@ -113,6 +114,7 @@ export const useGlyphConstruction = ({
                     x: targetX, 
                     y: targetY, 
                     scale: manualT?.scale ?? 1, 
+                    rotation: manualT?.rotation ?? 0,
                     mode: 'absolute' 
                 });
                 
