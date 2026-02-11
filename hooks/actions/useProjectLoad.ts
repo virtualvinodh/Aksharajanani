@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -337,7 +338,7 @@ export const useProjectLoad = ({
                     ...baseSettings, 
                     showUnicodeValues: false, 
                     gridGhostSize: currentScript.grid.characterNameSize,
-                    isBackgroundAutoKerningEnabled: false,
+                    isBackgroundAutoKerningEnabled: baseSettings.isBackgroundAutoKerningEnabled ?? false,
                     ...savedSettings 
                 };
                 newSettings.testPage = { ...currentScript.testPage, ...(savedSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(savedSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(savedSettings.testPage?.lineHeight || {}) } };

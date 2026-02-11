@@ -103,17 +103,7 @@
       { "unicode": 3413, "name": "ൕ", "glyphClass": "base" },
       { "unicode": 3414, "name": "ൖ", "glyphClass": "base" }    
     ]
-  },
-  {
-    "nameKey": "miniatures",
-    "characters": [
-      {  "name": "ഗ", "glyphClass": "base", "link": [""], "compositeTransform": [""] },
-      {  "name": "ഡ", "glyphClass": "base", "link": [""], "compositeTransform": [""] },
-      { "name": "ണ", "glyphClass": "base", "link": [""], "compositeTransform": [""] },
-      {  "name": "റ", "glyphClass": "base", "link": [""], "compositeTransform": [""]},
-      { "name": "ശ", "glyphClass": "base", "link": [""], "compositeTransform": [""] }  
-    ]
-  },  
+  }, 
   {
     "nameKey": "conjuncts",
     "characters":[

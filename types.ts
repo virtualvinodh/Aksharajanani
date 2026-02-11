@@ -1,4 +1,5 @@
 
+
 export interface Point {
   x: number;
   y: number;
@@ -260,6 +261,7 @@ export interface ScriptDefaults {
     showUnicodeValues?: boolean;
     showGlyphNames?: boolean;
     preferKerningTerm?: boolean;
+    isBackgroundAutoKerningEnabled?: boolean;
 }
 
 export interface Range {
