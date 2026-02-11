@@ -6,6 +6,7 @@ import { useRules } from '../contexts/RulesContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useProject } from '../contexts/ProjectContext';
 import { deepClone } from '../utils/cloneUtils';
+import { useRefactoring } from './useRefactoring';
 
 export type RuleType = 'ligature' | 'contextual' | 'multiple' | 'single';
 export type DistRuleType = 'simple' | 'contextual';
@@ -16,6 +17,10 @@ export const useRulesState = () => {
     const { state: rulesState, dispatch: rulesDispatch } = useRules();
     const { showNotification } = useLayout();
     const { allCharsByUnicode } = useProject();
+    
+    // Use the Refactoring Hook
+    const { renameGroup } = useRefactoring();
+
     const { fontRules, manualFeaCode, isFeaEditMode } = rulesState;
 
     const [localRules, setLocalRules] = useState(() => deepClone(fontRules));
@@ -36,16 +41,11 @@ export const useRulesState = () => {
     // Sync global fontRules to localRules only if they differ content-wise
     useEffect(() => {
         try {
-            // CRITICAL FIX: Break the infinite loop.
-            // Only update local state if the CONTENT of the global state is different.
-            // References will always be different on context updates, so === check fails.
-            // JSON.stringify is safe here as fontRules is a POJO (no Maps/Sets).
             if (JSON.stringify(localRules) === JSON.stringify(fontRules)) {
                 return;
             }
             setLocalRules(deepClone(fontRules));
         } catch (e) {
-            // Fallback if stringify fails (unlikely for rules)
             setLocalRules(deepClone(fontRules));
         }
     }, [fontRules]);
@@ -59,7 +59,6 @@ export const useRulesState = () => {
         if (!settings?.isAutosaveEnabled) {
           return;
         }
-        // Avoid flagging as unsaved if they are identical
         if (JSON.stringify(localRules) === JSON.stringify(fontRules)) {
             rulesDispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: false });
             return;
@@ -100,8 +99,6 @@ export const useRulesState = () => {
     }, [localRules, scriptTag, allCharsByUnicode]);
 
     useEffect(() => {
-        // This effect ensures that when the lookups are first loaded, they are all expanded.
-        // It won't re-expand them on subsequent updates if the user has manually collapsed some.
         if (isInitialLookupsLoad.current && Object.keys(lookups).length > 0) {
             setExpandedLookups(new Set(Object.keys(lookups)));
             isInitialLookupsLoad.current = false;
@@ -137,7 +134,6 @@ export const useRulesState = () => {
 
             if (targetObject && ruleKey in targetObject) {
                 delete targetObject[ruleKey];
-                // Clean up empty rule groups if necessary
             }
             return newRules;
         });
@@ -157,13 +153,11 @@ export const useRulesState = () => {
                 if (!newRules[scriptTag!][contextName]) newRules[scriptTag!][contextName] = {};
                 targetObject = newRules[scriptTag!][contextName];
                 
-                // Ensure 'children' array exists and contains 'inline' for feature context
                 if (!targetObject.children) {
                     targetObject.children = [];
                 }
                 const hasInline = targetObject.children.some((c: any) => c.type === 'inline');
                 if (!hasInline) {
-                    // Prepend inline to children if not present, to ensure visibility
                     targetObject.children.unshift({ type: 'inline' });
                 }
             } else {
@@ -214,13 +208,12 @@ export const useRulesState = () => {
         setLocalRules(prev => {
             const newRules = deepClone(prev);
             if (!newRules[scriptTag]) newRules[scriptTag] = {};
-            newRules[scriptTag][tag] = { children: [{ type: 'inline' }] }; // Initialize with children array
+            newRules[scriptTag][tag] = { children: [{ type: 'inline' }] };
             return newRules;
         });
         setActiveFeature(tag);
     };
 
-    // --- New Lookup Handlers ---
     const handleAddLookup = (name: string): boolean => {
         const trimmedName = name.trim();
         if (!trimmedName || lookups[trimmedName]) {
@@ -248,7 +241,6 @@ export const useRulesState = () => {
             if (newRules.lookups?.[oldName]) {
                 newRules.lookups[trimmedNewName] = newRules.lookups[oldName];
                 delete newRules.lookups[oldName];
-                // Also update any features referencing the old name
                 if (newRules[scriptTag!]) {
                     Object.keys(newRules[scriptTag!]).forEach(featureTag => {
                         const feature = newRules[scriptTag!][featureTag];
@@ -347,7 +339,6 @@ export const useRulesState = () => {
         });
     };
 
-
     const activeLigatureRules = useMemo(() => (scriptTag && activeFeature && localRules[scriptTag]?.[activeFeature]?.liga) ? localRules[scriptTag][activeFeature].liga : {}, [localRules, scriptTag, activeFeature]);
     const activeContextualRules = useMemo(() => (scriptTag && activeFeature && localRules[scriptTag]?.[activeFeature]?.context) ? localRules[scriptTag][activeFeature].context : {}, [localRules, scriptTag, activeFeature]);
     const activeMultipleRules = useMemo(() => (scriptTag && activeFeature && localRules[scriptTag]?.[activeFeature]?.multi) ? localRules[scriptTag][activeFeature].multi : {}, [localRules, scriptTag, activeFeature]);
@@ -360,7 +351,6 @@ export const useRulesState = () => {
             const newRules = deepClone(prev);
             if (newRules[scriptTag]?.[activeFeature]?.[type]) {
                  if (type === 'simple') {
-                    // This handles editing a simple rule, including changing its target character (key).
                     if (ruleData.oldKey && ruleData.oldKey !== ruleData.newKey) {
                         delete newRules[scriptTag][activeFeature][type][ruleData.oldKey];
                     }
@@ -380,7 +370,6 @@ export const useRulesState = () => {
             if (!newRules[scriptTag]) newRules[scriptTag] = {};
             if (!newRules[scriptTag][activeFeature]) newRules[scriptTag][activeFeature] = {};
             
-            // Ensure children inline block exists for feature (same logic as handleSaveNewRule)
             const targetObject = newRules[scriptTag][activeFeature];
             if (!targetObject.children) targetObject.children = [];
             if (!targetObject.children.some((c: any) => c.type === 'inline')) {
@@ -443,17 +432,29 @@ export const useRulesState = () => {
         setActiveFeature(newFeature);
     };
 
+    // Modified Group Saving with Refactoring Support
     const handleSaveGroup = useCallback(({ originalKey, newKey, members }: { originalKey?: string; newKey: string; members: string[] }) => {
-        setLocalRules(prev => {
-            const newRules = deepClone(prev);
-            if (!newRules.groups) newRules.groups = {};
-            if (originalKey && originalKey !== newKey) {
-                delete newRules.groups[originalKey];
-            }
-            newRules.groups[newKey] = members;
-            return newRules;
-        });
-    }, []);
+        if (originalKey && originalKey !== newKey) {
+            // This is a rename operation
+            renameGroup(originalKey, newKey, 'group');
+            // Update members locally (though renameGroup handles propagation, we want the current members)
+            setLocalRules(prev => {
+                const newRules = deepClone(prev);
+                if (!newRules.groups) newRules.groups = {};
+                // Ensure new group has latest members
+                newRules.groups[newKey] = members;
+                return newRules;
+            });
+        } else {
+            // New Group or just updating members
+            setLocalRules(prev => {
+                const newRules = deepClone(prev);
+                if (!newRules.groups) newRules.groups = {};
+                newRules.groups[newKey] = members;
+                return newRules;
+            });
+        }
+    }, [renameGroup]);
 
     const handleDeleteGroup = useCallback((key: string) => {
         setLocalRules(prev => {

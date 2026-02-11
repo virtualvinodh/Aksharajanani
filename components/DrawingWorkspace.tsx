@@ -23,6 +23,7 @@ import { deepClone } from '../utils/cloneUtils';
 import { VirtuosoHandle } from 'react-virtuoso';
 import ConfirmationModal from './ConfirmationModal';
 import { useGlyphFilter } from '../hooks/useGlyphFilter';
+import { useRefactoring } from '../hooks/useRefactoring';
 
 interface DrawingWorkspaceProps {
     characterSets: CharacterSet[];
@@ -50,6 +51,9 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
     const { state: rulesState } = useRules();
     const rulesGroups = rulesState.fontRules?.groups || {};
+    
+    // Use Refactoring Hook
+    const { renameGroup } = useRefactoring();
 
     const [modalState, setModalState] = useState<{ type: 'create' | 'rename', index?: number, isOpen: boolean }>({ type: 'create', isOpen: false });
     const [modalInputValue, setModalInputValue] = useState('');
@@ -345,12 +349,11 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const handleRenameGroup = useCallback((index: number, newName: string) => {
         const targetSet = visibleCharacterSets[index];
         if (!targetSet) return;
-        const realIndex = characterSets.findIndex(s => s.nameKey === targetSet.nameKey);
         
-        if (realIndex !== -1 && newName.trim()) {
-            characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: (prev) => prev ? prev.map((set, i) => i === realIndex ? { ...set, nameKey: newName.trim() } : set) : null });
-        }
-    }, [visibleCharacterSets, characterSets, characterDispatch]);
+        // Use the centralized refactoring hook to handle the rename and all cascades
+        renameGroup(targetSet.nameKey, newName.trim(), 'set');
+
+    }, [visibleCharacterSets, renameGroup]);
 
     const handleRequestDeleteGroup = useCallback((index: number) => {
         const targetSet = visibleCharacterSets[index];
