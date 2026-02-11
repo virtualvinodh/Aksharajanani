@@ -185,7 +185,9 @@
         "unicode": 105,
         "name": "i",
         "glyphClass": "base",
-        "link": ["ı", "̇"]
+        "position": ["ı", "̇"],
+        "gpos": "mark",
+        "gsub": "liga"
       },
       {
         "unicode": 106,
