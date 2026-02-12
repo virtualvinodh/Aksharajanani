@@ -208,9 +208,10 @@ const TutorialManager: React.FC = () => {
         fetchTranslations();
     }, [locale]);
 
-    // 1. Define Linear Tutorial Steps
     const linearTutorialSteps: Step[] = useMemo(() => {
         if (!translations) return [];
+        
+        const richText = (key: string) => <div dangerouslySetInnerHTML={{ __html: translations[key] }} />;
         
         const steps: Step[] = [
             // 0. Welcome
@@ -226,7 +227,7 @@ const TutorialManager: React.FC = () => {
                 disableBeacon: true,
                 data: { isTutorial: true, translations }
             },
-            // 1. Click 'A' (Interaction)
+            // 1. Click 'A'
             {
                 target: '[data-tour="grid-item-0"]',
                 content: translations.clickFirstChar,
@@ -235,16 +236,15 @@ const TutorialManager: React.FC = () => {
                 hideFooter: true, 
                 data: { isTutorial: true, advanceOn: 'selected-A', translations }
             },
-            // 2. Highlight Pen Tool
+            // 2. Pen Tool
             {
                 target: '[data-tour="toolbar-pen"]',
                 content: translations.toolbarPenContent,
-                placement: 'right',
+                placement: isLargeScreen ? 'right' : 'bottom',
                 disableBeacon: true, 
-                spotlightClicks: true, 
                 data: { isTutorial: true, translations }
             },
-            // 3. Draw on Canvas (Wait for draw)
+            // 3. Draw 'A'
             {
                 target: '[data-tour="drawing-canvas"]',
                 content: translations.drawContent,
@@ -253,432 +253,195 @@ const TutorialManager: React.FC = () => {
                 spotlightClicks: true,
                 disableOverlayClose: true,
                 data: { isTutorial: true, translations }
-            }
-        ];
+            },
+            // 4. Click Test
+            { 
+                target: '[data-tour="header-test"]', 
+                content: translations.clickTest, 
+                spotlightClicks: true, 
+                hideFooter: true, 
+                data: { isTutorial: true, advanceOn: 'test-modal-open', translations } 
+            },
+            // 5. Test Page Input
+            { 
+                target: '[data-tour="test-page-input"]', 
+                content: translations.testPageInput, 
+                placement: 'bottom', 
+                disableBeacon: true, 
+                data: { isTutorial: true, translations } 
+            },
+            // 6. Close Test Page
+            { 
+                target: '[data-tour="test-page-close"]', 
+                content: translations.closeTestPage, 
+                spotlightClicks: true, 
+                hideFooter: true, 
+                data: { isTutorial: true, advanceOn: 'test-modal-close', translations } 
+            },
+            // 7. Next for 'a'
+            {
+                target: '[data-tour="header-next"]',
+                content: translations.clickNextForA,
+                spotlightClicks: true,
+                hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'selected-a', translations }
+            },
+            // 8. Draw 'a'
+            {
+                target: '[data-tour="drawing-canvas"]',
+                content: translations.drawLowerA,
+                placement: 'right',
+                disableBeacon: true,
+                spotlightClicks: true,
+                disableOverlayClose: true,
+                data: { isTutorial: true, translations }
+            },
+            // 9. Transition to Toolbar Tour
+            {
+                target: '[data-tour="header-next"]',
+                content: translations.clickNextForToolbarTour,
+                data: { isTutorial: true, translations }
+            },
+            // 10-21. Toolbar Tour
+            { target: '[data-tour="tool-select"]', content: richText('toolSelect'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="tool-pan"]', content: richText('toolPan'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="tool-calligraphy"]', content: richText('toolCalligraphy'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="tool-eraser"]', content: richText('toolEraser'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="tool-slice"]', content: richText('toolSlice'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-undo"]', content: richText('actionUndo'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-redo"]', content: richText('actionRedo'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-cut"]', content: richText('actionCut'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-copy"]', content: richText('actionCopy'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-paste"]', content: richText('actionPaste'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-group"]', content: richText('actionGroup'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-ungroup"]', content: richText('actionUngroup'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
 
-        // --- BRANCH: TEST PAGE ACCESS ---
-        if (!isLargeScreen) {
-             // Mobile: Must go back to dashboard first
-             steps.push({
+            // 22. Next for 'T'
+            {
+                target: '[data-tour="header-next"]',
+                content: translations.clickNextForT,
+                spotlightClicks: true,
+                hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'selected-T', translations }
+            },
+            // 23. Line Tool Intro
+            {
+                target: '[data-tour="tool-line"]',
+                content: richText('toolLineIntro'),
+                placement: isLargeScreen ? 'left' : 'top',
+                disableBeacon: true,
+                data: { isTutorial: true, translations }
+            },
+            // 24. Draw 'T'
+            {
+                target: '[data-tour="drawing-canvas"]',
+                content: translations.drawT,
+                placement: 'right',
+                disableBeacon: true,
+                spotlightClicks: true,
+                disableOverlayClose: true,
+                data: { isTutorial: true, translations }
+            },
+            // 25. Next for 'F'
+            {
+                target: '[data-tour="header-next"]',
+                content: translations.clickNextForF,
+                spotlightClicks: true,
+                hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'selected-F', translations }
+            },
+            // --- BRANCH: SELECT 'F' (The tutorial flow continues from F) ---
+            ...(isLargeScreen ? [] : [{
                 target: '[data-tour="header-back"]',
                 content: translations.clickBackToDashboard,
-                spotlightClicks: true,
-                // Beacon enabled
-                hideFooter: true,
+                spotlightClicks: true, hideFooter: true,
                 data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations }
-             });
-        }
-        
-        steps.push({
-            target: '[data-tour="header-test"]',
-            content: translations.clickTest,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'test-modal-open', translations }
-        });
-
-        steps.push({
-            target: '[data-tour="test-page-input"]',
-            content: translations.testPageInput,
-            placement: 'bottom',
-            disableBeacon: true,
-            spotlightClicks: true,
-            data: { isTutorial: true, translations }
-        });
-
-        steps.push({
-            target: '[data-tour="test-page-close"]',
-            content: translations.closeTestPage,
-            spotlightClicks: true,
-            disableBeacon: true,
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'test-modal-close', translations }
-        });
-
-        // --- BRANCH: SELECT 'F' ---
-        if (!isLargeScreen) {
-            // Mobile: Must re-enter editor via 'A' (or any), then open drawer
-            steps.push({
-                target: '[data-tour="grid-item-0"]', // Use A as entry point again
+            },{
+                target: '[data-tour="grid-item-0"]',
                 content: translations.clickAAgain,
-                spotlightClicks: true,
-                disableBeacon: true,
-                hideFooter: true,
+                spotlightClicks: true, hideFooter: true,
                 data: { isTutorial: true, advanceOn: 're-enter-editor', translations }
-            });
-            steps.push({
+            },{
                 target: '[data-tour="floating-grid-btn"]',
                 content: translations.openGrid,
-                spotlightClicks: true,
-                disableBeacon: true,
-                hideFooter: true,
+                spotlightClicks: true, hideFooter: true,
                 data: { isTutorial: true, advanceOn: 'drawer-open', translations }
-            });
-            // Drawer open -> Select F
-             steps.push({
-                target: '#mobile-nav-drawer [data-tour="grid-item-1"]', // Scoped to Drawer ID to avoid conflict
+            }]),
+            // Select 'F'
+            {
+                target: isLargeScreen ? '[data-tour="grid-item-1"]' : '#mobile-nav-drawer [data-tour="grid-item-1"]',
                 content: translations.selectCharF,
-                spotlightClicks: true,
-                disableBeacon: true,
-                hideFooter: true,
-                placement: 'right', // Drawer is on left, so tooltip goes right
+                spotlightClicks: true, hideFooter: true, placement: 'right',
                 data: { isTutorial: true, advanceOn: 'selected-F', translations }
-            });
-        } else {
-            // Desktop: Select F from sidebar directly
-             steps.push({
-                target: '[data-tour="grid-item-1"]', // F in sidebar
-                content: translations.selectCharF,
-                spotlightClicks: true,
-                disableBeacon: true,
-                hideFooter: true,
-                placement: 'right',
-                data: { isTutorial: true, advanceOn: 'selected-F', translations }
-            });
-        }
+            },
+            // Draw 'F'
+            {
+                target: '[data-tour="drawing-canvas"]',
+                content: translations.drawCharF,
+                placement: 'right', disableBeacon: true, spotlightClicks: true,
+                disableOverlayClose: true, data: { isTutorial: true, translations }
+            },
+            // Next for 'E'
+            {
+                target: '[data-tour="header-next"]',
+                content: translations.clickNextForComposite,
+                spotlightClicks: true, hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'selected-E', translations }
+            },
+            // Composite Explanation
+            {
+                target: 'body',
+                content: richText('compositeExplanation'),
+                placement: 'center', disableBeacon: true,
+                data: { isTutorial: true, translations }
+            },
+            // Draw Composite 'E'
+            {
+                target: '[data-tour="drawing-canvas"]',
+                content: translations.drawComposite,
+                placement: 'right', disableBeacon: true, spotlightClicks: true,
+                disableOverlayClose: true, data: { isTutorial: true, translations }
+            },
+            // Linked Glyphs section
+            { target: '[data-tour="header-next"]', content: translations.clickNextForLowerE, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-e', translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawLowerE, placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-next"]', content: translations.clickNextForLinked, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-combining', translations } },
+            { target: 'body', content: richText('linkedExplanation'), placement: 'center', disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="linked-source-strip"]', content: translations.linkedStripNav, placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="drawing-canvas"]', content: richText('transformLinked'), placement: 'right', disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-prev"]', content: translations.clickPrevForModification, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-e', translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.modifyLowerE, placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-next"]', content: translations.clickNextToVerify, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-combining', translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.verifyLink, placement: 'right', disableBeacon: true, data: { isTutorial: true, translations } },
+            
+            // Smart Positioning section
+            { target: '[data-tour="header-next"]', content: translations.clickNextForN, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-n', translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawN, placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-next"]', content: translations.clickNextForTilde, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-tilde', translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawTilde, placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-next"]', content: translations.clickNextForMacron, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-macron', translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawMacron, placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-next"]', content: translations.clickNextForNTilde, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-ntilde', translations } },
+            { target: '[data-tour="positioning-canvas"]', content: richText('positioningIntro'), placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="related-pairs-strip"]', content: richText('smartClassExpl'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="strip-link-toggle"]', content: richText('unlinkExpl'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-detach-pos"]', content: richText('detachExpl'), placement: 'bottom', disableBeacon: true, data: { isTutorial: true, translations } },
 
-        // Common Finish
-        steps.push({
-            target: '[data-tour="drawing-canvas"]',
-            content: translations.drawCharF,
-            placement: 'right',
-            disableBeacon: true,
-            spotlightClicks: true,
-            disableOverlayClose: true,
-            data: { isTutorial: true, translations }
-        });
-        
-        steps.push({
-            target: '[data-tour="tool-select"]',
-            content: translations.toolSelectPan,
-            placement: 'top',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
+            // Go Back to Grid
+            {
+                target: '[data-tour="header-back"]', content: translations.explainBack, spotlightClicks: true, hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations }
+            },
+            
+            // Final Header Actions
+            { target: '[data-tour="header-creator"]', content: translations.explainCreator, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-compare"]', content: translations.explainCompare, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-settings"]', content: translations.explainSettings, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-export"]', content: translations.explainExport, data: { isTutorial: true, translations } },
 
-        steps.push({
-            target: '[data-tour="tool-eraser"]',
-            content: translations.toolEraser,
-            placement: 'top',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
-
-        steps.push({
-            target: '[data-tour="action-undo"]',
-            content: translations.actionUndo,
-            placement: 'top',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
-
-        steps.push({
-            target: '[data-tour="action-group"]',
-            content: translations.actionGroup,
-            placement: 'top',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
-
-        steps.push({
-            target: '[data-tour="header-next"]',
-            content: translations.clickNextForComposite,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'selected-E', translations }
-        });
-
-        steps.push({
-            target: 'body',
-            content: translations.compositeExplanation,
-            placement: 'center',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
-        
-        // Draw the composite parts
-        steps.push({
-            target: '[data-tour="drawing-canvas"]',
-            content: translations.drawComposite,
-            placement: 'right',
-            disableBeacon: true,
-            spotlightClicks: true,
-            disableOverlayClose: true,
-            data: { isTutorial: true, translations }
-        });
-
-        // --- NEW LINKED GLYPHS SECTION ---
-        
-        // Navigate to 'e'
-        steps.push({
-            target: '[data-tour="header-next"]',
-            content: translations.clickNextForLowerE,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'selected-e', translations }
-        });
-        
-        // Draw 'e'
-        steps.push({
-            target: '[data-tour="drawing-canvas"]',
-            content: translations.drawLowerE,
-            placement: 'right',
-            disableBeacon: true,
-            spotlightClicks: true,
-            disableOverlayClose: true,
-            data: { isTutorial: true, translations }
-        });
-        
-        // Navigate to Combining Mark (Linked)
-        steps.push({
-            target: '[data-tour="header-next"]',
-            content: translations.clickNextForLinked,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'selected-combining', translations }
-        });
-        
-        // Explain Linking
-        steps.push({
-            target: 'body',
-            content: translations.linkedExplanation,
-            placement: 'center',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
-
-        // New Step: Point out the bottom strip for navigation
-        steps.push({
-            target: '[data-tour="linked-source-strip"]',
-            content: translations.linkedStripNav,
-            placement: 'top',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
-
-        // Explain Transforming Linked Glyph
-        steps.push({
-            target: '[data-tour="drawing-canvas"]',
-            content: translations.transformLinked,
-            placement: 'right',
-            disableBeacon: true,
-            spotlightClicks: true, 
-            data: { isTutorial: true, translations }
-        });
-
-        // Navigate Back
-        steps.push({
-            target: '[data-tour="header-prev"]',
-            content: translations.clickPrevForModification,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'selected-e', translations }
-        });
-        
-        // Modify Source
-        steps.push({
-            target: '[data-tour="drawing-canvas"]',
-            content: translations.modifyLowerE,
-            placement: 'right',
-            disableBeacon: true,
-            spotlightClicks: true,
-            disableOverlayClose: true,
-            data: { isTutorial: true, translations }
-        });
-        
-        // Return to Verify
-        steps.push({
-            target: '[data-tour="header-next"]',
-            content: translations.clickNextToVerify,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'selected-combining', translations }
-        });
-        
-        // Conclusion of Linking
-        steps.push({
-            target: '[data-tour="drawing-canvas"]',
-            content: translations.verifyLink,
-            placement: 'right',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
-        
-        // --- SMART POSITIONING SECTION ---
-        
-        // Go to 'n'
-        steps.push({
-            target: '[data-tour="header-next"]',
-            content: translations.clickNextForN,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'selected-n', translations }
-        });
-
-        // Draw 'n'
-        steps.push({
-            target: '[data-tour="drawing-canvas"]',
-            content: translations.drawN,
-            placement: 'right',
-            disableBeacon: true,
-            spotlightClicks: true,
-            disableOverlayClose: true,
-            data: { isTutorial: true, translations }
-        });
-
-        // Go to Tilde
-        steps.push({
-            target: '[data-tour="header-next"]',
-            content: translations.clickNextForTilde,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'selected-tilde', translations }
-        });
-
-        // Draw Tilde
-        steps.push({
-            target: '[data-tour="drawing-canvas"]',
-            content: translations.drawTilde,
-            placement: 'right',
-            disableBeacon: true,
-            spotlightClicks: true,
-            disableOverlayClose: true,
-            data: { isTutorial: true, translations }
-        });
-
-        // Go to Macron
-        steps.push({
-            target: '[data-tour="header-next"]',
-            content: translations.clickNextForMacron,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'selected-macron', translations }
-        });
-
-        // Draw Macron
-        steps.push({
-            target: '[data-tour="drawing-canvas"]',
-            content: translations.drawMacron,
-            placement: 'right',
-            disableBeacon: true,
-            spotlightClicks: true,
-            disableOverlayClose: true,
-            data: { isTutorial: true, translations }
-        });
-
-        // Go to n-tilde (Positioning Mode)
-        steps.push({
-            target: '[data-tour="header-next"]',
-            content: translations.clickNextForNTilde,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'selected-ntilde', translations }
-        });
-
-        // Explain Positioning
-        steps.push({
-            target: '[data-tour="positioning-canvas"]',
-            content: translations.positioningIntro,
-            placement: 'right',
-            disableBeacon: true,
-            spotlightClicks: true,
-            disableOverlayClose: true,
-            data: { isTutorial: true, translations }
-        });
-
-        // Explain Smart Classes
-        steps.push({
-            target: '[data-tour="related-pairs-strip"]',
-            content: translations.smartClassExpl,
-            placement: 'top',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
-
-        // Explain Unlinking
-        steps.push({
-            target: '[data-tour="strip-link-toggle"]',
-            content: translations.unlinkExpl,
-            placement: 'top',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
-
-        // Explain Detach
-        steps.push({
-            target: '[data-tour="header-detach-pos"]',
-            content: translations.detachExpl,
-            placement: 'bottom',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
-        
-        // Go back to dashboard (Transition Step)
-        steps.push({
-            target: '[data-tour="header-back"]',
-            content: translations.explainBack,
-            spotlightClicks: true,
-            // Beacon enabled
-            hideFooter: true,
-            data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations }
-        });
-        
-        // --- FINAL HEADER TOUR (After returning to grid) ---
-        
-        // Creator Studio
-        steps.push({
-            target: '[data-tour="header-creator"]',
-            content: translations.explainCreator,
-            spotlightClicks: true,
-            // Beacon enabled
-            data: { isTutorial: true, translations }
-        });
-
-        // Compare
-        steps.push({
-            target: '[data-tour="header-compare"]',
-            content: translations.explainCompare,
-            spotlightClicks: true,
-            // Beacon enabled
-            data: { isTutorial: true, translations }
-        });
-
-        // Settings
-        steps.push({
-            target: '[data-tour="header-settings"]',
-            content: translations.explainSettings,
-            spotlightClicks: true,
-            // Beacon enabled
-            data: { isTutorial: true, translations }
-        });
-
-        // Export (The Big Finish)
-        steps.push({
-            target: '[data-tour="header-export"]',
-            content: translations.explainExport,
-            spotlightClicks: true,
-            // Beacon enabled
-            data: { isTutorial: true, translations }
-        });
-
-        // Final Step
-        steps.push({
-            target: 'body',
-            content: translations.finish,
-            placement: 'center',
-            disableBeacon: true,
-            data: { isTutorial: true, translations }
-        });
+            // Final Message
+            { target: 'body', content: translations.finish, placement: 'center', disableBeacon: true, data: { isTutorial: true, translations } }
+        ];
 
         return steps;
     }, [translations, isLargeScreen]);
@@ -1056,51 +819,22 @@ const TutorialManager: React.FC = () => {
         const advance = () => setTimeout(() => setStepIndex(prev => prev + 1), 500);
 
         switch (advanceRule) {
-            case 'selected-A':
-                if (selectedCharacter?.name === 'A') advance();
-                break;
-            case 'back-to-dashboard':
-                if (!activeModal && !selectedCharacter) advance();
-                break;
-            case 'test-modal-open':
-                if (activeModal?.name === 'testPage') advance();
-                break;
-            case 'test-modal-close':
-                if (activeModal === null) advance();
-                break;
-            case 're-enter-editor':
-                if (selectedCharacter) advance();
-                break;
-            case 'drawer-open':
-                if (isNavDrawerOpen) advance();
-                break;
-            case 'selected-F':
-                if (selectedCharacter?.name === 'F') {
-                     advance();
-                }
-                break;
-            case 'selected-E':
-                if (selectedCharacter?.name === 'E') advance();
-                break;
-            case 'selected-e':
-                if (selectedCharacter?.name === 'e') advance();
-                break;
-            case 'selected-combining':
-                if (selectedCharacter?.name === 'ͤ') advance(); // Checking the specific character
-                break;
-            // NEW ADVANCE RULES for Positioning
-            case 'selected-n':
-                if (selectedCharacter?.name === 'n') advance();
-                break;
-            case 'selected-tilde':
-                if (selectedCharacter?.name === '̃') advance();
-                break;
-            case 'selected-macron':
-                if (selectedCharacter?.name === '̄') advance();
-                break;
-            case 'selected-ntilde':
-                if (selectedCharacter?.name === 'ñ') advance();
-                break;
+            case 'selected-A': if (selectedCharacter?.name === 'A') advance(); break;
+            case 'selected-a': if (selectedCharacter?.name === 'a') advance(); break;
+            case 'selected-T': if (selectedCharacter?.name === 'T') advance(); break;
+            case 'selected-F': if (selectedCharacter?.name === 'F') advance(); break;
+            case 'selected-E': if (selectedCharacter?.name === 'E') advance(); break;
+            case 'selected-e': if (selectedCharacter?.name === 'e') advance(); break;
+            case 'selected-combining': if (selectedCharacter?.name === 'ͤ') advance(); break;
+            case 'selected-n': if (selectedCharacter?.name === 'n') advance(); break;
+            case 'selected-tilde': if (selectedCharacter?.name === '̃') advance(); break;
+            case 'selected-macron': if (selectedCharacter?.name === '̄') advance(); break;
+            case 'selected-ntilde': if (selectedCharacter?.name === 'ñ') advance(); break;
+            case 'back-to-dashboard': if (!activeModal && !selectedCharacter) advance(); break;
+            case 'test-modal-open': if (activeModal?.name === 'testPage') advance(); break;
+            case 'test-modal-close': if (activeModal === null) advance(); break;
+            case 're-enter-editor': if (selectedCharacter) advance(); break;
+            case 'drawer-open': if (isNavDrawerOpen) advance(); break;
         }
     }, [stepIndex, selectedCharacter, activeModal, run, script?.id, activeSteps, isNavDrawerOpen]);
 

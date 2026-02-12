@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
 import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
@@ -118,7 +117,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
         <>
             <ToolButton tool="pen" currentTool={currentTool} label="Pen" onClick={setCurrentTool} disabled={isLocked} dataTour="toolbar-pen"><PenIcon /></ToolButton>
             
-            <div className="relative" ref={calligraphyToolButtonRef}>
+            <div className="relative" ref={calligraphyToolButtonRef} data-tour="tool-calligraphy">
                 <button
                     onClick={handleCalligraphyToolClick}
                     title="Calligraphy Pen"
@@ -147,7 +146,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
                 )}
             </div>
 
-            <ToolButton tool="line" currentTool={currentTool} label="Line" onClick={setCurrentTool} disabled={isLocked}><LineIcon /></ToolButton>
+            <ToolButton tool="line" currentTool={currentTool} label="Line" onClick={setCurrentTool} disabled={isLocked} dataTour="tool-line"><LineIcon /></ToolButton>
             <ToolButton tool="curve" currentTool={currentTool} label="Curve" onClick={setCurrentTool} disabled={isLocked}><CurveIcon /></ToolButton>
             <ToolButton tool="circle" currentTool={currentTool} label="Circle" onClick={setCurrentTool} disabled={isLocked}><CircleIcon /></ToolButton>
             <ToolButton tool="ellipse" currentTool={currentTool} label="Ellipse" onClick={setCurrentTool} disabled={isLocked}><EllipseIcon /></ToolButton>
@@ -155,7 +154,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
             
             <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ToolButton tool="eraser" currentTool={currentTool} label="Eraser" onClick={setCurrentTool} disabled={isLocked} dataTour="tool-eraser"><EraserIcon /></ToolButton>
-            <ToolButton tool="slice" currentTool={currentTool} label="Slice" onClick={setCurrentTool} disabled={isLocked}><SliceIcon /></ToolButton>
+            <ToolButton tool="slice" currentTool={currentTool} label="Slice" onClick={setCurrentTool} disabled={isLocked} dataTour="tool-slice"><SliceIcon /></ToolButton>
         </>
     );
 
@@ -164,9 +163,9 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
             <ActionButton onClick={onUndo} title="Undo" disabled={!canUndo} dataTour="action-undo"><UndoIcon /></ActionButton>
             <ActionButton onClick={onRedo} title="Redo" disabled={!canRedo} dataTour="action-redo"><RedoIcon /></ActionButton>
             <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
-            <ActionButton onClick={onCut} title={t('cut')} disabled={selectedPathIds.size === 0 || isLocked}><CutIcon /></ActionButton>
-            <ActionButton onClick={onCopy} title={t('copy')} disabled={isLocked}><CopyIcon /></ActionButton>
-            <ActionButton onClick={onPaste} title={t('paste')} disabled={!clipboard || isLocked}><PasteIcon /></ActionButton>
+            <ActionButton onClick={onCut} title={t('cut')} disabled={selectedPathIds.size === 0 || isLocked} dataTour="action-cut"><CutIcon /></ActionButton>
+            <ActionButton onClick={onCopy} title={t('copy')} disabled={isLocked} dataTour="action-copy"><CopyIcon /></ActionButton>
+            <ActionButton onClick={onPaste} title={t('paste')} disabled={!clipboard || isLocked} dataTour="action-paste"><PasteIcon /></ActionButton>
             <ActionButton onClick={onGroup} title={t('group')} disabled={!canGroup || isLocked} dataTour="action-group"><GroupIcon /></ActionButton>
             <ActionButton onClick={onUngroup} title={t('ungroup')} disabled={!canUngroup || isLocked} dataTour="action-ungroup"><UngroupIcon /></ActionButton>
             <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
