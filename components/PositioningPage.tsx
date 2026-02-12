@@ -354,6 +354,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 glyphVersion={glyphVersion}
                 setEditingPair={handleSetEditingPair}
                 allLigaturesByKey={positioningData.allLigaturesByKey}
+                groups={groups}
+                markAttachmentClasses={markAttachmentClasses}
+                baseAttachmentClasses={baseAttachmentClasses}
             />
         );
     }

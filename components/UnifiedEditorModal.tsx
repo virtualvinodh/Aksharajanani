@@ -263,6 +263,9 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
                     settings={settings} metrics={metrics} markAttachmentRules={markAttachmentRules} positioningRules={positioningRules} allChars={allCharsByName}
                     onNavigate={handlePageNavigate} hasPrev={!!prevCharacter} hasNext={!!nextCharacter} setEditingPair={(pair: any) => handlePageNavigate(pair.ligature)}
                     characterSets={allCharacterSets} glyphVersion={glyphVersion} allLigaturesByKey={allLigaturesByKey} onConvertToComposite={handleConvertToComposite}
+                    groups={groups}
+                    markAttachmentClasses={markAttachmentClasses}
+                    baseAttachmentClasses={baseAttachmentClasses}
                 />
             );
         }

@@ -3,12 +3,11 @@ import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { DRAWING_CANVAS_SIZE } from '../../constants';
-import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Point, PositioningRules, CharacterSet, ComponentTransform } from '../../types';
+import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Point, PositioningRules, CharacterSet, ComponentTransform, AttachmentClass } from '../../types';
 import ReusePreviewCard from './ReusePreviewCard';
 import UnsavedChangesModal from './UnsavedChangesModal';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import Modal from './Modal';
-import { useRules } from '../../contexts/RulesContext';
 import { useProject } from '../../contexts/ProjectContext';
 import PositioningEditorHeader from './positioning/PositioningEditorHeader';
 import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace';
@@ -45,15 +44,19 @@ interface PositioningEditorPageProps {
     glyphVersion: number;
     allLigaturesByKey: Map<string, Character>;
     onConvertToComposite?: (newTransforms: ComponentTransform[]) => void;
+    groups: Record<string, string[]>;
+    markAttachmentClasses: AttachmentClass[] | null;
+    baseAttachmentClasses: AttachmentClass[] | null;
 }
 
 const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     const { t } = useLocale();
     const { showNotification } = useLayout();
-    const { state: rulesState } = useRules();
-    const groups = useMemo(() => rulesState.fontRules?.groups || {}, [rulesState.fontRules]);
     
-    const { markAttachmentClasses, setMarkAttachmentClasses, baseAttachmentClasses, setBaseAttachmentClasses, dispatch: characterDispatch } = useProject();
+    // Removed internal useRules/groups fetching to prevent shadowing. 
+    // Using props.groups, props.markAttachmentClasses, etc.
+    
+    const { setMarkAttachmentClasses, setBaseAttachmentClasses, dispatch: characterDispatch } = useProject();
     const { dispatch: glyphDataDispatch } = useGlyphDataContext();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
 
@@ -69,9 +72,9 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
 
     const session = usePositioningSession({
         ...props,
-        groups,
-        markAttachmentClasses,
-        baseAttachmentClasses
+        groups: props.groups,
+        markAttachmentClasses: props.markAttachmentClasses,
+        baseAttachmentClasses: props.baseAttachmentClasses
     });
 
     const onSaveConstruction = useCallback((type: 'drawing' | 'composite' | 'link' | 'positioning' | 'kerning', components: string[], transforms?: ComponentTransform[]) => {
@@ -151,15 +154,15 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     const isGsubPair = useMemo(() => {
         if (!props.positioningRules) return false;
         const rule = props.positioningRules.find(r => 
-            expandMembers(r.base, groups, props.characterSets).includes(props.baseChar.name) && 
-            expandMembers(r.mark, groups, props.characterSets).includes(props.baseChar.name)
+            expandMembers(r.base, props.groups, props.characterSets).includes(props.baseChar.name) && 
+            expandMembers(r.mark, props.groups, props.characterSets).includes(props.baseChar.name)
         );
         return !!rule?.gsub;
-    }, [props.positioningRules, props.baseChar, groups, props.characterSets]);
+    }, [props.positioningRules, props.baseChar, props.groups, props.characterSets]);
 
     const classSiblings = useMemo(() => {
         if (session.activeAttachmentClass && session.activeClassType) {
-             const members = expandMembers(session.activeAttachmentClass.members, groups, props.characterSets);
+             const members = expandMembers(session.activeAttachmentClass.members, props.groups, props.characterSets);
              const siblings: any[] = [];
              members.forEach(memberName => {
                  let sBase = props.baseChar; let sMark = props.markChar;
@@ -180,7 +183,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
              return siblings;
         }
         return [];
-    }, [session.activeAttachmentClass, session.activeClassType, props.baseChar, props.markChar, groups, props.characterSets, props.allChars, props.allLigaturesByKey, props.glyphDataMap]);
+    }, [session.activeAttachmentClass, session.activeClassType, props.baseChar, props.markChar, props.groups, props.characterSets, props.allChars, props.allLigaturesByKey, props.glyphDataMap]);
 
     const handleToggleLink = () => {
         const newIsLinked = !session.isLinked;
@@ -189,7 +192,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
         
         const updateClassList = (classes: any[], setter: (c: any[]) => void) => {
              const newClasses = deepClone(classes);
-             const cls = newClasses.find(c => expandMembers(c.members, groups, props.characterSets).includes(session.activeClassType === 'mark' ? props.markChar.name : props.baseChar.name));
+             const cls = newClasses.find(c => expandMembers(c.members, props.groups, props.characterSets).includes(session.activeClassType === 'mark' ? props.markChar.name : props.baseChar.name));
              if (cls) {
                  if (!cls.exceptPairs) cls.exceptPairs = [];
                  if (newIsLinked) cls.exceptPairs = cls.exceptPairs.filter((p: string) => p !== pairNameKey);
@@ -198,8 +201,8 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
              }
         };
 
-        if (session.activeClassType === 'mark' && markAttachmentClasses) updateClassList(markAttachmentClasses, setMarkAttachmentClasses);
-        if (session.activeClassType === 'base' && baseAttachmentClasses) updateClassList(baseAttachmentClasses, setBaseAttachmentClasses);
+        if (session.activeClassType === 'mark' && props.markAttachmentClasses) updateClassList(props.markAttachmentClasses, setMarkAttachmentClasses);
+        if (session.activeClassType === 'base' && props.baseAttachmentClasses) updateClassList(props.baseAttachmentClasses, setBaseAttachmentClasses);
         if (newIsLinked) showNotification(t('glyphRelinkedSuccess'), "success");
     };
 
@@ -301,7 +304,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 pivotChar={session.isPivot ? (session.activeAttachmentClass?.name ? null : props.markChar) : (session.pivotName ? props.allChars.get(session.pivotName) : null)}
                 glyphDataMap={props.glyphDataMap} anchorDelta={VEC.sub(session.currentOffset, session.alignmentOffset)} isLinked={session.isLinked} onToggleLink={handleToggleLink}
                 handleSelectSibling={(p) => { if (props.setEditingPair) props.setEditingPair(p); }} markAttachmentRules={props.markAttachmentRules} positioningRules={props.positioningRules}
-                characterSets={props.characterSets} groups={groups} isStripExpanded={isStripExpanded} setIsStripExpanded={setIsStripExpanded}
+                characterSets={props.characterSets} groups={props.groups} isStripExpanded={isStripExpanded} setIsStripExpanded={setIsStripExpanded}
                 activeAttachmentClass={session.activeAttachmentClass} hasDualContext={session.hasDualContext} activeClassType={session.activeClassType} onToggleContext={session.setOverrideClassType}
                 isLargeScreen={isLargeScreen}
                 manualX={session.manualX} manualY={session.manualY} onManualChange={(a, v) => a === 'x' ? session.setManualX(v) : session.setManualY(v)} onManualCommit={session.handleManualCommit}
