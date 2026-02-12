@@ -379,14 +379,6 @@ const TutorialManager: React.FC = () => {
                 disableOverlayClose: true,
                 data: { isTutorial: true, translations }
             },
-            // 27. Next for 'F'
-            {
-                target: '[data-tour="header-next"]',
-                content: translations.clickNextForF,
-                spotlightClicks: true,
-                hideFooter: true,
-                data: { isTutorial: true, advanceOn: 'selected-F', translations }
-            },
             
             // --- NEW RESPONSIVE FLOW FOR 'F' ---
             ...(isLargeScreen ? [{
@@ -396,7 +388,7 @@ const TutorialManager: React.FC = () => {
                 spotlightClicks: true, 
                 hideFooter: true, 
                 placement: 'right' as Placement,
-                data: { isTutorial: true, translations } // Click advances it
+                data: { isTutorial: true, advanceOn: 'selected-F', translations }
             }] : [{
                 // Small Screen: Open drawer, then select 'F'
                 target: '[data-tour="floating-grid-btn"]',
@@ -410,7 +402,7 @@ const TutorialManager: React.FC = () => {
                 spotlightClicks: true, 
                 hideFooter: true, 
                 placement: 'right' as Placement,
-                data: { isTutorial: true, translations } // Click advances it
+                data: { isTutorial: true, advanceOn: 'selected-F', translations }
             }]),
 
             // Draw 'F' (Common step)
