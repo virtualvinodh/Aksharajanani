@@ -163,7 +163,7 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
     return (
         <canvas
             ref={canvasRef}
-            data-tour="drawing-canvas"
+            data-tour="kerning-canvas"
             width={width}
             height={height}
             className="w-full h-full block mx-auto touch-none"

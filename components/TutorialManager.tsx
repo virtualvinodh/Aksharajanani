@@ -658,7 +658,7 @@ const TutorialManager: React.FC = () => {
                      const timer = setTimeout(() => {
                          setActiveSteps([
                             {
-                                target: '[data-tour="drawing-canvas"]',
+                                target: '[data-tour="positioning-canvas"]',
                                 content: (
                                     <div>
                                         <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintPositionedTitle}</h3>
@@ -702,7 +702,7 @@ const TutorialManager: React.FC = () => {
                      const timer = setTimeout(() => {
                          setActiveSteps([
                             {
-                                target: '[data-tour="drawing-canvas"]',
+                                target: '[data-tour="kerning-canvas"]',
                                 content: (
                                     <div>
                                         <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKernedTitle}</h3>
