@@ -85,7 +85,7 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
             if (mClass) {
                 // Check if this class actually applies to this base
                 let applies = true;
-                if (mClass.applies && !expandMembers(mClass.applies, groups, characterSets).includes(base.name)) applies = false;
+                if (mClass.applies && mClass.applies.length > 0 && !expandMembers(mClass.applies, groups, characterSets).includes(base.name)) applies = false;
                 if (mClass.exceptions && expandMembers(mClass.exceptions, groups, characterSets).includes(base.name)) applies = false;
                 
                 if (applies) {
@@ -94,6 +94,7 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                      const members = expandMembers(mClass.members, groups, characterSets);
                      
                      // --- DYNAMIC LEADER IDENTIFICATION ---
+                     // The leader is the first member that IS NOT an exception for this specific base
                      const effectiveLeaderMark = members.find(memberName => {
                          const pk = `${base.name}-${memberName}`;
                          return !mClass.exceptPairs?.includes(pk);
@@ -115,7 +116,7 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
             const bClass = baseAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(base.name));
             if (bClass) {
                 let applies = true;
-                if (bClass.applies && !expandMembers(bClass.applies, groups, characterSets).includes(mark.name)) applies = false;
+                if (bClass.applies && bClass.applies.length > 0 && !expandMembers(bClass.applies, groups, characterSets).includes(mark.name)) applies = false;
                 if (bClass.exceptions && expandMembers(bClass.exceptions, groups, characterSets).includes(mark.name)) applies = false;
                 
                 if (applies) {

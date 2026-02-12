@@ -206,15 +206,25 @@ export const usePositioningData = ({
 
     const getPairClassKey = useCallback((pair: { base: Character, mark: Character }) => {
         const pairNameKey = `${pair.base.name}-${pair.mark.name}`;
+        
         let baseKey = `B:${pair.base.name}`;
-        const baseClassIdx = baseAttachmentClasses?.findIndex(cls => 
-            expandMembers(cls.members, groups, characterSets).includes(pair.base.name)
-        );
+        
+        const baseClassIdx = baseAttachmentClasses?.findIndex(cls => {
+            const isMember = expandMembers(cls.members, groups, characterSets).includes(pair.base.name);
+            if (!isMember) return false;
+            
+            // Validate Scope: Check if class applies to the MARK of this pair
+            if (cls.applies && cls.applies.length > 0 && !expandMembers(cls.applies, groups, characterSets).includes(pair.mark.name)) return false;
+            
+            // Validate Exceptions: Check if MARK is an exception for this class
+            if (cls.exceptions && expandMembers(cls.exceptions, groups, characterSets).includes(pair.mark.name)) return false;
+            
+            return true;
+        });
         
         if (baseClassIdx !== undefined && baseClassIdx > -1) {
             const cls = baseAttachmentClasses![baseClassIdx];
-            const isException = (cls.exceptions && expandMembers(cls.exceptions, groups, characterSets).includes(pair.base.name)) || 
-                                (cls.exceptPairs && cls.exceptPairs.includes(pairNameKey));
+            const isException = cls.exceptPairs && cls.exceptPairs.includes(pairNameKey);
             
             if (!isException) {
                 baseKey = `BC:${baseClassIdx}`;
@@ -222,14 +232,22 @@ export const usePositioningData = ({
         }
 
         let markKey = `M:${pair.mark.name}`;
-        const markClassIdx = markAttachmentClasses?.findIndex(cls => 
-            expandMembers(cls.members, groups, characterSets).includes(pair.mark.name)
-        );
+        const markClassIdx = markAttachmentClasses?.findIndex(cls => {
+            const isMember = expandMembers(cls.members, groups, characterSets).includes(pair.mark.name);
+            if (!isMember) return false;
+
+            // Validate Scope: Check if class applies to the BASE of this pair
+            if (cls.applies && cls.applies.length > 0 && !expandMembers(cls.applies, groups, characterSets).includes(pair.base.name)) return false;
+            
+            // Validate Exceptions: Check if BASE is an exception for this class
+            if (cls.exceptions && expandMembers(cls.exceptions, groups, characterSets).includes(pair.base.name)) return false;
+
+            return true;
+        });
         
         if (markClassIdx !== undefined && markClassIdx > -1) {
             const cls = markAttachmentClasses![markClassIdx];
-            const isException = (cls.exceptions && expandMembers(cls.exceptions, groups, characterSets).includes(pair.mark.name)) || 
-                                (cls.exceptPairs && cls.exceptPairs.includes(pairNameKey));
+            const isException = cls.exceptPairs && cls.exceptPairs.includes(pairNameKey);
                                 
              if (!isException) {
                  markKey = `MC:${markClassIdx}`;

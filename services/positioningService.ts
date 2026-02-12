@@ -1,3 +1,4 @@
+
 import {
     Character,
     GlyphData,
@@ -123,7 +124,7 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
             const mCls = markAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(markChar.name));
             if (mCls && !(mCls.exceptPairs && mCls.exceptPairs.includes(currentPairKey))) {
                 const appliesToBase = (!mCls.exceptions || !expandMembers(mCls.exceptions, groups, characterSets).includes(baseChar.name)) &&
-                                       (!mCls.applies || expandMembers(mCls.applies, groups, characterSets).includes(baseChar.name));
+                                       (!mCls.applies || mCls.applies.length === 0 || expandMembers(mCls.applies, groups, characterSets).includes(baseChar.name));
                 if (appliesToBase) {
                     expandMembers(mCls.members, groups, characterSets).forEach(name => {
                         const char = allChars.get(name);
@@ -140,7 +141,7 @@ export const updatePositioningAndCascade = (args: UpdatePositioningAndCascadeArg
             const bCls = baseAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(baseChar.name));
             if (bCls && !(bCls.exceptPairs && bCls.exceptPairs.includes(currentPairKey))) {
                 const appliesToMark = (!bCls.exceptions || !expandMembers(bCls.exceptions, groups, characterSets).includes(markChar.name)) &&
-                                      (!bCls.applies || expandMembers(bCls.applies, groups, characterSets).includes(markChar.name));
+                                      (!bCls.applies || bCls.applies.length === 0 || expandMembers(bCls.applies, groups, characterSets).includes(markChar.name));
                 if (appliesToMark) {
                     expandMembers(bCls.members, groups, characterSets).forEach(name => {
                         const char = allChars.get(name);

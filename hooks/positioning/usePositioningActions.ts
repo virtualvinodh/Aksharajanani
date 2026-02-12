@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
@@ -44,7 +45,7 @@ const isPairEligible = (
         const mClass = markAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(mark.name));
         if (mClass) {
             let applies = true;
-            if (mClass.applies && !expandMembers(mClass.applies, groups, characterSets).includes(base.name)) applies = false;
+            if (mClass.applies && mClass.applies.length > 0 && !expandMembers(mClass.applies, groups, characterSets).includes(base.name)) applies = false;
             if (mClass.exceptions && expandMembers(mClass.exceptions, groups, characterSets).includes(base.name)) applies = false;
             
             if (applies) {
@@ -62,7 +63,7 @@ const isPairEligible = (
         const bClass = baseAttachmentClasses.find(c => expandMembers(c.members, groups, characterSets).includes(base.name));
         if (bClass) {
             let applies = true;
-            if (bClass.applies && !expandMembers(bClass.applies, groups, characterSets).includes(mark.name)) applies = false;
+            if (bClass.applies && bClass.applies.length > 0 && !expandMembers(bClass.applies, groups, characterSets).includes(mark.name)) applies = false;
             if (bClass.exceptions && expandMembers(bClass.exceptions, groups, characterSets).includes(mark.name)) applies = false;
             
             if (applies) {

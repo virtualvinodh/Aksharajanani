@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
     Character, GlyphData, Point, Path, AppSettings, FontMetrics, 
@@ -170,8 +171,23 @@ export const usePositioningSession = ({
 
     // --- Class Logic ---
     const { pivotName, isPivot, activeAttachmentClass, activeClassType, hasDualContext } = useMemo(() => {
-        let mClass = markAttachmentClasses?.find(c => expandMembers(c.members, groups, characterSets).includes(markChar.name));
-        let bClass = baseAttachmentClasses?.find(c => expandMembers(c.members, groups, characterSets).includes(baseChar.name));
+        let mClass = markAttachmentClasses?.find(c => {
+             // 1. Check Membership
+             if (!expandMembers(c.members, groups, characterSets).includes(markChar.name)) return false;
+             // 2. Check Scope (Applies) - Empty/Undefined means Global
+             if (c.applies && c.applies.length > 0 && !expandMembers(c.applies, groups, characterSets).includes(baseChar.name)) return false;
+             // 3. Check Exceptions (Scope)
+             if (c.exceptions && expandMembers(c.exceptions, groups, characterSets).includes(baseChar.name)) return false;
+             return true;
+        });
+
+        let bClass = baseAttachmentClasses?.find(c => {
+             if (!expandMembers(c.members, groups, characterSets).includes(baseChar.name)) return false;
+             if (c.applies && c.applies.length > 0 && !expandMembers(c.applies, groups, characterSets).includes(markChar.name)) return false;
+             if (c.exceptions && expandMembers(c.exceptions, groups, characterSets).includes(markChar.name)) return false;
+             return true;
+        });
+
         const hasDual = !!(mClass && bClass);
         let targetType: 'mark' | 'base' | null = null;
         let activeClass: AttachmentClass | undefined;
