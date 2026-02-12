@@ -137,7 +137,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
             itemContent={(index) => {
                 const char = characters[index];
                 return (
-                    <div className="tutorial-glyph-item" data-tour={index === 0 ? "grid-item-0" : undefined}>
+                    <div className="tutorial-glyph-item" data-tour={`grid-item-${char.name}`}>
                         <UnifiedCard
                             key={char.unicode || char.name}
                             character={char}
@@ -185,8 +185,6 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                 });
                 
                 const isEditing = editingGroupIndex === index;
-                // Identify the very first item of the first group for the tutorial
-                const isFirstGroup = index === 0;
 
                 return (
                     <div className="pb-6" id={`section-${index}`}>
@@ -234,11 +232,11 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                         
                         {/* Internal Grid */}
                         <div className={gridClasses}>
-                            {visibleChars.map((char, charIndex) => (
+                            {visibleChars.map((char) => (
                                 <div 
                                     key={char.unicode || char.name} 
                                     className="tutorial-glyph-item"
-                                    data-tour={isFirstGroup && charIndex <= 1 ? `grid-item-${charIndex}` : undefined}
+                                    data-tour={`grid-item-${char.name}`}
                                 >
                                     <UnifiedCard
                                         character={char}

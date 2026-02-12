@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import Joyride, { CallBackProps, STATUS, Step, EVENTS, ACTIONS, TooltipRenderProps } from 'react-joyride';
+import Joyride, { CallBackProps, STATUS, Step, EVENTS, ACTIONS, TooltipRenderProps, Placement } from 'react-joyride';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { Tool } from '../types';
 
 // Custom Tooltip Component to handle "Don't Show Again" vs "Skip"
 const CustomTooltip = ({
@@ -130,6 +131,24 @@ const CustomTooltip = ({
     );
 };
 
+// Dummy component to get access to context
+const TutorialStateProvider: React.FC<{ onToolChange: (tool: Tool) => void }> = ({ onToolChange }) => {
+    // This is a bit of a hack. Joyride doesn't have a direct way to read app state.
+    // So we render a tiny component inside the modal that *can* read context, and use it to advance the tour.
+    // In a real app, this would be handled by a global state manager like Redux or Zustand.
+    const { activeModal } = useLayout(); 
+    const editor = (activeModal?.props as any)?.editorContext;
+    const currentTool = editor?.currentTool;
+    
+    useEffect(() => {
+        if(currentTool) {
+            onToolChange(currentTool);
+        }
+    }, [currentTool, onToolChange]);
+    
+    return null;
+}
+
 const TutorialManager: React.FC = () => {
     const { script } = useProject();
     const { selectedCharacter, activeModal, workspace, currentView, isNavDrawerOpen } = useLayout();
@@ -140,6 +159,7 @@ const TutorialManager: React.FC = () => {
     const [stepIndex, setStepIndex] = useState(0);
     const [translations, setTranslations] = useState<Record<string, string> | null>(null);
     const [activeSteps, setActiveSteps] = useState<Step[]>([]);
+    const [currentTool, setCurrentTool] = useState<Tool>('pen');
     
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
@@ -223,38 +243,46 @@ const TutorialManager: React.FC = () => {
                         <p>{translations.welcomeContent}</p>
                     </div>
                 ),
-                placement: 'center',
+                placement: 'center' as Placement,
                 disableBeacon: true,
                 data: { isTutorial: true, translations }
             },
             // 1. Click 'A'
             {
-                target: '[data-tour="grid-item-0"]',
+                target: '[data-tour="grid-item-A"]',
                 content: translations.clickFirstChar,
                 spotlightClicks: true,
                 disableBeacon: true,
                 hideFooter: true, 
                 data: { isTutorial: true, advanceOn: 'selected-A', translations }
             },
-            // 2. Pen Tool
+            // 2. Split View Intro
+            {
+                target: '[data-tour="split-view-resizer"]',
+                content: richText('splitViewIntro'),
+                placement: 'right' as Placement,
+                data: { isTutorial: true, translations },
+                styles: { spotlight: { borderRadius: '8px' } }
+            },
+            // 3. Pen Tool
             {
                 target: '[data-tour="toolbar-pen"]',
                 content: translations.toolbarPenContent,
-                placement: isLargeScreen ? 'right' : 'bottom',
+                placement: (isLargeScreen ? 'right' : 'bottom') as Placement,
                 disableBeacon: true, 
                 data: { isTutorial: true, translations }
             },
-            // 3. Draw 'A'
+            // 4. Draw 'A'
             {
                 target: '[data-tour="drawing-canvas"]',
                 content: translations.drawContent,
-                placement: 'right',
+                placement: 'right' as Placement,
                 disableBeacon: true,
                 spotlightClicks: true,
                 disableOverlayClose: true,
                 data: { isTutorial: true, translations }
             },
-            // 4. Click Test
+            // 5. Click Test
             { 
                 target: '[data-tour="header-test"]', 
                 content: translations.clickTest, 
@@ -262,15 +290,15 @@ const TutorialManager: React.FC = () => {
                 hideFooter: true, 
                 data: { isTutorial: true, advanceOn: 'test-modal-open', translations } 
             },
-            // 5. Test Page Input
+            // 6. Test Page Input
             { 
                 target: '[data-tour="test-page-input"]', 
                 content: translations.testPageInput, 
-                placement: 'bottom', 
+                placement: 'bottom' as Placement,
                 disableBeacon: true, 
                 data: { isTutorial: true, translations } 
             },
-            // 6. Close Test Page
+            // 7. Close Test Page
             { 
                 target: '[data-tour="test-page-close"]', 
                 content: translations.closeTestPage, 
@@ -278,7 +306,7 @@ const TutorialManager: React.FC = () => {
                 hideFooter: true, 
                 data: { isTutorial: true, advanceOn: 'test-modal-close', translations } 
             },
-            // 7. Next for 'a'
+            // 8. Next for 'a'
             {
                 target: '[data-tour="header-next"]',
                 content: translations.clickNextForA,
@@ -286,37 +314,45 @@ const TutorialManager: React.FC = () => {
                 hideFooter: true,
                 data: { isTutorial: true, advanceOn: 'selected-a', translations }
             },
-            // 8. Draw 'a'
+            // 9. Draw 'a'
             {
                 target: '[data-tour="drawing-canvas"]',
                 content: translations.drawLowerA,
-                placement: 'right',
+                placement: 'right' as Placement,
                 disableBeacon: true,
                 spotlightClicks: true,
                 disableOverlayClose: true,
                 data: { isTutorial: true, translations }
             },
-            // 9. Transition to Toolbar Tour
+            // 10. Toolbar Intro
             {
-                target: '[data-tour="header-next"]',
-                content: translations.clickNextForToolbarTour,
+                target: '[data-tour="main-toolbar"]',
+                content: translations.toolbarIntro,
+                placement: (isLargeScreen ? 'right' : 'bottom') as Placement,
                 data: { isTutorial: true, translations }
             },
-            // 10-21. Toolbar Tour
-            { target: '[data-tour="tool-select"]', content: richText('toolSelect'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="tool-pan"]', content: richText('toolPan'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="tool-calligraphy"]', content: richText('toolCalligraphy'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="tool-eraser"]', content: richText('toolEraser'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="tool-slice"]', content: richText('toolSlice'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-undo"]', content: richText('actionUndo'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-redo"]', content: richText('actionRedo'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-cut"]', content: richText('actionCut'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-copy"]', content: richText('actionCopy'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-paste"]', content: richText('actionPaste'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-group"]', content: richText('actionGroup'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-ungroup"]', content: richText('actionUngroup'), placement: isLargeScreen ? 'left' : 'top', data: { isTutorial: true, translations } },
+            // 11. Toolbar Actions Intro
+            {
+                target: '[data-tour="main-toolbar"]',
+                content: translations.toolbarActionsIntro,
+                placement: (isLargeScreen ? 'right' : 'bottom') as Placement,
+                data: { isTutorial: true, translations }
+            },
+            // 12-23. Toolbar Tour
+            { target: '[data-tour="tool-select"]', content: richText('toolSelect'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="tool-pan"]', content: richText('toolPan'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="tool-calligraphy"]', content: richText('toolCalligraphy'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="tool-eraser"]', content: richText('toolEraser'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="tool-slice"]', content: richText('toolSlice'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-undo"]', content: richText('actionUndo'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-redo"]', content: richText('actionRedo'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-cut"]', content: richText('actionCut'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-copy"]', content: richText('actionCopy'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-paste"]', content: richText('actionPaste'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-group"]', content: richText('actionGroup'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="action-ungroup"]', content: richText('actionUngroup'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
 
-            // 22. Next for 'T'
+            // 24. Next for 'T'
             {
                 target: '[data-tour="header-next"]',
                 content: translations.clickNextForT,
@@ -324,25 +360,26 @@ const TutorialManager: React.FC = () => {
                 hideFooter: true,
                 data: { isTutorial: true, advanceOn: 'selected-T', translations }
             },
-            // 23. Line Tool Intro
+            // 25. Select Line Tool (Manual)
             {
-                target: '[data-tour="tool-line"]',
-                content: richText('toolLineIntro'),
-                placement: isLargeScreen ? 'left' : 'top',
+                target: '[data-tour="main-toolbar"]',
+                content: richText('selectLineTool'),
+                spotlightClicks: true,
+                placement: (isLargeScreen ? 'right' : 'bottom') as Placement,
                 disableBeacon: true,
                 data: { isTutorial: true, translations }
             },
-            // 24. Draw 'T'
+            // 26. Draw 'T'
             {
                 target: '[data-tour="drawing-canvas"]',
                 content: translations.drawT,
-                placement: 'right',
+                placement: 'right' as Placement,
                 disableBeacon: true,
                 spotlightClicks: true,
                 disableOverlayClose: true,
                 data: { isTutorial: true, translations }
             },
-            // 25. Next for 'F'
+            // 27. Next for 'F'
             {
                 target: '[data-tour="header-next"]',
                 content: translations.clickNextForF,
@@ -350,35 +387,37 @@ const TutorialManager: React.FC = () => {
                 hideFooter: true,
                 data: { isTutorial: true, advanceOn: 'selected-F', translations }
             },
-            // --- BRANCH: SELECT 'F' (The tutorial flow continues from F) ---
-            ...(isLargeScreen ? [] : [{
-                target: '[data-tour="header-back"]',
-                content: translations.clickBackToDashboard,
-                spotlightClicks: true, hideFooter: true,
-                data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations }
-            },{
-                target: '[data-tour="grid-item-0"]',
-                content: translations.clickAAgain,
-                spotlightClicks: true, hideFooter: true,
-                data: { isTutorial: true, advanceOn: 're-enter-editor', translations }
-            },{
+            
+            // --- NEW RESPONSIVE FLOW FOR 'F' ---
+            ...(isLargeScreen ? [{
+                // Large Screen: Select 'F' from split view grid
+                target: '[data-tour="grid-item-F"]',
+                content: translations.selectCharF,
+                spotlightClicks: true, 
+                hideFooter: true, 
+                placement: 'right' as Placement,
+                data: { isTutorial: true, translations } // Click advances it
+            }] : [{
+                // Small Screen: Open drawer, then select 'F'
                 target: '[data-tour="floating-grid-btn"]',
                 content: translations.openGrid,
-                spotlightClicks: true, hideFooter: true,
+                spotlightClicks: true, 
+                hideFooter: true,
                 data: { isTutorial: true, advanceOn: 'drawer-open', translations }
-            }]),
-            // Select 'F'
-            {
-                target: isLargeScreen ? '[data-tour="grid-item-1"]' : '#mobile-nav-drawer [data-tour="grid-item-1"]',
+            },{
+                target: '#mobile-nav-drawer [data-tour="grid-item-F"]',
                 content: translations.selectCharF,
-                spotlightClicks: true, hideFooter: true, placement: 'right',
-                data: { isTutorial: true, advanceOn: 'selected-F', translations }
-            },
-            // Draw 'F'
+                spotlightClicks: true, 
+                hideFooter: true, 
+                placement: 'right' as Placement,
+                data: { isTutorial: true, translations } // Click advances it
+            }]),
+
+            // Draw 'F' (Common step)
             {
                 target: '[data-tour="drawing-canvas"]',
                 content: translations.drawCharF,
-                placement: 'right', disableBeacon: true, spotlightClicks: true,
+                placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true,
                 disableOverlayClose: true, data: { isTutorial: true, translations }
             },
             // Next for 'E'
@@ -389,43 +428,38 @@ const TutorialManager: React.FC = () => {
                 data: { isTutorial: true, advanceOn: 'selected-E', translations }
             },
             // Composite Explanation
-            {
-                target: 'body',
-                content: richText('compositeExplanation'),
-                placement: 'center', disableBeacon: true,
-                data: { isTutorial: true, translations }
-            },
+            { target: 'body', content: richText('compositeExplanation'), placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
             // Draw Composite 'E'
             {
                 target: '[data-tour="drawing-canvas"]',
                 content: translations.drawComposite,
-                placement: 'right', disableBeacon: true, spotlightClicks: true,
+                placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true,
                 disableOverlayClose: true, data: { isTutorial: true, translations }
             },
             // Linked Glyphs section
             { target: '[data-tour="header-next"]', content: translations.clickNextForLowerE, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-e', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawLowerE, placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawLowerE, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-next"]', content: translations.clickNextForLinked, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-combining', translations } },
-            { target: 'body', content: richText('linkedExplanation'), placement: 'center', disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="linked-source-strip"]', content: translations.linkedStripNav, placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="drawing-canvas"]', content: richText('transformLinked'), placement: 'right', disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
+            { target: 'body', content: richText('linkedExplanation'), placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="linked-source-strip"]', content: translations.linkedStripNav, placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="drawing-canvas"]', content: richText('transformLinked'), placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-prev"]', content: translations.clickPrevForModification, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-e', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.modifyLowerE, placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.modifyLowerE, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-next"]', content: translations.clickNextToVerify, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-combining', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.verifyLink, placement: 'right', disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.verifyLink, placement: 'right' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
             
             // Smart Positioning section
             { target: '[data-tour="header-next"]', content: translations.clickNextForN, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-n', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawN, placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawN, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-next"]', content: translations.clickNextForTilde, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-tilde', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawTilde, placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawTilde, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-next"]', content: translations.clickNextForMacron, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-macron', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawMacron, placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawMacron, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-next"]', content: translations.clickNextForNTilde, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-ntilde', translations } },
-            { target: '[data-tour="positioning-canvas"]', content: richText('positioningIntro'), placement: 'right', disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="related-pairs-strip"]', content: richText('smartClassExpl'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="strip-link-toggle"]', content: richText('unlinkExpl'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-detach-pos"]', content: richText('detachExpl'), placement: 'bottom', disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="positioning-canvas"]', content: richText('positioningIntro'), placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="related-pairs-strip"]', content: richText('smartClassExpl'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="strip-link-toggle"]', content: richText('unlinkExpl'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-detach-pos"]', content: richText('detachExpl'), placement: 'bottom' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
 
             // Go Back to Grid
             {
@@ -434,18 +468,23 @@ const TutorialManager: React.FC = () => {
             },
             
             // Final Header Actions
-            { target: '[data-tour="header-creator"]', content: translations.explainCreator, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-compare"]', content: translations.explainCompare, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-settings"]', content: translations.explainSettings, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-export"]', content: translations.explainExport, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-creator"]', content: translations.explainCreator, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-compare"]', content: translations.explainCompare, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-settings"]', content: translations.explainSettings, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-export"]', content: translations.explainExport, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
 
             // Final Message
-            { target: 'body', content: translations.finish, placement: 'center', disableBeacon: true, data: { isTutorial: true, translations } }
+            { target: 'body', content: translations.finish, placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } }
         ];
 
         return steps;
     }, [translations, isLargeScreen]);
 
+    // This is a bit of a hack to get the current tool from the editor modal's internal context
+    const handleToolChange = useCallback((tool: Tool) => {
+        setCurrentTool(tool);
+    }, []);
+    
     // 2. Initialize Linear Tutorial if active
     useEffect(() => {
         if (script?.id === 'tutorial') {
@@ -480,7 +519,7 @@ const TutorialManager: React.FC = () => {
                            target: '.tutorial-glyph-item',
                            content: translations.hintGridSelect || "Select a character to start.",
                            disableBeacon: true,
-                           placement: 'bottom',
+                           placement: 'bottom' as Placement,
                            spotlightClicks: true,
                            data: { isTutorial: false, storageKey: storageKey, translations }
                        }]);
@@ -503,7 +542,7 @@ const TutorialManager: React.FC = () => {
                        target: '[data-tour="drawing-canvas"]',
                        content: translations.hintEditorDraw || "Start drawing here.",
                        disableBeacon: true,
-                       placement: 'top',
+                       placement: 'top' as Placement,
                        spotlightClicks: true,
                        data: { isTutorial: false, storageKey: storageKey, translations }
                     }]);
@@ -531,7 +570,7 @@ const TutorialManager: React.FC = () => {
                                      <p dangerouslySetInnerHTML={{__html: translations.hintCompositeContent}}></p>
                                  </div>
                              ),
-                             placement: 'top',
+                             placement: 'top' as Placement,
                              disableBeacon: true,
                              spotlightClicks: true,
                              data: { isTutorial: false, storageKey: storageKey, translations }
@@ -560,7 +599,7 @@ const TutorialManager: React.FC = () => {
                                          <p dangerouslySetInnerHTML={{__html: translations.hintLinkedContent}}></p>
                                      </div>
                                  ),
-                                 placement: 'top',
+                                 placement: 'top' as Placement,
                                  disableBeacon: true,
                                  spotlightClicks: true,
                                  data: { isTutorial: false, translations } 
@@ -568,7 +607,7 @@ const TutorialManager: React.FC = () => {
                              {
                                  target: '[data-tour="header-unlink"]',
                                  content: translations.hintUnlinkContent,
-                                 placement: 'bottom',
+                                 placement: 'bottom' as Placement,
                                  disableBeacon: true,
                                  data: { isTutorial: false, storageKey: storageKey, translations }
                              }
@@ -590,7 +629,7 @@ const TutorialManager: React.FC = () => {
                          setActiveSteps([{
                              target: '[data-tour="header-relink"]',
                              content: translations.hintRelinkContent,
-                             placement: 'bottom',
+                             placement: 'bottom' as Placement,
                              disableBeacon: true,
                              spotlightClicks: true,
                              data: { isTutorial: false, storageKey: storageKey, translations }
@@ -618,7 +657,7 @@ const TutorialManager: React.FC = () => {
                                         <p dangerouslySetInnerHTML={{__html: translations.hintPositionedContent}}></p>
                                     </div>
                                 ),
-                                placement: 'top',
+                                placement: 'top' as Placement,
                                 disableBeacon: true,
                                 spotlightClicks: true,
                                 data: { isTutorial: false, translations }
@@ -626,14 +665,14 @@ const TutorialManager: React.FC = () => {
                             {
                                 target: '[data-tour="header-detach-pos"]',
                                 content: translations.hintDetachContent,
-                                placement: 'bottom',
+                                placement: 'bottom' as Placement,
                                 disableBeacon: true,
                                 data: { isTutorial: false, translations }
                             },
                             {
                                 target: '[data-tour="header-accept-pos"]',
                                 content: translations.hintAcceptPosition,
-                                placement: 'bottom',
+                                placement: 'bottom' as Placement,
                                 spotlightClicks: true,
                                 disableBeacon: true,
                                 data: { isTutorial: false, storageKey: storageKey, translations }
@@ -662,7 +701,7 @@ const TutorialManager: React.FC = () => {
                                         <p dangerouslySetInnerHTML={{__html: translations.hintKernedContent}}></p>
                                     </div>
                                 ),
-                                placement: 'top',
+                                placement: 'top' as Placement,
                                 disableBeacon: true,
                                 spotlightClicks: true,
                                 data: { isTutorial: false, translations }
@@ -670,14 +709,14 @@ const TutorialManager: React.FC = () => {
                             {
                                 target: '[data-tour="header-detach-kern"]',
                                 content: translations.hintDetachContent,
-                                placement: 'bottom',
+                                placement: 'bottom' as Placement,
                                 disableBeacon: true,
                                 data: { isTutorial: false, translations }
                             },
                             {
                                 target: '[data-tour="header-accept-kern"]',
                                 content: translations.hintAcceptKerning,
-                                placement: 'bottom',
+                                placement: 'bottom' as Placement,
                                 spotlightClicks: true,
                                 disableBeacon: true,
                                 data: { isTutorial: false, storageKey: storageKey, translations }
@@ -704,7 +743,7 @@ const TutorialManager: React.FC = () => {
                                 <p>{translations.hintKerningWorkspaceContent}</p>
                             </div>
                         ),
-                        placement: 'bottom',
+                        placement: 'bottom' as Placement,
                         disableBeacon: true,
                         spotlightClicks: true,
                         data: { isTutorial: false, storageKey: storageKey, translations }
@@ -729,7 +768,7 @@ const TutorialManager: React.FC = () => {
                                 <p>{translations.hintPositioningWorkspaceContent}</p>
                             </div>
                         ),
-                        placement: 'bottom',
+                        placement: 'bottom' as Placement,
                         disableBeacon: true,
                         spotlightClicks: true,
                         data: { isTutorial: false, storageKey: storageKey, translations }
@@ -757,7 +796,7 @@ const TutorialManager: React.FC = () => {
                          target: '[data-tour="related-pairs-strip"]',
                          title: translations.hintRelatedPairsTitle,
                          content: translations.hintRelatedPairsContent,
-                         placement: 'top',
+                         placement: 'top' as Placement,
                          disableBeacon: true,
                          spotlightClicks: true,
                          data: { isTutorial: false, translations }
@@ -766,7 +805,7 @@ const TutorialManager: React.FC = () => {
                          target: '[data-tour="strip-link-toggle"]',
                          title: translations.hintOverrideTitle,
                          content: translations.hintOverrideContent,
-                         placement: 'top', 
+                         placement: 'top' as Placement, 
                          disableBeacon: true,
                          data: { isTutorial: false, storageKey: storageKey, translations }
                      }
@@ -833,10 +872,9 @@ const TutorialManager: React.FC = () => {
             case 'back-to-dashboard': if (!activeModal && !selectedCharacter) advance(); break;
             case 'test-modal-open': if (activeModal?.name === 'testPage') advance(); break;
             case 'test-modal-close': if (activeModal === null) advance(); break;
-            case 're-enter-editor': if (selectedCharacter) advance(); break;
             case 'drawer-open': if (isNavDrawerOpen) advance(); break;
         }
-    }, [stepIndex, selectedCharacter, activeModal, run, script?.id, activeSteps, isNavDrawerOpen]);
+    }, [stepIndex, selectedCharacter, activeModal, run, script?.id, activeSteps, isNavDrawerOpen, currentTool]);
 
     const handleCallback = (data: CallBackProps) => {
         const { status, type, action, index } = data;
@@ -874,40 +912,44 @@ const TutorialManager: React.FC = () => {
     if (!translations || activeSteps.length === 0) return null;
 
     return (
-        <Joyride
-            steps={activeSteps}
-            run={run}
-            stepIndex={stepIndex}
-            continuous
-            showProgress={activeSteps.length > 1}
-            showSkipButton
-            callback={handleCallback}
-            tooltipComponent={CustomTooltip}
-            scrollOffset={scrollOffset}
-            disableOverlayClose={true}
-            spotlightPadding={4}
-            styles={{
-                options: {
-                    arrowColor: theme === 'dark' ? '#1f2937' : '#fff',
-                    zIndex: 10000,
-                    primaryColor: '#4f46e5' 
-                },
-                overlay: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)'
-                },
-                // FIX: Replaced deprecated 'beacon' object with 'beaconInner' and 'beaconOuter' for styling.
-                beaconInner: {
-                    backgroundColor: '#EF4444',
-                },
-                beaconOuter: {
-                    borderColor: '#EF4444',
-                },
-            }}
-            locale={{
-                last: translations.last || 'Finish',
-                skip: translations.skip || 'Skip',
-            }}
-        />
+        <>
+            {/* This is a hacky way to inject tool state into the manager */}
+            {activeModal && <TutorialStateProvider onToolChange={handleToolChange} />}
+            <Joyride
+                steps={activeSteps}
+                run={run}
+                stepIndex={stepIndex}
+                continuous
+                showProgress={activeSteps.length > 1}
+                showSkipButton
+                callback={handleCallback}
+                tooltipComponent={CustomTooltip}
+                scrollOffset={scrollOffset}
+                disableOverlayClose={true}
+                spotlightPadding={4}
+                styles={{
+                    options: {
+                        arrowColor: theme === 'dark' ? '#1f2937' : '#fff',
+                        zIndex: 10000,
+                        primaryColor: '#4f46e5' 
+                    },
+                    overlay: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)'
+                    },
+                    // FIX: Replaced deprecated 'beacon' object with 'beaconInner' and 'beaconOuter' for styling.
+                    beaconInner: {
+                        backgroundColor: '#EF4444',
+                    },
+                    beaconOuter: {
+                        borderColor: '#EF4444',
+                    },
+                }}
+                locale={{
+                    last: translations.last || 'Finish',
+                    skip: translations.skip || 'Skip',
+                }}
+            />
+        </>
     );
 };
 

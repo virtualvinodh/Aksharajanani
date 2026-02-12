@@ -440,6 +440,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 {showEditorPanel && characterForModal && (
                     <>
                         <div 
+                            data-tour="split-view-resizer"
                             onMouseDown={panelLayout === 'split' ? handleMouseDownResize : undefined}
                             onTouchStart={panelLayout === 'split' ? handleTouchStartResize : undefined}
                             className="resizer"

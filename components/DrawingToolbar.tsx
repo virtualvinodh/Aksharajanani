@@ -179,7 +179,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
 
     if(isLargeScreen) {
         return (
-            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md p-2 rounded-2xl grid grid-cols-2 gap-1.5 justify-items-center content-start shadow-2xl border border-gray-200 dark:border-gray-700 max-h-full overflow-y-auto no-scrollbar w-24">
+            <div data-tour="main-toolbar" className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md p-2 rounded-2xl grid grid-cols-2 gap-1.5 justify-items-center content-start shadow-2xl border border-gray-200 dark:border-gray-700 max-h-full overflow-y-auto no-scrollbar w-24">
                  {commonTools}
                  <div className="h-px w-full my-1 col-span-2 bg-gray-300 dark:bg-gray-600"></div>
                  {drawingTools}
@@ -190,7 +190,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     }
 
     return (
-        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md p-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl w-full sm:w-auto max-w-[95vw]">
+        <div data-tour="main-toolbar" className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md p-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl w-full sm:w-auto max-w-[95vw]">
              <div className="flex flex-wrap items-center justify-center gap-2">
                 {commonTools}
                 <div className="hidden sm:block w-px h-6 mx-1 bg-gray-300 dark:bg-gray-600"></div>
