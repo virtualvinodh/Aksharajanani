@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
@@ -255,7 +254,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-900 min-h-0 relative overflow-hidden">
+        <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-900 min-h-0 relative overflow-hidden" data-tour="positioning-editor-page">
             <PositioningEditorHeader 
                 targetLigature={props.targetLigature} 
                 prevPair={props.hasPrev} 

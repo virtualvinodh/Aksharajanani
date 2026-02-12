@@ -1,5 +1,3 @@
-
-
 import React, { useRef, useEffect, forwardRef, useMemo } from 'react';
 import { Character, GlyphData, Path, Point, MarkAttachmentRules, MarkPositioningMap, FontMetrics, CharacterSet, PositioningRules } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -174,6 +172,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
         <button
           onClick={handleConfirmClick}
           title="Mark as positioned"
+          data-tour={`accept-pos-${ligature.name}`}
           className="absolute top-1 right-1 z-10 p-1 bg-white dark:bg-gray-700 rounded-full text-gray-400 hover:text-green-500 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors border border-gray-200 dark:border-gray-600"
         >
           <CheckCircleIcon className="w-5 h-5" />

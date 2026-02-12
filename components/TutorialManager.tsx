@@ -6,7 +6,9 @@ import { useLayout } from '../contexts/LayoutContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { usePositioning } from '../contexts/PositioningContext';
 import { Tool } from '../types';
+import { isGlyphComplete } from '../utils/glyphUtils';
 
 // Custom Tooltip Component to handle "Don't Show Again" vs "Skip"
 const CustomTooltip = ({
@@ -150,10 +152,11 @@ const TutorialStateProvider: React.FC<{ onToolChange: (tool: Tool) => void }> = 
 }
 
 const TutorialManager: React.FC = () => {
-    const { script } = useProject();
+    const { script, allCharsByName } = useProject();
     const { selectedCharacter, activeModal, workspace, currentView, isNavDrawerOpen } = useLayout();
     const { theme } = useTheme();
     const { locale } = useLocale();
+    const { markPositioningMap } = usePositioning();
     
     const [run, setRun] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
@@ -440,19 +443,6 @@ const TutorialManager: React.FC = () => {
             { target: '[data-tour="header-next"]', content: translations.clickNextToVerify, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-combining', translations } },
             { target: '[data-tour="drawing-canvas"]', content: translations.verifyLink, placement: 'right' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
             
-            // Smart Positioning section
-            { target: '[data-tour="header-next"]', content: translations.clickNextForN, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-n', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawN, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-next"]', content: translations.clickNextForTilde, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-tilde', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawTilde, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-next"]', content: translations.clickNextForMacron, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-macron', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawMacron, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-next"]', content: translations.clickNextForNTilde, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-ntilde', translations } },
-            { target: '[data-tour="positioning-canvas"]', content: richText('positioningIntro'), placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="related-pairs-strip"]', content: richText('smartClassExpl'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="strip-link-toggle"]', content: richText('unlinkExpl'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-detach-pos"]', content: richText('detachExpl'), placement: 'bottom' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-
             // Go Back to Grid
             {
                 target: '[data-tour="header-back"]', content: translations.explainBack, spotlightClicks: true, hideFooter: true,
@@ -465,6 +455,32 @@ const TutorialManager: React.FC = () => {
             { target: '[data-tour="header-settings"]', content: translations.explainSettings, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-export"]', content: translations.explainExport, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
 
+            // --- NEW: Positioning Workspace Section ---
+            {
+                target: '[data-tour="nav-positioning"]', content: translations.positioningNav, spotlightClicks: true, hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'workspace-positioning', translations }
+            },
+            {
+                target: 'body', content: translations.positioningIntro, placement: 'center' as Placement,
+                data: { isTutorial: true, translations }
+            },
+            {
+                target: '[data-tour="positioning-view-toggle"]', content: translations.positioningViews, placement: 'bottom' as Placement,
+                data: { isTutorial: true, translations }
+            },
+            {
+                target: '[data-tour="accept-pos-Aͤ"]', content: translations.positioningAccept, spotlightClicks: true, hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'accepted-A-combining', translations }
+            },
+            {
+                target: '[data-tour="grid-item-Eͤ"]', content: translations.positioningEdit, spotlightClicks: true, hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'editing-E-combining', translations }
+            },
+            {
+                target: '[data-tour="positioning-editor-page"]', content: translations.positioningEditor,
+                data: { isTutorial: true, translations }
+            },
+            
             // Final Message
             { target: 'body', content: translations.finish, placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } }
         ];
@@ -865,8 +881,22 @@ const TutorialManager: React.FC = () => {
             case 'test-modal-open': if (activeModal?.name === 'testPage') advance(); break;
             case 'test-modal-close': if (activeModal === null) advance(); break;
             case 'drawer-open': if (isNavDrawerOpen) advance(); break;
+            case 'workspace-positioning': if (workspace === 'positioning') advance(); break;
+            case 'accepted-A-combining': {
+                const A = allCharsByName.get('A');
+                const combining = allCharsByName.get('ͤ');
+                if (A?.unicode && combining?.unicode && markPositioningMap.has(`${A.unicode}-${combining.unicode}`)) {
+                    advance();
+                }
+                break;
+            }
+            case 'editing-E-combining':
+                if (document.querySelector('[data-tour="positioning-editor-page"]')) {
+                    advance();
+                }
+                break;
         }
-    }, [stepIndex, selectedCharacter, activeModal, run, script?.id, activeSteps, isNavDrawerOpen, currentTool]);
+    }, [stepIndex, selectedCharacter, activeModal, run, script?.id, activeSteps, isNavDrawerOpen, currentTool, workspace, allCharsByName, markPositioningMap]);
 
     const handleCallback = (data: CallBackProps) => {
         const { status, type, action, index } = data;

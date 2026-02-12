@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import { Character } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { RulesIcon, LeftArrowIcon, RightArrowIcon } from '../../constants';
+import { RulesIcon, SaveIcon, BackIcon, LeftArrowIcon, RightArrowIcon } from '../../constants';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 // FIX: Import useLayout to allow opening the rules manager modal directly from the header using the shared layout state.
 import { useLayout } from '../../contexts/LayoutContext';
@@ -57,7 +57,7 @@ const PositioningHeader: React.FC<PositioningHeaderProps> = ({
                 {!isFiltered && (
                     <div className="flex-1 sm:flex-none flex justify-start sm:justify-center sm:absolute sm:left-1/2 sm:top-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 mr-2 sm:mr-0 min-w-0">
                         {/* View Toggle */}
-                        <div className="inline-flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg shadow-inner w-full sm:w-auto h-full items-stretch">
+                        <div data-tour="positioning-view-toggle" className="inline-flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg shadow-inner w-full sm:w-auto h-full items-stretch">
                             <button 
                                 onClick={() => setViewMode('rules')} 
                                 className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 whitespace-normal text-center leading-tight flex items-center justify-center ${viewMode === 'rules' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
@@ -98,7 +98,6 @@ const PositioningHeader: React.FC<PositioningHeaderProps> = ({
             </div>
             
             {/* Secondary Nav for Grid View */}
-            {/* FIX: Removed isRulesManagerOpen check as that mode is now handled by a global modal. */}
             {!isFiltered && isGridView && (
                 <div className="relative mt-2 flex items-center">
                     {showNavArrows.left && (

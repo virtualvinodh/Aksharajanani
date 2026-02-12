@@ -1,4 +1,3 @@
-
 import React, { forwardRef } from 'react';
 import CombinationCard from '../CombinationCard';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, CharacterSet, AttachmentClass, PositioningRules } from '../../types';
@@ -205,7 +204,7 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                         const { status, representativeLabel, classType } = getClassStatus(base, mark);
                         
                         return (
-                            <div key={ligature.unicode} className={`relative ${status === 'representative' ? 'z-10' : ''}`}>
+                            <div key={ligature.unicode} data-tour={`grid-item-${ligature.name}`} className={`relative ${status === 'representative' ? 'z-10' : ''}`}>
                                  <div className={`
                                     rounded-lg transition-all duration-200 h-full
                                     ${status === 'representative' ? 'ring-4 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900 shadow-xl' : ''}
