@@ -1,4 +1,3 @@
-
 {
   "welcomeTitle": "Welcome to Aksharajanani!",
   "welcomeContent": "This tutorial will guide you through the process of drawing, testing, and refining your font.",
@@ -11,13 +10,22 @@
   "clickTest": "Great work! Now, let's see how it looks. Click the Test (flask) button.",
   "testPageInput": "This is the Test Page. You can type here to test how your font renders text.",
   "closeTestPage": "Click the Back button to close the test page.",
-  "selectCharF": "Now, look at the character list on the side (or open the grid). Click 'F' to switch to it directly.",
-  "drawCharF": "Draw the shape of 'F' on the canvas. This is important because the next letter, 'E', uses this shape as a starting point.",
+  
+  "clickNextForLowerA": "Let's draw the lowercase 'a'. Click the Next Glyph arrow.",
+  "drawLowerA": "Draw the 'a'. Notice how the curves work.",
+  
+  "clickNextForT": "Now let's draw 'T'. Click Next.",
+  "drawT": "Draw the 'T'. Use straight lines.",
+  
+  "clickNextForF": "Click Next to go to 'F'.",
+  "drawCharF": "Draw the shape of 'F'. This is important because the next letter, 'E', uses this shape as a starting point.",
+  
   "toolSelectPan": "The **Select Tool** is used to move, rotate, and scale paths. The **Pan Tool** is used to move the canvas view.",
   "toolEraser": "The **Eraser** removes parts of your drawing, and the **Slice Tool** cuts shapes into pieces.",
   "actionUndo": "Made a mistake? Use Undo/Redo or Copy/Paste.",
   "actionGroup": "Use Group to combine paths into a single object for easier moving.",
-  "clickNextForComposite": "Let's see a powerful feature. Click the Next Glyph arrow (top right).",
+  
+  "clickNextForComposite": "Let's see a powerful feature. Click Next to go to 'E'.",
   "compositeExplanation": "This is 'E'. It has been **pre-filled** with the shape of 'F'. You can now add strokes to finish the letter. Unlike linked glyphs, changes here are independent and won't affect the original 'F'.",
   "drawComposite": "Now, draw the bottom stroke to complete the 'E'. Notice how your new stroke combines with the pre-filled 'F' shape.",
   
