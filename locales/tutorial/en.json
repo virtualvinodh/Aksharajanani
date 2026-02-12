@@ -1,3 +1,4 @@
+
 {
   "welcomeTitle": "Welcome to Aksharajanani!",
   "welcomeContent": "This tutorial will guide you through the process of drawing, testing, and refining your font.",
@@ -10,25 +11,15 @@
   "clickTest": "Great work! Now, let's see how it looks. Click the Test (flask) button.",
   "testPageInput": "This is the Test Page. You can type here to test how your font renders text.",
   "closeTestPage": "Click the Back button to close the test page.",
-  
-  "clickNextForLowerA": "Let's draw the lowercase 'a'. Click the Next Glyph arrow.",
-  "drawLowerA": "Draw the 'a'. Notice how the curves work.",
-  
-  "clickNextForT": "Now let's draw 'T'. Click Next.",
-  "drawT": "Draw the 'T'. Use straight lines.",
-  
-  "clickNextForF": "Click Next to go to 'F'.",
+  "selectCharF": "Now, select 'F' from the grid.",
   "drawCharF": "Draw the shape of 'F'. This is important because the next letter, 'E', uses this shape as a starting point.",
-  
   "toolSelectPan": "The **Select Tool** is used to move, rotate, and scale paths. The **Pan Tool** is used to move the canvas view.",
   "toolEraser": "The **Eraser** removes parts of your drawing, and the **Slice Tool** cuts shapes into pieces.",
   "actionUndo": "Made a mistake? Use Undo/Redo or Copy/Paste.",
   "actionGroup": "Use Group to combine paths into a single object for easier moving.",
-  
   "clickNextForComposite": "Let's see a powerful feature. Click Next to go to 'E'.",
   "compositeExplanation": "This is 'E'. It has been **pre-filled** with the shape of 'F'. You can now add strokes to finish the letter. Unlike linked glyphs, changes here are independent and won't affect the original 'F'.",
   "drawComposite": "Now, draw the bottom stroke to complete the 'E'. Notice how your new stroke combines with the pre-filled 'F' shape.",
-  
   "clickNextForLowerE": "Let's create a lowercase 'e'. Click the Next Glyph arrow.",
   "drawLowerE": "Draw a simple 'e' on the canvas.",
   "clickNextForLinked": "Click Next again to see the magic of Linked Glyphs.",
@@ -39,7 +30,6 @@
   "modifyLowerE": "Modify the 'e' significantly (e.g. add a circle around it).",
   "clickNextToVerify": "Go back to the linked glyph (Next).",
   "verifyLink": "See? The linked glyph updated automatically to match your changes!",
-
   "clickNextForN": "Let's explore **Smart Positioning**. Click Next to go to 'n'.",
   "drawN": "Draw the base letter 'n'.",
   "clickNextForTilde": "Click Next to go to the Tilde mark.",
@@ -51,13 +41,11 @@
   "smartClassExpl": "Look at the bottom strip. It shows **Related Pairs**. Tilde and Macron are in the same **Smart Class**, so positioning one updates the other automatically!",
   "unlinkExpl": "Need this specific pair to be different? Click **Unlink** to move this mark independently without affecting the Macron.",
   "detachExpl": "If you need to change the *shape* of the mark just for this letter (e.g. to squash it), click **Detach** to bake it into a new composite glyph.",
-  
+  "explainBack": "Now, click **Back** to return to the Character Grid so we can explore the final tools.",
   "explainCreator": "Open the **Creator Studio** to create artwork, stickers, and social media posts using your font.",
   "explainCompare": "Use **Compare** to view multiple characters side-by-side. Useful for checking consistency.",
   "explainSettings": "Adjust global font settings, metadata (like designer name), and view metrics here.",
   "explainExport": "When you are ready, click **Export** to generate and download your installable OpenType (.otf) font file.",
-  "explainBack": "Now, click **Back** to return to the Character Grid so we can explore the final tools.",
-
   "finish": "You are ready to create! Explore the other workspaces for Positioning and Kerning when you are done drawing.",
   "last": "Finish Tour",
   "skip": "Skip Tutorial",
@@ -67,14 +55,12 @@
   "close": "Close",
   "finishBtn": "Finish",
   "dontShowAgain": "Don't show me this again",
-
   "hintGridSelect": "Welcome! Select a character card to start drawing your font.",
   "hintEditorDraw": "The **Pen Tool** is active. Click and drag on the canvas to draw your character shape.",
   "hintRelatedPairsTitle": "Smart Positioning",
   "hintRelatedPairsContent": "This pair belongs to a **Smart Class**. Any position changes you make here will automatically sync to all **Related Pairs** shown in this strip.",
   "hintOverrideTitle": "Creating Exceptions",
   "hintOverrideContent": "Need a unique position for this specific pair? Click this button to **Unlink**. This creates an **Override**, allowing you to move this mark independently without affecting the rest of the class.",
-  
   "hintCompositeTitle": "Composite Glyph",
   "hintCompositeContent": "This glyph is constructed from components. It has been pre-filled for you. You can edit the paths, or use the <strong>Refresh</strong> button to update it if the source components change.",
   "hintLinkedTitle": "Linked Glyph",
