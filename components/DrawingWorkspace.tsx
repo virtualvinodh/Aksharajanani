@@ -41,7 +41,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         activeTab, setActiveTab, showNotification, 
         metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, 
         filterMode, setComparisonCharacters, setCurrentView,
-        searchQuery
+        searchQuery, selectedCharacter, triggerActiveEditorUpdate
     } = useLayout();
     
     const { dispatch: characterDispatch, positioningGroupNames, allCharsByName, allCharsByUnicode, markAttachmentRules, positioningRules } = useProject();
@@ -387,6 +387,11 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     }, []);
 
     const handleBatchComplete = () => {
+        // TRIGGER FIX: Check if active character was modified
+        if (selectedCharacter && metricsSelection.has(selectedCharacter.unicode!)) {
+            triggerActiveEditorUpdate();
+        }
+
         setMetricsSelection(new Set());
         setIsMetricsSelectionMode(false);
         setIsPropertiesOpen(false);

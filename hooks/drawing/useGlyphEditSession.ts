@@ -39,7 +39,7 @@ export const useGlyphEditSession = ({
     script
 }: UseGlyphEditSessionProps) => {
     const { t } = useLocale();
-    const { showNotification, checkAndSetFlag } = useLayout();
+    const { showNotification, checkAndSetFlag, activeEditorForceUpdate } = useLayout();
     const { state: rulesState } = useRules();
     const { dispatch: characterDispatch } = useProject();
     const groups = rulesState.fontRules?.groups || {};
@@ -108,6 +108,19 @@ export const useGlyphEditSession = ({
         metaRef.current = { lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform };
     }, [lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform]);
     
+    // --- FORCE UPDATE LISTENER ---
+    useEffect(() => {
+        if (activeEditorForceUpdate > 0 && glyphData) {
+            // Reload paths from global store due to external bulk op
+            const newPaths = deepClone(glyphData.paths || []);
+            setCurrentPaths(newPaths);
+            setInitialPathsOnLoad(newPaths);
+            // Reset history to match new state (prevents undoing into pre-transform state which is confusing)
+            setHistory([newPaths]);
+            setHistoryIndex(0);
+        }
+    }, [activeEditorForceUpdate, glyphData]);
+
     const handleTransformComponent = useCallback((index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => {
         if (!character.link && !character.composite) return;
         

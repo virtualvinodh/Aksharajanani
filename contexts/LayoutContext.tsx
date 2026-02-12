@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useCallback, useRef } from 'react';
 import { Character, ProjectData, FilterMode } from '../types';
 import { useMediaQuery } from '../hooks/useMediaQuery';
@@ -80,6 +81,10 @@ interface LayoutContextType {
   isNavDrawerOpen: boolean;
   openNavDrawer: () => void;
   closeNavDrawer: () => void;
+
+  // Signal to force update active editor (for bulk ops)
+  activeEditorForceUpdate: number;
+  triggerActiveEditorUpdate: () => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -107,6 +112,9 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [pendingNavigationTarget, setPendingNavigationTarget] = useState<string | null>(null);
     const [filterMode, setFilterMode] = useState<FilterMode>('none');
     const [searchQuery, setSearchQuery] = useState<string>('');
+
+    // Force update signal
+    const [activeEditorForceUpdate, setActiveEditorForceUpdate] = useState(0);
 
     // Session flags (non-persistent across refreshes)
     const sessionFlags = useRef<Set<string>>(new Set());
@@ -150,6 +158,10 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         sessionFlags.current.add(key);
         return false;
     }, []);
+
+    const triggerActiveEditorUpdate = useCallback(() => {
+        setActiveEditorForceUpdate(prev => prev + 1);
+    }, []);
     
     const value = {
         workspace, setWorkspace,
@@ -169,7 +181,8 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         checkAndSetFlag,
         filterMode, setFilterMode,
         searchQuery, setSearchQuery,
-        isNavDrawerOpen, openNavDrawer, closeNavDrawer
+        isNavDrawerOpen, openNavDrawer, closeNavDrawer,
+        activeEditorForceUpdate, triggerActiveEditorUpdate
     };
 
     return (
