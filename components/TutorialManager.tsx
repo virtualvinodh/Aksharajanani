@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Joyride, { CallBackProps, STATUS, Step, EVENTS, ACTIONS, TooltipRenderProps, Placement } from 'react-joyride';
 import { useProject } from '../contexts/ProjectContext';
@@ -383,6 +384,33 @@ const TutorialManager: React.FC = () => {
                 data: { isTutorial: true, translations }
             },
             
+            // --- NEW INTERACTIVE BEARINGS SECTION ---
+            { 
+                target: '[data-tour="drawing-canvas"]', 
+                content: richText('explainBearings'), 
+                placement: 'top' as Placement, 
+                disableBeacon: true, 
+                data: { isTutorial: true, translations } 
+            },
+            { 
+                target: '[data-tour="drawing-canvas"]', 
+                content: richText('dragLSB'), 
+                placement: 'top' as Placement, 
+                disableBeacon: true, 
+                spotlightClicks: true,
+                disableOverlayClose: true,
+                data: { isTutorial: true, translations } 
+            },
+            { 
+                target: '[data-tour="drawing-canvas"]', 
+                content: richText('dragRSB'), 
+                placement: 'top' as Placement, 
+                disableBeacon: true, 
+                spotlightClicks: true,
+                disableOverlayClose: true,
+                data: { isTutorial: true, translations } 
+            },
+
             // --- NEW RESPONSIVE FLOW FOR 'F' ---
             ...(isLargeScreen ? [{
                 // Large Screen: Select 'F' from split view grid
@@ -443,6 +471,28 @@ const TutorialManager: React.FC = () => {
             { target: '[data-tour="header-next"]', content: translations.clickNextToVerify, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-combining', translations } },
             { target: '[data-tour="drawing-canvas"]', content: translations.verifyLink, placement: 'right' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
             
+            // --- Interactive Positioning Section ---
+            { target: '[data-tour="header-next"]', content: translations.clickNextForN, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-n', translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawN, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-next"]', content: translations.clickNextForTilde, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-tilde', translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawTilde, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-next"]', content: translations.clickNextForMacron, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-macron', translations } },
+            { target: '[data-tour="drawing-canvas"]', content: translations.drawMacron, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-next"]', content: translations.clickNextForNTilde, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-ntilde', translations } },
+            { target: '[data-tour="positioning-canvas"]', content: richText('positioningConcept'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="related-pairs-strip"]', content: richText('positioningStripIntro'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="positioning-canvas"]', content: richText('positioningDrag'), placement: 'top' as Placement, disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="strip-item-n̄"]', content: translations.positioningStripNavToNBar, placement: 'top' as Placement, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-nbar', translations } },
+            { target: '[data-tour="positioning-canvas"]', content: richText('smartClassExpl'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
+
+            // NEW: Interactive override flow
+            { target: '[data-tour="positioning-canvas"]', content: richText('positioningTryDragLocked'), placement: 'top', disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="positioning-canvas"]', content: richText('positioningExplainLock'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="strip-link-toggle"]', content: richText('positioningClickUnlink'), placement: 'top', spotlightClicks: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="strip-link-toggle"]', content: richText('positioningConfirmOverride'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="positioning-canvas"]', content: richText('positioningDragOverride'), placement: 'top', disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="positioning-canvas"]', content: richText('positioningOverrideFinish'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
+
             // Go Back to Grid
             {
                 target: '[data-tour="header-back"]', content: translations.explainBack, spotlightClicks: true, hideFooter: true,
@@ -877,6 +927,14 @@ const TutorialManager: React.FC = () => {
             case 'selected-tilde': if (selectedCharacter?.name === '̃') advance(); break;
             case 'selected-macron': if (selectedCharacter?.name === '̄') advance(); break;
             case 'selected-ntilde': if (selectedCharacter?.name === 'ñ') advance(); break;
+            case 'selected-nbar': if (selectedCharacter?.name === 'n̄') advance(); break;
+            case 'unlinked-nbar': {
+                const linkButton = document.querySelector('[data-tour="strip-link-toggle"]');
+                if (linkButton && linkButton.getAttribute('title')?.startsWith('Exception')) {
+                    advance();
+                }
+                break;
+            }
             case 'back-to-dashboard': if (!activeModal && !selectedCharacter) advance(); break;
             case 'test-modal-open': if (activeModal?.name === 'testPage') advance(); break;
             case 'test-modal-close': if (activeModal === null) advance(); break;

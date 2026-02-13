@@ -1,6 +1,7 @@
 
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { Virtuoso } from 'react-virtuoso';
 import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet, AttachmentClass, PositioningRules, MarkPositioningMap } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths, calculateDefaultMarkOffset, getAccurateGlyphBBox } from '../../services/glyphRenderService';
@@ -215,8 +216,9 @@ const SiblingThumbnail: React.FC<{
         }`;
 
     return (
-        <div 
+        <div
             onClick={onClick}
+            data-tour={`strip-item-${pair.ligature.name}`}
             style={{ width: size }}
             className={containerClasses}
             title={isPivot ? t('classRepresentativeEdit') : t('editPair', { base: pair.base.name, mark: pair.mark.name })}
