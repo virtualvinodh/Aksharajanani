@@ -36,10 +36,12 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
         <div className="flex flex-col h-full overflow-hidden">
              <div 
                 className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                data-tour="kerning-tabs"
              >
                 <nav className="flex space-x-2 px-2 sm:px-4">
                     <button
                         onClick={() => setActiveTab('recommended')}
+                        data-tour="tab-suggestions"
                         className={`flex-shrink-0 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors ${
                             activeTab === 'recommended'
                                 ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
@@ -50,6 +52,7 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
                     </button>
                     <button
                         onClick={() => setActiveTab('spaced')}
+                        data-tour="tab-spaced"
                         className={`flex-shrink-0 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors ${
                             activeTab === 'spaced'
                                 ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
@@ -60,6 +63,7 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
                     </button>
                     <button
                         onClick={() => setActiveTab('all')}
+                        data-tour="tab-all"
                         className={`flex-shrink-0 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors ${
                             activeTab === 'all'
                                 ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'

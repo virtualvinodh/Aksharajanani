@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Character, GlyphData, FontMetrics } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -101,7 +102,7 @@ const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showR
                 : 'bg-white dark:bg-gray-800 border-dashed border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:border-indigo-500'}`;
 
     return (
-        <div onClick={onClick} className={cardClasses}>
+        <div onClick={onClick} className={cardClasses} data-tour={`pair-card-${pair.left.name}${pair.right.name}`}>
             <canvas ref={canvasRef} width={KERNING_CARD_CANVAS_SIZE} height={KERNING_CARD_CANVAS_SIZE}></canvas>
             
             {/* Logic Change: "Auto" label removed entirely per request to merge visually */}

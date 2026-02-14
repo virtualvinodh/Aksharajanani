@@ -221,7 +221,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
                     )}
 
                     <div className="p-4 border-b dark:border-gray-700 flex items-center gap-4 flex-wrap bg-white dark:bg-gray-800">
-                        <button onClick={handleAutoKern} disabled={isAutoKerning} className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors"><SparklesIcon /> {t('autoKern')}</button>
+                        <button onClick={handleAutoKern} disabled={isAutoKerning} data-tour="auto-kern-btn" className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors"><SparklesIcon /> {t('autoKern')}</button>
                         
                         <button onClick={handleDiscoverKerning} disabled={isAutoKerning} className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors" title="Scan all characters for geometric collisions">
                              <SearchIcon className="w-4 h-4" />

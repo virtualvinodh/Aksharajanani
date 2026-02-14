@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePositioning } from '../contexts/PositioningContext';
+import { useKerning } from '../contexts/KerningContext';
 import { Tool } from '../types';
 import { isGlyphComplete } from '../utils/glyphUtils';
 
@@ -158,6 +159,7 @@ const TutorialManager: React.FC = () => {
     const { theme } = useTheme();
     const { locale } = useLocale();
     const { markPositioningMap } = usePositioning();
+    const { kerningMap } = useKerning();
     
     const [run, setRun] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
@@ -514,7 +516,7 @@ const TutorialManager: React.FC = () => {
                 data: { isTutorial: true, translations }
             },
 
-            // --- NEW: Positioning Workspace Section ---
+            // --- Positioning Workspace Section ---
             {
                 target: '[data-tour="nav-positioning"]', content: translations.positioningNav, spotlightClicks: true, hideFooter: true,
                 data: { isTutorial: true, advanceOn: 'workspace-positioning', translations }
@@ -553,8 +555,57 @@ const TutorialManager: React.FC = () => {
                 data: { isTutorial: true, translations }
             },
             
+            // --- NEW: Kerning Workspace Section ---
+            {
+                target: '[data-tour="nav-kerning"]',
+                content: translations.kerningNav,
+                spotlightClicks: true,
+                hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'workspace-kerning', translations }
+            },
+            {
+                target: '[data-tour="kerning-tabs"]',
+                content: richText('kerningIntroAndViews'),
+                placement: 'bottom' as Placement,
+                data: { isTutorial: true, translations }
+            },
+            {
+                target: '[data-tour="pair-card-Te"]',
+                content: translations.kerningManualEdit,
+                spotlightClicks: true,
+                hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'editing-Te', translations }
+            },
+            {
+                target: '[data-tour="kerning-canvas"]',
+                content: richText('kerningEditor'),
+                placement: 'top' as Placement,
+                disableBeacon: true,
+                spotlightClicks: true,
+                hideFooter: true, // User must click "Back" on their own
+                data: { isTutorial: true, advanceOn: 'kerned-Te', translations }
+            },
+            {
+                target: '[data-tour="tab-spaced"]',
+                content: translations.kerningSpacedTab,
+                placement: 'bottom' as Placement,
+                data: { isTutorial: true, translations }
+            },
+            {
+                target: '[data-tour="auto-kern-btn"]',
+                content: richText('kerningAutoTools'),
+                placement: 'bottom' as Placement,
+                data: { isTutorial: true, translations }
+            },
+            {
+                target: '[data-tour="tab-all"]',
+                content: translations.kerningAllPairsTab,
+                placement: 'bottom' as Placement,
+                data: { isTutorial: true, translations }
+            },
+            
             // Final Message
-            { target: 'body', content: translations.finish, placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } }
+            { target: 'body', content: richText('finalCongratulations'), placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } }
         ];
 
         return steps;
@@ -762,7 +813,7 @@ const TutorialManager: React.FC = () => {
                          setRun(true);
                      }, 1200);
                      return () => clearTimeout(timer);
-                 }
+                }
             }
         }
 
@@ -962,10 +1013,8 @@ const TutorialManager: React.FC = () => {
             case 'test-modal-close': if (activeModal === null) advance(); break;
             case 'drawer-open': if (isNavDrawerOpen) advance(); break;
             case 'workspace-positioning': if (workspace === 'positioning') advance(); break;
+            case 'workspace-kerning': if (workspace === 'kerning') advance(); break;
             case 'start-positioning-A-combining': {
-                // This event triggers when the user clicks the "Start Positioning" button,
-                // which changes the view inside the Positioning workspace. We can detect this
-                // by checking if the next step's target exists.
                 const nextStepTarget = activeSteps[stepIndex + 1]?.target as string;
                 if (nextStepTarget && document.querySelector(nextStepTarget)) {
                     advance();
@@ -985,8 +1034,23 @@ const TutorialManager: React.FC = () => {
                     advance();
                 }
                 break;
+            case 'editing-Te':
+                 if (document.querySelector('[data-tour="kerning-editor-page"]')) {
+                     advance();
+                 }
+                 break;
+            case 'kerned-Te': {
+                const T = allCharsByName.get('T');
+                const e = allCharsByName.get('e');
+                if (T?.unicode && e?.unicode && kerningMap.has(`${T.unicode}-${e.unicode}`)) {
+                     if (!document.querySelector('[data-tour="kerning-editor-page"]')) {
+                         advance();
+                     }
+                }
+                break;
+            }
         }
-    }, [stepIndex, selectedCharacter, activeModal, run, script?.id, activeSteps, isNavDrawerOpen, currentTool, workspace, allCharsByName, markPositioningMap]);
+    }, [stepIndex, selectedCharacter, activeModal, run, script?.id, activeSteps, isNavDrawerOpen, currentTool, workspace, allCharsByName, markPositioningMap, kerningMap]);
 
     const handleCallback = (data: CallBackProps) => {
         const { status, type, action, index } = data;

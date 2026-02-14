@@ -218,7 +218,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-800 min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-800 min-h-0 overflow-hidden" data-tour="kerning-editor-page">
             <KerningEditorHeader 
                 pair={props.pair} 
                 onClose={props.onClose}
