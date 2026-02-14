@@ -57,7 +57,9 @@
   "positioningNav": "Finally, let's explore the powerful **Positioning** workspace. This is where you align marks, like accents or vowel signs, to base letters. Click the **Positioning** tab to continue.",
   "positioningIntro": "This is the Positioning Workspace. Here you'll align marks (like accents or vowel signs) to base letters and accept or adjust the app's automatic suggestions.",
   "positioningViews": "You can browse pairs in three ways: **By Rule** (groups similar pairs), **By Base** (shows all marks for a single base), or **By Mark** (shows a single mark on all bases).",
-  "positioningAccept": "Let's review a pair. Pairs with a dashed border are unconfirmed suggestions. To accept the automatic position for **Aͤ**, click the **Checkmark** button.",
+  "positioningPreviewCard": "This card shows a preview of the automatically positioned pair. The dashed border means it's an unconfirmed suggestion.",
+  "startPositioning": "Click 'Start Positioning' to review the pairs in this rule.",
+  "positioningAccept": "To accept the automatic position for **Aͤ**, click the **Checkmark** button.",
   "positioningEdit": "Great! Now, let's fix one that might be incorrect. To make a manual adjustment, click on the **Eͤ** card to open the detailed editor.",
   "positioningEditor": "In this view, you can **drag the mark** into the perfect position. When you're satisfied with the alignment, click **Save** in the header. For now, just click 'Next' to finish the tour.",
   "finish": "You are ready to create! Explore the other workspaces for Positioning and Kerning when you are done drawing.",
@@ -110,5 +112,5 @@
   "positioningConfirmOverride": "Excellent! This pair is now an **Override** and will no longer receive automatic updates from `ñ`. Notice the icon has changed.",
   "positioningDragOverride": "Now, **drag the macron again**. See? It moves freely. When you're ready, click Next.",
   "positioningOverrideFinish": "You've successfully created an exception. This powerful feature allows you to maintain consistency across a class while still handling special cases that require unique alignment.",
-  "positioningPairDeleted": "Positioning for '{name}' has been deleted and reverted to a standard glyph."
+  "threePillarsIntro": "You've mastered drawing! The next two workspaces, **Positioning** and **Kerning**, are the final pillars of font design. **Positioning** handles vertical alignment (like accents), while **Kerning** handles horizontal spacing between letters."
 }

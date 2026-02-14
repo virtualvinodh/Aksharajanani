@@ -1,4 +1,3 @@
-
 import React, { useMemo, useRef, useEffect } from 'react';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, PositioningRules, CharacterSet, FontMetrics } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
@@ -223,10 +222,13 @@ const PositioningRuleBlock: React.FC<PositioningRuleBlockProps> = ({
         }
     };
 
+    const firstPairForTour = pairs.length > 0 ? `${pairs[0].base.name}-${pairs[0].mark.name}` : '';
+
     return (
         <div 
             className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer"
             onClick={handleBlockClick}
+            data-tour={`start-positioning-rule-${firstPairForTour}`}
         >
             <div className="flex flex-col sm:flex-row items-center p-6 gap-6 sm:gap-4">
                 

@@ -505,6 +505,15 @@ const TutorialManager: React.FC = () => {
             { target: '[data-tour="header-settings"]', content: translations.explainSettings, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-export"]', content: translations.explainExport, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
 
+            // NEW INTERSTITIAL STEP (MOVED)
+            {
+                target: 'body',
+                content: richText('threePillarsIntro'),
+                placement: 'center' as Placement,
+                disableBeacon: true,
+                data: { isTutorial: true, translations }
+            },
+
             // --- NEW: Positioning Workspace Section ---
             {
                 target: '[data-tour="nav-positioning"]', content: translations.positioningNav, spotlightClicks: true, hideFooter: true,
@@ -516,6 +525,19 @@ const TutorialManager: React.FC = () => {
             },
             {
                 target: '[data-tour="positioning-view-toggle"]', content: translations.positioningViews, placement: 'bottom' as Placement,
+                data: { isTutorial: true, translations }
+            },
+            {
+                target: '[data-tour="start-positioning-rule-A-ͤ"]',
+                content: translations.startPositioning,
+                spotlightClicks: true,
+                hideFooter: true,
+                data: { isTutorial: true, advanceOn: 'start-positioning-A-combining', translations }
+            },
+            {
+                target: '[data-tour="combo-card-Aͤ"]',
+                content: translations.positioningPreviewCard,
+                placement: 'top' as Placement,
                 data: { isTutorial: true, translations }
             },
             {
@@ -575,7 +597,7 @@ const TutorialManager: React.FC = () => {
                        clearInterval(checkExist);
                        setActiveSteps([{
                            target: '.tutorial-glyph-item',
-                           content: translations.hintGridSelect || "Select a character to start.",
+                           content: translations.hintGridSelect || "Select a character card to start drawing your font.",
                            disableBeacon: true,
                            placement: 'bottom' as Placement,
                            spotlightClicks: true,
@@ -940,6 +962,16 @@ const TutorialManager: React.FC = () => {
             case 'test-modal-close': if (activeModal === null) advance(); break;
             case 'drawer-open': if (isNavDrawerOpen) advance(); break;
             case 'workspace-positioning': if (workspace === 'positioning') advance(); break;
+            case 'start-positioning-A-combining': {
+                // This event triggers when the user clicks the "Start Positioning" button,
+                // which changes the view inside the Positioning workspace. We can detect this
+                // by checking if the next step's target exists.
+                const nextStepTarget = activeSteps[stepIndex + 1]?.target as string;
+                if (nextStepTarget && document.querySelector(nextStepTarget)) {
+                    advance();
+                }
+                break;
+            }
             case 'accepted-A-combining': {
                 const A = allCharsByName.get('A');
                 const combining = allCharsByName.get('ͤ');

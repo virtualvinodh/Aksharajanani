@@ -163,11 +163,16 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
   if (isPositioned) {
       stateClasses = "bg-indigo-50 dark:bg-indigo-900/30 border-2 border-indigo-200 dark:border-indigo-700";
   } else {
-      stateClasses = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500";
+      stateClasses = "bg-white dark:bg-gray-800 border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
   }
 
   return (
-    <div ref={ref} onClick={canEdit ? onClick : undefined} className={`${baseContainerClasses} ${cursorClass} ${stateClasses}`}>
+    <div 
+      ref={ref} 
+      onClick={canEdit ? onClick : undefined} 
+      className={`${baseContainerClasses} ${cursorClass} ${stateClasses}`}
+      data-tour={`combo-card-${ligature.name}`}
+    >
       {!isPositioned && canEdit && !hideTick && (
         <button
           onClick={handleConfirmClick}
