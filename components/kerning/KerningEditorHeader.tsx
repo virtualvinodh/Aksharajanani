@@ -131,6 +131,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
             <div className="flex-1 flex justify-start">
                 <button 
                     onClick={props.onClose} 
+                    data-tour="header-back"
                     className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 active:scale-95"
                 >
                     <BackIcon />
