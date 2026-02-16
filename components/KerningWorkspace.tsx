@@ -26,6 +26,11 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
         return (hasStatic || hasDynamic) ? 'recommended' : 'all';
     });
 
+    // Notify Tutorial Manager that the view has loaded
+    useEffect(() => {
+        window.dispatchEvent(new Event('aksharajanani:view-loaded'));
+    }, []);
+
     if (!settings) return null;
 
     const useKerningTerm = settings.editorMode === 'advanced' || settings.preferKerningTerm;

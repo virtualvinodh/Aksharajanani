@@ -338,8 +338,6 @@ const TutorialManager: React.FC = () => {
             { target: 'body', content: translations.positioningIntro, placement: 'center' as Placement, data: { isTutorial: true, translations } },
             { target: '[data-tour="positioning-view-toggle"]', content: translations.positioningViews, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
             
-            // --- FIX: Race Condition Handling ---
-            // Removed 'advanceOn' here to rely on manual handoff.
             {
                 target: '[data-tour="start-positioning-rule-A-ͤ"]',
                 content: translations.startPositioning,
@@ -348,8 +346,6 @@ const TutorialManager: React.FC = () => {
                 data: { isTutorial: true, translations } 
             },
             
-            // --- Transition Step to Editor ---
-            // Removed advanceOn because we handle it via event listener manually now.
             { target: '[data-tour="combo-card-Aͤ"]', content: translations.positioningPreviewCard, placement: 'top' as Placement, data: { isTutorial: true, translations } },
             { target: '[data-tour="accept-pos-Aͤ"]', content: translations.positioningAccept, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'accepted-A-combining', translations } },
             { 
@@ -357,20 +353,19 @@ const TutorialManager: React.FC = () => {
                 content: translations.positioningEdit, 
                 spotlightClicks: true, 
                 hideFooter: true, 
-                data: { isTutorial: true, translations } // Removed advanceOn
+                data: { isTutorial: true, translations } // removed advanceOn
             },
             { target: '[data-tour="positioning-editor-page"]', content: translations.positioningEditor, data: { isTutorial: true, translations } },
             
             { target: '[data-tour="nav-kerning"]', content: translations.kerningNav, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'workspace-kerning', translations } },
             { target: '[data-tour="kerning-tabs"]', content: richText('kerningIntroAndViews'), placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
             
-            // --- Transition Step to Kerning Editor ---
             { 
                 target: '[data-tour="pair-card-Te"]', 
                 content: translations.kerningManualEdit, 
                 spotlightClicks: true, 
                 hideFooter: true, 
-                data: { isTutorial: true, translations } // Removed advanceOn
+                data: { isTutorial: true, translations } // removed advanceOn
             },
             // Step 1: The Action (Adjusting Spacing)
             { 
@@ -421,10 +416,6 @@ const TutorialManager: React.FC = () => {
         }
     }, [script?.id, linearTutorialSteps]);
 
-    // ... (JIT Hint Logic remains unchanged) ...
-    // Note: Reusing the same JIT block from previous file content for brevity as it was correct.
-    // Assuming context is passed correctly.
-
     // 5. Linear Tutorial State Machine (Advancement Logic)
     useEffect(() => {
         if (!run || script?.id !== 'tutorial' || activeSteps.length === 0) return;
@@ -432,7 +423,35 @@ const TutorialManager: React.FC = () => {
         const currentStep = activeSteps[stepIndex];
         if (!currentStep) return;
 
-        // Passive Polling for View Transition (Fix for Race Condition)
+        // Proactive Click Interception for "Transition Steps"
+        // This is the CRITICAL FIX for the race condition crash.
+        const isTransitionToEditor = currentStep.target === '[data-tour="combo-card-Eͤ"]';
+        const isTransitionToKerning = currentStep.target === '[data-tour="pair-card-Te"]';
+        const isTransitionBack = currentStep.target === '[data-tour="header-back"]';
+        
+        if (isTransitionToEditor || isTransitionToKerning || isTransitionBack) {
+             const selector = currentStep.target as string;
+             
+             const handleProactiveClick = (e: MouseEvent) => {
+                 const target = e.target as HTMLElement;
+                 if (target.closest(selector)) {
+                     // Capture the click event before React unmounts the view
+                     // Pause the tour explicitly to prevent TARGET_NOT_FOUND
+                     setRun(false);
+                     // Advance the step index so when we resume, we are on the next step
+                     setStepIndex(prev => prev + 1);
+                 }
+             };
+
+             // Use capture phase to ensure we catch it before React bubbles it up/unmounts
+             document.addEventListener('click', handleProactiveClick, true);
+             
+             return () => {
+                 document.removeEventListener('click', handleProactiveClick, true);
+             };
+        }
+
+        // Passive Polling for View Transition (Fix for Race Condition on Grid Load)
         if (currentStep.target === '[data-tour="start-positioning-rule-A-ͤ"]') {
              const interval = setInterval(() => {
                  // Check if the destination element (the combo card in the grid view) has appeared
@@ -475,7 +494,6 @@ const TutorialManager: React.FC = () => {
             case 'drawer-open': if (isNavDrawerOpen) advance(); break;
             case 'workspace-positioning': if (workspace === 'positioning') advance(); break;
             case 'workspace-kerning': if (workspace === 'kerning') advance(); break;
-            // 'start-positioning-A-combining' removed as it is handled by the poller above
             case 'accepted-A-combining': {
                 const A = allCharsByName.get('A');
                 const combining = allCharsByName.get('ͤ');
@@ -484,8 +502,6 @@ const TutorialManager: React.FC = () => {
                 }
                 break;
             }
-            // Removed 'editing-E-combining' case as it's handled by manual handoff
-            // Removed 'editing-Te' case as it's handled by manual handoff
 
             case 'kerned-Te-action': {
                 const T = allCharsByName.get('T');
@@ -507,16 +523,16 @@ const TutorialManager: React.FC = () => {
     const handleCallback = (data: CallBackProps) => {
         const { status, type, action, index, step } = data;
         
-        // Error Handling: If the positioning button target is missing (because view switched),
-        // we explicitly IGNORE the error. The poller in useEffect will handle the advancement.
-        // This prevents Joyride from stopping the tour prematurely.
+        // Robust Error Handling
         if (type === EVENTS.TARGET_NOT_FOUND) {
              const stepTarget = activeSteps[index]?.target;
+             
+             // If we are waiting for the grid view to load, ignore this error
              if (stepTarget === '[data-tour="start-positioning-rule-A-ͤ"]') {
                  return; 
              }
              
-             // Race Condition Handling: If target not found for Editor steps, Pause and Wait for Event
+             // For Editor Pages, if target is not found, pause and wait for 'view-loaded' event
              if (stepTarget === '[data-tour="positioning-editor-page"]' || stepTarget === '[data-tour="kerning-canvas"]') {
                  setRun(false);
                  return;
@@ -532,13 +548,6 @@ const TutorialManager: React.FC = () => {
             }
         } else if (type === EVENTS.STEP_AFTER) {
             const currentStep = activeSteps[index];
-
-            // Manual Handoff: Pause before entering editors to avoid race condition
-            if (currentStep.target === '[data-tour="combo-card-Eͤ"]' || currentStep.target === '[data-tour="pair-card-Te"]') {
-                 setRun(false);
-                 setStepIndex(index + 1);
-                 return;
-            }
 
             if (!currentStep.data?.isTutorial && action === ACTIONS.NEXT) {
                  setStepIndex(index + 1);
