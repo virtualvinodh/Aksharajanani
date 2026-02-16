@@ -58,6 +58,11 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     const [gsub, setGsub] = useState<string | undefined>(props.character.gsub);
     const [liga, setLiga] = useState<string[] | undefined>(props.character.liga);
 
+    // Notify Tutorial Manager that the view has loaded
+    useEffect(() => {
+        window.dispatchEvent(new Event('aksharajanani:view-loaded'));
+    }, []);
+
     // Sync state if character changes
     useEffect(() => {
         setLsb(props.character.lsb);

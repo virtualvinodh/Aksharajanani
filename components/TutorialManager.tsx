@@ -27,7 +27,6 @@ const CustomTooltip = ({
     const labels = step.data?.translations || {};
 
     // 1. Define the action logic closing over current props
-    // FIX: Changed SyntheticEvent to MouseEvent to match what onClick provides and what Joyride expects.
     const performDismiss = (e?: React.MouseEvent<HTMLElement>) => {
         // Main Tutorial Logic
         if (step.data?.isTutorial) {
@@ -38,7 +37,6 @@ const CustomTooltip = ({
              localStorage.setItem(step.data.storageKey, 'true');
         }
         
-        // Pass event if exists, or a dummy object for the timer call
         const safeEvent = e || { 
             preventDefault: () => {}, 
             stopPropagation: () => {},
@@ -81,8 +79,6 @@ const CustomTooltip = ({
         }, 15000); // 15 seconds (increased for multi-step readability)
 
         return () => clearTimeout(timer);
-        // Empty dependency array: We only start the timer when this specific tooltip MOUNTS.
-        // We do NOT want to reset the timer on re-renders.
     }, []); 
   
     return (
@@ -106,7 +102,6 @@ const CustomTooltip = ({
                              {labels.back || 'Back'}
                           </button>
                        )}
-                       {/* Hide "Next" button if the step requires interaction (hideFooter is not enough for custom tooltips) */}
                        {!step.hideFooter && (
                            <button 
                                 {...primaryProps} 
@@ -119,7 +114,6 @@ const CustomTooltip = ({
                    </div>
               </div>
               
-              {/* Show for JIT hints only, NOT for main tutorial */}
               {!step.data?.isTutorial && (
                   <div className="border-t border-gray-100 dark:border-gray-700 pt-3 text-center">
                       <button 
@@ -167,6 +161,18 @@ const TutorialManager: React.FC = () => {
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
     const [scrollOffset, setScrollOffset] = useState(150);
     
+    // Resume Listener for View Transitions
+    useEffect(() => {
+        const handleViewLoaded = () => {
+             // If tutorial is paused and waiting for a view transition, resume it now.
+             if (script?.id === 'tutorial') {
+                 setRun(true);
+             }
+        };
+        window.addEventListener('aksharajanani:view-loaded', handleViewLoaded);
+        return () => window.removeEventListener('aksharajanani:view-loaded', handleViewLoaded);
+    }, [script?.id]);
+
     const updateScrollOffset = useCallback(() => {
         let total = 0;
         const appHeader = document.querySelector('header');
@@ -333,8 +339,7 @@ const TutorialManager: React.FC = () => {
             { target: '[data-tour="positioning-view-toggle"]', content: translations.positioningViews, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
             
             // --- FIX: Race Condition Handling ---
-            // Removed 'advanceOn' here to rely on passive polling in the effect below.
-            // This prevents Joyride from trying to calculate the next target before the view transition completes.
+            // Removed 'advanceOn' here to rely on manual handoff.
             {
                 target: '[data-tour="start-positioning-rule-A-ͤ"]',
                 content: translations.startPositioning,
@@ -343,15 +348,30 @@ const TutorialManager: React.FC = () => {
                 data: { isTutorial: true, translations } 
             },
             
+            // --- Transition Step to Editor ---
+            // Removed advanceOn because we handle it via event listener manually now.
             { target: '[data-tour="combo-card-Aͤ"]', content: translations.positioningPreviewCard, placement: 'top' as Placement, data: { isTutorial: true, translations } },
             { target: '[data-tour="accept-pos-Aͤ"]', content: translations.positioningAccept, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'accepted-A-combining', translations } },
-            // CHANGE HERE: Update target selector from 'grid-item-Eͤ' to 'combo-card-Eͤ' to ensure it can be found in the editor view
-            { target: '[data-tour="combo-card-Eͤ"]', content: translations.positioningEdit, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'editing-E-combining', translations } },
+            { 
+                target: '[data-tour="combo-card-Eͤ"]', 
+                content: translations.positioningEdit, 
+                spotlightClicks: true, 
+                hideFooter: true, 
+                data: { isTutorial: true, translations } // Removed advanceOn
+            },
             { target: '[data-tour="positioning-editor-page"]', content: translations.positioningEditor, data: { isTutorial: true, translations } },
             
             { target: '[data-tour="nav-kerning"]', content: translations.kerningNav, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'workspace-kerning', translations } },
             { target: '[data-tour="kerning-tabs"]', content: richText('kerningIntroAndViews'), placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="pair-card-Te"]', content: translations.kerningManualEdit, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'editing-Te', translations } },
+            
+            // --- Transition Step to Kerning Editor ---
+            { 
+                target: '[data-tour="pair-card-Te"]', 
+                content: translations.kerningManualEdit, 
+                spotlightClicks: true, 
+                hideFooter: true, 
+                data: { isTutorial: true, translations } // Removed advanceOn
+            },
             // Step 1: The Action (Adjusting Spacing)
             { 
                 target: '[data-tour="kerning-canvas"]', 
@@ -464,16 +484,9 @@ const TutorialManager: React.FC = () => {
                 }
                 break;
             }
-            case 'editing-E-combining':
-                if (document.querySelector('[data-tour="positioning-editor-page"]')) {
-                    advance();
-                }
-                break;
-            case 'editing-Te':
-                 if (document.querySelector('[data-tour="kerning-editor-page"]')) {
-                     advance();
-                 }
-                 break;
+            // Removed 'editing-E-combining' case as it's handled by manual handoff
+            // Removed 'editing-Te' case as it's handled by manual handoff
+
             case 'kerned-Te-action': {
                 const T = allCharsByName.get('T');
                 const e = allCharsByName.get('e');
@@ -502,13 +515,10 @@ const TutorialManager: React.FC = () => {
              if (stepTarget === '[data-tour="start-positioning-rule-A-ͤ"]') {
                  return; 
              }
-             // CHANGE HERE: Force advancement if E-combo card is missing (View Transition to Editor happened)
-             if (stepTarget === '[data-tour="combo-card-Eͤ"]') {
-                 setStepIndex(index + 1);
-                 return;
-             }
-             // CHANGE HERE: Added suppression for Te pair card to prevent crash on view transition
-             if (stepTarget === '[data-tour="pair-card-Te"]') {
+             
+             // Race Condition Handling: If target not found for Editor steps, Pause and Wait for Event
+             if (stepTarget === '[data-tour="positioning-editor-page"]' || stepTarget === '[data-tour="kerning-canvas"]') {
+                 setRun(false);
                  return;
              }
         }
@@ -522,6 +532,14 @@ const TutorialManager: React.FC = () => {
             }
         } else if (type === EVENTS.STEP_AFTER) {
             const currentStep = activeSteps[index];
+
+            // Manual Handoff: Pause before entering editors to avoid race condition
+            if (currentStep.target === '[data-tour="combo-card-Eͤ"]' || currentStep.target === '[data-tour="pair-card-Te"]') {
+                 setRun(false);
+                 setStepIndex(index + 1);
+                 return;
+            }
+
             if (!currentStep.data?.isTutorial && action === ACTIONS.NEXT) {
                  setStepIndex(index + 1);
                  return;

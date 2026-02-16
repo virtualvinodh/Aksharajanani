@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
@@ -66,6 +67,11 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     const [isStripExpanded, setIsStripExpanded] = useState(false);
     const [isDetachConfirmOpen, setIsDetachConfirmOpen] = useState(false);
     const [pageTool, setPageTool] = useState<'select' | 'pan'>('select');
+
+    // Notify Tutorial Manager that the view has loaded
+    useEffect(() => {
+        window.dispatchEvent(new Event('aksharajanani:view-loaded'));
+    }, []);
 
     const sourceGlyphs = useMemo(() => [props.baseChar, props.markChar], [props.baseChar, props.markChar]);
 
