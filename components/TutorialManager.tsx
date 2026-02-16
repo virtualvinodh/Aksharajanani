@@ -253,7 +253,15 @@ const TutorialManager: React.FC = () => {
                 data: { isTutorial: true, advanceOn: 'selected-A', translations }
             },
             
-            { target: '[data-tour="split-view-resizer"]', content: richText('splitViewIntro'), placement: 'right' as Placement, data: { isTutorial: true, translations }, styles: { spotlight: { borderRadius: '8px' } } },
+            // Only show split view explanation on large screens where it exists
+            ...(isLargeScreen ? [{ 
+                target: '[data-tour="split-view-resizer"]', 
+                content: richText('splitViewIntro'), 
+                placement: 'right' as Placement, 
+                data: { isTutorial: true, translations }, 
+                styles: { spotlight: { borderRadius: '8px' } } 
+            }] : []),
+
             { target: '[data-tour="toolbar-pen"]', content: translations.toolbarPenContent, placement: (isLargeScreen ? 'right' : 'bottom') as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="drawing-canvas"]', content: translations.drawContent, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-test"]', content: translations.clickTest, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'test-modal-open', translations } },
