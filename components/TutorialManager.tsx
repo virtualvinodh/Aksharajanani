@@ -343,12 +343,19 @@ const TutorialManager: React.FC = () => {
             { target: '[data-tour="header-next"]', content: translations.clickNextForComposite, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-E', translations } },
             { target: 'body', content: richText('compositeExplanation'), placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="drawing-canvas"]', content: translations.drawComposite, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            { target: '[data-tour="header-reset"]', content: richText('compositeTools'), placement: 'bottom' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
+
             { target: '[data-tour="header-next"]', content: translations.clickNextForLowerE, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-e', translations } },
             { target: '[data-tour="drawing-canvas"]', content: translations.drawLowerE, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-next"]', content: translations.clickNextForLinked, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-combining', translations } },
             { target: 'body', content: richText('linkedExplanation'), placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="linked-source-strip"]', content: translations.linkedStripNav, placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="drawing-canvas"]', content: richText('transformLinked'), placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
+            
+            // Unlink/Relink Flow
+            { target: '[data-tour="header-unlink"]', content: richText('unlinkExpl'), placement: 'bottom' as Placement, spotlightClicks: true, disableOverlayClose: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'unlinked-combining', translations } },
+            { target: '[data-tour="header-relink"]', content: richText('relinkExpl'), placement: 'bottom' as Placement, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'relinked-combining', translations } },
+
             { target: '[data-tour="header-prev"]', content: translations.clickPrevForModification, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-e', translations } },
             { target: '[data-tour="drawing-canvas"]', content: translations.modifyLowerE, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="header-next"]', content: translations.clickNextToVerify, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-combining', translations } },
@@ -366,6 +373,9 @@ const TutorialManager: React.FC = () => {
             { target: '[data-tour="positioning-canvas"]', content: richText('positioningDrag'), placement: 'top' as Placement, disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="strip-item-n̄"]', content: translations.positioningStripNavToNBar, placement: 'top' as Placement, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-nbar', translations } },
             { target: '[data-tour="positioning-canvas"]', content: richText('smartClassExpl'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
+            
+            // Positioning Detach explanation
+            { target: '[data-tour="header-detach-pos"]', content: richText('detachExpl'), placement: 'bottom' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
 
             { target: '[data-tour="positioning-canvas"]', content: richText('positioningTryDragLocked'), placement: 'top', disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="positioning-canvas"]', content: richText('positioningExplainLock'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
@@ -868,6 +878,8 @@ const TutorialManager: React.FC = () => {
             case 'selected-E': if (selectedCharacter?.name === 'E') advance(); break;
             case 'selected-e': if (selectedCharacter?.name === 'e') advance(); break;
             case 'selected-combining': if (selectedCharacter?.name === 'ͤ') advance(); break;
+            case 'unlinked-combining': if (selectedCharacter?.name === 'ͤ' && !selectedCharacter.link) advance(); break;
+            case 'relinked-combining': if (selectedCharacter?.name === 'ͤ' && selectedCharacter.link) advance(); break;
             case 'selected-n': if (selectedCharacter?.name === 'n') advance(); break;
             case 'selected-tilde': if (selectedCharacter?.name === '̃') advance(); break;
             case 'selected-macron': if (selectedCharacter?.name === '̄') advance(); break;

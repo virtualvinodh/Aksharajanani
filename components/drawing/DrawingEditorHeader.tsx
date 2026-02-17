@@ -141,13 +141,13 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
           )}
 
           {(props.isLocked || props.isComposite) && props.onRefresh && (
-             <button onClick={props.onRefresh} title={t('refresh')} className="p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95">
+             <button onClick={props.onRefresh} title={t('refresh')} className="p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95" data-tour="header-refresh">
                 <RefreshIcon />
              </button>
           )}
 
           {(props.isLocked || props.isComposite) && (
-              <button onClick={props.onReset} title={t('reset')} className="p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95">
+              <button onClick={props.onReset} title={t('reset')} className="p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95" data-tour="header-reset">
                   <UndoIcon />
               </button>
           )}
