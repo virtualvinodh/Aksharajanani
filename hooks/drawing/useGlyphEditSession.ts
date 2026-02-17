@@ -435,6 +435,10 @@ export const useGlyphEditSession = ({
         }
     }, [history, historyIndex, settings.isAutosaveEnabled, performSave]);
     
+    // Create a stable ref for undo that is always up-to-date for async callbacks (like notification actions)
+    const undoRef = useRef(undo);
+    useEffect(() => { undoRef.current = undo; }, [undo]);
+    
     const redo = useCallback(() => {
         if (historyIndex < history.length - 1) {
             const newIndex = historyIndex + 1;
@@ -546,7 +550,7 @@ export const useGlyphEditSession = ({
         if (compositeData) {
             handlePathsChange(compositeData.paths);
         }
-        showNotification(t('glyphRefreshedSuccess'), 'info');
+        showNotification(t('glyphRefreshedSuccess'), 'info', { onUndo: () => undoRef.current() });
     }, [character, allCharacterSets, allGlyphData, settings, metrics, markAttachmentRules, handlePathsChange, showNotification, t, groups]);
     
     // NEW: Handle Reset to Original Script Defaults
@@ -597,7 +601,7 @@ export const useGlyphEditSession = ({
             handlePathsChange(compositeData.paths);
         }
         
-        showNotification(t('glyphResetSuccess') || 'Glyph reset to original defaults', 'success');
+        showNotification(t('glyphResetSuccess') || 'Glyph reset to original defaults', 'success', { onUndo: () => undoRef.current() });
 
     }, [script, character, allCharacterSets, allGlyphData, settings, metrics, markAttachmentRules, groups, characterDispatch, handlePathsChange, showNotification, t]);
 
