@@ -173,6 +173,27 @@ const TutorialManager: React.FC = () => {
         return () => window.removeEventListener('aksharajanani:view-loaded', handleViewLoaded);
     }, [script?.id]);
 
+    // Resume Listener for Dashboard Return (Fix for Mobile Back Button Stall)
+    useEffect(() => {
+        const isDismissed = localStorage.getItem('tutorial_dismissed') === 'true';
+
+        // Check if tutorial should auto-resume. 
+        // Must strictly check !isDismissed to prevent zombie tutorial after "Skip".
+        if (script?.id === 'tutorial' && !run && !activeModal && !selectedCharacter && activeSteps.length > 0 && !isDismissed) {
+            // If paused at dashboard, check if the current step target exists.
+            const currentStep = activeSteps[stepIndex];
+            if (currentStep?.target && typeof currentStep.target === 'string') {
+                 // Try to find the target. If found, we can resume.
+                 // This catches cases where proactive click paused the tour, but no 'view-loaded' event fired.
+                 const targetEl = document.querySelector(currentStep.target);
+                 if (targetEl) {
+                     const timer = setTimeout(() => setRun(true), 500);
+                     return () => clearTimeout(timer);
+                 }
+            }
+        }
+    }, [activeModal, selectedCharacter, run, script?.id, stepIndex, activeSteps]);
+
     const updateScrollOffset = useCallback(() => {
         let total = 0;
         const appHeader = document.querySelector('header');
@@ -264,9 +285,29 @@ const TutorialManager: React.FC = () => {
 
             { target: '[data-tour="toolbar-pen"]', content: translations.toolbarPenContent, placement: (isLargeScreen ? 'right' : 'bottom') as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="drawing-canvas"]', content: translations.drawContent, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
+            
+            // Mobile Specific: Ask user to exit editor to see the Test button
+            ...(!isLargeScreen ? [{
+                target: '[data-tour="header-back"]', 
+                content: translations.clickBackToDashboard, 
+                spotlightClicks: true, 
+                hideFooter: true, 
+                data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations } 
+            }] : []),
+
             { target: '[data-tour="header-test"]', content: translations.clickTest, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'test-modal-open', translations } },
             { target: '[data-tour="test-page-input"]', content: translations.testPageInput, placement: 'bottom' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="test-page-close"]', content: translations.closeTestPage, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'test-modal-close', translations } },
+            
+            // Mobile Specific: Ask user to re-enter editor for 'A' to continue flow
+            ...(!isLargeScreen ? [{
+                target: '[data-tour="grid-item-A"]', 
+                content: translations.clickAAgain, 
+                spotlightClicks: true, 
+                hideFooter: true, 
+                data: { isTutorial: true, advanceOn: 'selected-A', translations } 
+            }] : []),
+
             { target: '[data-tour="header-next"]', content: translations.clickNextForA, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-a', translations } },
             { target: '[data-tour="drawing-canvas"]', content: translations.drawLowerA, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
             { target: '[data-tour="main-toolbar"]', content: translations.toolbarIntro, placement: (isLargeScreen ? 'right' : 'bottom') as Placement, data: { isTutorial: true, translations } },
@@ -408,6 +449,7 @@ const TutorialManager: React.FC = () => {
         setCurrentTool(tool);
     }, []);
     
+    // 2. Initialize Linear Tutorial if active
     useEffect(() => {
         if (script?.id === 'tutorial') {
             const isDismissed = localStorage.getItem('tutorial_dismissed') === 'true';
@@ -416,6 +458,7 @@ const TutorialManager: React.FC = () => {
                 setRun(true);
             }
         } else {
+            // Reset if switching away
             if (activeSteps.length > 0 && activeSteps[0].data?.isTutorial) {
                  setRun(false);
                  setStepIndex(0);
@@ -423,6 +466,347 @@ const TutorialManager: React.FC = () => {
             }
         }
     }, [script?.id, linearTutorialSteps]);
+
+    // 3. JIT Hint Logic (RESTORED)
+    useEffect(() => {
+        if (!translations) return;
+        if (script?.id === 'tutorial') return;
+        
+        // Hint 1: Select Character
+        if (workspace === 'drawing' && currentView === 'grid' && !selectedCharacter && !activeModal) {
+            const storageKey = 'hint_grid_select_seen';
+            if (!localStorage.getItem(storageKey) && !sessionStorage.getItem(storageKey)) {
+                const checkExist = setInterval(() => {
+                   if (document.querySelector('.tutorial-glyph-item')) {
+                       clearInterval(checkExist);
+                       setActiveSteps([{
+                           target: '.tutorial-glyph-item',
+                           content: translations.hintGridSelect || "Select a character card to start drawing your font.",
+                           disableBeacon: true,
+                           placement: 'bottom' as Placement,
+                           spotlightClicks: true,
+                           data: { isTutorial: false, storageKey: storageKey, translations }
+                       }]);
+                       setStepIndex(0);
+                       setRun(true);
+                       sessionStorage.setItem(storageKey, 'true');
+                   }
+                }, 500);
+                setTimeout(() => clearInterval(checkExist), 5000);
+                return () => clearInterval(checkExist);
+            }
+        }
+        
+        // Hint 2: Start Drawing
+        if (workspace === 'drawing' && selectedCharacter && !activeModal) {
+            const storageKey = 'hint_editor_draw_seen';
+            if (!localStorage.getItem(storageKey) && !sessionStorage.getItem(storageKey)) {
+                const timer = setTimeout(() => {
+                    setActiveSteps([{
+                       target: '[data-tour="drawing-canvas"]',
+                       content: translations.hintEditorDraw || "Start drawing here.",
+                       disableBeacon: true,
+                       placement: 'top' as Placement,
+                       spotlightClicks: true,
+                       data: { isTutorial: false, storageKey: storageKey, translations }
+                    }]);
+                    setStepIndex(0);
+                    setRun(true);
+                    sessionStorage.setItem(storageKey, 'true');
+                }, 800);
+                return () => clearTimeout(timer);
+            }
+        }
+        
+        // Hint 3: First Composite Glyph (Exclude Linked Glyphs)
+        if (workspace === 'drawing' && selectedCharacter && !activeModal) {
+             const isStaticComposite = (selectedCharacter.composite && selectedCharacter.composite.length > 0) && (!selectedCharacter.link);
+             
+             if (isStaticComposite) {
+                 const storageKey = 'hint_composite_seen';
+                 if (!localStorage.getItem(storageKey)) {
+                     const timer = setTimeout(() => {
+                         setActiveSteps([{
+                             target: '[data-tour="drawing-canvas"]',
+                             content: (
+                                 <div>
+                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintCompositeTitle}</h3>
+                                     <p dangerouslySetInnerHTML={{__html: translations.hintCompositeContent}}></p>
+                                 </div>
+                             ),
+                             placement: 'top' as Placement,
+                             disableBeacon: true,
+                             spotlightClicks: true,
+                             data: { isTutorial: false, storageKey: storageKey, translations }
+                         }]);
+                         setStepIndex(0);
+                         setRun(true);
+                     }, 1200); 
+                     
+                     return () => clearTimeout(timer);
+                 }
+             }
+        }
+
+        // Hint 4: First Linked Glyph Intro (Multi-step)
+        if (workspace === 'drawing' && selectedCharacter && !activeModal) {
+            if (selectedCharacter.link && selectedCharacter.link.length > 0) {
+                const storageKey = 'hint_linked_intro_seen';
+                if (!localStorage.getItem(storageKey)) {
+                     const timer = setTimeout(() => {
+                         setActiveSteps([
+                             {
+                                 target: '[data-tour="drawing-canvas"]',
+                                 content: (
+                                     <div>
+                                         <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintLinkedTitle}</h3>
+                                         <p dangerouslySetInnerHTML={{__html: translations.hintLinkedContent}}></p>
+                                     </div>
+                                 ),
+                                 placement: 'top' as Placement,
+                                 disableBeacon: true,
+                                 spotlightClicks: true,
+                                 data: { isTutorial: false, translations } 
+                             },
+                             {
+                                 target: '[data-tour="header-unlink"]',
+                                 content: translations.hintUnlinkContent,
+                                 placement: 'bottom' as Placement,
+                                 disableBeacon: true,
+                                 data: { isTutorial: false, storageKey: storageKey, translations }
+                             }
+                         ]);
+                         setStepIndex(0);
+                         setRun(true);
+                     }, 1200);
+                     return () => clearTimeout(timer);
+                }
+            }
+        }
+
+        // Hint 5: Relink Action (After Unlinking)
+        if (workspace === 'drawing' && selectedCharacter && !activeModal) {
+            if (selectedCharacter.sourceLink) {
+                const storageKey = 'hint_relink_action_seen';
+                if (!localStorage.getItem(storageKey)) {
+                     const timer = setTimeout(() => {
+                         setActiveSteps([{
+                             target: '[data-tour="header-relink"]',
+                             content: translations.hintRelinkContent,
+                             placement: 'bottom' as Placement,
+                             disableBeacon: true,
+                             spotlightClicks: true,
+                             data: { isTutorial: false, storageKey: storageKey, translations }
+                         }]);
+                         setStepIndex(0);
+                         setRun(true);
+                     }, 1000);
+                     return () => clearTimeout(timer);
+                }
+            }
+        }
+
+        // Hint 6: Positioned Glyph Intro (Multi-step)
+        if (workspace === 'drawing' && selectedCharacter && !activeModal && !selectedCharacter.link) {
+            if (selectedCharacter.position && selectedCharacter.position.length > 0) {
+                 const storageKey = 'hint_positioned_seen';
+                 if (!localStorage.getItem(storageKey)) {
+                     const timer = setTimeout(() => {
+                         setActiveSteps([
+                            {
+                                target: '[data-tour="positioning-canvas"]',
+                                content: (
+                                    <div>
+                                        <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintPositionedTitle}</h3>
+                                        <p dangerouslySetInnerHTML={{__html: translations.hintPositionedContent}}></p>
+                                    </div>
+                                ),
+                                placement: 'top' as Placement,
+                                disableBeacon: true,
+                                spotlightClicks: true,
+                                data: { isTutorial: false, translations }
+                            },
+                            {
+                                target: '[data-tour="header-detach-pos"]',
+                                content: translations.hintDetachContent,
+                                placement: 'bottom' as Placement,
+                                disableBeacon: true,
+                                data: { isTutorial: false, translations }
+                            },
+                            {
+                                target: '[data-tour="header-accept-pos"]',
+                                content: translations.hintAcceptPosition,
+                                placement: 'bottom' as Placement,
+                                spotlightClicks: true,
+                                disableBeacon: true,
+                                data: { isTutorial: false, storageKey: storageKey, translations }
+                            }
+                         ]);
+                         setStepIndex(0);
+                         setRun(true);
+                     }, 1200);
+                     return () => clearTimeout(timer);
+                }
+            }
+        }
+
+        // Hint 7: Kerned Glyph Intro (Multi-step)
+        if (workspace === 'drawing' && selectedCharacter && !activeModal && !selectedCharacter.link) {
+            if (selectedCharacter.kern && selectedCharacter.kern.length > 0) {
+                 const storageKey = 'hint_kerned_seen';
+                 if (!localStorage.getItem(storageKey)) {
+                     const timer = setTimeout(() => {
+                         setActiveSteps([
+                            {
+                                target: '[data-tour="kerning-canvas"]',
+                                content: (
+                                    <div>
+                                        <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKernedTitle}</h3>
+                                        <p dangerouslySetInnerHTML={{__html: translations.hintKernedContent}}></p>
+                                    </div>
+                                ),
+                                placement: 'top' as Placement,
+                                disableBeacon: true,
+                                spotlightClicks: true,
+                                data: { isTutorial: false, translations }
+                            },
+                            {
+                                target: '[data-tour="header-detach-kern"]',
+                                content: translations.hintDetachContent,
+                                placement: 'bottom' as Placement,
+                                disableBeacon: true,
+                                data: { isTutorial: false, translations }
+                            },
+                            {
+                                target: '[data-tour="header-accept-kern"]',
+                                content: translations.hintAcceptKerning,
+                                placement: 'bottom' as Placement,
+                                spotlightClicks: true,
+                                disableBeacon: true,
+                                data: { isTutorial: false, storageKey: storageKey, translations }
+                            }
+                         ]);
+                         setStepIndex(0);
+                         setRun(true);
+                     }, 1200);
+                     return () => clearTimeout(timer);
+                 }
+            }
+        }
+
+        // Hint 8: Kerning Workspace Intro
+        if (workspace === 'kerning' && !activeModal) {
+            const storageKey = 'hint_kerning_seen';
+            if (!localStorage.getItem(storageKey)) {
+                const timer = setTimeout(() => {
+                    setActiveSteps([{
+                        target: '[data-tour="nav-kerning"]', // Updated target
+                        content: (
+                            <div>
+                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKerningWorkspaceTitle}</h3>
+                                <p>{translations.hintKerningWorkspaceContent}</p>
+                            </div>
+                        ),
+                        placement: 'bottom' as Placement,
+                        disableBeacon: true,
+                        spotlightClicks: true,
+                        data: { isTutorial: false, storageKey: storageKey, translations }
+                    }]);
+                    setStepIndex(0);
+                    setRun(true);
+                }, 500);
+                return () => clearTimeout(timer);
+            }
+        }
+
+        // Hint 9: Positioning Workspace Intro (NEW)
+        if (workspace === 'positioning' && !activeModal) {
+            const storageKey = 'hint_positioning_workspace_seen';
+            if (!localStorage.getItem(storageKey)) {
+                const timer = setTimeout(() => {
+                    setActiveSteps([{
+                        target: '[data-tour="nav-positioning"]', // Target the tab in header
+                        content: (
+                            <div>
+                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintPositioningWorkspaceTitle}</h3>
+                                <p>{translations.hintPositioningWorkspaceContent}</p>
+                            </div>
+                        ),
+                        placement: 'bottom' as Placement,
+                        disableBeacon: true,
+                        spotlightClicks: true,
+                        data: { isTutorial: false, storageKey: storageKey, translations }
+                    }]);
+                    setStepIndex(0);
+                    setRun(true);
+                }, 500);
+                return () => clearTimeout(timer);
+            }
+        }
+
+    }, [script?.id, workspace, currentView, selectedCharacter, activeModal, translations]);
+
+    // Hint: Related Pairs (Smart Class) - Polling approach (RESTORED)
+    useEffect(() => {
+        const storageKey = 'hint_related_pairs_seen';
+        if (localStorage.getItem(storageKey) || !translations) return;
+
+        const checkExist = setInterval(() => {
+            const strip = document.querySelector('[data-tour="related-pairs-strip"]');
+            if (strip && !activeModal && !run) {
+                clearInterval(checkExist);
+                 setActiveSteps([
+                     {
+                         target: '[data-tour="related-pairs-strip"]',
+                         title: translations.hintRelatedPairsTitle,
+                         content: translations.hintRelatedPairsContent,
+                         placement: 'top' as Placement,
+                         disableBeacon: true,
+                         spotlightClicks: true,
+                         data: { isTutorial: false, translations }
+                     },
+                     {
+                         target: '[data-tour="strip-link-toggle"]',
+                         title: translations.hintOverrideTitle,
+                         content: translations.hintOverrideContent,
+                         placement: 'top' as Placement, 
+                         disableBeacon: true,
+                         data: { isTutorial: false, storageKey: storageKey, translations }
+                     }
+                 ]);
+                 setStepIndex(0);
+                 setRun(true);
+            }
+        }, 1000); 
+
+        return () => clearInterval(checkExist);
+    }, [run, activeModal, translations]); 
+
+    // 4. JIT Cleanup Logic (RESTORED)
+    useEffect(() => {
+        if (run && activeSteps.length > 0 && !activeSteps[0].data?.isTutorial) {
+             const currentStepTarget = activeSteps[0].target as string;
+             // Only auto-close single-step simple hints if context changes
+             if (currentStepTarget === '.tutorial-glyph-item' && selectedCharacter) {
+                 setRun(false);
+                 setActiveSteps([]);
+             }
+             if (currentStepTarget === '[data-tour="drawing-canvas"]' && !selectedCharacter) {
+                 setRun(false);
+                 setActiveSteps([]);
+             }
+             // Auto-close kerning hint if workspace changes
+             if (currentStepTarget === '[data-tour="nav-kerning"]' && workspace !== 'kerning') {
+                 setRun(false);
+                 setActiveSteps([]);
+             }
+             // Auto-close positioning hint if workspace changes
+             if (currentStepTarget === '[data-tour="nav-positioning"]' && workspace !== 'positioning') {
+                 setRun(false);
+                 setActiveSteps([]);
+             }
+        }
+    }, [run, activeSteps, selectedCharacter, workspace]);
 
     // 5. Linear Tutorial State Machine (Advancement Logic)
     useEffect(() => {
@@ -543,6 +927,18 @@ const TutorialManager: React.FC = () => {
              // For Editor Pages, if target is not found, pause and wait for 'view-loaded' event
              if (stepTarget === '[data-tour="positioning-editor-page"]' || stepTarget === '[data-tour="kerning-canvas"]') {
                  setRun(false);
+                 return;
+             }
+
+             // FIX: Mobile Navigation Race Condition
+             // If the "Back" button is gone, it likely means we successfully navigated back.
+             if (stepTarget === '[data-tour="header-back"]') {
+                 // Check if we are actually back at dashboard (no active modal)
+                 if (!activeModal && !selectedCharacter) {
+                     setStepIndex(prev => prev + 1);
+                     // CRITICAL: Force resume immediately to prevent "stop" behavior
+                     setTimeout(() => setRun(true), 100);
+                 }
                  return;
              }
         }
