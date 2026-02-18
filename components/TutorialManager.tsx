@@ -733,7 +733,7 @@ const TutorialManager: React.FC = () => {
 
     // Combined Polling Effect for Positioning & Kerning JIT Hints
     useEffect(() => {
-        if (activeModal || run || !translations) return;
+        if (activeModal || run || !translations || script?.id === 'tutorial') return;
 
         const checkHints = setInterval(() => {
             if (workspace === 'positioning') {
