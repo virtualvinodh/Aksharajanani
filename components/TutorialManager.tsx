@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import Joyride, { CallBackProps, STATUS, Step, EVENTS, ACTIONS, TooltipRenderProps, Placement } from 'react-joyride';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Joyride, { CallBackProps, STATUS, Step, EVENTS, ACTIONS, Placement } from 'react-joyride';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -10,117 +10,9 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePositioning } from '../contexts/PositioningContext';
 import { useKerning } from '../contexts/KerningContext';
 import { Tool } from '../types';
-import { isGlyphComplete } from '../utils/glyphUtils';
-
-// Custom Tooltip Component to handle "Don't Show Again" vs "Exit"
-const CustomTooltip = ({
-    index,
-    step,
-    backProps,
-    primaryProps,
-    skipProps,
-    tooltipProps,
-    isLastStep,
-}: TooltipRenderProps) => {
-    
-    // Access translations passed via step.data
-    const labels = step.data?.translations || {};
-
-    // 1. Define the action logic closing over current props
-    const performDismiss = (e?: React.MouseEvent<HTMLElement>, persist: boolean = true) => {
-        if (persist) {
-            // Main Tutorial Logic
-            if (step.data?.isTutorial) {
-                 localStorage.setItem('tutorial_dismissed', 'true');
-            } 
-            // JIT Hint Logic - Persist only on manual dismissal
-            else if (step.data?.storageKey) {
-                 localStorage.setItem(step.data.storageKey, 'true');
-            }
-        }
-        
-        const safeEvent = e || { 
-            preventDefault: () => {}, 
-            stopPropagation: () => {},
-            currentTarget: { blur: () => {} }
-        } as any;
-
-        if (skipProps && typeof skipProps.onClick === 'function') {
-            skipProps.onClick(safeEvent);
-        }
-    };
-
-    const handlePrimaryClick = (e: React.MouseEvent<HTMLElement>) => {
-        // For JIT hints (single step), treat "OK" as a dismissal to ensure it closes reliably.
-        if (!step.data?.isTutorial && isLastStep) {
-            performDismiss(e, true);
-        } else {
-            // For the main linear tutorial or multi-step JIT, use the standard navigation
-            primaryProps.onClick(e);
-        }
-    };
-
-    // 2. Use a ref to keep the latest version of the action accessible to the timer
-    const dismissRef = useRef(performDismiss);
-    
-    // Update ref on every render so the timer always calls the fresh function with fresh props
-    useEffect(() => {
-        dismissRef.current = performDismiss;
-    });
-
-    // 3. Set up the timer ONCE on mount
-    useEffect(() => {
-        // Do not auto-dismiss the main tutorial steps
-        if (step.data?.isTutorial) return;
-
-        const timer = setTimeout(() => {
-            // Call the latest version of the function
-            if (dismissRef.current) {
-                // Soft dismissal: persist=false. 
-                // If the user hasn't interacted, we hide it but don't mark it as seen forever.
-                dismissRef.current(undefined, false);
-            }
-        }, 15000); // 15 seconds (increased for multi-step readability)
-
-        return () => clearTimeout(timer);
-    }, []); 
-  
-    return (
-      <div {...tooltipProps} className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 max-w-sm border border-gray-200 dark:border-gray-700 flex flex-col gap-4 relative z-50">
-         <div className="text-gray-700 dark:text-gray-200 text-sm leading-relaxed">
-           {step.content}
-         </div>
-         
-         <div className="flex flex-col gap-3 mt-2">
-              <div className="flex justify-between items-center">
-                   <div className="flex items-center">
-                      {!isLastStep && (
-                           <button {...skipProps} onClick={(e) => performDismiss(e, false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs font-bold uppercase tracking-wider transition-colors">
-                               {step.data?.isTutorial ? (labels.exit || 'Exit Tutorial') : (labels.close || 'Close')}
-                           </button>
-                      )}
-                   </div>
-                   <div className="flex gap-2">
-                       {index > 0 && (
-                          <button {...backProps} className="px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                             {labels.back || 'Back'}
-                          </button>
-                       )}
-                       {!step.hideFooter && (
-                           <button 
-                                {...primaryProps} 
-                                onClick={handlePrimaryClick}
-                                className="px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md transition-all active:scale-95"
-                           >
-                              {isLastStep ? (step.data?.isTutorial ? (labels.finishBtn || 'Finish') : (labels.ok || 'OK')) : (labels.next || 'Next')}
-                           </button>
-                       )}
-                   </div>
-              </div>
-         </div>
-      </div>
-    );
-};
+import { isGlyphDrawn } from '../utils/glyphUtils';
+import TutorialTooltip from './tutorial/TutorialTooltip';
+import { useTutorialSteps } from './tutorial/useTutorialSteps';
 
 // Dummy component to get access to context
 const TutorialStateProvider: React.FC<{ onToolChange: (tool: Tool) => void }> = ({ onToolChange }) => {
@@ -139,6 +31,7 @@ const TutorialStateProvider: React.FC<{ onToolChange: (tool: Tool) => void }> = 
 
 const TutorialManager: React.FC = () => {
     const { script, allCharsByName } = useProject();
+    const { glyphDataMap } = useGlyphData();
     const { selectedCharacter, activeModal, workspace, currentView, isNavDrawerOpen } = useLayout();
     const { theme } = useTheme();
     const { locale } = useLocale();
@@ -154,6 +47,17 @@ const TutorialManager: React.FC = () => {
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
     const [scrollOffset, setScrollOffset] = useState(150);
     
+    const linearTutorialSteps = useTutorialSteps(translations, isLargeScreen);
+    
+    // Calculate total drawn glyphs for JIT logic
+    const drawnCount = useMemo(() => {
+        let count = 0;
+        glyphDataMap.forEach((data) => {
+            if (isGlyphDrawn(data)) count++;
+        });
+        return count;
+    }, [glyphDataMap]);
+
     // Resume Listener for View Transitions
     useEffect(() => {
         const handleViewLoaded = () => {
@@ -237,216 +141,6 @@ const TutorialManager: React.FC = () => {
         };
         fetchTranslations();
     }, [locale]);
-
-    const linearTutorialSteps: Step[] = useMemo(() => {
-        if (!translations) return [];
-        
-        const richText = (key: string) => <div dangerouslySetInnerHTML={{ __html: translations[key] }} />;
-        
-        const steps: Step[] = [
-            // 0. Welcome
-            {
-                target: 'body',
-                content: (
-                    <div>
-                        <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.welcomeTitle}</h3>
-                        <p>{translations.welcomeContent}</p>
-                    </div>
-                ),
-                placement: 'center' as Placement,
-                disableBeacon: true,
-                data: { isTutorial: true, translations }
-            },
-            // 1. Click 'A'
-            {
-                target: '[data-tour="grid-item-A"]',
-                content: translations.clickFirstChar,
-                spotlightClicks: true,
-                disableBeacon: true,
-                hideFooter: true, 
-                data: { isTutorial: true, advanceOn: 'selected-A', translations }
-            },
-            
-            // Only show split view explanation on large screens where it exists
-            ...(isLargeScreen ? [{ 
-                target: '[data-tour="split-view-resizer"]', 
-                content: richText('splitViewIntro'), 
-                placement: 'right' as Placement, 
-                data: { isTutorial: true, translations }, 
-                styles: { spotlight: { borderRadius: '8px' } } 
-            }] : []),
-
-            { target: '[data-tour="toolbar-pen"]', content: translations.toolbarPenContent, placement: (isLargeScreen ? 'right' : 'bottom') as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawContent, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            
-            // Mobile Specific: Ask user to exit editor to see the Test button
-            ...(!isLargeScreen ? [{
-                target: '[data-tour="header-back"]', 
-                content: translations.clickBackToDashboard, 
-                spotlightClicks: true, 
-                hideFooter: true, 
-                data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations } 
-            }] : []),
-
-            { target: '[data-tour="header-test"]', content: translations.clickTest, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'test-modal-open', translations } },
-            { target: '[data-tour="test-page-input"]', content: translations.testPageInput, placement: 'bottom' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="test-page-close"]', content: translations.closeTestPage, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'test-modal-close', translations } },
-            
-            // Mobile Specific: Ask user to re-enter editor for 'A' to continue flow
-            ...(!isLargeScreen ? [{
-                target: '[data-tour="grid-item-A"]', 
-                content: translations.clickAAgain, 
-                spotlightClicks: true, 
-                hideFooter: true, 
-                data: { isTutorial: true, advanceOn: 'selected-A', translations } 
-            }] : []),
-
-            { target: '[data-tour="header-next"]', content: translations.clickNextForA, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-a', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawLowerA, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="main-toolbar"]', content: translations.toolbarIntro, placement: (isLargeScreen ? 'right' : 'bottom') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="main-toolbar"]', content: translations.toolbarActionsIntro, placement: (isLargeScreen ? 'right' : 'bottom') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="tool-select"]', content: richText('toolSelect'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="tool-pan"]', content: richText('toolPan'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="tool-calligraphy"]', content: richText('toolCalligraphy'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="tool-eraser"]', content: richText('toolEraser'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="tool-slice"]', content: richText('toolSlice'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-undo"]', content: richText('actionUndo'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-redo"]', content: richText('actionRedo'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-cut"]', content: richText('actionCut'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-copy"]', content: richText('actionCopy'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-paste"]', content: richText('actionPaste'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-group"]', content: richText('actionGroup'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="action-ungroup"]', content: richText('actionUngroup'), placement: (isLargeScreen ? 'left' : 'top') as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-next"]', content: translations.clickNextForT, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-T', translations } },
-            { target: '[data-tour="main-toolbar"]', content: richText('selectLineTool'), spotlightClicks: true, placement: (isLargeScreen ? 'right' : 'bottom') as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawT, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="drawing-canvas"]', content: richText('explainBearings'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="drawing-canvas"]', content: richText('dragLSB'), placement: 'top' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="drawing-canvas"]', content: richText('dragRSB'), placement: 'top' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-
-            ...(isLargeScreen ? [{
-                target: '[data-tour="grid-item-F"]', content: translations.selectCharF, spotlightClicks: true, hideFooter: true, placement: 'right' as Placement, data: { isTutorial: true, advanceOn: 'selected-F', translations }
-            }] : [{
-                target: '[data-tour="floating-grid-btn"]', content: translations.openGrid, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'drawer-open', translations }
-            },{
-                target: '#mobile-nav-drawer [data-tour="grid-item-F"]', content: translations.selectCharF, spotlightClicks: true, hideFooter: true, placement: 'right' as Placement, data: { isTutorial: true, advanceOn: 'selected-F', translations }
-            }]),
-
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawCharF, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-next"]', content: translations.clickNextForComposite, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-E', translations } },
-            { target: 'body', content: richText('compositeExplanation'), placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawComposite, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-reset"]', content: richText('compositeTools'), placement: 'bottom' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-
-            { target: '[data-tour="header-next"]', content: translations.clickNextForLowerE, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-e', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawLowerE, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-next"]', content: translations.clickNextForLinked, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-combining', translations } },
-            { target: 'body', content: richText('linkedExplanation'), placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="linked-source-strip"]', content: translations.linkedStripNav, placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="drawing-canvas"]', content: richText('transformLinked'), placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
-            
-            // Unlink/Relink Flow
-            { target: '[data-tour="header-unlink"]', content: richText('unlinkExpl'), placement: 'bottom' as Placement, spotlightClicks: true, disableOverlayClose: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'unlinked-combining', translations } },
-            { target: '[data-tour="header-relink"]', content: richText('relinkExpl'), placement: 'bottom' as Placement, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'relinked-combining', translations } },
-
-            { target: '[data-tour="header-prev"]', content: translations.clickPrevForModification, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-e', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.modifyLowerE, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-next"]', content: translations.clickNextToVerify, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-combining', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.verifyLink, placement: 'right' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            
-            { target: '[data-tour="header-next"]', content: translations.clickNextForN, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-n', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawN, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-next"]', content: translations.clickNextForTilde, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-tilde', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawTilde, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-next"]', content: translations.clickNextForMacron, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-macron', translations } },
-            { target: '[data-tour="drawing-canvas"]', content: translations.drawMacron, placement: 'right' as Placement, disableBeacon: true, spotlightClicks: true, disableOverlayClose: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-next"]', content: translations.clickNextForNTilde, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-ntilde', translations } },
-            { target: '[data-tour="positioning-canvas"]', content: richText('positioningConcept'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="related-pairs-strip"]', content: richText('positioningStripIntro'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="positioning-canvas"]', content: richText('positioningDrag'), placement: 'top' as Placement, disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="strip-item-n̄"]', content: translations.positioningStripNavToNBar, placement: 'top' as Placement, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'selected-nbar', translations } },
-            { target: '[data-tour="positioning-canvas"]', content: richText('smartClassExpl'), placement: 'top' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-            
-            // Positioning Detach explanation
-            { target: '[data-tour="header-detach-pos"]', content: richText('detachExpl'), placement: 'bottom' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-
-            { target: '[data-tour="positioning-canvas"]', content: richText('positioningTryDragLocked'), placement: 'top', disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="positioning-canvas"]', content: richText('positioningExplainLock'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="strip-link-toggle"]', content: richText('positioningClickUnlink'), placement: 'top', spotlightClicks: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="strip-link-toggle"]', content: richText('positioningConfirmOverride'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="positioning-canvas"]', content: richText('positioningDragOverride'), placement: 'top', disableBeacon: true, spotlightClicks: true, data: { isTutorial: true, translations } },
-            { target: '[data-tour="positioning-canvas"]', content: richText('positioningOverrideFinish'), placement: 'top', disableBeacon: true, data: { isTutorial: true, translations } },
-
-            { target: '[data-tour="header-back"]', content: translations.explainBack, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'back-to-dashboard', translations } },
-            
-            { target: '[data-tour="header-creator"]', content: translations.explainCreator, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-compare"]', content: translations.explainCompare, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-settings"]', content: translations.explainSettings, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="header-export"]', content: translations.explainExport, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
-
-            { target: 'body', content: richText('threePillarsIntro'), placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } },
-
-            { target: '[data-tour="nav-positioning"]', content: translations.positioningNav, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'workspace-positioning', translations } },
-            { target: 'body', content: translations.positioningIntro, placement: 'center' as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="positioning-view-toggle"]', content: translations.positioningViews, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
-            
-            {
-                target: '[data-tour="start-positioning-rule-A-ͤ"]',
-                content: translations.startPositioning,
-                spotlightClicks: true,
-                hideFooter: true,
-                data: { isTutorial: true, translations } 
-            },
-            
-            { target: '[data-tour="combo-card-Aͤ"]', content: translations.positioningPreviewCard, placement: 'top' as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="accept-pos-Aͤ"]', content: translations.positioningAccept, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'accepted-A-combining', translations } },
-            { 
-                target: '[data-tour="combo-card-Eͤ"]', 
-                content: translations.positioningEdit, 
-                spotlightClicks: true, 
-                hideFooter: true, 
-                data: { isTutorial: true, translations } // removed advanceOn
-            },
-            { target: '[data-tour="positioning-editor-page"]', content: translations.positioningEditor, data: { isTutorial: true, translations } },
-            
-            { target: '[data-tour="nav-kerning"]', content: translations.kerningNav, spotlightClicks: true, hideFooter: true, data: { isTutorial: true, advanceOn: 'workspace-kerning', translations } },
-            { target: '[data-tour="kerning-tabs"]', content: richText('kerningIntroAndViews'), placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
-            
-            { 
-                target: '[data-tour="pair-card-Te"]', 
-                content: translations.kerningManualEdit, 
-                spotlightClicks: true, 
-                hideFooter: true, 
-                data: { isTutorial: true, translations } // removed advanceOn
-            },
-            // Step 1: The Action (Adjusting Spacing)
-            { 
-                target: '[data-tour="kerning-canvas"]', 
-                content: richText('kerningEditor'), 
-                placement: 'top' as Placement, 
-                disableBeacon: true, 
-                spotlightClicks: true, 
-                hideFooter: true, 
-                data: { isTutorial: true, advanceOn: 'kerned-Te-action', translations } 
-            },
-            // Step 2: The Navigation (Exiting)
-            { 
-                target: '[data-tour="header-back"]', 
-                content: translations.kerningClickBack, 
-                placement: 'bottom' as Placement,
-                spotlightClicks: true, 
-                hideFooter: true, 
-                data: { isTutorial: true, advanceOn: 'kerning-editor-closed', translations } 
-            },
-            { target: '[data-tour="tab-spaced"]', content: translations.kerningSpacedTab, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="auto-kern-btn"]', content: richText('kerningAutoTools'), placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
-            { target: '[data-tour="tab-all"]', content: translations.kerningAllPairsTab, placement: 'bottom' as Placement, data: { isTutorial: true, translations } },
-            
-            { target: 'body', content: richText('finalCongratulations'), placement: 'center' as Placement, disableBeacon: true, data: { isTutorial: true, translations } }
-        ];
-
-        return steps;
-    }, [translations, isLargeScreen]);
 
     const handleToolChange = useCallback((tool: Tool) => {
         setCurrentTool(tool);
@@ -677,6 +371,83 @@ const TutorialManager: React.FC = () => {
                      return () => clearTimeout(timer);
                  }
             }
+
+            // Hint: Mobile Back
+            if (!isLargeScreen && selectedCharacter && drawnCount === 1) {
+                const storageKey = 'hint_mobile_back_seen';
+                if (!localStorage.getItem(storageKey)) {
+                    // Slight delay to ensure UI settles
+                    const timer = setTimeout(() => {
+                        setActiveSteps([{
+                            target: '[data-tour="header-back"]',
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintMobileBackTitle}</h3>
+                                    <p dangerouslySetInnerHTML={{__html: translations.hintMobileBackContent}}></p>
+                                </div>
+                            ),
+                            placement: 'bottom',
+                            disableBeacon: true,
+                            spotlightClicks: true,
+                            hideFooter: true,
+                            data: { isTutorial: false, storageKey: storageKey, translations }
+                        }]);
+                        setStepIndex(0);
+                        setRun(true);
+                    }, 1000);
+                    return () => clearTimeout(timer);
+                }
+            }
+        }
+
+        // Hint: Test Font
+        if (!selectedCharacter && drawnCount > 0 && workspace === 'drawing') {
+            const storageKey = 'hint_test_seen';
+            if (!localStorage.getItem(storageKey)) {
+                 const timer = setTimeout(() => {
+                    setActiveSteps([{
+                        target: '[data-tour="header-test"]',
+                        content: (
+                            <div>
+                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintTestTitle}</h3>
+                                <p dangerouslySetInnerHTML={{__html: translations.hintTestContent}}></p>
+                            </div>
+                        ),
+                        placement: 'bottom',
+                        disableBeacon: true,
+                        spotlightClicks: true,
+                        data: { isTutorial: false, storageKey: storageKey, translations }
+                    }]);
+                    setStepIndex(0);
+                    setRun(true);
+                }, 1000);
+                return () => clearTimeout(timer);
+            }
+        }
+        
+        // Hint: Export Font
+        if (!selectedCharacter && drawnCount >= 3 && workspace === 'drawing') {
+            const storageKey = 'hint_export_seen';
+            if (!localStorage.getItem(storageKey)) {
+                 const timer = setTimeout(() => {
+                    setActiveSteps([{
+                        target: '[data-tour="header-export"]',
+                        content: (
+                            <div>
+                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintExportTitle}</h3>
+                                <p dangerouslySetInnerHTML={{__html: translations.hintExportContent}}></p>
+                            </div>
+                        ),
+                        placement: 'bottom',
+                        disableBeacon: true,
+                        spotlightClicks: true,
+                        data: { isTutorial: false, storageKey: storageKey, translations }
+                    }]);
+                    setStepIndex(0);
+                    setRun(true);
+                }, 1000);
+                return () => clearTimeout(timer);
+            }
         }
         
         // Hint 8: Kerning Workspace Intro (Multi-step)
@@ -729,7 +500,7 @@ const TutorialManager: React.FC = () => {
             }
         }
         
-    }, [script?.id, workspace, currentView, selectedCharacter, activeModal, translations, run]);
+    }, [script?.id, workspace, currentView, selectedCharacter, activeModal, translations, run, drawnCount, isLargeScreen]);
 
     // Combined Polling Effect for Positioning & Kerning JIT Hints
     useEffect(() => {
@@ -1098,7 +869,7 @@ const TutorialManager: React.FC = () => {
                 showProgress={activeSteps.length > 1}
                 showSkipButton
                 callback={handleCallback}
-                tooltipComponent={CustomTooltip}
+                tooltipComponent={TutorialTooltip}
                 scrollOffset={scrollOffset}
                 disableOverlayClose={true}
                 spotlightPadding={4}
