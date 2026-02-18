@@ -12,7 +12,7 @@ import { useKerning } from '../contexts/KerningContext';
 import { Tool } from '../types';
 import { isGlyphComplete } from '../utils/glyphUtils';
 
-// Custom Tooltip Component to handle "Don't Show Again" vs "Skip"
+// Custom Tooltip Component to handle "Don't Show Again" vs "Exit"
 const CustomTooltip = ({
     index,
     step,
@@ -27,14 +27,16 @@ const CustomTooltip = ({
     const labels = step.data?.translations || {};
 
     // 1. Define the action logic closing over current props
-    const performDismiss = (e?: React.MouseEvent<HTMLElement>) => {
-        // Main Tutorial Logic
-        if (step.data?.isTutorial) {
-             localStorage.setItem('tutorial_dismissed', 'true');
-        } 
-        // JIT Hint Logic
-        else if (step.data?.storageKey) {
-             localStorage.setItem(step.data.storageKey, 'true');
+    const performDismiss = (e?: React.MouseEvent<HTMLElement>, persist: boolean = true) => {
+        if (persist) {
+            // Main Tutorial Logic
+            if (step.data?.isTutorial) {
+                 localStorage.setItem('tutorial_dismissed', 'true');
+            } 
+            // JIT Hint Logic - Persist only on manual dismissal
+            else if (step.data?.storageKey) {
+                 localStorage.setItem(step.data.storageKey, 'true');
+            }
         }
         
         const safeEvent = e || { 
@@ -51,7 +53,7 @@ const CustomTooltip = ({
     const handlePrimaryClick = (e: React.MouseEvent<HTMLElement>) => {
         // For JIT hints (single step), treat "OK" as a dismissal to ensure it closes reliably.
         if (!step.data?.isTutorial && isLastStep) {
-            performDismiss(e);
+            performDismiss(e, true);
         } else {
             // For the main linear tutorial or multi-step JIT, use the standard navigation
             primaryProps.onClick(e);
@@ -74,7 +76,9 @@ const CustomTooltip = ({
         const timer = setTimeout(() => {
             // Call the latest version of the function
             if (dismissRef.current) {
-                dismissRef.current();
+                // Soft dismissal: persist=false. 
+                // If the user hasn't interacted, we hide it but don't mark it as seen forever.
+                dismissRef.current(undefined, false);
             }
         }, 15000); // 15 seconds (increased for multi-step readability)
 
@@ -91,8 +95,8 @@ const CustomTooltip = ({
               <div className="flex justify-between items-center">
                    <div className="flex items-center">
                       {!isLastStep && (
-                           <button {...skipProps} onClick={(e) => performDismiss(e)} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs font-bold uppercase tracking-wider transition-colors">
-                               {step.data?.isTutorial ? (labels.skip || 'Skip') : (labels.close || 'Close')}
+                           <button {...skipProps} onClick={(e) => performDismiss(e, false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs font-bold uppercase tracking-wider transition-colors">
+                               {step.data?.isTutorial ? (labels.exit || 'Exit Tutorial') : (labels.close || 'Close')}
                            </button>
                       )}
                    </div>
@@ -113,17 +117,6 @@ const CustomTooltip = ({
                        )}
                    </div>
               </div>
-              
-              {!step.data?.isTutorial && (
-                  <div className="border-t border-gray-100 dark:border-gray-700 pt-3 text-center">
-                      <button 
-                          onClick={(e) => performDismiss(e)}
-                          className="text-[10px] text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
-                      >
-                          {labels.dontShowAgain || "Don't show me this again"}
-                      </button>
-                  </div>
-              )}
          </div>
       </div>
     );
@@ -178,7 +171,7 @@ const TutorialManager: React.FC = () => {
         const isDismissed = localStorage.getItem('tutorial_dismissed') === 'true';
 
         // Check if tutorial should auto-resume. 
-        // Must strictly check !isDismissed to prevent zombie tutorial after "Skip".
+        // Must strictly check !isDismissed to prevent zombie tutorial after "Exit".
         if (script?.id === 'tutorial' && !run && !activeModal && !selectedCharacter && activeSteps.length > 0 && !isDismissed) {
             // If paused at dashboard, check if the current step target exists.
             const currentStep = activeSteps[stepIndex];
@@ -485,7 +478,7 @@ const TutorialManager: React.FC = () => {
         // Hint 1: Select Character
         if (workspace === 'drawing' && currentView === 'grid' && !selectedCharacter && !activeModal) {
             const storageKey = 'hint_grid_select_seen';
-            if (!localStorage.getItem(storageKey) && !sessionStorage.getItem(storageKey)) {
+            if (!localStorage.getItem(storageKey)) {
                 const checkExist = setInterval(() => {
                    if (document.querySelector('.tutorial-glyph-item')) {
                        clearInterval(checkExist);
@@ -499,7 +492,7 @@ const TutorialManager: React.FC = () => {
                        }]);
                        setStepIndex(0);
                        setRun(true);
-                       sessionStorage.setItem(storageKey, 'true');
+                       // localStorage.setItem(storageKey, 'true'); // Removed: Handled in CustomTooltip on Dismiss
                    }
                 }, 500);
                 setTimeout(() => clearInterval(checkExist), 5000);
@@ -510,7 +503,7 @@ const TutorialManager: React.FC = () => {
         // Hint 2: Start Drawing
         if (workspace === 'drawing' && selectedCharacter && !activeModal) {
             const storageKey = 'hint_editor_draw_seen';
-            if (!localStorage.getItem(storageKey) && !sessionStorage.getItem(storageKey)) {
+            if (!localStorage.getItem(storageKey)) {
                 const timer = setTimeout(() => {
                     setActiveSteps([{
                        target: '[data-tour="drawing-canvas"]',
@@ -522,7 +515,7 @@ const TutorialManager: React.FC = () => {
                     }]);
                     setStepIndex(0);
                     setRun(true);
-                    sessionStorage.setItem(storageKey, 'true');
+                    // localStorage.setItem(storageKey, 'true'); // Removed
                 }, 800);
                 return () => clearTimeout(timer);
             }
@@ -551,6 +544,7 @@ const TutorialManager: React.FC = () => {
                          }]);
                          setStepIndex(0);
                          setRun(true);
+                         // localStorage.setItem(storageKey, 'true'); // Removed
                      }, 1200); 
                      
                      return () => clearTimeout(timer);
@@ -588,6 +582,7 @@ const TutorialManager: React.FC = () => {
                          ]);
                          setStepIndex(0);
                          setRun(true);
+                         // localStorage.setItem(storageKey, 'true'); // Removed
                      }, 1200);
                      return () => clearTimeout(timer);
                 }
@@ -610,6 +605,7 @@ const TutorialManager: React.FC = () => {
                          }]);
                          setStepIndex(0);
                          setRun(true);
+                         // localStorage.setItem(storageKey, 'true'); // Removed
                      }, 1000);
                      return () => clearTimeout(timer);
                 }
@@ -654,6 +650,7 @@ const TutorialManager: React.FC = () => {
                          ]);
                          setStepIndex(0);
                          setRun(true);
+                         // localStorage.setItem(storageKey, 'true'); // Removed
                      }, 1200);
                      return () => clearTimeout(timer);
                 }
@@ -698,6 +695,7 @@ const TutorialManager: React.FC = () => {
                          ]);
                          setStepIndex(0);
                          setRun(true);
+                         // localStorage.setItem(storageKey, 'true'); // Removed
                      }, 1200);
                      return () => clearTimeout(timer);
                  }
@@ -724,6 +722,7 @@ const TutorialManager: React.FC = () => {
                     }]);
                     setStepIndex(0);
                     setRun(true);
+                    // localStorage.setItem(storageKey, 'true'); // Removed
                 }, 500);
                 return () => clearTimeout(timer);
             }
@@ -749,6 +748,7 @@ const TutorialManager: React.FC = () => {
                     }]);
                     setStepIndex(0);
                     setRun(true);
+                    // localStorage.setItem(storageKey, 'true'); // Removed
                 }, 500);
                 return () => clearTimeout(timer);
             }
@@ -786,6 +786,7 @@ const TutorialManager: React.FC = () => {
                  ]);
                  setStepIndex(0);
                  setRun(true);
+                 // localStorage.setItem(storageKey, 'true'); // Removed
             }
         }, 1000); 
 
@@ -959,6 +960,10 @@ const TutorialManager: React.FC = () => {
             setRun(false);
             if (script?.id === 'tutorial') {
                 setStepIndex(0);
+                // Fix: Clear active steps on Exit to prevent auto-resume from restarting the tour immediately
+                if (status === STATUS.SKIPPED) {
+                    setActiveSteps([]);
+                }
             } else {
                 setActiveSteps([]); // Clear JIT steps
             }

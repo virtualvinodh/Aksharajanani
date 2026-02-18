@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
@@ -24,6 +23,7 @@ import { VirtuosoHandle } from 'react-virtuoso';
 import ConfirmationModal from './ConfirmationModal';
 import { useGlyphFilter } from '../hooks/useGlyphFilter';
 import { useRefactoring } from '../hooks/useRefactoring';
+import CelebrationOverlay from './CelebrationOverlay';
 
 interface DrawingWorkspaceProps {
     characterSets: CharacterSet[];
@@ -41,7 +41,8 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         activeTab, setActiveTab, showNotification, 
         metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, 
         filterMode, setComparisonCharacters, setCurrentView,
-        searchQuery, selectedCharacter, triggerActiveEditorUpdate
+        searchQuery, selectedCharacter, triggerActiveEditorUpdate,
+        checkAndSetFlag, setWorkspace
     } = useLayout();
     
     const { dispatch: characterDispatch, positioningGroupNames, allCharsByName, allCharsByUnicode, markAttachmentRules, positioningRules } = useProject();
@@ -67,10 +68,38 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     
     const virtuosoRef = useRef<VirtuosoHandle>(null);
+    
+    // Celebration State
+    const [showCelebration, setShowCelebration] = useState(false);
+    const [nextStep, setNextStep] = useState<'positioning' | 'kerning'>('positioning');
 
     const showHidden = settings?.showHiddenGlyphs ?? false;
     const isSearching = searchQuery.trim().length > 0;
     
+    // Celebration Trigger Logic
+    useEffect(() => {
+        if (!isOverlayMode && drawingProgress.total > 0 && drawingProgress.completed === drawingProgress.total) {
+            // Check if user has already seen this
+            const hasCelebrated = checkAndSetFlag('drawing_complete_celebration');
+            if (!hasCelebrated) {
+                // Determine next step
+                // Check if positioning rules exist. If so, positioning is likely needed.
+                const hasPositioningRules = positioningRules && positioningRules.length > 0;
+                setNextStep(hasPositioningRules ? 'positioning' : 'kerning');
+                setShowCelebration(true);
+            }
+        }
+    }, [drawingProgress, isOverlayMode, positioningRules, checkAndSetFlag]);
+    
+    const handleCelebrationProceed = () => {
+        setShowCelebration(false);
+        setWorkspace(nextStep);
+        // Force reset the hint flag for the next workspace so the intro tour shows up
+        const hintKey = nextStep === 'positioning' ? 'hint_positioning_workspace_seen' : 'hint_kerning_seen';
+        localStorage.removeItem(hintKey);
+        sessionStorage.removeItem(hintKey);
+    };
+
     // Use the hook for filtering logic
     const allCharacters = useMemo(() => characterSets.flatMap(set => set.characters), [characterSets]);
     const { filteredList: filteredFlatList, isFiltered } = useGlyphFilter({
@@ -467,6 +496,15 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     />
                 )}
             </div>
+            
+            {showCelebration && (
+                <CelebrationOverlay 
+                    glyphDataMap={glyphDataMap} 
+                    nextStep={nextStep} 
+                    onProceed={handleCelebrationProceed} 
+                    onClose={() => setShowCelebration(false)} 
+                />
+            )}
 
             {isMetricsSelectionMode && !isOverlayMode && (
                 <DrawingBatchToolbar 
