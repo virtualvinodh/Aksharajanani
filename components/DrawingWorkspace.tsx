@@ -93,11 +93,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     
     const handleCelebrationProceed = () => {
         setShowCelebration(false);
-        setWorkspace(nextStep);
-        // Force reset the hint flag for the next workspace so the intro tour shows up
-        const hintKey = nextStep === 'positioning' ? 'hint_positioning_workspace_seen' : 'hint_kerning_seen';
-        localStorage.removeItem(hintKey);
-        sessionStorage.removeItem(hintKey);
+        setWorkspace(nextStep);;
     };
 
     // Use the hook for filtering logic

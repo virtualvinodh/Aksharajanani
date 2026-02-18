@@ -679,110 +679,161 @@ const TutorialManager: React.FC = () => {
             }
         }
         
-        // Hint 8: Kerning Workspace Intro
+        // Hint 8: Kerning Workspace Intro (Multi-step)
         if (workspace === 'kerning') {
-            const storageKey = 'hint_kerning_seen';
+            const storageKey = 'tutorial_kerning_tour_completed';
             if (!localStorage.getItem(storageKey)) {
+                // Wait for UI to mount
                 const timer = setTimeout(() => {
-                    setActiveSteps([{
-                        target: '[data-tour="nav-kerning"]', // Updated target
-                        content: (
-                            <div>
-                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKerningWorkspaceTitle}</h3>
-                                <p>{translations.hintKerningWorkspaceContent}</p>
-                            </div>
-                        ),
-                        placement: 'bottom' as Placement,
-                        disableBeacon: true,
-                        spotlightClicks: true,
-                        data: { isTutorial: false, storageKey: storageKey, translations }
-                    }]);
+                    const steps = [
+                        {
+                            target: '[data-tour="nav-kerning"]',
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintWhatIsKerningTitle}</h3>
+                                    <p dangerouslySetInnerHTML={{__html: translations.hintWhatIsKerningContent}}></p>
+                                </div>
+                            ),
+                            placement: 'bottom' as Placement,
+                            disableBeacon: true,
+                            data: { isTutorial: false, translations }
+                        },
+                        {
+                            target: '[data-tour="kerning-tabs"]',
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKerningViewsTitle}</h3>
+                                    <p dangerouslySetInnerHTML={{__html: translations.hintKerningViewsContent}}></p>
+                                </div>
+                            ),
+                            placement: 'bottom' as Placement,
+                            data: { isTutorial: false, translations }
+                        },
+                        {
+                            target: '[data-tour="auto-kern-btn"]',
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKerningToolsTitle}</h3>
+                                    <p dangerouslySetInnerHTML={{__html: translations.hintKerningToolsContent}}></p>
+                                </div>
+                            ),
+                            placement: 'bottom' as Placement,
+                            data: { isTutorial: false, storageKey: storageKey, translations }
+                        }
+                    ];
+                    setActiveSteps(steps);
                     setStepIndex(0);
                     setRun(true);
-                }, 500);
+                }, 1000);
                 return () => clearTimeout(timer);
             }
         }
         
     }, [script?.id, workspace, currentView, selectedCharacter, activeModal, translations, run]);
 
-    // Combined Polling Effect for Positioning Workspace JIT Hints
+    // Combined Polling Effect for Positioning & Kerning JIT Hints
     useEffect(() => {
-        if (workspace !== 'positioning' || activeModal || run || !translations) return;
+        if (activeModal || run || !translations) return;
 
         const checkHints = setInterval(() => {
-            // Hint A: Workspace Intro & Views
-            // Trigger: Just entering the workspace
-            if (!localStorage.getItem('hint_pos_intro_seen')) {
-                const toggle = document.querySelector('[data-tour="positioning-view-toggle"]');
-                if (toggle) {
-                    clearInterval(checkHints);
-                    setActiveSteps([{
-                        target: '[data-tour="positioning-view-toggle"]',
-                        content: (
-                            <div>
-                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Positioning Workspace</h3>
-                                <p>This workspace aligns marks to base characters. The view toggles allow organization by <strong>Rule</strong> (groups), <strong>Base</strong>, or <strong>Mark</strong>.</p>
-                            </div>
-                        ),
-                        placement: 'bottom',
-                        disableBeacon: true,
-                        data: { isTutorial: false, storageKey: 'hint_pos_intro_seen', translations }
-                    }]);
-                    setStepIndex(0);
-                    setRun(true);
-                    return;
+            if (workspace === 'positioning') {
+                // Hint A: Workspace Intro & Views
+                // Trigger: Just entering the workspace
+                if (!localStorage.getItem('hint_pos_intro_seen')) {
+                    const toggle = document.querySelector('[data-tour="positioning-view-toggle"]');
+                    if (toggle) {
+                        clearInterval(checkHints);
+                        setActiveSteps([{
+                            target: '[data-tour="positioning-view-toggle"]',
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Positioning Workspace</h3>
+                                    <p>This workspace aligns marks to base characters. The view toggles allow organization by <strong>Rule</strong> (groups), <strong>Base</strong>, or <strong>Mark</strong>.</p>
+                                </div>
+                            ),
+                            placement: 'bottom',
+                            disableBeacon: true,
+                            data: { isTutorial: false, storageKey: 'hint_pos_intro_seen', translations }
+                        }]);
+                        setStepIndex(0);
+                        setRun(true);
+                        return;
+                    }
                 }
-            }
 
-            // Hint B: Auto-Positioning (Rules View)
-            // Trigger: When a Rule Block appears
-            if (!localStorage.getItem('hint_pos_rules_seen')) {
-                 const ruleBlock = document.querySelector('[data-tour^="start-positioning-rule-"]');
-                 if (ruleBlock) {
-                     clearInterval(checkHints);
-                     setActiveSteps([{
-                        target: ruleBlock as HTMLElement,
-                        content: (
-                            <div>
-                                 <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Auto-Positioning</h3>
-                                 <p>The app has already calculated default positions for these pairs based on standard typography rules. The <strong>Start Positioning</strong> button opens the detailed grid to review them.</p>
-                            </div>
-                        ),
-                        placement: isLargeScreen ? 'right' : 'bottom',
-                        disableBeacon: true,
-                        data: { isTutorial: false, storageKey: 'hint_pos_rules_seen', translations }
-                     }]);
-                     setStepIndex(0);
-                     setRun(true);
-                     return;
-                 }
-            }
+                // Hint B: Auto-Positioning (Rules View)
+                // Trigger: When a Rule Block appears
+                if (!localStorage.getItem('hint_pos_rules_seen')) {
+                    const ruleBlock = document.querySelector('[data-tour^="start-positioning-rule-"]');
+                    if (ruleBlock) {
+                        clearInterval(checkHints);
+                        setActiveSteps([{
+                            target: ruleBlock as HTMLElement,
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Auto-Positioning</h3>
+                                    <p>The app has already calculated default positions for these pairs based on standard typography rules. The <strong>Start Positioning</strong> button opens the detailed grid to review them.</p>
+                                </div>
+                            ),
+                            placement: isLargeScreen ? 'right' : 'bottom',
+                            disableBeacon: true,
+                            data: { isTutorial: false, storageKey: 'hint_pos_rules_seen', translations }
+                        }]);
+                        setStepIndex(0);
+                        setRun(true);
+                        return;
+                    }
+                }
 
-            // Hint C: Grid & Confirmation
-            // Trigger: When Grid cards appear
-            if (!localStorage.getItem('hint_pos_grid_seen')) {
-                const acceptBtn = document.querySelector('[data-tour^="accept-pos-"]');
-                const comboCard = document.querySelector('[data-tour^="combo-card-"]');
-                
-                if (acceptBtn && comboCard) {
-                    clearInterval(checkHints);
-                    setActiveSteps([{
-                        target: acceptBtn as HTMLElement,
-                        content: (
-                            <div>
-                                 <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Accepting Suggestions</h3>
-                                 <p>Cards with dashed borders are <strong>Auto-Positioned suggestions</strong>. The <strong>Checkmark</strong> button confirms the position and saves it to the font file.</p>
-                            </div>
-                        ),
-                        placement: 'left', 
-                        disableBeacon: true,
-                        spotlightClicks: true,
-                        data: { isTutorial: false, storageKey: 'hint_pos_grid_seen', translations }
-                    }]);
-                    setStepIndex(0);
-                    setRun(true);
-                    return;
+                // Hint C: Grid & Confirmation
+                // Trigger: When Grid cards appear
+                if (!localStorage.getItem('hint_pos_grid_seen')) {
+                    const acceptBtn = document.querySelector('[data-tour^="accept-pos-"]');
+                    const comboCard = document.querySelector('[data-tour^="combo-card-"]');
+                    
+                    if (acceptBtn && comboCard) {
+                        clearInterval(checkHints);
+                        setActiveSteps([{
+                            target: acceptBtn as HTMLElement,
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Accepting Suggestions</h3>
+                                    <p>Cards with dashed borders are <strong>Auto-Positioned suggestions</strong>. The <strong>Checkmark</strong> button confirms the position and saves it to the font file.</p>
+                                </div>
+                            ),
+                            placement: 'left', 
+                            disableBeacon: true,
+                            spotlightClicks: true,
+                            data: { isTutorial: false, storageKey: 'hint_pos_grid_seen', translations }
+                        }]);
+                        setStepIndex(0);
+                        setRun(true);
+                        return;
+                    }
+                }
+            } else if (workspace === 'kerning') {
+                // Hint: Accept Suggestions (Kerning)
+                if (!localStorage.getItem('hint_kerning_accept_seen')) {
+                    const btn = document.querySelector('[data-tour="accept-batch-btn"]');
+                    if (btn) {
+                        clearInterval(checkHints);
+                        setActiveSteps([{
+                            target: btn as HTMLElement,
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKerningAcceptTitle}</h3>
+                                    <p dangerouslySetInnerHTML={{__html: translations.hintKerningAcceptContent}}></p>
+                                </div>
+                            ),
+                            placement: 'bottom',
+                            disableBeacon: true,
+                            spotlightClicks: true,
+                            data: { isTutorial: false, storageKey: 'hint_kerning_accept_seen', translations }
+                        }]);
+                        setStepIndex(0);
+                        setRun(true);
+                        return;
+                    }
                 }
             }
 
