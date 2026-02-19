@@ -33,6 +33,65 @@ export const useJITHints = (
     useEffect(() => {
         if (!translations || isTutorialActive || activeModal || run) return;
         
+        // Global Header Hints: Test & Export
+        // Visible when header is visible (not in specific views) and accessible (desktop or mobile dashboard)
+        const isHeaderVisible = !['creator', 'settings', 'comparison', 'rules'].includes(currentView);
+        const canShowHeaderHints = isHeaderVisible && (isLargeScreen || !selectedCharacter);
+
+        if (true) {
+            // Dashboard Hints: Test & Export
+            // Priority Logic: Export > Test
+            const exportUnseen = drawnCount >= 3 && !localStorage.getItem('hint_export_seen');
+            const testUnseen = drawnCount > 0 && !localStorage.getItem('hint_test_seen');
+            
+            if (exportUnseen) {
+                 // Check if element exists in DOM before triggering
+                 const exportBtn = document.querySelector('[data-tour="header-export"]');
+                 if (exportBtn) {
+                     const timer = setTimeout(() => {
+                        setSteps([{
+                            target: '[data-tour="header-export"]',
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintExportTitle}</h3>
+                                    <p dangerouslySetInnerHTML={{__html: translations.hintExportContent}}></p>
+                                </div>
+                            ),
+                            placement: 'bottom',
+                            disableBeacon: true,
+                            spotlightClicks: true,
+                            data: { isTutorial: false, storageKey: 'hint_export_seen', translations }
+                        }]);
+                        setStepIndex(0);
+                        setRun(true);
+                    }, 1000); // Wait for transition
+                    return () => clearTimeout(timer);
+                 }
+            } else if (testUnseen) {
+                 const testBtn = document.querySelector('[data-tour="header-test"]');
+                 if (testBtn) {
+                     const timer = setTimeout(() => {
+                        setSteps([{
+                            target: '[data-tour="header-test"]',
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintTestTitle}</h3>
+                                    <p dangerouslySetInnerHTML={{__html: translations.hintTestContent}}></p>
+                                </div>
+                            ),
+                            placement: 'bottom',
+                            disableBeacon: true,
+                            spotlightClicks: true,
+                            data: { isTutorial: false, storageKey: 'hint_test_seen', translations }
+                        }]);
+                        setStepIndex(0);
+                        setRun(true);
+                    }, 1000); // Wait for transition
+                    return () => clearTimeout(timer);
+                 }
+            }
+        }
+
         if (workspace === 'drawing') {
             // Hint 1: Select Character (Dashboard)
             if (currentView === 'grid' && !selectedCharacter) {
@@ -56,51 +115,6 @@ export const useJITHints = (
                     }, 500);
                     setTimeout(() => clearInterval(checkExist), 5000);
                     return () => clearInterval(checkExist);
-                }
-                
-                // Dashboard Hints: Test & Export
-                // Priority Logic: Export > Test
-                const exportUnseen = drawnCount >= 3 && !localStorage.getItem('hint_export_seen');
-                const testUnseen = drawnCount > 0 && !localStorage.getItem('hint_test_seen');
-                
-                if (exportUnseen) {
-                     const timer = setTimeout(() => {
-                        setSteps([{
-                            target: '[data-tour="header-export"]',
-                            content: (
-                                <div>
-                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintExportTitle}</h3>
-                                    <p dangerouslySetInnerHTML={{__html: translations.hintExportContent}}></p>
-                                </div>
-                            ),
-                            placement: 'bottom',
-                            disableBeacon: true,
-                            spotlightClicks: true,
-                            data: { isTutorial: false, storageKey: 'hint_export_seen', translations }
-                        }]);
-                        setStepIndex(0);
-                        setRun(true);
-                    }, 1000); // Wait for transition
-                    return () => clearTimeout(timer);
-                } else if (testUnseen) {
-                     const timer = setTimeout(() => {
-                        setSteps([{
-                            target: '[data-tour="header-test"]',
-                            content: (
-                                <div>
-                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintTestTitle}</h3>
-                                    <p dangerouslySetInnerHTML={{__html: translations.hintTestContent}}></p>
-                                </div>
-                            ),
-                            placement: 'bottom',
-                            disableBeacon: true,
-                            spotlightClicks: true,
-                            data: { isTutorial: false, storageKey: 'hint_test_seen', translations }
-                        }]);
-                        setStepIndex(0);
-                        setRun(true);
-                    }, 1000); // Wait for transition
-                    return () => clearTimeout(timer);
                 }
             }
             
