@@ -34,18 +34,14 @@ export const useJITHints = (
         if (!translations || isTutorialActive || activeModal || run) return;
         
         // Global Header Hints: Test & Export
-        // Visible when header is visible (not in specific views) and accessible (desktop or mobile dashboard)
-        const isHeaderVisible = !['creator', 'settings', 'comparison', 'rules'].includes(currentView);
-        const canShowHeaderHints = isHeaderVisible && (isLargeScreen || !selectedCharacter);
+        // const isHeaderVisible = !['creator', 'settings', 'comparison', 'rules'].includes(currentView);
+       //  const canShowHeaderHints = isHeaderVisible && (isLargeScreen || !selectedCharacter);
 
-        if (true) {
-            // Dashboard Hints: Test & Export
-            // Priority Logic: Export > Test
+        //if (canShowHeaderHints) {
             const exportUnseen = drawnCount >= 3 && !localStorage.getItem('hint_export_seen');
             const testUnseen = drawnCount > 0 && !localStorage.getItem('hint_test_seen');
             
             if (exportUnseen) {
-                 // Check if element exists in DOM before triggering
                  const exportBtn = document.querySelector('[data-tour="header-export"]');
                  if (exportBtn) {
                      const timer = setTimeout(() => {
@@ -64,7 +60,7 @@ export const useJITHints = (
                         }]);
                         setStepIndex(0);
                         setRun(true);
-                    }, 1000); // Wait for transition
+                    }, 1000);
                     return () => clearTimeout(timer);
                  }
             } else if (testUnseen) {
@@ -86,18 +82,17 @@ export const useJITHints = (
                         }]);
                         setStepIndex(0);
                         setRun(true);
-                    }, 1000); // Wait for transition
+                    }, 1000);
                     return () => clearTimeout(timer);
                  }
             }
-        }
+       // }
 
         if (workspace === 'drawing') {
             // Hint 1: Select Character (Dashboard)
             if (currentView === 'grid' && !selectedCharacter) {
                 const storageKey = 'hint_grid_select_seen';
                 if (!localStorage.getItem(storageKey)) {
-                    // This is a special case where we might need to wait for DOM elements
                     const checkExist = setInterval(() => {
                        if (document.querySelector('.tutorial-glyph-item')) {
                            clearInterval(checkExist);
@@ -118,10 +113,11 @@ export const useJITHints = (
                 }
             }
             
-            // Hint 2: Start Drawing (Editor)
+            // Hints inside Editor
             if (selectedCharacter) {
-                const storageKey = 'hint_editor_draw_seen';
-                if (!localStorage.getItem(storageKey)) {
+                // Hint 2: Start Drawing
+                const drawStorageKey = 'hint_editor_draw_seen';
+                if (!localStorage.getItem(drawStorageKey)) {
                     const timer = setTimeout(() => {
                         setSteps([{
                            target: '[data-tour="drawing-canvas"]',
@@ -129,14 +125,41 @@ export const useJITHints = (
                            disableBeacon: true,
                            placement: 'top' as Placement,
                            spotlightClicks: true,
-                           data: { isTutorial: false, storageKey: storageKey, translations }
+                           data: { isTutorial: false, storageKey: drawStorageKey, translations }
                         }]);
                         setStepIndex(0);
                         setRun(true);
                     }, 800);
                     return () => clearTimeout(timer);
                 }
+
+                // New Hint: Metrics (Side Bearings)
+                const metricsStorageKey = 'hint_metrics_seen';
+                if (!localStorage.getItem(metricsStorageKey)) {
+                    const currentGlyph = glyphDataMap.get(selectedCharacter.unicode!);
+                    if (currentGlyph && isGlyphDrawn(currentGlyph)) {
+                        const timer = setTimeout(() => {
+                            setSteps([{
+                                target: '[data-tour="drawing-canvas"]',
+                                content: (
+                                    <div>
+                                        <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintMetricsTitle}</h3>
+                                        <p dangerouslySetInnerHTML={{__html: translations.hintMetricsContent}}></p>
+                                    </div>
+                                ),
+                                placement: 'top',
+                                disableBeacon: true,
+                                spotlightClicks: true,
+                                data: { isTutorial: false, storageKey: metricsStorageKey, translations }
+                            }]);
+                            setStepIndex(0);
+                            setRun(true);
+                        }, 2000); // Wait 2s to ensure they have drawn something and aren't just passing through
+                        return () => clearTimeout(timer);
+                    }
+                }
             }
+
             // Hint 3: First Composite Glyph
             if (selectedCharacter) {
                  const isStaticComposite = (selectedCharacter.composite && selectedCharacter.composite.length > 0) && (!selectedCharacter.link);

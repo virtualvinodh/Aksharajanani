@@ -138,5 +138,7 @@
   "hintTestTitle": "Test Your Font",
   "hintTestContent": "You have drawn a character! Click here to test how it renders.",
   "hintExportTitle": "Export Font",
-  "hintExportContent": "Ready to use your font? Click here to generate the OTF file."
+  "hintExportContent": "Ready to use your font? Click here to generate the OTF file.",
+  "hintMetricsTitle": "Adjusting Spacing",
+  "hintMetricsContent": "The vertical lines are your **Side Bearings**. Drag the **LSB** (Left) or **RSB** (Right) lines to adjust the whitespace around this character."
 }
