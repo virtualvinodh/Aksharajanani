@@ -18,6 +18,7 @@ export const useLinearTutorial = (
 
     const [run, setRun] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
+    const [hasUserSkipped, setHasUserSkipped] = useState(false);
     const steps = useTutorialSteps(translations, isLargeScreen);
 
     const isActive = script?.id === 'tutorial';
@@ -25,18 +26,18 @@ export const useLinearTutorial = (
     // Resume Listener for View Transitions
     useEffect(() => {
         const handleViewLoaded = () => {
-             if (isActive) {
+             if (isActive && !hasUserSkipped) {
                  setRun(true);
              }
         };
         window.addEventListener('aksharajanani:view-loaded', handleViewLoaded);
         return () => window.removeEventListener('aksharajanani:view-loaded', handleViewLoaded);
-    }, [isActive]);
+    }, [isActive, hasUserSkipped]);
 
     // Resume Listener for Dashboard Return
     useEffect(() => {
         const isDismissed = localStorage.getItem('tutorial_dismissed') === 'true';
-        if (isActive && !run && !activeModal && !selectedCharacter && steps.length > 0 && !isDismissed) {
+        if (isActive && !run && !activeModal && !selectedCharacter && steps.length > 0 && !isDismissed && !hasUserSkipped) {
             const currentStep = steps[stepIndex];
             if (currentStep?.target && typeof currentStep.target === 'string') {
                  const targetEl = document.querySelector(currentStep.target);
@@ -46,18 +47,19 @@ export const useLinearTutorial = (
                  }
             }
         }
-    }, [activeModal, selectedCharacter, run, isActive, stepIndex, steps]);
+    }, [activeModal, selectedCharacter, run, isActive, stepIndex, steps, hasUserSkipped]);
 
     // Initialize / Reset
     useEffect(() => {
         if (isActive) {
             const isDismissed = localStorage.getItem('tutorial_dismissed') === 'true';
-            if (!isDismissed) {
+            if (!isDismissed && !hasUserSkipped) {
                 setRun(true);
             }
         } else {
              setRun(false);
              setStepIndex(0);
+             setHasUserSkipped(false);
         }
     }, [isActive]);
 
@@ -178,6 +180,9 @@ export const useLinearTutorial = (
         }
         
         if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+            if (status === STATUS.SKIPPED) {
+                setHasUserSkipped(true);
+            }
             setRun(false);
             setStepIndex(0);
         } else if (type === EVENTS.STEP_AFTER) {
