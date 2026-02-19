@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
@@ -23,7 +24,6 @@ import { VirtuosoHandle } from 'react-virtuoso';
 import ConfirmationModal from './ConfirmationModal';
 import { useGlyphFilter } from '../hooks/useGlyphFilter';
 import { useRefactoring } from '../hooks/useRefactoring';
-import CelebrationOverlay from './CelebrationOverlay';
 
 interface DrawingWorkspaceProps {
     characterSets: CharacterSet[];
@@ -42,7 +42,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, 
         filterMode, setComparisonCharacters, setCurrentView,
         searchQuery, selectedCharacter, triggerActiveEditorUpdate,
-        checkAndSetFlag, setWorkspace
+        setWorkspace
     } = useLayout();
     
     const { dispatch: characterDispatch, positioningGroupNames, allCharsByName, allCharsByUnicode, markAttachmentRules, positioningRules } = useProject();
@@ -53,7 +53,6 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const { state: rulesState } = useRules();
     const rulesGroups = rulesState.fontRules?.groups || {};
     
-    // Use Refactoring Hook
     const { renameGroup } = useRefactoring();
 
     const [modalState, setModalState] = useState<{ type: 'create' | 'rename', index?: number, isOpen: boolean }>({ type: 'create', isOpen: false });
@@ -68,35 +67,10 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     
     const virtuosoRef = useRef<VirtuosoHandle>(null);
-    
-    // Celebration State
-    const [showCelebration, setShowCelebration] = useState(false);
-    const [nextStep, setNextStep] = useState<'positioning' | 'kerning'>('positioning');
 
     const showHidden = settings?.showHiddenGlyphs ?? false;
     const isSearching = searchQuery.trim().length > 0;
     
-    // Celebration Trigger Logic
-    useEffect(() => {
-        if (!isOverlayMode && drawingProgress.total > 0 && drawingProgress.completed === drawingProgress.total) {
-            // Check if user has already seen this
-            const hasCelebrated = checkAndSetFlag('drawing_complete_celebration');
-            if (!hasCelebrated) {
-                // Determine next step
-                // Check if positioning rules exist. If so, positioning is likely needed.
-                const hasPositioningRules = positioningRules && positioningRules.length > 0;
-                setNextStep(hasPositioningRules ? 'positioning' : 'kerning');
-                setShowCelebration(true);
-            }
-        }
-    }, [drawingProgress, isOverlayMode, positioningRules, checkAndSetFlag]);
-    
-    const handleCelebrationProceed = () => {
-        setShowCelebration(false);
-        setWorkspace(nextStep);;
-    };
-
-    // Use the hook for filtering logic
     const allCharacters = useMemo(() => characterSets.flatMap(set => set.characters), [characterSets]);
     const { filteredList: filteredFlatList, isFiltered } = useGlyphFilter({
         characters: allCharacters,
@@ -375,7 +349,6 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         const targetSet = visibleCharacterSets[index];
         if (!targetSet) return;
         
-        // Use the centralized refactoring hook to handle the rename and all cascades
         renameGroup(targetSet.nameKey, newName.trim(), 'set');
 
     }, [visibleCharacterSets, renameGroup]);
@@ -412,7 +385,6 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     }, []);
 
     const handleBatchComplete = () => {
-        // TRIGGER FIX: Check if active character was modified
         if (selectedCharacter && metricsSelection.has(selectedCharacter.unicode!)) {
             triggerActiveEditorUpdate();
         }
@@ -492,15 +464,6 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     />
                 )}
             </div>
-            
-            {showCelebration && (
-                <CelebrationOverlay 
-                    glyphDataMap={glyphDataMap} 
-                    nextStep={nextStep} 
-                    onProceed={handleCelebrationProceed} 
-                    onClose={() => setShowCelebration(false)} 
-                />
-            )}
 
             {isMetricsSelectionMode && !isOverlayMode && (
                 <DrawingBatchToolbar 
@@ -509,12 +472,10 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                         const newSelection = new Set<number>();
                         
                         if (isFiltered) {
-                            // In filtered mode (search or category filter), select from the flat list results
                             filteredFlatList.forEach(c => {
                                 if (c.unicode !== undefined) newSelection.add(c.unicode);
                             });
                         } else {
-                            // In default grouped view, select from visible sets, respecting hidden status
                             visibleCharacterSets.forEach(set => {
                                 set.characters.forEach(c => {
                                     const isVisible = !c.hidden || showHidden;

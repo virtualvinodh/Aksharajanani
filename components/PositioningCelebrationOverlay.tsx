@@ -10,6 +10,7 @@ interface PositioningCelebrationOverlayProps {
     markPositioningMap: MarkPositioningMap;
     onProceed: () => void;
     onClose: () => void;
+    isFinalMilestone?: boolean;
 }
 
 interface AnimationPair {
@@ -22,13 +23,12 @@ interface AnimationPair {
 }
 
 const PositioningCelebrationOverlay: React.FC<PositioningCelebrationOverlayProps> = ({ 
-    glyphDataMap, markPositioningMap, onProceed, onClose 
+    glyphDataMap, markPositioningMap, onProceed, onClose, isFinalMilestone = false
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
     const [opacity, setOpacity] = useState(0);
 
-    // Easing function: easeOutBack
     const easeOutBack = (x: number): number => {
         const c1 = 1.70158;
         const c3 = c1 + 1;
@@ -41,10 +41,8 @@ const PositioningCelebrationOverlay: React.FC<PositioningCelebrationOverlayProps
         
         // Shuffle and pick up to 15
         const selectedEntries = entries.sort(() => 0.5 - Math.random()).slice(0, 15);
-
-        // Grid layout calculation
         const cols = 5;
-        const rows = Math.ceil(selectedEntries.length / cols);
+        const rows = Math.ceil(selectedEntries.length / cols) || 1;
         
         selectedEntries.forEach((entry, index) => {
             const [key, offset] = entry;
@@ -53,7 +51,6 @@ const PositioningCelebrationOverlay: React.FC<PositioningCelebrationOverlayProps
             const markGlyph = glyphDataMap.get(markUni);
 
             if (baseGlyph && markGlyph) {
-                // Random start offset relative to target
                 const angle = Math.random() * Math.PI * 2;
                 const dist = 300 + Math.random() * 500;
                 const startOffset = {
@@ -71,7 +68,7 @@ const PositioningCelebrationOverlay: React.FC<PositioningCelebrationOverlayProps
                     startOffset: startOffset,
                     screenPosition: { 
                         x: (col + 0.5) / cols, 
-                        y: (row + 0.5) / (rows || 1) 
+                        y: (row + 0.5) / rows 
                     }, 
                     scale: 0.15 
                 });
@@ -96,7 +93,7 @@ const PositioningCelebrationOverlay: React.FC<PositioningCelebrationOverlayProps
         window.addEventListener('resize', resize);
 
         const startTime = performance.now();
-        const duration = 2000; // 2 seconds for snap
+        const duration = 2000;
         
         let animationId: number;
 
@@ -106,45 +103,35 @@ const PositioningCelebrationOverlay: React.FC<PositioningCelebrationOverlayProps
             const easedProgress = easeOutBack(progress);
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Background dim
             ctx.fillStyle = theme === 'dark' ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.85)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             const cellW = canvas.width / 5;
-            const cellH = canvas.height / 3; // Approx
-            // Dynamic scale calculation to fit glyphs nicely
+            const cellH = canvas.height / 3;
             const scaleBase = Math.min(cellW, cellH) / DRAWING_CANVAS_SIZE * 0.5;
 
             pairsToAnimate.forEach(pair => {
                 const { basePaths, markPaths, targetOffset, startOffset, screenPosition } = pair;
                 
-                // Interpolate mark position
                 const currentX = startOffset.x + (targetOffset.x - startOffset.x) * easedProgress;
                 const currentY = startOffset.y + (targetOffset.y - startOffset.y) * easedProgress;
                 
-                // Screen coordinates for this pair center
                 const cx = screenPosition.x * canvas.width;
                 const cy = screenPosition.y * canvas.height;
 
                 ctx.save();
                 ctx.translate(cx, cy);
                 ctx.scale(scaleBase, scaleBase);
-                
-                // Center the base glyph roughly (assuming 1000x1000 grid centered at 500,500)
                 ctx.translate(-500, -500);
 
-                // Draw Base
                 renderPaths(ctx, basePaths, { 
                     strokeThickness: 30, 
-                    color: theme === 'dark' ? '#4b5563' : '#94a3b8' // Gray
+                    color: theme === 'dark' ? '#4b5563' : '#94a3b8' 
                 });
 
-                // Draw Mark
                 ctx.save();
                 ctx.translate(currentX, currentY);
                 
-                // Glow effect when snapped
                 if (progress >= 0.9) {
                     const glowIntensity = (progress - 0.9) * 10 * 20;
                     ctx.shadowBlur = glowIntensity;
@@ -153,10 +140,9 @@ const PositioningCelebrationOverlay: React.FC<PositioningCelebrationOverlayProps
 
                 renderPaths(ctx, markPaths, { 
                     strokeThickness: 30,
-                    color: theme === 'dark' ? '#818cf8' : '#4f46e5' // Indigo
+                    color: theme === 'dark' ? '#818cf8' : '#4f46e5' 
                 });
                 ctx.restore();
-
                 ctx.restore();
             });
 
@@ -173,35 +159,32 @@ const PositioningCelebrationOverlay: React.FC<PositioningCelebrationOverlayProps
         };
     }, [pairsToAnimate, theme]);
 
+    const title = isFinalMilestone ? "Engineering Complete!" : "Perfect Alignment!";
+    const message = isFinalMilestone 
+        ? "Your marks and base letters are perfectly aligned. Your font works, but you can make it beautiful by checking spacing."
+        : "Your marks are now correctly anchored to their base characters. The script is taking shape!";
+    
+    const buttonText = isFinalMilestone ? "Finish & Export" : "Next: Kerning";
+    const secondaryText = isFinalMilestone ? "Fine-tune Spacing" : "Stay here for now";
+
     return (
-        <div 
-            className="fixed inset-0 z-[200] flex items-center justify-center transition-opacity duration-1000"
-            style={{ opacity }}
-        >
+        <div className="fixed inset-0 z-[200] flex items-center justify-center transition-opacity duration-1000" style={{ opacity }}>
             <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
-            
             <div className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-indigo-200 dark:border-indigo-700 max-w-md text-center transform transition-transform duration-500 scale-100 animate-pop-in z-10">
                 <div className="w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-3xl">✨</span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Perfect Alignment!</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{title}</h2>
                 <p className="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
-                    Your marks are now correctly anchored to their base characters. The script is taking shape!
+                    {message}
                 </p>
-                
                 <div className="flex flex-col gap-3">
-                    <button 
-                        onClick={onProceed}
-                        className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        <span>Next: Kerning</span>
+                    <button onClick={onProceed} className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+                        <span>{buttonText}</span>
                         <RightArrowIcon className="w-5 h-5" />
                     </button>
-                    <button 
-                        onClick={onClose}
-                        className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline"
-                    >
-                        Stay here for now
+                    <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline">
+                        {secondaryText}
                     </button>
                 </div>
             </div>
@@ -209,4 +192,4 @@ const PositioningCelebrationOverlay: React.FC<PositioningCelebrationOverlayProps
     );
 };
 
-export default React.memo(PositioningCelebrationOverlay);
+export default PositioningCelebrationOverlay;

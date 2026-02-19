@@ -1,12 +1,9 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import PositioningPage from './PositioningPage';
 import { MarkAttachmentRules, PositioningRules, AttachmentClass } from '../../types';
 import { useRules } from '../contexts/RulesContext';
 import ProgressIndicator from './ProgressIndicator';
-import PositioningCelebrationOverlay from './PositioningCelebrationOverlay';
-import { useLayout } from '../contexts/LayoutContext';
-import { useGlyphData } from '../contexts/GlyphDataContext';
-import { usePositioning } from '../contexts/PositioningContext';
 
 interface PositioningWorkspaceProps {
     positioningRules: PositioningRules[] | null;
@@ -19,26 +16,6 @@ interface PositioningWorkspaceProps {
 const PositioningWorkspace: React.FC<PositioningWorkspaceProps> = (props) => {
     const { state: rulesState } = useRules();
     const { positioningProgress, ...positioningPageProps } = props;
-    
-    const { checkAndSetFlag, setWorkspace } = useLayout();
-    const { glyphDataMap } = useGlyphData();
-    const { markPositioningMap } = usePositioning();
-
-    const [showCelebration, setShowCelebration] = useState(false);
-
-    useEffect(() => {
-        if (positioningProgress.total > 0 && positioningProgress.completed === positioningProgress.total) {
-             const hasCelebrated = checkAndSetFlag('positioning_complete_celebration');
-             if (!hasCelebrated) {
-                 setShowCelebration(true);
-             }
-        }
-    }, [positioningProgress.completed, positioningProgress.total, checkAndSetFlag]);
-
-    const handleProceed = () => {
-        setShowCelebration(false);
-        setWorkspace('kerning');
-    };
     
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -55,15 +32,6 @@ const PositioningWorkspace: React.FC<PositioningWorkspaceProps> = (props) => {
                     fontRules={rulesState.fontRules}
                 />
             </div>
-            
-            {showCelebration && (
-                <PositioningCelebrationOverlay
-                    glyphDataMap={glyphDataMap}
-                    markPositioningMap={markPositioningMap}
-                    onProceed={handleProceed}
-                    onClose={() => setShowCelebration(false)}
-                />
-            )}
         </div>
     );
 };

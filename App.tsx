@@ -27,6 +27,7 @@ import SaveAsModal from './components/SaveAsModal';
 import CreatorPage from './components/CreatorPage';
 import MobileNavDrawer from './components/MobileNavDrawer';
 import TutorialManager from './components/TutorialManager';
+import CelebrationManager from './components/CelebrationManager'; // Added
 import { useLocale } from './contexts/LocaleContext';
 import { useLayout } from './contexts/LayoutContext';
 import { useGlyphData } from './contexts/GlyphDataContext';
@@ -81,13 +82,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const [isNavDrawerVisible, setNavDrawerVisible] = useState(false);
   const [isNavDrawerAnimatingOut, setNavDrawerAnimatingOut] = useState(false);
   
-  // FIX: This is the core of the refresh fix.
-  // We use `useMemo` to get the fresh version of the selected character from the global ProjectContext
-  // every time the App component re-renders (which happens when any context it consumes changes).
   const characterForModal = useMemo(() => {
     if (!selectedCharacter?.unicode) return selectedCharacter;
-    // Look up the character by its ID in the latest, globally-updated map.
-    // If it's not found (e.g., during deletion), fall back to the one in layout state to avoid crashes.
     return allCharsByUnicode.get(selectedCharacter.unicode) || selectedCharacter;
   }, [selectedCharacter, allCharsByUnicode]);
 
@@ -175,7 +171,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const mainContainerRef = useRef<HTMLElement>(null);
   const [gridPanelWidth, setGridPanelWidth] = useState<number>(() => {
     const savedWidth = localStorage.getItem('gridPanelWidth');
-    // Ensure default isn't too small if calculating from %
     return savedWidth ? parseInt(savedWidth, 10) : Math.max(200, window.innerWidth * 0.15);
   });
 
@@ -188,8 +183,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
       const doDrag = (moveEvent: MouseEvent) => {
           const newWidth = startWidth + (moveEvent.clientX - startX);
-          const minWidth = 200; // 220px min width (approx 2-3 columns)
-          const maxWidth = mainContainer.clientWidth * 0.75; // 75% max
+          const minWidth = 200; 
+          const maxWidth = mainContainer.clientWidth * 0.75; 
           setGridPanelWidth(Math.max(minWidth, Math.min(newWidth, maxWidth)));
       };
 
@@ -210,8 +205,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
       const doDrag = (moveEvent: TouchEvent) => {
           const newWidth = startWidth + (moveEvent.touches[0].clientX - startX);
-          const minWidth = 220; // 220px min width
-          const maxWidth = mainContainer.clientWidth * 0.75; // 75% max
+          const minWidth = 220; 
+          const maxWidth = mainContainer.clientWidth * 0.75; 
           setGridPanelWidth(Math.max(minWidth, Math.min(newWidth, maxWidth)));
       };
 
@@ -307,11 +302,9 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 c.unicode !== undefined && layout.metricsSelection.has(c.unicode)
             ) || []
         );
-        // Turn off selection mode after using the selection
         layout.setIsMetricsSelectionMode(false);
         layout.setMetricsSelection(new Set());
     }
-    // Always navigate to comparison view
     setCurrentView('comparison');
   };
 
@@ -334,13 +327,14 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const hasPositioning = positioningProgress.total > 0;
   
   const showEditorPanel = isLargeScreen && characterForModal && workspace === 'drawing' && (panelLayout === 'split' || panelLayout === 'editor');
-  const RESIZER_WIDTH = isLargeScreen ? 8 : 16; // px
+  const RESIZER_WIDTH = isLargeScreen ? 8 : 16; 
 
   return (
     <div className="h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
        
        <TutorialManager />
+       <CelebrationManager />
 
        {currentView === 'creator' ? (
            <CreatorPage 

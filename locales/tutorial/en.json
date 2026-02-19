@@ -140,5 +140,7 @@
   "hintExportTitle": "Export Font",
   "hintExportContent": "Ready to use your font? Click here to generate the OTF file.",
   "hintMetricsTitle": "Adjusting Spacing",
-  "hintMetricsContent": "The vertical lines are your **Side Bearings**. Drag the **LSB** (Left) or **RSB** (Right) lines to adjust the whitespace around this character."
+  "hintMetricsContent": "The vertical lines are your **Side Bearings**. Drag the **LSB** (Left) or **RSB** (Right) lines to adjust the whitespace around this character.",
+  "hintGridDottedTitle": "Pending Characters",
+  "hintGridDottedContent": "Cards with **dashed borders** are placeholders or auto-generated suggestions. Select them to review, draw, or accept them into your font."
 }

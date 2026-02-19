@@ -34,10 +34,10 @@ export const useJITHints = (
         if (!translations || isTutorialActive || activeModal || run) return;
         
         // Global Header Hints: Test & Export
-        // const isHeaderVisible = !['creator', 'settings', 'comparison', 'rules'].includes(currentView);
-       //  const canShowHeaderHints = isHeaderVisible && (isLargeScreen || !selectedCharacter);
+        const isHeaderVisible = !['creator', 'settings', 'comparison', 'rules'].includes(currentView);
+        const canShowHeaderHints = isHeaderVisible && (isLargeScreen || !selectedCharacter);
 
-        //if (canShowHeaderHints) {
+        if (canShowHeaderHints) {
             const exportUnseen = drawnCount >= 3 && !localStorage.getItem('hint_export_seen');
             const testUnseen = drawnCount > 0 && !localStorage.getItem('hint_test_seen');
             
@@ -86,7 +86,7 @@ export const useJITHints = (
                     return () => clearTimeout(timer);
                  }
             }
-       // }
+        }
 
         if (workspace === 'drawing') {
             // Hint 1: Select Character (Dashboard)
@@ -111,33 +111,172 @@ export const useJITHints = (
                     setTimeout(() => clearInterval(checkExist), 5000);
                     return () => clearInterval(checkExist);
                 }
+
+                // Hint: Pending/Dotted Characters
+                const dottedStorageKey = 'hint_grid_dotted_seen';
+                if (!localStorage.getItem(dottedStorageKey)) {
+                     const checkDashed = setInterval(() => {
+                        // Find a visible card with a dashed border
+                        const dashedCard = document.querySelector('.tutorial-glyph-item .border-dashed');
+                        if (dashedCard) {
+                            clearInterval(checkDashed);
+                            setSteps([{
+                                target: dashedCard as HTMLElement,
+                                content: (
+                                    <div>
+                                        <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintGridDottedTitle}</h3>
+                                        <p dangerouslySetInnerHTML={{__html: translations.hintGridDottedContent}}></p>
+                                    </div>
+                                ),
+                                placement: 'bottom',
+                                disableBeacon: true,
+                                spotlightClicks: false,
+                                data: { isTutorial: false, storageKey: dottedStorageKey, translations }
+                            }]);
+                            setStepIndex(0);
+                            setRun(true);
+                        }
+                     }, 1500); // Check every 1.5s to avoid clashing immediately with welcome/select hint
+                     
+                     const safety = setTimeout(() => clearInterval(checkDashed), 10000);
+                     return () => { clearInterval(checkDashed); clearTimeout(safety); };
+                }
             }
             
             // Hints inside Editor
             if (selectedCharacter) {
-                // Hint 2: Start Drawing
-                const drawStorageKey = 'hint_editor_draw_seen';
-                if (!localStorage.getItem(drawStorageKey)) {
-                    const timer = setTimeout(() => {
-                        setSteps([{
-                           target: '[data-tour="drawing-canvas"]',
-                           content: translations.hintEditorDraw || "Start drawing here.",
-                           disableBeacon: true,
-                           placement: 'top' as Placement,
-                           spotlightClicks: true,
-                           data: { isTutorial: false, storageKey: drawStorageKey, translations }
-                        }]);
-                        setStepIndex(0);
-                        setRun(true);
-                    }, 800);
-                    return () => clearTimeout(timer);
+                const currentGlyph = selectedCharacter.unicode ? glyphDataMap.get(selectedCharacter.unicode) : undefined;
+                const isCurrentDrawn = isGlyphDrawn(currentGlyph);
+
+                // Hint 2: Start Drawing (Only for the very first character)
+                if (drawnCount === 0) {
+                    const drawStorageKey = 'hint_editor_draw_seen';
+                    if (!localStorage.getItem(drawStorageKey)) {
+                        const timer = setTimeout(() => {
+                            setSteps([{
+                               target: '[data-tour="drawing-canvas"]',
+                               content: translations.hintEditorDraw || "Start drawing here.",
+                               disableBeacon: true,
+                               placement: 'top' as Placement,
+                               spotlightClicks: true,
+                               data: { isTutorial: false, storageKey: drawStorageKey, translations }
+                            }]);
+                            setStepIndex(0);
+                            setRun(true);
+                        }, 800);
+                        return () => clearTimeout(timer);
+                    }
                 }
 
-                // New Hint: Metrics (Side Bearings)
-                const metricsStorageKey = 'hint_metrics_seen';
-                if (!localStorage.getItem(metricsStorageKey)) {
-                    const currentGlyph = glyphDataMap.get(selectedCharacter.unicode!);
-                    if (currentGlyph && isGlyphDrawn(currentGlyph)) {
+                // New Hint: Toolbar Tour (Triggers on entering 2nd character, before drawing)
+                if (drawnCount === 1 && !isCurrentDrawn) {
+                    const toolbarStorageKey = 'hint_toolbar_seen';
+                    if (!localStorage.getItem(toolbarStorageKey)) {
+                         const placement = isLargeScreen ? 'right' as Placement : 'bottom' as Placement;
+                         const timer = setTimeout(() => {
+                             setSteps([
+                                {
+                                    target: '[data-tour="main-toolbar"]',
+                                    content: (
+                                        <div>
+                                            <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Toolbar</h3>
+                                            <p dangerouslySetInnerHTML={{__html: translations.toolbarIntro}}></p>
+                                        </div>
+                                    ),
+                                    placement,
+                                    disableBeacon: true,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="tool-select"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.toolSelect }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="tool-pan"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.toolPan }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="toolbar-pen"]',
+                                    content: translations.toolbarPenContent,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="tool-calligraphy"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.toolCalligraphy }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="tool-eraser"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.toolEraser }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="tool-slice"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.toolSlice }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="action-undo"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionUndo }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="action-redo"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionRedo }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="action-cut"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionCut }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="action-copy"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionCopy }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="action-paste"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionPaste }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="action-group"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionGroup }} />,
+                                    placement,
+                                    data: { isTutorial: false, translations }
+                                },
+                                {
+                                    target: '[data-tour="action-ungroup"]',
+                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionUngroup }} />,
+                                    placement,
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
+                                }
+                             ]);
+                             setStepIndex(0);
+                             setRun(true);
+                         }, 500);
+                         return () => clearTimeout(timer);
+                    }
+                }
+
+                // New Hint: Metrics (Side Bearings) - Delayed until 2nd char is drawn
+                if (drawnCount >= 2 && isCurrentDrawn) {
+                    const metricsStorageKey = 'hint_metrics_seen';
+                    if (!localStorage.getItem(metricsStorageKey)) {
                         const timer = setTimeout(() => {
                             setSteps([{
                                 target: '[data-tour="drawing-canvas"]',
@@ -154,7 +293,7 @@ export const useJITHints = (
                             }]);
                             setStepIndex(0);
                             setRun(true);
-                        }, 2000); // Wait 2s to ensure they have drawn something and aren't just passing through
+                        }, 2000); 
                         return () => clearTimeout(timer);
                     }
                 }
