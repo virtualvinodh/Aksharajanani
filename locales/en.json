@@ -758,5 +758,9 @@
 	"renameGroup": "Rename Group",
 	"deleteGroup": "Delete Group",
 	"confirmDeleteGroup": "Are you sure you want to delete the group '{name}' and all its characters? This action cannot be undone.",
-	"cannotDeleteLastGroup": "Cannot delete the last group."
+	"cannotDeleteLastGroup": "Cannot delete the last group.",
+	"hintTestTitle": "Test Your Font",
+	"hintTestContent": "You have drawn a character! Click here to test how it renders.",
+	"hintExportTitle": "Export Font",
+	"hintExportContent": "Ready to use your font? Click here to generate the OTF file."
 }

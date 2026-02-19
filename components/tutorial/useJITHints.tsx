@@ -11,7 +11,7 @@ export const useJITHints = (
     isLargeScreen: boolean
 ) => {
     const { script } = useProject();
-    const { glyphDataMap } = useGlyphData();
+    const { glyphDataMap, version } = useGlyphData();
     const { selectedCharacter, activeModal, workspace, currentView } = useLayout();
     
     const [run, setRun] = useState(false);
@@ -27,16 +27,18 @@ export const useJITHints = (
             if (isGlyphDrawn(data)) count++;
         });
         return count;
-    }, [glyphDataMap]);
+    }, [glyphDataMap, version]);
 
     // Triggers
     useEffect(() => {
         if (!translations || isTutorialActive || activeModal || run) return;
+        
         if (workspace === 'drawing') {
-            // Hint 1: Select Character
+            // Hint 1: Select Character (Dashboard)
             if (currentView === 'grid' && !selectedCharacter) {
                 const storageKey = 'hint_grid_select_seen';
                 if (!localStorage.getItem(storageKey)) {
+                    // This is a special case where we might need to wait for DOM elements
                     const checkExist = setInterval(() => {
                        if (document.querySelector('.tutorial-glyph-item')) {
                            clearInterval(checkExist);
@@ -55,8 +57,54 @@ export const useJITHints = (
                     setTimeout(() => clearInterval(checkExist), 5000);
                     return () => clearInterval(checkExist);
                 }
+                
+                // Dashboard Hints: Test & Export
+                // Priority Logic: Export > Test
+                const exportUnseen = drawnCount >= 3 && !localStorage.getItem('hint_export_seen');
+                const testUnseen = drawnCount > 0 && !localStorage.getItem('hint_test_seen');
+                
+                if (exportUnseen) {
+                     const timer = setTimeout(() => {
+                        setSteps([{
+                            target: '[data-tour="header-export"]',
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintExportTitle}</h3>
+                                    <p dangerouslySetInnerHTML={{__html: translations.hintExportContent}}></p>
+                                </div>
+                            ),
+                            placement: 'bottom',
+                            disableBeacon: true,
+                            spotlightClicks: true,
+                            data: { isTutorial: false, storageKey: 'hint_export_seen', translations }
+                        }]);
+                        setStepIndex(0);
+                        setRun(true);
+                    }, 1000); // Wait for transition
+                    return () => clearTimeout(timer);
+                } else if (testUnseen) {
+                     const timer = setTimeout(() => {
+                        setSteps([{
+                            target: '[data-tour="header-test"]',
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintTestTitle}</h3>
+                                    <p dangerouslySetInnerHTML={{__html: translations.hintTestContent}}></p>
+                                </div>
+                            ),
+                            placement: 'bottom',
+                            disableBeacon: true,
+                            spotlightClicks: true,
+                            data: { isTutorial: false, storageKey: 'hint_test_seen', translations }
+                        }]);
+                        setStepIndex(0);
+                        setRun(true);
+                    }, 1000); // Wait for transition
+                    return () => clearTimeout(timer);
+                }
             }
-            // Hint 2: Start Drawing
+            
+            // Hint 2: Start Drawing (Editor)
             if (selectedCharacter) {
                 const storageKey = 'hint_editor_draw_seen';
                 if (!localStorage.getItem(storageKey)) {
@@ -261,56 +309,6 @@ export const useJITHints = (
                     }, 1000);
                     return () => clearTimeout(timer);
                 }
-            }
-        }
-
-        // Hint: Test Font
-        if (!selectedCharacter && drawnCount > 0 && workspace === 'drawing') {
-            const storageKey = 'hint_test_seen';
-            if (!localStorage.getItem(storageKey)) {
-                 const timer = setTimeout(() => {
-                    setSteps([{
-                        target: '[data-tour="header-test"]',
-                        content: (
-                            <div>
-                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintTestTitle}</h3>
-                                <p dangerouslySetInnerHTML={{__html: translations.hintTestContent}}></p>
-                            </div>
-                        ),
-                        placement: 'bottom',
-                        disableBeacon: true,
-                        spotlightClicks: true,
-                        data: { isTutorial: false, storageKey: storageKey, translations }
-                    }]);
-                    setStepIndex(0);
-                    setRun(true);
-                }, 1000);
-                return () => clearTimeout(timer);
-            }
-        }
-        
-        // Hint: Export Font
-        if (!selectedCharacter && drawnCount >= 3 && workspace === 'drawing') {
-            const storageKey = 'hint_export_seen';
-            if (!localStorage.getItem(storageKey)) {
-                 const timer = setTimeout(() => {
-                    setSteps([{
-                        target: '[data-tour="header-export"]',
-                        content: (
-                            <div>
-                                <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintExportTitle}</h3>
-                                <p dangerouslySetInnerHTML={{__html: translations.hintExportContent}}></p>
-                            </div>
-                        ),
-                        placement: 'bottom',
-                        disableBeacon: true,
-                        spotlightClicks: true,
-                        data: { isTutorial: false, storageKey: storageKey, translations }
-                    }]);
-                    setStepIndex(0);
-                    setRun(true);
-                }, 1000);
-                return () => clearTimeout(timer);
             }
         }
         
