@@ -304,68 +304,24 @@ export const useGlyphActions = (
                         const isGpos = !!dependentChar.gpos;
                         const shouldBake = isLink || (isPosition && !isGpos);
 
-                        const dependentGlyphData = calculationSourceMap.get(depUnicode);
                         let resultData: GlyphData | null = null;
                         
-                        if (!dependentGlyphData || !isGlyphDrawn(dependentGlyphData)) {
-                             const regenerated = generateCompositeGlyphData({ 
-                                character: dependentChar, 
-                                allCharsByName, 
-                                allGlyphData: calculationSourceMap, 
-                                settings: settings!, 
-                                metrics: metrics!, 
-                                markAttachmentRules, 
-                                allCharacterSets: characterSets!,
-                                groups
-                            });
-                            if(regenerated) resultData = regenerated;
-                        } else {
-                            const indicesToUpdate: number[] = [];
-                            const components = dependentChar.link || dependentChar.position || dependentChar.kern || [];
-                            components.forEach((name, index) => {
-                                if (allCharsByName.get(name)?.unicode === currentSourceUnicode) {
-                                    indicesToUpdate.push(index);
-                                }
-                            });
-                    
-                            if (indicesToUpdate.length > 0) {
-                                let tempPaths = dependentGlyphData.paths;
-                                const strokeThickness = settings?.strokeThickness ?? 1;
-                                const sourceGlyphData = calculationSourceMap.get(currentSourceUnicode);
-                                
-                                if (sourceGlyphData) {
-                                    let pathsNeedRegeneration = false;
-                                    for (const index of indicesToUpdate) {
-                                        const updatedPaths = updateComponentInPaths(
-                                            tempPaths,
-                                            index,
-                                            sourceGlyphData.paths,
-                                            strokeThickness,
-                                            dependentChar.compositeTransform
-                                        );
-                                        if (!updatedPaths) {
-                                            pathsNeedRegeneration = true;
-                                            break;
-                                        }
-                                        tempPaths = updatedPaths;
-                                    }
-                                    if (pathsNeedRegeneration) {
-                                        const regenerated = generateCompositeGlyphData({ 
-                                            character: dependentChar, 
-                                            allCharsByName, 
-                                            allGlyphData: calculationSourceMap, 
-                                            settings: settings!, 
-                                            metrics: metrics!, 
-                                            markAttachmentRules, 
-                                            allCharacterSets: characterSets!,
-                                            groups
-                                        });
-                                        if(regenerated) resultData = regenerated;
-                                    } else {
-                                        resultData = { paths: tempPaths };
-                                    }
-                                }
-                            }
+                        // Unconditionally regenerate the dependent glyph. `generateCompositeGlyphData`
+                        // is the single source of truth and will handle all cases, including missing
+                        // sub-components (by returning null), making the previous if/else redundant.
+                        const regenerated = generateCompositeGlyphData({ 
+                            character: dependentChar, 
+                            allCharsByName, 
+                            allGlyphData: calculationSourceMap, 
+                            settings: settings!, 
+                            metrics: metrics!, 
+                            markAttachmentRules, 
+                            allCharacterSets: characterSets!,
+                            groups
+                        });
+                        
+                        if (regenerated) {
+                            resultData = regenerated;
                         }
 
                         if (resultData) {
