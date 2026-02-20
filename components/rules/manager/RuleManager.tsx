@@ -251,7 +251,7 @@ const RuleEditor: React.FC<{
                      <span>▶</span> {t('ligatureNamingOverrides')} {ligOverrides.length > 0 && <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-[10px]">{ligOverrides.length}</span>}
                  </summary>
                  <div className="pl-4 space-y-3 pt-2">
-                     <p className="text-xs text-gray-400 mb-2">Map specific Base+Mark pairs to a named ligature or group. Supports groups (e.g. $cons -> $ligs).</p>
+                     <p className="text-xs text-gray-400 mb-2">Map specific Base+Mark pairs to a named ligature or group. Supports groups (e.g. $cons replaced_by $ligs).</p>
                      
                      <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
                          {ligOverrides.map((o, idx) => (

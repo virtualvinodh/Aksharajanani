@@ -1,24 +1,24 @@
 
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { useLocale } from '../../contexts/LocaleContext';
-import { useLayout } from '../../contexts/LayoutContext';
+import { useLocale } from '../contexts/LocaleContext';
+import { useLayout } from '../contexts/LayoutContext';
 import { DRAWING_CANVAS_SIZE } from '../../constants';
 import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Point, PositioningRules, CharacterSet, ComponentTransform, AttachmentClass } from '../../types';
 import ReusePreviewCard from './ReusePreviewCard';
 import UnsavedChangesModal from './UnsavedChangesModal';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import Modal from './Modal';
-import { useProject } from '../../contexts/ProjectContext';
+import { useProject } from '../contexts/ProjectContext';
 import PositioningEditorHeader from './positioning/PositioningEditorHeader';
 import PositioningEditorWorkspace from './positioning/PositioningEditorWorkspace';
-import { CloseIcon } from '../../constants';
-import { VEC } from '../../utils/vectorUtils';
-import { usePositioningSession } from '../../hooks/positioning/usePositioningSession';
-import { deepClone } from '../../utils/cloneUtils';
-import { expandMembers } from '../../services/groupExpansionService';
-import { useGlyphData as useGlyphDataContext } from '../../contexts/GlyphDataContext';
-import { usePositioning } from '../../contexts/PositioningContext';
-import { isGlyphDrawn } from '../../utils/glyphUtils';
+import { CloseIcon } from '../constants';
+import { VEC } from '../utils/vectorUtils';
+import { usePositioningSession } from '../hooks/positioning/usePositioningSession';
+import { deepClone } from '../utils/cloneUtils';
+import { expandMembers } from '../services/groupExpansionService';
+import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
+import { usePositioning } from '../contexts/PositioningContext';
+import { isGlyphDrawn } from '../utils/glyphUtils';
 
 interface PositioningEditorPageProps {
     baseChar: Character;
