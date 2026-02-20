@@ -46,5 +46,49 @@
     { "id": "settings_theme_toggle", "category": "Settings", "description": "Toggle Dark Mode. Verify UI colors invert correctly.", "priority": "low" },
 
     { "id": "import_project_merge", "category": "Import/Export", "description": "Click 'Import Glyphs'. Select a project file. Choose 'Fill' vs 'Overwrite' for a specific glyph. Import. Verify logic held.", "priority": "high" },
-    { "id": "snapshot_create_restore", "category": "History", "description": "Menu -> Take Snapshot. Modify glyph. Menu -> Restore Snapshot. Verify original state returned.", "priority": "high" }
+    { "id": "snapshot_create_restore", "category": "History", "description": "Menu -> Take Snapshot. Modify glyph. Menu -> Restore Snapshot. Verify original state returned.", "priority": "high" },
+
+    { "id": "link_create_propagate", "category": "Linked Glyphs", "description": "Create glyph 'B' as link to 'A'. Modify 'A'. Verify 'B' updates automatically.", "priority": "high" },
+    { "id": "link_double_click_lock", "category": "Linked Glyphs", "description": "Select a linked glyph. Double-click on the path. Verify edit mode is NOT entered (locked).", "priority": "high" },
+    { "id": "link_unlink_edit", "category": "Linked Glyphs", "description": "Unlink glyph 'B' (was linked to 'A'). Modify 'B'. Verify 'A' remains unchanged.", "priority": "medium" },
+    { "id": "link_circular_prevent", "category": "Linked Glyphs", "description": "Try to link 'A' to 'B' where 'B' is already linked to 'A'. Verify error/prevention.", "priority": "low" },
+
+    { "id": "pos_reset_page", "category": "Positioning", "description": "In Rule Details, manually position 3 pairs. Click 'Reset Page'. Verify all 3 revert to default positions.", "priority": "medium" },
+    { "id": "pos_accept_page", "category": "Positioning", "description": "In Rule Details, click 'Accept Page'. Verify unpositioned items are marked as positioned/accepted.", "priority": "medium" },
+
+    { "id": "draw_undo_redo", "category": "Drawing Tools", "description": "Draw a path. Move a point. Press Ctrl+Z. Verify point moves back. Press Ctrl+Shift+Z. Verify point moves forward.", "priority": "high" },
+    { "id": "draw_nudge_keys", "category": "Drawing Tools", "description": "Select a point. Press Right Arrow. Verify point moves 1 unit right. Hold Shift+Right Arrow. Verify 10 unit move.", "priority": "medium" },
+    
+    { "id": "group_delete_used", "category": "Rules Manager", "description": "Try to delete a group that is used in a positioning rule. Verify warning message.", "priority": "medium" },
+    
+    { "id": "import_svg_drag", "category": "Import/Export", "description": "Drag and drop an SVG file onto a glyph card. Verify SVG path is imported into the glyph.", "priority": "medium" },
+
+    { "id": "creator_text_update", "category": "Creator Studio", "description": "Open Creator Studio. Type 'Hello World'. Verify text updates on canvas.", "priority": "medium" },
+    { "id": "creator_aspect_ratio", "category": "Creator Studio", "description": "Click 'Story' preset. Verify canvas aspect ratio changes to portrait.", "priority": "medium" },
+    { "id": "creator_bg_image", "category": "Creator Studio", "description": "Upload a background image. Verify it appears on canvas.", "priority": "medium" },
+
+    { "id": "compare_select_category", "category": "Comparison View", "description": "Open Comparison View. Select 'Vowels' category. Verify vowel glyphs appear on canvas.", "priority": "medium" },
+    { "id": "compare_zoom", "category": "Comparison View", "description": "Click Zoom In button. Verify glyphs render larger.", "priority": "low" },
+    { "id": "compare_fold_toggle", "category": "Comparison View", "description": "Toggle 'Fold Lines'. Verify layout switches between grid and single line.", "priority": "low" },
+
+    { "id": "test_page_typing", "category": "Font Test Page", "description": "Open Test Page. Type text. Verify it renders using the current font.", "priority": "high" },
+    { "id": "test_page_size_slider", "category": "Font Test Page", "description": "Adjust Font Size slider. Verify text size changes.", "priority": "medium" },
+
+    { "id": "settings_grid_size", "category": "Settings", "description": "Change Grid Size in settings. Open Editor. Verify grid cell size.", "priority": "low" },
+
+    { "id": "trace_modal_open", "category": "Image Tracer", "description": "Open Image Tracer modal. Verify preview area is empty.", "priority": "medium" },
+    { "id": "trace_insert_svg", "category": "Image Tracer", "description": "Trace an image and click Insert. Verify paths added to glyph.", "priority": "high" },
+
+    { "id": "refactor_rename_group", "category": "Refactoring", "description": "Rename a group in Rules Manager. Verify the new name persists.", "priority": "medium" },
+
+    { "id": "export_template", "category": "Export", "description": "Click 'Save as Template'. Verify JSON download.", "priority": "medium" },
+    { "id": "export_incomplete", "category": "Export", "description": "Try to export empty font. Verify 'Incomplete Font' warning.", "priority": "medium" },
+    { "id": "export_test_page", "category": "Export", "description": "Click 'Test Font'. Verify Test Page opens.", "priority": "high" },
+
+    { "id": "project_save_as", "category": "Project Management", "description": "Click 'Save As'. Enter new name. Verify project saved.", "priority": "high" },
+    { "id": "add_block_latin", "category": "Glyph Management", "description": "Add 'Basic Latin' block. Verify glyphs added to grid.", "priority": "high" },
+    { "id": "add_custom_glyph", "category": "Glyph Management", "description": "Add custom glyph 'myLogo'. Verify it appears in grid.", "priority": "medium" },
+
+    { "id": "prop_change_lsb", "category": "Glyph Properties", "description": "Change LSB in properties panel. Verify spacing updates.", "priority": "high" },
+    { "id": "prop_make_ligature", "category": "Glyph Properties", "description": "Change glyph type to 'Ligature'. Add components 'f', 'i'. Save.", "priority": "medium" }
 ]

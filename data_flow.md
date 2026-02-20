@@ -58,10 +58,92 @@ On project load, `useProjectLoad.ts` scans all characters. If character **B** ha
 When glyph **A** is saved:
 1.  `handleSaveGlyph` (in `useGlyphActions.ts`) identifies all dependents of **A**.
 2.  **Filter**: It selects only **Linked** glyphs (those requiring automatic updates).
+    *   **Live Links**: Characters with `link` property are always updated.
+    *   **Virtual Composites**: Characters with `position` or `kern` properties are updated if they are not manually overridden (checked via `gpos` flag).
 3.  **Baking**: For each dependent (e.g., **B**), it determines which components changed.
-4.  **Transformation**: It applies local transforms (Scale, X/Y, Mode) defined in **B**'s `compositeTransform` to **A**'s new paths.
-5.  **Reconstruction**: `updateComponentInPaths` replaces the old paths of **A** inside **B** with the new ones.
+4.  **Transformation**: It applies local transforms (Scale, Rotation, X/Y, Mode) defined in **B**'s `compositeTransform` to **A**'s new paths.
+5.  **Reconstruction**: `generateCompositeGlyphData` replaces the old paths of **A** inside **B** with the new ones.
 6.  **Recursion**: If **C** depends on **B**, the process repeats.
+
+---
+
+## 15. Image Tracing Pipeline
+
+The Image Tracer converts raster images into vector glyphs using a multi-stage process involving external libraries and geometric cleanup.
+
+### 15.1 Raster Processing
+1.  **Input**: User uploads an image or pastes a Data URL.
+2.  **Preprocessing**: `traceImageToSVG` (in `imageTracerService.ts`) optionally removes the background color using pixel-difference thresholding on an HTML5 Canvas.
+3.  **Vectorization**: The `imagetracer.js` library converts the processed bitmap into raw SVG path data.
+
+### 15.2 Geometric Refinement
+1.  **Import**: The raw SVG is imported into a headless `paper.js` scope.
+2.  **Boolean Operations**:
+    *   **Union**: Overlapping shapes are merged.
+    *   **Subtraction**: White background shapes are subtracted from the main shape to create proper holes (counters).
+3.  **Simplification**: The resulting path is simplified to reduce node count while maintaining visual fidelity.
+4.  **Export**: The final geometry is extracted as an SVG string and converted into the application's internal `Path[]` format.
+
+---
+
+## 16. Refactoring & Renaming Pipeline
+
+The Refactoring Service ensures data integrity when renaming core entities like Groups or Character Sets, which are referenced throughout the project.
+
+### 16.1 Scope of Impact
+Renaming a group (e.g., `@vowels` -> `@vowels_new`) requires atomic updates across:
+*   **Character Sets**: Group definitions.
+*   **Positioning Rules**: Base/Mark lists and Ligature Maps.
+*   **Attachment Rules**: Anchor definitions keyed by group.
+*   **Kerning**: Recommended pairs referencing the group.
+*   **Font Rules**: The entire GSUB/GPOS feature tree (recursive traversal).
+
+### 16.2 Execution Flow
+1.  **Input**: `useRefactoring.ts` receives the rename request.
+2.  **State Cloning**: A deep copy of the entire relevant project state is created.
+3.  **Recursive Replacement**: `renameGroupInState` (in `refactoringService.ts`) walks through the state tree.
+    *   **Strings**: Direct string matches are replaced.
+    *   **Arrays**: Member lists are mapped and filtered.
+    *   **Objects**: Keys and values are inspected and updated.
+4.  **Atomic Commit**: The modified state objects are dispatched back to their respective Context providers in a single batch to prevent UI tearing.
+
+---
+
+## 17. Creator Studio Rendering
+
+The Creator Studio provides a "What You See Is What You Get" (WYSIWYG) environment for testing fonts in graphical contexts.
+
+### 17.1 Composition Layering
+The `CreatorPage` canvas is built from multiple layers:
+1.  **Background**: Solid color or user-uploaded image (scaled to `aspectRatio`).
+2.  **Text Layer**: The current font is used to render the user's text.
+    *   **Glyph Retrieval**: Geometries are fetched from `glyphDataMap`.
+    *   **Layout**: Text is aligned (Left/Center/Right) and positioned (`textPos`).
+    *   **Effects**: Shadow and Color are applied via Canvas API.
+3.  **Overlay**: A semi-transparent color overlay is applied on top of the background but behind the text to improve contrast.
+
+### 17.2 Export
+*   **Rasterization**: The composite canvas is converted to a high-resolution PNG via `toDataURL`.
+*   **Download**: The user can save the resulting image as a promotional asset.
+
+---
+
+## 18. Unified Render Context
+
+To manage the increasing complexity of rendering parameters (Kerning, Positioning, Metrics, Rules), the application utilizes a `UnifiedRenderContext`.
+
+### 18.1 The Problem
+Previously, rendering a single glyph required passing 10+ individual props (Metrics, Kerning Map, Positioning Map, Rules, etc.) down through the component tree, leading to "Prop Drilling" and maintenance overhead.
+
+### 18.2 The Solution
+The `UnifiedRenderContext` object consolidates all necessary rendering data into a single structure:
+*   `glyphDataMap` (Geometry)
+*   `markPositioningMap` (Anchor Offsets)
+*   `kerningMap` (Spacing Adjustments)
+*   `metrics` (Vertical Alignment)
+*   `rules` (Contextual Logic)
+
+This context is passed to service-level functions like `renderGlyph` and `getGlyphBBox`, ensuring they always have access to the full typographic state without changing function signatures for every new feature.
 
 ---
 

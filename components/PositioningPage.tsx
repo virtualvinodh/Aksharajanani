@@ -389,6 +389,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                             positioningRules={positioningRules}
                             characterSets={characterSets} groups={groups} glyphVersion={glyphVersion} metrics={metrics} ITEMS_PER_PAGE={ITEMS_PER_PAGE}
                             handleAcceptAllDefaults={handleAcceptAllDefaults}
+                            handleResetPage={(pairs) => handleResetPositions(pairs, undefined, () => {})}
                             uniqueRepPairs={uniqueRepPairs}
                             isPairEligible={isPairEligibleForAutoPos}
                         />

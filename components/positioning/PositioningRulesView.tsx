@@ -3,7 +3,7 @@ import React from 'react';
 import PositioningRuleBlock from './PositioningRuleBlock';
 import CombinationCard from '../CombinationCard';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, PositioningRules, CharacterSet, FontMetrics } from '../../types';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, CheckCircleIcon, RefreshIcon } from '../../constants';
 
 interface PositioningRulesViewProps {
     ruleGroups: { rule: PositioningRules, pairs: any[], id: number }[];
@@ -31,6 +31,7 @@ interface PositioningRulesViewProps {
     metrics: FontMetrics;
     ITEMS_PER_PAGE: number;
     handleAcceptAllDefaults: (pairs: any[]) => void;
+    handleResetPage: (pairs: any[]) => void;
     uniqueRepPairs: any[]; // List of unique items displayed in the grid
     isPairEligible: (base: Character, mark: Character) => boolean;
 }
@@ -40,7 +41,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
     pagedRulePairs, rulePage, setRulePage, ruleTotalPages, markPositioningMap,
     getPairClassKey, classCounts, setEditingPair, setEditingIndex, setEditingContextList,
     handleConfirmPosition, glyphDataMap, strokeThickness, markAttachmentRules, positioningRules, characterSets,
-    groups, glyphVersion, metrics, ITEMS_PER_PAGE, handleAcceptAllDefaults,
+    groups, glyphVersion, metrics, ITEMS_PER_PAGE, handleAcceptAllDefaults, handleResetPage,
     uniqueRepPairs,
     isPairEligible
 }) => {
@@ -108,14 +109,24 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                 
                 {/* Accept Page Button */}
                 {activeRuleGroup && (
-                    <button
-                        onClick={() => handleAcceptAllDefaults(pagedRulePairs)}
-                        disabled={unpositionedOnPageCount === 0}
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
-                        <CheckCircleIcon className="h-4 w-4" />
-                        <span>Accept Page</span>
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => handleResetPage(pagedRulePairs)}
+                            disabled={pagedRulePairs.length - unpositionedOnPageCount === 0}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <RefreshIcon className="h-4 w-4" />
+                            <span>Reset Page</span>
+                        </button>
+                        <button
+                            onClick={() => handleAcceptAllDefaults(pagedRulePairs)}
+                            disabled={unpositionedOnPageCount === 0}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                            <CheckCircleIcon className="h-4 w-4" />
+                            <span>Accept Page</span>
+                        </button>
+                    </div>
                 )}
             </div>
 

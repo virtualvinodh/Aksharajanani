@@ -212,17 +212,42 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
     };
 
     const reuseSources = useMemo(() => {
-        const sources: Character[] = []; const seen = new Set<number>();
+        const sources: { base: Character, mark: Character, key: string, type: 'same-mark' | 'same-base' }[] = [];
+        const seen = new Set<string>();
+
+        // 1. Consistency across Bases (Existing Logic): "Show me how OTHER BASES handled THIS MARK"
         props.characterSets.forEach(set => set.characters.forEach(c => {
-            if (c.unicode !== undefined && c.glyphClass !== 'mark' && c.unicode !== props.baseChar.unicode && props.markPositioningMap.has(`${c.unicode}-${props.markChar.unicode}`)) {
-                if (!seen.has(c.unicode)) { sources.push(c); seen.add(c.unicode); }
+            // c is the candidate Base
+            if (c.unicode !== undefined && c.glyphClass !== 'mark' && c.unicode !== props.baseChar.unicode) {
+                const key = `${c.unicode}-${props.markChar.unicode}`;
+                if (props.markPositioningMap.has(key)) {
+                    if (!seen.has(key)) {
+                        sources.push({ base: c, mark: props.markChar, key, type: 'same-mark' });
+                        seen.add(key);
+                    }
+                }
             }
         }));
+
+        // 2. Consistency across Marks (New Logic): "Show me how THIS BASE handled OTHER MARKS"
+        props.characterSets.forEach(set => set.characters.forEach(c => {
+            // c is the candidate Mark
+            if (c.unicode !== undefined && c.glyphClass === 'mark' && c.unicode !== props.markChar.unicode) {
+                const key = `${props.baseChar.unicode}-${c.unicode}`;
+                if (props.markPositioningMap.has(key)) {
+                    if (!seen.has(key)) {
+                        sources.push({ base: props.baseChar, mark: c, key, type: 'same-base' });
+                        seen.add(key);
+                    }
+                }
+            }
+        }));
+
         return sources;
     }, [props.characterSets, props.markPositioningMap, props.baseChar, props.markChar]);
 
-    const handleReuse = (sourceBase: Character) => {
-        const sourceOffset = props.markPositioningMap.get(`${sourceBase.unicode}-${props.markChar.unicode}`);
+    const handleReuse = (sourceBase: Character, sourceMark: Character) => {
+        const sourceOffset = props.markPositioningMap.get(`${sourceBase.unicode}-${sourceMark.unicode}`);
         if (!sourceOffset) return;
         const moveX = sourceOffset.x - session.currentOffset.x, moveY = sourceOffset.y - session.currentOffset.y;
         const newPaths = session.markPaths.map(p => ({
@@ -327,8 +352,50 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                         <h4 className="font-bold text-gray-900 dark:text-white">{t('copyPositionFrom')}</h4>
                         <button onClick={() => setIsReusePanelOpen(false)}><CloseIcon className="w-5 h-5"/></button>
                     </div>
-                    <div className="flex-grow overflow-y-auto pr-1 grid grid-cols-2 gap-3">
-                        {reuseSources.length > 0 ? reuseSources.map(s => <ReusePreviewCard key={s.unicode} baseChar={s} markChar={props.markChar} onClick={() => handleReuse(s)} glyphDataMap={props.glyphDataMap} strokeThickness={props.settings.strokeThickness} markPositioningMap={props.markPositioningMap} glyphVersion={props.glyphVersion} displayLabel={s.label || s.name} />) : <div className="col-span-2 text-center text-gray-500 italic py-4">{t('noCompleteSources')}</div>}
+                    <div className="flex-grow overflow-y-auto pr-1 space-y-4">
+                        {reuseSources.length === 0 && <div className="text-center text-gray-500 italic py-4">{t('noCompleteSources')}</div>}
+                        
+                        {reuseSources.some(s => s.type === 'same-base') && (
+                            <div>
+                                <div className="text-xs font-bold text-gray-500 uppercase mb-2">Same Base (Other Marks)</div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {reuseSources.filter(s => s.type === 'same-base').map(s => (
+                                        <ReusePreviewCard 
+                                            key={s.key} 
+                                            baseChar={s.base} 
+                                            markChar={s.mark} 
+                                            onClick={() => handleReuse(s.base, s.mark)} 
+                                            glyphDataMap={props.glyphDataMap} 
+                                            strokeThickness={props.settings.strokeThickness} 
+                                            markPositioningMap={props.markPositioningMap} 
+                                            glyphVersion={props.glyphVersion} 
+                                            displayLabel={s.mark.name} 
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {reuseSources.some(s => s.type === 'same-mark') && (
+                            <div>
+                                <div className="text-xs font-bold text-gray-500 uppercase mb-2">Other Bases (Same Mark)</div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {reuseSources.filter(s => s.type === 'same-mark').map(s => (
+                                        <ReusePreviewCard 
+                                            key={s.key} 
+                                            baseChar={s.base} 
+                                            markChar={s.mark} 
+                                            onClick={() => handleReuse(s.base, s.mark)} 
+                                            glyphDataMap={props.glyphDataMap} 
+                                            strokeThickness={props.settings.strokeThickness} 
+                                            markPositioningMap={props.markPositioningMap} 
+                                            glyphVersion={props.glyphVersion} 
+                                            displayLabel={s.base.name} 
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                  </div>
             )}
