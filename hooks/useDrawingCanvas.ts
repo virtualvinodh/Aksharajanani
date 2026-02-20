@@ -411,6 +411,9 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     }, [getViewportPoint, panTool, endInteraction]);
 
     const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+        // Prevent double click editing for linked glyphs
+        if (currentCharacter?.link) return;
+
         const viewportPoint = getViewportPoint(e);
         if (!viewportPoint) return;
         const canvasPoint = getCanvasPoint(viewportPoint);
@@ -423,7 +426,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
                 editTool.setFocusedPathId(path.id);
             }
         }
-    }, [tool, getViewportPoint, getCanvasPoint, editTool, findPathAtPoint, onToolChange, onSelectionChange]);
+    }, [tool, getViewportPoint, getCanvasPoint, editTool, findPathAtPoint, onToolChange, onSelectionChange, currentCharacter]);
     
     const handleWheel = useCallback((e: React.WheelEvent) => {
         e.preventDefault(); 

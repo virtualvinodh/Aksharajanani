@@ -259,8 +259,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                                 <span className="text-[10px] font-bold uppercase tracking-wide opacity-50 group-hover:opacity-100 text-center transition-opacity">{t('addGlyph')}</span>
                             </div>
 
-                            {/* Ghost Button: Add Block (Only in last group) */}
-                            {index === (characterSets.length - 1) && (
+
                                 <div
                                     onClick={onAddBlock}
                                     className={ghostButtonClass}
@@ -269,7 +268,6 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                                     <SwitchScriptIcon className="w-8 h-8 mb-1 opacity-50 group-hover:opacity-100 transition-opacity" />
                                     <span className="text-[10px] font-bold uppercase tracking-wide opacity-50 group-hover:opacity-100 text-center transition-opacity">{t('addBlock')}</span>
                                 </div>
-                            )}
                         </div>
                     </div>
                 );
