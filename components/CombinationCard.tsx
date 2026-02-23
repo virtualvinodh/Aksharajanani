@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, forwardRef, useMemo } from 'react';
 import { Character, GlyphData, Path, Point, MarkAttachmentRules, MarkPositioningMap, FontMetrics, CharacterSet, PositioningRules } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderService';
 import { calculateDefaultMarkOffset } from '../services/positioningHeuristicsService';
 import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon } from '../constants';
@@ -49,6 +50,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
+  const { t } = useLocale();
   const { metrics } = useSettings();
 
   const movementConstraint = useMemo(() => {
@@ -166,17 +168,20 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
       stateClasses = "bg-white dark:bg-gray-800 border-2 border-dashed border-blue-400 dark:border-blue-500 hover:border-blue-600 cursor-pointer";
   }
 
+  const status = isPositioned ? 'positioned' : 'review-required';
+
   return (
     <div 
       ref={ref} 
       onClick={canEdit ? onClick : undefined} 
       className={`${baseContainerClasses} ${cursorClass} ${stateClasses}`}
       data-tour={`combo-card-${ligature.name}`}
+      data-status={status}
     >
       {!isPositioned && canEdit && !hideTick && (
         <button
           onClick={handleConfirmClick}
-          title="Mark as positioned"
+          title={t('markAsPositioned')}
           data-tour={`accept-pos-${ligature.name}`}
           className="absolute top-1 right-1 z-10 p-1 bg-white dark:bg-gray-700 rounded-full text-gray-400 hover:text-green-500 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors border border-gray-200 dark:border-gray-600"
         >

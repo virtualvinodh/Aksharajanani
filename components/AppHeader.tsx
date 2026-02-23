@@ -188,7 +188,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         <button onClick={onSaveToDB} title={t('save')} className="relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
                             <SaveIcon />
                             <span className="hidden md:inline">{t('save')}</span>
-                            {hasUnsavedChanges && <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white dark:ring-gray-800" title="Unsaved changes"></span>}
+                            {hasUnsavedChanges && <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white dark:ring-gray-800" title={t('unsavedChangesIndicator')}></span>}
                         </button>
                     )}
                     
@@ -201,11 +201,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         onClick={onCreatorClick} 
                         disabled={isAnyExporting} 
                         data-tour="header-creator"
-                        title="Creator Studio" 
+                        title={t('creatorStudio')} 
                         className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base disabled:bg-purple-400 disabled:cursor-wait"
                     >
                         {exportingType === 'create' ? <SpinnerIcon /> : <CreatorIcon />}
-                        <span className="hidden md:inline">Create</span>
+                        <span className="hidden md:inline">{t('create')}</span>
                     </button>
                     
                     <button onClick={onTestClick} disabled={isAnyExporting} data-tour="header-test" title={t('testFont')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-wait">
@@ -221,16 +221,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                             <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-30 max-h-[80vh] overflow-y-auto">
                                 <button onClick={() => { onSaveProject(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CodeBracketsIcon /> {t('exportJson')}</button>
                                 <button onClick={() => { onExportTemplate(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ExportIcon /> {t('exportTemplate')}</button>
-                                <button onClick={() => { onSaveAs(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CopyIcon /> Save Copy...</button>
+                                <button onClick={() => { onSaveAs(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CopyIcon /> {t('saveCopy')}</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                 <button onClick={() => { onImportGlyphsClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ImportIcon /> {t('importFromProject')}</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-                                <button onClick={() => { onTakeSnapshot(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CameraIcon /> Take Snapshot</button>
-                                <button onClick={() => { onRestoreSnapshot(); setIsMoreMenuOpen(false); }} disabled={!hasSnapshot} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"><HistoryIcon /> Restore Snapshot</button>
+                                <button onClick={() => { onTakeSnapshot(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CameraIcon /> {t('takeSnapshot')}</button>
+                                <button onClick={() => { onRestoreSnapshot(); setIsMoreMenuOpen(false); }} disabled={!hasSnapshot} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"><HistoryIcon /> {t('restoreSnapshot')}</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                 <button onClick={() => { setCurrentView('rules'); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <RulesIcon /> {t('workspaceRules')}
-                                    {hasUnsavedRules && <span className="ml-auto w-2 h-2 bg-yellow-400 rounded-full" title="Unsaved changes"></span>}
+                                    {hasUnsavedRules && <span className="ml-auto w-2 h-2 bg-yellow-400 rounded-full" title={t('unsavedChangesIndicator')}></span>}
                                 </button>
                                 <button onClick={() => { openModal('positioningRulesManager'); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <WrenchIcon /> {t('managePositioningRules')}
@@ -251,8 +251,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 <input type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} onBlur={() => setIsEditingFontName(false)} onKeyDown={(e) => e.key === 'Enter' && setIsEditingFontName(false)} className="text-lg sm:text-xl font-bold text-center bg-transparent border-b-2 border-indigo-500 focus:outline-none w-full md:w-auto" autoFocus />
                             ) : (
                                 <div className="flex items-center justify-center gap-2">
-                                    <h1 className="text-lg sm:text-xl font-bold truncate max-w-[40vw] sm:max-w-xs">{projectName}{hasUnsavedChanges && !settings.isAutosaveEnabled && <span className="text-yellow-400 ml-1" title="Unsaved changes">•</span>}</h1>
-                                    <button onClick={() => setIsEditingFontName(true)} title="Rename Project" className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0 text-gray-500 dark:text-gray-400"><EditIcon /></button>
+                                    <h1 className="text-lg sm:text-xl font-bold truncate max-w-[40vw] sm:max-w-xs">{projectName}{hasUnsavedChanges && !settings.isAutosaveEnabled && <span className="text-yellow-400 ml-1" title={t('unsavedChangesIndicator')}>•</span>}</h1>
+                                    <button onClick={() => setIsEditingFontName(true)} title={t('renameProject')} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0 text-gray-500 dark:text-gray-400"><EditIcon /></button>
                                 </div>
                             )}
                             <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px] sm:max-w-xs mx-auto">{t(script.nameKey)}</p>
@@ -262,7 +262,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                             <>
                             <button
                                 onClick={() => setIsPaletteOpen(true)}
-                                title="Command Palette (Ctrl+K)"
+                                title={t('commandPalette')}
                                 className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
                             >
                                 <SearchIcon className="w-5 h-5" />
@@ -285,7 +285,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                  <button
                                      onClick={toggleSelectionMode}
                                      className={`flex items-center gap-1 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${isMetricsSelectionMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-                                     title="Toggle Batch Selection"
+                                     title={t('toggleBatchSelection')}
                                  >
                                      <BatchIcon className="w-5 h-5" />
                                      <span className="hidden sm:inline">{t('select')}</span>

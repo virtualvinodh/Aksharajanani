@@ -84,11 +84,11 @@ const DrawingConfirmationStack: React.FC<DrawingConfirmationStackProps> = (props
             <Modal 
                 isOpen={props.isConstructionWarningOpen} 
                 onClose={() => props.setIsConstructionWarningOpen(false)} 
-                title="Overwrite Glyph Data?" 
+                title={t('overwriteGlyphTitle')} 
                 titleClassName="text-red-600 dark:text-red-400"
-                footer={<><button onClick={() => props.setIsConstructionWarningOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button><button onClick={() => props.pendingConstruction && props.executeConstructionUpdate(props.pendingConstruction.type, props.pendingConstruction.components, props.pendingConstruction.transforms)} className="px-4 py-2 bg-red-600 text-white rounded-lg">Overwrite & Reconstruct</button></>}
+                footer={<><button onClick={() => props.setIsConstructionWarningOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button><button onClick={() => props.pendingConstruction && props.executeConstructionUpdate(props.pendingConstruction.type, props.pendingConstruction.components, props.pendingConstruction.transforms)} className="px-4 py-2 bg-red-600 text-white rounded-lg">{t('overwriteAndReconstruct')}</button></>}
             >
-                <p>Switching construction mode will discard your current manual drawings and replace them with the selected components. This cannot be undone.</p>
+                <p>{t('overwriteGlyphMessage')}</p>
             </Modal>
 
             <ImageTracerModal 

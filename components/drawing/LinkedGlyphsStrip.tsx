@@ -2,6 +2,7 @@
 import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Virtuoso } from 'react-virtuoso';
+import { useLocale } from '../../contexts/LocaleContext';
 import { Character, GlyphData, AppSettings, CharacterSet, MarkAttachmentRules, Path, KerningMap, MarkPositioningMap, UnifiedRenderContext } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths, getAccurateGlyphBBox, getUnifiedPaths } from '../../services/glyphRenderService';
@@ -151,6 +152,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
     liveSourcePaths, sourceCharacter, allCharsByName, metrics, markAttachmentRules, characterSets, groups,
     kerningMap, markPositioningMap, isCollapsed: propCollapsed, onToggleCollapse
 }) => {
+    const { t } = useLocale();
     const { visibility, handleScroll, scrollRef } = useHorizontalScroll([items]);
     const [isExpanded, setIsExpanded] = useState(false); // Fullscreen
     const [internalCollapsed, setInternalCollapsed] = useState(false); // Minimize
@@ -239,7 +241,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                      <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {items.length} characters
+                            {items.length} {t('characters')}
                         </p>
                      </div>
                  </div>
@@ -276,7 +278,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                     <span className={`text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight ${collapsed ? 'text-left flex gap-2 items-center' : 'text-center'}`}>
                         {title}
                         {collapsed && <span className="text-gray-300 dark:text-gray-600">•</span>}
-                        <span className="text-indigo-600 dark:text-indigo-400 text-xs block sm:inline">{items.length} {collapsed ? 'items' : ''}</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 text-xs block sm:inline">{items.length} {collapsed ? t('items') : ''}</span>
                     </span>
                     
                     {/* Buttons - Always visible */}
@@ -284,14 +286,14 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                         <button 
                             onClick={toggleCollapse}
                             className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"
-                            title={collapsed ? "Expand" : "Minimize"}
+                            title={collapsed ? t('expand') : t('minimize')}
                         >
                             {collapsed ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
                         </button>
                         <button 
                             onClick={() => setIsExpanded(true)}
                             className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"
-                            title="Fullscreen"
+                            title={t('fullscreen')}
                         >
                             <FoldIcon className="w-4 h-4 rotate-180" />
                         </button>

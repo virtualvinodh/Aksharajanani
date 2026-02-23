@@ -116,8 +116,8 @@ export const useJITHints = (
                 const dottedStorageKey = 'hint_grid_dotted_seen';
                 if (!localStorage.getItem(dottedStorageKey)) {
                      const checkDashed = setInterval(() => {
-                        // Find a visible card with a dashed border
-                        const dashedCard = document.querySelector('.tutorial-glyph-item .border-dashed');
+                        // Find a visible card with status="review-required"
+                        const dashedCard = document.querySelector('.tutorial-glyph-item[data-status="review-required"]');
                         if (dashedCard) {
                             clearInterval(checkDashed);
                             setSteps([{

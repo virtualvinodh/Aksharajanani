@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useLocale } from '../../contexts/LocaleContext';
 import PositioningRuleBlock from './PositioningRuleBlock';
 import CombinationCard from '../CombinationCard';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, PositioningRules, CharacterSet, FontMetrics } from '../../types';
@@ -45,6 +46,8 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
     uniqueRepPairs,
     isPairEligible
 }) => {
+    const { t } = useLocale();
+
     if (selectedRuleGroupId === null) {
         // Level 1: List of Blocks
         return (
@@ -70,7 +73,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                 ))}
                 {ruleGroups.length === 0 && (
                      <div className="text-center p-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                        <p className="text-gray-500 italic">No rules defined or no glyphs drawn for rules.</p>
+                        <p className="text-gray-500 italic">{t('noRulesDefined')}</p>
                      </div>
                 )}
             </div>
@@ -93,15 +96,15 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                     <button 
                         onClick={() => setSelectedRuleGroupId(null)}
                         className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                        title="Back to Rules"
+                        title={t('backToRules')}
                     >
                         <BackIcon />
                     </button>
                     <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Rule Details</h3>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('ruleDetails')}</h3>
                         {activeRuleGroup && (
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {activeRuleGroup.pairs.length} pairs total • Page {rulePage}
+                                {activeRuleGroup.pairs.length} {t('pairsTotal')} • {t('pageOf', { current: rulePage, total: Math.ceil(activeRuleGroup.pairs.length / ITEMS_PER_PAGE) })}
                             </div>
                         )}
                     </div>
@@ -116,7 +119,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                             className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <RefreshIcon className="h-4 w-4" />
-                            <span>Reset Page</span>
+                            <span>{t('resetPage')}</span>
                         </button>
                         <button
                             onClick={() => handleAcceptAllDefaults(pagedRulePairs)}
@@ -124,7 +127,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                             className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
                             <CheckCircleIcon className="h-4 w-4" />
-                            <span>Accept Page</span>
+                            <span>{t('acceptPage')}</span>
                         </button>
                     </div>
                 )}
@@ -216,7 +219,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                         <LeftArrowIcon />
                     </button>
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Page {rulePage} of {ruleTotalPages}
+                        {t('pageOf', { current: rulePage, total: ruleTotalPages })}
                     </span>
                     <button
                         onClick={() => setRulePage(p => Math.min(ruleTotalPages, p + 1))}

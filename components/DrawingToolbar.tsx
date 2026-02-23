@@ -108,19 +108,19 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     
     const commonTools = (
         <>
-            <ToolButton tool="select" currentTool={currentTool} label="Select" onClick={setCurrentTool} dataTour="tool-select"><SelectIcon /></ToolButton>
+            <ToolButton tool="select" currentTool={currentTool} label={t('select')} onClick={setCurrentTool} dataTour="tool-select"><SelectIcon /></ToolButton>
             <ToolButton tool="pan" currentTool={currentTool} label={t('pan')} onClick={setCurrentTool} dataTour="tool-pan"><PanIcon /></ToolButton>
         </>
     );
 
     const drawingTools = (
         <>
-            <ToolButton tool="pen" currentTool={currentTool} label="Pen" onClick={setCurrentTool} disabled={isLocked} dataTour="toolbar-pen"><PenIcon /></ToolButton>
+            <ToolButton tool="pen" currentTool={currentTool} label={t('pen')} onClick={setCurrentTool} disabled={isLocked} dataTour="toolbar-pen"><PenIcon /></ToolButton>
             
             <div className="relative" ref={calligraphyToolButtonRef} data-tour="tool-calligraphy">
                 <button
                     onClick={handleCalligraphyToolClick}
-                    title="Calligraphy Pen"
+                    title={t('calligraphyPen')}
                     disabled={isLocked}
                     className={`p-2 rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 ${
                     currentTool === 'calligraphy'
@@ -146,22 +146,22 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
                 )}
             </div>
 
-            <ToolButton tool="line" currentTool={currentTool} label="Line" onClick={setCurrentTool} disabled={isLocked} dataTour="tool-line"><LineIcon /></ToolButton>
-            <ToolButton tool="curve" currentTool={currentTool} label="Curve" onClick={setCurrentTool} disabled={isLocked}><CurveIcon /></ToolButton>
-            <ToolButton tool="circle" currentTool={currentTool} label="Circle" onClick={setCurrentTool} disabled={isLocked}><CircleIcon /></ToolButton>
-            <ToolButton tool="ellipse" currentTool={currentTool} label="Ellipse" onClick={setCurrentTool} disabled={isLocked}><EllipseIcon /></ToolButton>
-            <ToolButton tool="dot" currentTool={currentTool} label="Dot" onClick={setCurrentTool} disabled={isLocked}><DotIcon /></ToolButton>
+            <ToolButton tool="line" currentTool={currentTool} label={t('line')} onClick={setCurrentTool} disabled={isLocked} dataTour="tool-line"><LineIcon /></ToolButton>
+            <ToolButton tool="curve" currentTool={currentTool} label={t('curve')} onClick={setCurrentTool} disabled={isLocked}><CurveIcon /></ToolButton>
+            <ToolButton tool="circle" currentTool={currentTool} label={t('circle')} onClick={setCurrentTool} disabled={isLocked}><CircleIcon /></ToolButton>
+            <ToolButton tool="ellipse" currentTool={currentTool} label={t('ellipse')} onClick={setCurrentTool} disabled={isLocked}><EllipseIcon /></ToolButton>
+            <ToolButton tool="dot" currentTool={currentTool} label={t('dot')} onClick={setCurrentTool} disabled={isLocked}><DotIcon /></ToolButton>
             
             <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
-            <ToolButton tool="eraser" currentTool={currentTool} label="Eraser" onClick={setCurrentTool} disabled={isLocked} dataTour="tool-eraser"><EraserIcon /></ToolButton>
-            <ToolButton tool="slice" currentTool={currentTool} label="Slice" onClick={setCurrentTool} disabled={isLocked} dataTour="tool-slice"><SliceIcon /></ToolButton>
+            <ToolButton tool="eraser" currentTool={currentTool} label={t('eraser')} onClick={setCurrentTool} disabled={isLocked} dataTour="tool-eraser"><EraserIcon /></ToolButton>
+            <ToolButton tool="slice" currentTool={currentTool} label={t('slice')} onClick={setCurrentTool} disabled={isLocked} dataTour="tool-slice"><SliceIcon /></ToolButton>
         </>
     );
 
     const actionTools = (
         <>
-            <ActionButton onClick={onUndo} title="Undo" disabled={!canUndo} dataTour="action-undo"><UndoIcon /></ActionButton>
-            <ActionButton onClick={onRedo} title="Redo" disabled={!canRedo} dataTour="action-redo"><RedoIcon /></ActionButton>
+            <ActionButton onClick={onUndo} title={t('undo')} disabled={!canUndo} dataTour="action-undo"><UndoIcon /></ActionButton>
+            <ActionButton onClick={onRedo} title={t('redo')} disabled={!canRedo} dataTour="action-redo"><RedoIcon /></ActionButton>
             <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ActionButton onClick={onCut} title={t('cut')} disabled={selectedPathIds.size === 0 || isLocked} dataTour="action-cut"><CutIcon /></ActionButton>
             <ActionButton onClick={onCopy} title={t('copy')} disabled={isLocked} dataTour="action-copy"><CopyIcon /></ActionButton>

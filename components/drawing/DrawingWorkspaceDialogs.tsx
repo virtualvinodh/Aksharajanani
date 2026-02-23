@@ -200,7 +200,7 @@ const DrawingWorkspaceDialogs: React.FC<DrawingWorkspaceDialogsProps> = (props) 
                         </div>
                         <div className="col-span-2 flex items-center">
                             <input type="checkbox" id="lockAspect" checked={lockAspect} onChange={e => setLockAspect(e.target.checked)} className="h-4 w-4 rounded text-indigo-600" />
-                            <label htmlFor="lockAspect" className="ml-2 text-sm">Lock Aspect Ratio</label>
+                            <label htmlFor="lockAspect" className="ml-2 text-sm">{t('lockAspectRatio')}</label>
                         </div>
                     </div>
                     <div>

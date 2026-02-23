@@ -73,7 +73,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
     const navButtonClass = "p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all";
     
     const useKerningTerm = props.settings.editorMode === 'advanced' || props.settings.preferKerningTerm;
-    const autoLabel = useKerningTerm ? t('autoKern') : "Auto-space";
+    const autoLabel = useKerningTerm ? t('autoKern') : t('autoSpace');
 
     const renderActionButton = () => {
         if (props.settings.isAutosaveEnabled) {
@@ -82,11 +82,11 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                     <button 
                         onClick={props.onSave}
                         data-tour="header-accept-kern"
-                        title="Accept Default" 
+                        title={t('acceptDefault')} 
                         className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
                     >
                         <CheckIcon />
-                        <span className="hidden xl:inline font-semibold">Accept</span>
+                        <span className="hidden xl:inline font-semibold">{t('accept')}</span>
                     </button>
                 );
             }
@@ -97,11 +97,11 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                     <button 
                         onClick={props.onSave}
                         data-tour="header-accept-kern"
-                        title="Accept Default Value" 
+                        title={t('acceptValue')} 
                         className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-sm"
                     >
                         <CheckIcon />
-                        <span className="hidden xl:inline font-semibold">Accept Value</span>
+                        <span className="hidden xl:inline font-semibold">{t('acceptValue')}</span>
                     </button>
                 );
             }
@@ -113,14 +113,14 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                         title={t('save')}
                     >
                         <SaveIcon />
-                        <span className="hidden xl:inline font-semibold">Save Changes</span>
+                        <span className="hidden xl:inline font-semibold">{t('saveChanges')}</span>
                     </button>
                 );
             }
             return (
                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 font-semibold rounded-lg cursor-default">
                     <SaveIcon />
-                    <span className="hidden xl:inline">Saved</span>
+                    <span className="hidden xl:inline">{t('saved')}</span>
                 </div>
             );
         }
@@ -180,10 +180,10 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                         onClick={props.onDetach}
                         data-tour="header-detach-kern"
                         className="flex items-center gap-2 px-3 py-2 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 font-semibold rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-all active:scale-95 shadow-sm border border-orange-200 dark:border-orange-800"
-                        title="Detach and Convert to Composite Glyph"
+                        title={t('detachAndConvert')}
                     >
                         <BrokenLinkIcon />
-                        <span className="hidden xl:inline">Detach</span>
+                        <span className="hidden xl:inline">{t('detach')}</span>
                     </button>
                 )}
 

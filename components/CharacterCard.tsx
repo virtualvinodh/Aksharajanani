@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
 import { renderPaths, calculateUnifiedTransform } from '../services/glyphRenderService';
 import { PREVIEW_CANVAS_SIZE, CheckCircleIcon, LinkIcon, PuzzleIcon, PositioningIcon, KerningIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
@@ -31,6 +32,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const { theme } = useTheme();
   const { settings, metrics } = useSettings();
   const { showNotification } = useLayout();
+  const { t } = useLocale();
   
   const handleClick = (e: React.MouseEvent) => {
       if (!isAvailable) {
@@ -134,31 +136,38 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
     ? "text-gray-400 dark:text-gray-500" 
     : "text-gray-200 dark:text-gray-700 group-hover:text-gray-300 dark:group-hover:text-gray-600";
 
+  let status = 'complete';
+  if (!isAvailable) status = 'unavailable';
+  else if (character.hidden) status = 'hidden';
+  else if (!isDrawn) status = 'undrawn';
+  else if (!isManuallySet) status = 'review-required';
+
   return (
     <div
       ref={cardRef}
       onClick={handleClick}
       className={`${baseContainerClasses} ${stateClasses}`}
       title={disabledReason}
+      data-status={status}
     >
       {/* Badge Priority: pos -> kern -> link -> composite */}
       {!isCompact && character.position && (
-          <div className="absolute top-1 left-1 p-1 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-full shadow-sm z-10" title="Syllable (Positioned)">
+          <div className="absolute top-1 left-1 p-1 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-full shadow-sm z-10" title={t('syllablePositioned')}>
              <PositioningIcon className="w-3 h-3" />
           </div>
       )}
       {!isCompact && character.kern && (
-          <div className="absolute top-1 left-1 p-1 bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 rounded-full shadow-sm z-10" title="Kerning Pair">
+          <div className="absolute top-1 left-1 p-1 bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 rounded-full shadow-sm z-10" title={t('kerningPair')}>
              <KerningIcon className="w-3 h-3" />
           </div>
       )}
       {!isCompact && character.link && (
-          <div className="absolute top-1 left-1 p-1 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full shadow-sm z-10" title="Linked Glyph">
+          <div className="absolute top-1 left-1 p-1 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full shadow-sm z-10" title={t('linkedGlyph')}>
              <LinkIcon className="w-3 h-3" />
           </div>
       )}
       {!isCompact && isCompositeTemplate && (
-          <div className="absolute top-1 left-1 p-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-full shadow-sm z-10" title="Composite Template">
+          <div className="absolute top-1 left-1 p-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-full shadow-sm z-10" title={t('compositeTemplate')}>
              <PuzzleIcon className="w-3 h-3" />
           </div>
       )}

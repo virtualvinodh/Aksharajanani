@@ -201,13 +201,13 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                                             autoFocus
                                             className="px-2 py-1 text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 border border-indigo-300 dark:border-indigo-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
                                         />
-                                        <button onClick={() => saveEditing(index)} className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors" title="Save Name">
+                                        <button onClick={() => saveEditing(index)} className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors" title={t('saveName')}>
                                             <CheckCircleIcon className="w-5 h-5"/>
                                         </button>
-                                        <button onClick={() => handleDelete(index)} className="p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors" title="Delete Group">
+                                        <button onClick={() => handleDelete(index)} className="p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors" title={t('deleteGroup')}>
                                             <TrashIcon className="w-4 h-4"/>
                                         </button>
-                                        <button onClick={cancelEditing} className="p-1.5 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors" title="Cancel">
+                                        <button onClick={cancelEditing} className="p-1.5 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors" title={t('cancel')}>
                                             <CloseIcon className="w-5 h-5"/>
                                         </button>
                                     </div>
@@ -219,7 +219,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                                             <button 
                                                 onClick={() => startEditing(index, group.nameKey)}
                                                 className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 opacity-0 group-hover/header:opacity-100 transition-opacity"
-                                                title="Edit Group Name"
+                                                title={t('editGroupName')}
                                             >
                                                 <EditIcon className="w-3.5 h-3.5" />
                                             </button>

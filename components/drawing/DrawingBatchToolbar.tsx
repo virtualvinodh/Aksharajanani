@@ -86,7 +86,7 @@ const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
                     <button 
                         onClick={props.onClose} 
                         className="p-2.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
-                        title="Exit Selection Mode"
+                        title={t('exitSelectionMode')}
                     >
                         <CloseIcon className="w-5 h-5" />
                     </button>
