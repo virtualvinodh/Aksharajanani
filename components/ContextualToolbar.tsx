@@ -4,6 +4,7 @@ import { BoundingBox, Point, TransformState } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { CheckCircleIcon, ControlPointsIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useLocale } from '../contexts/LocaleContext';
 
 interface ContextualToolbarProps {
   selectionBox: BoundingBox;
@@ -31,6 +32,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
   onEditMode
 }) => {
   const { theme } = useTheme();
+  const { t } = useLocale();
   const [rotateInput, setRotateInput] = useState('0');
   const [scaleInput, setScaleInput] = useState('1.0');
   
@@ -211,7 +213,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
        <div className="flex items-center border-r border-gray-200 dark:border-gray-700 pr-2 mr-1">
         <button
             onClick={onEditMode}
-            title="Edit Points"
+            title={t('editPoints')}
             className={buttonClass}
         >
              <ControlPointsIcon />
@@ -221,14 +223,14 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
       <div className="flex items-center gap-1 border-r border-gray-200 dark:border-gray-700 pr-2">
         <button 
             onClick={() => handleFlip('X')} 
-            title="Flip Horizontal" 
+            title={t('flipHorizontal')} 
             className={previewTransform?.flipX ? activeButtonClass : buttonClass}
         >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12L3 12M21 12L17 8M21 12L17 16M3 12L7 8M3 12L7 16"/></svg>
         </button>
         <button 
             onClick={() => handleFlip('Y')} 
-            title="Flip Vertical" 
+            title={t('flipVertical')} 
             className={previewTransform?.flipY ? activeButtonClass : buttonClass}
         >
              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3L12 21M12 3L8 7M12 3L16 7M12 21L8 17M12 21L16 17"/></svg>
@@ -243,7 +245,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
           onChange={(e) => handleTransformChange('rotate', e.target.value)}
           onKeyDown={handleKeyDown}
           className={inputClass}
-          title="Rotate (Degrees)"
+          title={t('rotateDegrees')}
         />
       </div>
 
@@ -255,7 +257,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
           onChange={(e) => handleTransformChange('scale', e.target.value)}
           onKeyDown={handleKeyDown}
           className={inputClass}
-          title="Scale (Multiplier)"
+          title={t('scaleMultiplier')}
         />
       </div>
 
@@ -263,7 +265,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
         <button
           onClick={commitTransform}
           className="ml-1 p-1.5 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-sm transition-colors flex-shrink-0"
-          title="Apply Transformation"
+          title={t('applyTransformation')}
         >
           <CheckCircleIcon className="w-4 h-4" />
         </button>

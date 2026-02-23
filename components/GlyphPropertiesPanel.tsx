@@ -79,7 +79,7 @@ const ComponentListEditor: React.FC<{
                             characterSets={characterSets}
                             groups={{}} 
                             showSets={false} 
-                            placeholder="Type char..."
+                            placeholder={t('typeCharPlaceholder')}
                             className="w-full border-none focus:ring-0 p-0 text-xs bg-transparent"
                             autoFocus={true}
                             onSelect={handleAdd}
@@ -100,7 +100,7 @@ const ComponentListEditor: React.FC<{
                     <button 
                         onClick={() => setShowInput(true)} 
                         className="p-1 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/30 rounded transition-colors"
-                        title="Add Component"
+                        title={t('addComponent')}
                     >
                         <AddIcon className="w-4 h-4" />
                     </button>
@@ -114,7 +114,7 @@ const ComponentListEditor: React.FC<{
                         className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors"
                     >
                         <RightArrowIcon className={`w-3 h-3 transition-transform ${isAdvancedOpen ? 'rotate-90' : ''}`} />
-                        ADVANCED TRANSFORMS
+                        {t('advancedTransforms')}
                     </button>
                     
                     {isAdvancedOpen && (
@@ -126,25 +126,25 @@ const ComponentListEditor: React.FC<{
                                         <div className="font-bold text-gray-700 dark:text-gray-300 truncate">{comp}</div>
                                         <div className="flex gap-2 items-center">
                                             <div className="flex-1">
-                                                <label className="block text-[9px] text-gray-500 uppercase">Scale</label>
+                                                <label className="block text-[9px] text-gray-500 uppercase">{t('scaleShort')}</label>
                                                 <input type="text" value={tr.scale} onChange={e => handleTransformChange(index, 'scale', parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                             </div>
                                             <div className="flex-1">
-                                                <label className="block text-[9px] text-gray-500 uppercase">Rot (°)</label>
+                                                <label className="block text-[9px] text-gray-500 uppercase">{t('rotateShort')}</label>
                                                 <input type="text" value={tr.rotation || 0} onChange={e => handleTransformChange(index, 'rotation', parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                             </div>
                                             <div className="flex-1">
-                                                <label className="block text-[9px] text-gray-500 uppercase">X</label>
+                                                <label className="block text-[9px] text-gray-500 uppercase">{t('xLabel')}</label>
                                                 <input type="text" value={tr.x} onChange={e => handleTransformChange(index, 'x', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                             </div>
                                             <div className="flex-1">
-                                                <label className="block text-[9px] text-gray-500 uppercase">Y</label>
+                                                <label className="block text-[9px] text-gray-500 uppercase">{t('yLabel')}</label>
                                                 <input type="text" value={tr.y} onChange={e => handleTransformChange(index, 'y', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                             </div>
                                         </div>
                                         {index > 0 && (
                                             <div>
-                                                <label className="block text-[9px] text-gray-500 uppercase mb-1">Mode</label>
+                                                <label className="block text-[9px] text-gray-500 uppercase mb-1">{t('modeLabel')}</label>
                                                 <div className="flex bg-gray-200 dark:bg-gray-600 rounded p-0.5">
                                                     {(['relative', 'absolute', 'touching'] as const).map(m => (
                                                         <button
@@ -300,13 +300,13 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   }, [components.length]);
 
   const constructionTypes: { id: ConstructionType, label: string }[] = [
-      { id: 'drawing', label: 'Draw' },
-      { id: 'composite', label: 'Comp.' },
-      { id: 'link', label: 'Link' },
+      { id: 'drawing', label: t('drawLabel') },
+      { id: 'composite', label: t('compLabel') },
+      { id: 'link', label: t('linkLabel') },
   ];
 
-  if (setPosition) constructionTypes.push({ id: 'positioning', label: 'Pos.' });
-  if (setKern) constructionTypes.push({ id: 'kerning', label: 'Kern' });
+  if (setPosition) constructionTypes.push({ id: 'positioning', label: t('posLabel') });
+  if (setKern) constructionTypes.push({ id: 'kerning', label: t('kernLabel') });
 
   const handleTypeChange = (newType: ConstructionType) => {
     if (newType === type) return;
@@ -442,7 +442,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
       <div className="grid grid-cols-2 gap-3 flex-shrink-0">
           <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
-                  Label (Ghost)
+                  {t('labelGhost')}
               </label>
               <input
                   type="text"
@@ -454,11 +454,11 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
           </div>
           <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
-                  Codepoint
+                  {t('codepointLabel')}
               </label>
               <input
                   type="text"
-                  value={character?.unicode !== undefined && character.glyphClass !== 'virtual' ? `U+${character.unicode.toString(16).toUpperCase().padStart(4, '0')}` : 'Virtual'}
+                  value={character?.unicode !== undefined && character.glyphClass !== 'virtual' ? `U+${character.unicode.toString(16).toUpperCase().padStart(4, '0')}` : t('virtual')}
                   disabled
                   className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm text-gray-500 cursor-not-allowed font-mono"
               />
@@ -471,14 +471,14 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                 onClick={() => setIsClassificationExpanded(!isClassificationExpanded)}
                 className="flex items-center justify-between w-full text-xs font-bold text-gray-500 dark:text-gray-400 uppercase hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
             >
-                <span>Classification</span>
+                <span>{t('classification')}</span>
                 <RightArrowIcon className={`w-3 h-3 transition-transform ${isClassificationExpanded ? 'rotate-90' : ''}`} />
             </button>
             
             {isClassificationExpanded && (
                 <div className="mt-3 space-y-3">
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{t('typeLabel')}</label>
                         <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                             {(['base', 'ligature', 'mark', 'virtual'] as const).map((typeOption) => {
                                 const isActive = (glyphClass || 'base') === typeOption;
@@ -504,7 +504,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                     {glyphClass === 'ligature' && setLiga && (
                         <div className="space-y-2 animate-fade-in-up">
                             <ComponentListEditor
-                                label="Ligature Components (GSUB)"
+                                label={t('ligatureComponents')}
                                 components={liga || []}
                                 setComponents={(c) => setLiga(c.length > 0 ? c : undefined)}
                                 characterSets={allCharacterSets!}
@@ -518,8 +518,8 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                     value={gsub || ''} 
                                     onChange={e => setGsub(e.target.value)} 
                                     className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 text-xs font-mono" 
-                                    placeholder="Feature Tag (e.g. dlig)"
-                                    title="GSUB Feature Tag (Default: liga)"
+                                    placeholder={t('featureTagPlaceholder')}
+                                    title={t('gsubFeatureTagTitle')}
                                 />
                             )}
                         </div>
@@ -534,7 +534,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 onChange={e => setAdvWidth(e.target.checked ? 0 : undefined)}
                                 className="h-4 w-4 rounded accent-indigo-600 cursor-pointer"
                              />
-                             <label htmlFor="non-spacing" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">Non-spacing (Width: 0)</label>
+                             <label htmlFor="non-spacing" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">{t('nonSpacing')}</label>
                         </div>
                     )}
                 </div>
@@ -548,7 +548,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
             onClick={() => setIsConstructionExpanded(!isConstructionExpanded)}
             className="flex items-center justify-between w-full text-xs font-bold text-gray-500 dark:text-gray-400 uppercase hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
         >
-            <span>Construction</span>
+            <span>{t('construction')}</span>
             <RightArrowIcon className={`w-3 h-3 transition-transform ${isConstructionExpanded ? 'rotate-90' : ''}`} />
         </button>
         
@@ -572,13 +572,13 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
             
             {type === 'drawing' && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 italic text-center py-2">
-                    Manual drawing mode. Paths are stored directly.
+                    {t('manualDrawingMode')}
                 </p>
             )}
 
             {(type === 'composite' || type === 'link') && (
                 <ComponentListEditor
-                    label="Geometric Sources"
+                    label={t('geometricSources')}
                     components={components}
                     setComponents={setComponents}
                     transforms={transforms}
@@ -599,7 +599,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 characterSets={allCharacterSets!} 
                                 groups={{}} 
                                 showSets={false} 
-                                placeholder="Base" 
+                                placeholder={t('baseLabel')} 
                              />
                         </div>
                         <div className="flex-1">
@@ -609,14 +609,14 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 characterSets={allCharacterSets!} 
                                 groups={{}} 
                                 showSets={false} 
-                                placeholder="Mark" 
+                                placeholder={t('markLabel')} 
                              />
                         </div>
                     </div>
                      <div className="grid grid-cols-2 gap-2">
                         <div>
                             {/* Note: This is an extra input for GPOS if used in Positioning construction mode. GSUB is handled in Metadata section for Ligatures. */}
-                            <input type="text" value={gpos || ''} onChange={e => setGpos && setGpos(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 text-xs" placeholder="GPOS Tag" />
+                            <input type="text" value={gpos || ''} onChange={e => setGpos && setGpos(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 text-xs" placeholder={t('gposTagPlaceholder')} />
                         </div>
                     </div>
                 </div>
@@ -632,7 +632,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 characterSets={allCharacterSets!} 
                                 groups={{}} 
                                 showSets={false} 
-                                placeholder="Left" 
+                                placeholder={t('left')} 
                             />
                         </div>
                         <div className="flex-1">
@@ -642,7 +642,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                 characterSets={allCharacterSets!} 
                                 groups={{}} 
                                 showSets={false} 
-                                placeholder="Right" 
+                                placeholder={t('right')} 
                             />
                         </div>
                     </div>
@@ -655,7 +655,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                     className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-bold text-sm bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
                 >
                     <SaveIcon className="w-4 h-4" />
-                    Apply Changes
+                    {t('saveChanges')}
                 </button>
             )}
         </div>

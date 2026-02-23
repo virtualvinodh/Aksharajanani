@@ -160,15 +160,15 @@ const DrawingWorkspaceDialogs: React.FC<DrawingWorkspaceDialogsProps> = (props) 
                 footer={<><button onClick={() => props.setIsPropertiesOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded-lg">{t('cancel')}</button><button onClick={() => props.onBulkProperties(lsb, rsb)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">{t('save')}</button></>}
             >
                 <div className="space-y-4">
-                    <p className="text-sm text-gray-500">Leave fields blank to keep existing values.</p>
+                    <p className="text-sm text-gray-500">{t('leaveFieldsBlank')}</p>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-1">{t('leftSpace')} (LSB)</label>
-                            <input type="text" value={lsb} onChange={e => setLsb(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
+                            <input type="text" value={lsb} onChange={e => setLsb(e.target.value)} placeholder={t('unchanged')} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium mb-1">{t('rightSpace')} (RSB)</label>
-                            <input type="text" value={rsb} onChange={e => setRsb(e.target.value)} placeholder="Unchanged" className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
+                            <input type="text" value={rsb} onChange={e => setRsb(e.target.value)} placeholder={t('unchanged')} className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600" />
                         </div>
                     </div>
                 </div>
