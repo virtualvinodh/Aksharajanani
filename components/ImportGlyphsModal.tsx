@@ -82,7 +82,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
           setSourceProject(projectData);
           setStep('selectGlyphs');
         } else {
-          throw new Error('Invalid project file format.');
+          throw new Error(t('invalidProjectFileFormat'));
         }
       } catch (err) {
         setFileError(t('errorReadingProjectFile'));
@@ -100,7 +100,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
               setSourceProject(projectData);
               setStep('selectGlyphs');
           } else {
-              throw new Error('Invalid project data format in database.');
+              throw new Error(t('invalidProjectDataFormat'));
           }
       } catch (err) {
           setFileError(t('errorReadingProjectFile'));
@@ -258,7 +258,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
         <div className="max-h-64 overflow-y-auto space-y-2 pr-2 mb-6">
           {recentProjects.map(p => {
             const scriptForProject = allScripts.find(s => s.id === p.scriptId) || (p.scriptId?.startsWith('custom_blocks_') ? { nameKey: 'customBlockFont' } : null);
-            const scriptName = scriptForProject ? t(scriptForProject.nameKey) : 'Unknown Script';
+            const scriptName = scriptForProject ? t(scriptForProject.nameKey) : t('unknownScript');
             return (
               <button key={p.projectId} onClick={() => handleProjectSelect(p.projectId)} className="w-full flex items-center gap-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-gray-200 dark:border-gray-600 text-left transition-colors">
                 <div className="flex-grow">
@@ -271,12 +271,12 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
           })}
         </div>
       ) : (
-        <p className="text-center text-gray-500 py-8">No saved projects found.</p>
+        <p className="text-center text-gray-500 py-8">{t('noSavedProjectsFound')}</p>
       )}
   
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300 dark:border-gray-600" /></div>
-        <div className="relative flex justify-center"><span className="px-2 bg-white dark:bg-gray-800 text-sm text-gray-500">OR</span></div>
+        <div className="relative flex justify-center"><span className="px-2 bg-white dark:bg-gray-800 text-sm text-gray-500">{t('orSeparator')}</span></div>
       </div>
       
       <div className="text-center">
@@ -315,7 +315,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
                             <th className="p-2 text-center">{t('sourceProject')}</th>
                             <th className="p-2 w-8"></th>
                             <th className="p-2 text-center">{t('targetProject')}</th>
-                            <th className="p-2 text-left">Status</th>
+                            <th className="p-2 text-left">{t('status')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -331,7 +331,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
                                         ? <span className="text-yellow-600 dark:text-yellow-400 font-semibold">⚠️ {t('willBeOverwritten')}</span>
                                         : (comp.targetCharExists 
                                             ? <span className="text-green-600 dark:text-green-400">{t('willBeFilled')}</span>
-                                            : <span className="text-blue-600 dark:text-blue-400 italic">New Custom Glyph</span>
+                                            : <span className="text-blue-600 dark:text-blue-400 italic">{t('newCustomGlyph')}</span>
                                           )
                                     }
                                 </td>
@@ -348,8 +348,8 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
     <div className="py-4">
       <h3 className="text-lg font-semibold mb-4">{t('confirmImportSummary', { newCount, overwriteCount })}</h3>
       <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-          {newCount > 0 && <li>{newCount} glyph(s) will be newly drawn.</li>}
-          {overwriteCount > 0 && <li><span className="font-bold text-yellow-600 dark:text-yellow-400">{overwriteCount} glyph(s) will have their existing drawings overwritten.</span></li>}
+          {newCount > 0 && <li>{t('importNewCount', { count: newCount })}</li>}
+          {overwriteCount > 0 && <li><span className="font-bold text-yellow-600 dark:text-yellow-400">{t('importOverwriteCount', { count: overwriteCount })}</span></li>}
       </ul>
       <p className="mt-6 font-bold text-red-600 dark:text-red-400">{t('actionCannotBeUndone')}</p>
     </div>
