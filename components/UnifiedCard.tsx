@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Character, UnifiedRenderContext, GlyphData } from '../types';
 import CharacterCard from './CharacterCard';
-// Import all necessary hooks
+import { useLocale } from '../contexts/LocaleContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useKerning } from '../contexts/KerningContext';
@@ -23,6 +23,7 @@ interface UnifiedCardProps {
 
 const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {
   const { character } = props;
+  const { t } = useLocale();
 
   // 1. Gather all data from contexts
   const { glyphDataMap, version: glyphVersion } = useGlyphData();

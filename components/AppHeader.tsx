@@ -236,8 +236,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                     <WrenchIcon /> {t('managePositioningRules')}
                                 </button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-                                <button onClick={() => { onShowAbout(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><AboutIcon /> {t('about')}</button>
-                                <button onClick={() => { onShowHelp(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><HelpIcon /> {t('help')}</button>
                                 <button onClick={() => { onShowTestCases(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><TestCaseIcon /> {t('testCases')}</button>
                             </div>
                         )}

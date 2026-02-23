@@ -369,7 +369,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             if (draggingMetric) {
                 const activeX = draggingMetric === 'lsb' ? lsbX : rsbX;
                 const activeVal = draggingMetric === 'lsb' ? lsbVal : rsbVal;
-                const label = draggingMetric === 'lsb' ? 'LSB' : 'RSB';
+                const label = draggingMetric === 'lsb' ? t('lsb') : t('rsb');
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, 0, 0); 
                 const screenX = (activeX * zoom) + viewOffset.x;
