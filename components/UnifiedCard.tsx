@@ -51,7 +51,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {
     }
 
     const reason = !available && missingComponents.length > 0 
-        ? `To edit this, first draw: ${missingComponents.join(', ')}` 
+        ? t('unifiedCardDisabledReason', { components: missingComponents.join(', ') }) 
         : undefined;
 
     // isManuallySet check

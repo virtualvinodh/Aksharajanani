@@ -798,6 +798,7 @@
     "newCustomGlyph": "புதிய தனிப்பயன் கிளிஃப்",
     "importNewCount": "{count} கிளிஃப்கள் புதிதாக வரையப்படும்.",
     "importOverwriteCount": "{count} கிளிஃப்களின் தற்போதைய வரைபடங்கள் மேலெழுதப்படும்.",
+    "unifiedCardDisabledReason": "இதைத் திருத்த, முதலில் இவற்றை வரையவும்: {components}",
     "leaveFieldsBlank": "தற்போதைய மதிப்புகளை வைத்திருக்க புலங்களை காலியாக விடவும்.",
     "unchanged": "மாற்றமில்லை",
     "sources": "மூலங்கள்",

@@ -807,6 +807,7 @@
     "newCustomGlyph": "New Custom Glyph",
     "importNewCount": "{count} glyph(s) will be newly drawn.",
     "importOverwriteCount": "{count} glyph(s) will have their existing drawings overwritten.",
+    "unifiedCardDisabledReason": "To edit this, first draw: {components}",
     "leaveFieldsBlank": "Leave fields blank to keep existing values.",
     "unchanged": "Unchanged",
     "sources": "Sources",
