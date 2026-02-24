@@ -236,6 +236,7 @@ export const useExportActions = ({
     }, [checkAndExecute, downloadTriggerRef, performExportAfterAnimation, setIsAnimatingExport]);
 
     const handleTestClick = useCallback(async () => {
+        layout.closeCharacterModal();
         setExportingType('test');
         layout.showNotification(t('exportingNotice'), 'info');
         const result = await getCachedOrGeneratedFont();
@@ -250,6 +251,7 @@ export const useExportActions = ({
     
     // New handler moved from useAppActions
     const handleCreatorClick = useCallback(() => {
+        layout.closeCharacterModal();
         const proceedToCreator = async () => {
             setExportingType('create');
             layout.showNotification(t('exportingNotice'), 'info');

@@ -296,6 +296,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   }, [script, guideFont]);
   
   const handleCompareClick = () => {
+    closeCharacterModal();
     if (layout.isMetricsSelectionMode && layout.metricsSelection.size > 0) {
         layout.setComparisonCharacters(
             characterSets?.flatMap(s => s.characters).filter(c => 
@@ -368,7 +369,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 onTestClick={handleTestClick}
                 onCreatorClick={handleCreatorClick}
                 onCompareClick={handleCompareClick}
-                onSettingsClick={() => setCurrentView('settings')}
+                onSettingsClick={() => { closeCharacterModal(); setCurrentView('settings'); }}
                 onChangeScriptClick={handleChangeScriptClick}
                 onShowAbout={onShowAbout}
                 onShowHelp={onShowHelp}
@@ -554,7 +555,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 onExportClick={startExportProcess}
                 onCreatorClick={handleCreatorClick}
                 onTestClick={handleTestClick}
-                onSettingsClick={() => setCurrentView('settings')}
+                onSettingsClick={() => { closeCharacterModal(); setCurrentView('settings'); }}
                 onCompareClick={handleCompareClick}
                 toggleSelectionMode={() => layout.setIsMetricsSelectionMode(!layout.isMetricsSelectionMode)}
                 isMetricsSelectionMode={layout.isMetricsSelectionMode}
