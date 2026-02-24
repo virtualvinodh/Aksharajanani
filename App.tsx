@@ -551,6 +551,15 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 onAddGlyph={(targetSet) => layout.openModal('addGlyph', { targetSet })}
                 onAddBlock={() => layout.openModal('addBlock')}
                 drawingProgress={drawingProgress}
+                onExportClick={startExportProcess}
+                onCreatorClick={handleCreatorClick}
+                onTestClick={handleTestClick}
+                onSettingsClick={() => setCurrentView('settings')}
+                onCompareClick={handleCompareClick}
+                toggleSelectionMode={() => layout.setIsMetricsSelectionMode(!layout.isMetricsSelectionMode)}
+                isMetricsSelectionMode={layout.isMetricsSelectionMode}
+                setIsPaletteOpen={layout.openPalette}
+                exportingType={exportingType}
             />
         )}
       
