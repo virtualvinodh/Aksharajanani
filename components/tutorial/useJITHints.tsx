@@ -89,57 +89,62 @@ export const useJITHints = (
         }
 
         if (workspace === 'drawing') {
-            // Hint 1: Select Character (Dashboard)
+            // Combined Grid Hints Logic: Prioritize "Review Required" over "Select Character"
             if (currentView === 'grid' && !selectedCharacter) {
-                const storageKey = 'hint_grid_select_seen';
-                if (!localStorage.getItem(storageKey)) {
-                    const checkExist = setInterval(() => {
-                       if (document.querySelector('.tutorial-glyph-item')) {
-                           clearInterval(checkExist);
-                           setSteps([{
-                               target: '.tutorial-glyph-item',
-                               content: translations.hintGridSelect || "Select a character card to start drawing your font.",
-                               disableBeacon: true,
-                               placement: 'bottom' as Placement,
-                               spotlightClicks: true,
-                               data: { isTutorial: false, storageKey: storageKey, translations }
-                           }]);
-                           setStepIndex(0);
-                           setRun(true);
-                       }
-                    }, 500);
-                    setTimeout(() => clearInterval(checkExist), 5000);
-                    return () => clearInterval(checkExist);
-                }
-
-                // Hint: Pending/Dotted Characters
+                const selectStorageKey = 'hint_grid_select_seen';
                 const dottedStorageKey = 'hint_grid_dotted_seen';
-                if (!localStorage.getItem(dottedStorageKey)) {
-                     const checkDashed = setInterval(() => {
-                        // Find a visible card with status="review-required"
-                        const dashedCard = document.querySelector('.tutorial-glyph-item[data-status="review-required"]');
-                        if (dashedCard) {
-                            clearInterval(checkDashed);
-                            setSteps([{
-                                target: dashedCard as HTMLElement,
-                                content: (
-                                    <div>
-                                        <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintGridDottedTitle}</h3>
-                                        <p dangerouslySetInnerHTML={{__html: translations.hintGridDottedContent}}></p>
-                                    </div>
-                                ),
-                                placement: 'bottom',
-                                disableBeacon: true,
-                                spotlightClicks: false,
-                                data: { isTutorial: false, storageKey: dottedStorageKey, translations }
-                            }]);
-                            setStepIndex(0);
-                            setRun(true);
+                
+                const hasSeenSelect = !!localStorage.getItem(selectStorageKey);
+                const hasSeenDotted = !!localStorage.getItem(dottedStorageKey);
+
+                if (!hasSeenSelect || !hasSeenDotted) {
+                    const checkGridHints = setInterval(() => {
+                        // 1. Priority Check: Review Required (Dotted)
+                        // We check this FIRST so it takes precedence over the generic select hint
+                        if (!hasSeenDotted) {
+                             const dashedCard = document.querySelector('.tutorial-glyph-item [data-status="review-required"]');
+                             if (dashedCard) {
+                                 clearInterval(checkGridHints);
+                                 setSteps([{
+                                     target: dashedCard as HTMLElement,
+                                     content: (
+                                         <div>
+                                             <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintGridDottedTitle}</h3>
+                                             <p dangerouslySetInnerHTML={{__html: translations.hintGridDottedContent}}></p>
+                                         </div>
+                                     ),
+                                     placement: 'bottom',
+                                     disableBeacon: true,
+                                     spotlightClicks: false,
+                                     data: { isTutorial: false, storageKey: dottedStorageKey, translations }
+                                 }]);
+                                 setStepIndex(0);
+                                 setRun(true);
+                                 return; // Exit so we don't trigger the other hint
+                             }
                         }
-                     }, 1500); // Check every 1.5s to avoid clashing immediately with welcome/select hint
-                     
-                     const safety = setTimeout(() => clearInterval(checkDashed), 10000);
-                     return () => { clearInterval(checkDashed); clearTimeout(safety); };
+
+                        // 2. Fallback Check: Generic Select
+                        // Only runs if we didn't trigger the review hint above
+                        if (!hasSeenSelect) {
+                            if (document.querySelector('.tutorial-glyph-item')) {
+                                clearInterval(checkGridHints);
+                                setSteps([{
+                                    target: '.tutorial-glyph-item',
+                                    content: translations.hintGridSelect || "Select a character card to start drawing your font.",
+                                    disableBeacon: true,
+                                    placement: 'bottom' as Placement,
+                                    spotlightClicks: true,
+                                    data: { isTutorial: false, storageKey: selectStorageKey, translations }
+                                }]);
+                                setStepIndex(0);
+                                setRun(true);
+                            }
+                        }
+                    }, 1000); // Check every 1s
+                    
+                    const safety = setTimeout(() => clearInterval(checkGridHints), 10000);
+                    return () => { clearInterval(checkGridHints); clearTimeout(safety); };
                 }
             }
             
