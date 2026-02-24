@@ -149,6 +149,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       className={`${baseContainerClasses} ${stateClasses}`}
       title={disabledReason}
       data-status={status}
+      
     >
       {/* Badge Priority: pos -> kern -> link -> composite */}
       {!isCompact && character.position && (

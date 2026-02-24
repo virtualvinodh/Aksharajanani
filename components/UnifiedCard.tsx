@@ -36,6 +36,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {
 
   // 2. Perform logic calculations using useMemo for performance
   const { resolvedGlyphData, isAvailable, isManuallySet, isConstructed, disabledReason } = useMemo(() => {
+    const glyphData = glyphDataMap.get(character.unicode);
     // isAvailable check
     let available = true;
     const missingComponents: string[] = [];
