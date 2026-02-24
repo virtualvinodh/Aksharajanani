@@ -112,12 +112,14 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         setEditorClosing(true);
         setTimeout(() => {
             closeCharacterModal();
+            setCurrentView('grid');
             setEditorClosing(false);
         }, 300); // Animation duration
     } else {
         closeCharacterModal();
+        setCurrentView('grid');
     }
-  }, [isLargeScreen, closeCharacterModal]);
+  }, [isLargeScreen, closeCharacterModal, setCurrentView]);
   
   const appActions = useAppActions({ 
       projectDataToRestore, onBackToSelection, allScripts, hasUnsavedRules,
@@ -296,7 +298,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   }, [script, guideFont]);
   
   const handleCompareClick = () => {
-    closeCharacterModal();
     if (layout.isMetricsSelectionMode && layout.metricsSelection.size > 0) {
         layout.setComparisonCharacters(
             characterSets?.flatMap(s => s.characters).filter(c => 
@@ -339,16 +340,15 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
        {currentView === 'creator' ? (
            <CreatorPage 
-                onClose={() => setCurrentView('grid')}
                 fontBlob={creatorFont?.blob ?? null}
            />
        ) : currentView === 'settings' ? (
-           <SettingsPage onClose={() => setCurrentView('grid')} toolRanges={TOOL_RANGES} />
+           <SettingsPage toolRanges={TOOL_RANGES} />
        ) : currentView === 'comparison' ? (
-           <ComparisonView onClose={() => setCurrentView('grid')} />
+           <ComparisonView />
        ) : currentView === 'rules' ? (
            <RulesWorkspace 
-                onClose={() => setCurrentView('grid')}
+                
                 positioningRules={positioningRules}
                 isFeaOnlyMode={isFeaOnlyMode}
                 rulesProgress={rulesProgress}
@@ -369,7 +369,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 onTestClick={handleTestClick}
                 onCreatorClick={handleCreatorClick}
                 onCompareClick={handleCompareClick}
-                onSettingsClick={() => { closeCharacterModal(); setCurrentView('settings'); }}
+                onSettingsClick={() => setCurrentView('settings')}
                 onChangeScriptClick={handleChangeScriptClick}
                 onShowAbout={onShowAbout}
                 onShowHelp={onShowHelp}
@@ -516,7 +516,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
            </>
        )}
        
-       {!isLargeScreen && characterForModal && (
+       {!isLargeScreen && characterForModal && currentView === 'editor' && (
             <UnifiedEditorModal
                 key={characterForModal.unicode || "unified-editor-modal"}
                 mode="modal"
@@ -555,7 +555,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 onExportClick={startExportProcess}
                 onCreatorClick={handleCreatorClick}
                 onTestClick={handleTestClick}
-                onSettingsClick={() => { closeCharacterModal(); setCurrentView('settings'); }}
+                onSettingsClick={() => setCurrentView('settings')}
                 onCompareClick={handleCompareClick}
                 toggleSelectionMode={() => layout.setIsMetricsSelectionMode(!layout.isMetricsSelectionMode)}
                 isMetricsSelectionMode={layout.isMetricsSelectionMode}

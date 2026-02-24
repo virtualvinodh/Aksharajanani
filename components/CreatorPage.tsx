@@ -3,18 +3,19 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon, DownloadIcon, ShareIcon, ImageIcon, TrashIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
+import { useLayout } from '../contexts/LayoutContext';
 import { CreatorSettings } from '../types';
 
 interface CreatorPageProps {
-    onClose: () => void;
     fontBlob: Blob | null;
 }
 
 const FONT_FACE_ID = 'creator-font-face';
 
-const CreatorPage: React.FC<CreatorPageProps> = ({ onClose, fontBlob }) => {
+const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
     const { t } = useLocale();
     const { settings, dispatch: settingsDispatch } = useSettings();
+    const { handleBack } = useLayout();
     const saved = settings?.creatorSettings;
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -413,7 +414,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ onClose, fontBlob }) => {
         <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col animate-fade-in-up">
             {/* Header */}
             <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-3 flex justify-between items-center shadow-sm w-full flex-shrink-0 z-10 border-b dark:border-gray-700">
-                <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200">
+                <button onClick={handleBack} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200">
                     <BackIcon />
                 </button>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Studio</h2>

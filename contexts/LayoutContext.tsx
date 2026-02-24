@@ -4,7 +4,7 @@ import { Character, ProjectData, FilterMode } from '../types';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 
 export type Workspace = 'drawing' | 'positioning' | 'kerning' | 'rules' | 'metrics';
-type View = 'grid' | 'comparison' | 'settings' | 'creator' | 'rules';
+type View = 'grid' | 'comparison' | 'settings' | 'creator' | 'rules' | 'editor';
 export type PanelLayout = 'grid' | 'split' | 'editor';
 
 interface ModalState {
@@ -24,7 +24,9 @@ interface LayoutContextType {
   workspace: Workspace;
   setWorkspace: React.Dispatch<React.SetStateAction<Workspace>>;
   currentView: View;
-  setCurrentView: React.Dispatch<React.SetStateAction<View>>;
+  setCurrentView: (view: View) => void;
+  previousView: View | null;
+  handleBack: () => void;
   activeTab: number;
   setActiveTab: React.Dispatch<React.SetStateAction<number>>;
   selectedCharacter: Character | null;
@@ -91,9 +93,11 @@ const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
 
 export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [workspace, setWorkspace] = useState<Workspace>('drawing');
-    const [currentView, setCurrentView] = useState<View>('grid');
+    const [currentView, _setCurrentView] = useState<View>('grid');
+    const [previousView, setPreviousView] = useState<View | null>(null);
     const [activeTab, setActiveTab] = useState(0);
     const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
+    
     const [modalOriginRect, setModalOriginRect] = useState<DOMRect | null>(null);
     const [comparisonCharacters, setComparisonCharacters] = useState<Character[]>([]);
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
@@ -120,13 +124,23 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const sessionFlags = useRef<Set<string>>(new Set());
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 
+    const setCurrentView = useCallback((newView: View) => {
+        _setCurrentView(oldView => {
+            if (oldView !== newView) {
+                setPreviousView(oldView);
+            }
+            return newView;
+        });
+    }, []);
+
     const selectCharacter = useCallback((character: Character, rect?: DOMRect) => {
         setModalOriginRect(rect || null);
         setSelectedCharacter(character);
+        setCurrentView('editor');
         if (isLargeScreen) {
             setPanelLayout(prev => (prev === 'grid' ? 'split' : prev));
         }
-    }, [isLargeScreen]);
+    }, [isLargeScreen, setCurrentView]);
     
     const closeCharacterModal = useCallback(() => {
         setSelectedCharacter(null);
@@ -162,10 +176,16 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const triggerActiveEditorUpdate = useCallback(() => {
         setActiveEditorForceUpdate(prev => prev + 1);
     }, []);
-    
+
+    const handleBack = useCallback(() => {
+        setCurrentView(previousView || 'grid');
+    }, [previousView, setCurrentView]);
+
     const value = {
         workspace, setWorkspace,
         currentView, setCurrentView,
+        previousView,
+        handleBack,
         activeTab, setActiveTab,
         selectedCharacter, modalOriginRect, selectCharacter, closeCharacterModal,
         comparisonCharacters, setComparisonCharacters,

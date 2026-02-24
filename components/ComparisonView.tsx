@@ -17,11 +17,9 @@ import { usePositioning } from '../contexts/PositioningContext';
 import { useKerning } from '../contexts/KerningContext';
 import { useRules } from '../contexts/RulesContext';
 
-interface ComparisonViewProps {
-  onClose: () => void;
-}
+interface ComparisonViewProps {}
 
-const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
+const ComparisonView: React.FC<ComparisonViewProps> = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { t } = useLocale();
@@ -29,7 +27,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
   const { characterSets, allCharsByName, markAttachmentRules, positioningRules } = useProject();
   const { glyphDataMap, version: glyphVersion } = useGlyphData();
   const { settings, metrics } = useSettings();
-  const { comparisonCharacters, setComparisonCharacters } = useLayout();
+  const { comparisonCharacters, setComparisonCharacters, handleBack } = useLayout();
   const { markPositioningMap } = usePositioning();
   const { kerningMap } = useKerning();
   const { state: rulesState } = useRules();
@@ -356,7 +354,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ onClose }) => {
     <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
       <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 flex justify-between items-center shadow-md w-full flex-shrink-0 z-20">
         <button
-          onClick={onClose}
+          onClick={handleBack}
           className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
         >
           <BackIcon />

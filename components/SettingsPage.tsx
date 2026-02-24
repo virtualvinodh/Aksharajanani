@@ -10,10 +10,10 @@ import MetaDataSettings from './settings/MetaDataSettings';
 import MetricsSettings from './settings/MetricsSettings';
 import { useSettings } from '../contexts/SettingsContext';
 import { useProject } from '../contexts/ProjectContext';
+import { useLayout } from '../contexts/LayoutContext';
 import { useHorizontalScroll } from '../hooks/useHorizontalScroll';
 
 interface SettingsPageProps {
-  onClose: () => void;
   toolRanges: ToolRanges;
 }
 
@@ -38,9 +38,10 @@ const TabButton: React.FC<{
 ));
 
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ toolRanges }) => {
   const { t } = useLocale();
   const { settings, metrics, dispatch } = useSettings();
+  const { handleBack } = useLayout();
   // Get GuideFont from ProjectContext
   const { guideFont, setGuideFont, script } = useProject();
 
@@ -58,7 +59,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, toolRanges }) => {
     dispatch({ type: 'SET_METRICS', payload: localMetrics });
     // Commit GuideFont to ProjectContext
     setGuideFont(localGuideFont);
-    onClose();
+    handleBack();
   };
 
   return (

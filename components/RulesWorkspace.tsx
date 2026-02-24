@@ -9,6 +9,7 @@ import { usePositioning } from '../contexts/PositioningContext';
 import { useRules } from '../contexts/RulesContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLocale } from '../contexts/LocaleContext';
+import { useLayout } from '../contexts/LayoutContext';
 import { BackIcon } from '../constants';
 import Footer from './Footer';
 
@@ -16,10 +17,10 @@ interface RulesWorkspaceProps {
     positioningRules: PositioningRules[] | null;
     isFeaOnlyMode: boolean;
     rulesProgress: { completed: number; total: number };
-    onClose?: () => void;
 }
 
 const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
+    const { handleBack } = useLayout();
     const { t } = useLocale();
     const { characterSets, allCharsByName, allCharsByUnicode, positioningGroupNames, markAttachmentRules } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
@@ -28,7 +29,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
     const { state, dispatch } = useRules();
     const { settings, metrics } = useSettings();
     
-    const { rulesProgress, onClose, ...rulesPageProps } = props;
+    const { rulesProgress, ...rulesPageProps } = props;
 
     if (!characterSets || !settings || !metrics) return null;
 
@@ -36,7 +37,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
         <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col">
              <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 flex justify-between items-center shadow-md w-full flex-shrink-0">
                 <button
-                  onClick={onClose}
+                  onClick={handleBack}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
                 >
                   <BackIcon />
