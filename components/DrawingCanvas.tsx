@@ -2,6 +2,8 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment, ComponentTransform } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLocale } from '../contexts/LocaleContext';
+
 import { VEC } from '../utils/vectorUtils';
 import { renderPaths } from '../services/glyphRenderService';
 import { useDrawingCanvas } from '../hooks/useDrawingCanvas';
@@ -61,7 +63,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
-
+  const { t } = useLocale();
   const {
     currentPaths, previewPath, marqueeBox, selectionBox, focusedPathId, selectedPointInfo, bgImageObject, hoveredPathIds,
     handleMouseDown, handleMouseMove, handleMouseUp, handleTouchStart, handleTouchMove,
