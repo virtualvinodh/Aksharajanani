@@ -93,6 +93,21 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
       });
   }, [isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection]);
 
+  const toggleGroupSelection = useCallback((groupChars: Character[]) => {
+      setMetricsSelection(prev => {
+          const newSet = new Set(prev);
+          const validChars = groupChars.filter(c => c.unicode !== undefined);
+          const allSelected = validChars.every(c => newSet.has(c.unicode!));
+          
+          if (allSelected) {
+              validChars.forEach(c => newSet.delete(c.unicode!));
+          } else {
+              validChars.forEach(c => newSet.add(c.unicode!));
+          }
+          return newSet;
+      });
+  }, [setMetricsSelection]);
+
   const startEditing = (index: number, currentName: string) => {
       setEditingGroupIndex(index);
       setEditValue(t(currentName) === currentName ? currentName : t(currentName)); // Use resolved name
@@ -185,12 +200,36 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                 });
                 
                 const isEditing = editingGroupIndex === index;
+                
+                // Group Selection Logic
+                const validChars = visibleChars.filter(c => c.unicode !== undefined);
+                const selectedCount = validChars.filter(c => metricsSelection.has(c.unicode!)).length;
+                const isAllSelected = validChars.length > 0 && selectedCount === validChars.length;
+                const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
                 return (
                     <div className="pb-6" id={`section-${index}`}>
                          {/* Sticky Header */}
                         <div className="sticky top-0 z-10 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur py-2 px-6 border-b border-gray-200 dark:border-gray-700 shadow-sm mb-2 flex justify-between items-center h-14">
                             <div className="flex items-center gap-2 flex-grow">
+                                {isMetricsSelectionMode && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleGroupSelection(visibleChars);
+                                        }}
+                                        className={`
+                                            w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all mr-2 flex-shrink-0
+                                            ${isAllSelected || isIndeterminate
+                                                ? 'bg-indigo-600 border-indigo-600 scale-110' 
+                                                : 'bg-white dark:bg-gray-800 border-gray-400 hover:border-indigo-500'}
+                                        `}
+                                        title={isAllSelected ? "Deselect Group" : "Select Group"}
+                                    >
+                                        {isAllSelected && <CheckCircleIcon className="w-4 h-4 text-white" />}
+                                        {isIndeterminate && <div className="w-3 h-0.5 bg-white rounded-full" />} 
+                                    </button>
+                                )}
                                 {isEditing ? (
                                     <div className="flex items-center gap-2 w-full max-w-md animate-fade-in-up">
                                         <input 
