@@ -9,13 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "idb": "8.0.0",
+    "lucide-react": "^0.575.0",
+    "paper": "0.12.18",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "idb": "8.0.0",
-    "paper": "0.12.18",
+    "react-joyride": "^2.9.3",
     "react-virtuoso": "4.6.2",
-    "vitest": "^4.0.15",
-    "react-joyride": "^2.9.3"
+    "vitest": "^4.0.15"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

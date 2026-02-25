@@ -594,7 +594,7 @@ const generateId = () => `${Date.now()}-${Math.random()}`;
 const getTransformForIndex = (config: any, index: number): ComponentTransform => {
     // Basic safety
     if (!Array.isArray(config)) {
-        return { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
+        return { scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
     }
     
     // Get the specific config for this component index
@@ -606,21 +606,27 @@ const getTransformForIndex = (config: any, index: number): ComponentTransform =>
         // that applies to ALL components (or specifically the mark).
         // Since we are looking at index > 0 (likely), and item is undefined, we check root.
         if (config.length > 0 && typeof config[0] === 'number') {
+             const s = config[0] ?? 1;
              return {
-                 scale: config[0] ?? 1,
+                 scale: s,
+                 scaleX: s,
+                 scaleY: s,
                  y: config[1] ?? 0,
                  mode: 'relative',
                  rotation: 0,
                  x: 0
              };
         }
-        return { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
+        return { scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
     }
 
     // Case 2: New Object Syntax (Preferred)
     if (typeof item === 'object' && !Array.isArray(item)) {
+        const s = item.scale ?? 1;
         return {
-             scale: item.scale ?? 1,
+             scale: s,
+             scaleX: item.scaleX ?? s,
+             scaleY: item.scaleY ?? s,
              rotation: item.rotation ?? 0,
              x: item.x ?? 0,
              y: item.y ?? 0,
@@ -630,8 +636,11 @@ const getTransformForIndex = (config: any, index: number): ComponentTransform =>
 
     // Case 3: Legacy Array Syntax for specific index [[scale], [scale, y, mode]]
     if (Array.isArray(item)) {
+        const s = typeof item[0] === 'number' ? item[0] : 1;
         return {
-             scale: typeof item[0] === 'number' ? item[0] : 1,
+             scale: s,
+             scaleX: s,
+             scaleY: s,
              y: typeof item[1] === 'number' ? item[1] : 0,
              mode: item.includes('touching') ? 'touching' : (item.includes('absolute') ? 'absolute' : 'relative'),
              rotation: 0,
@@ -644,8 +653,11 @@ const getTransformForIndex = (config: any, index: number): ComponentTransform =>
     // If index > 0, we already checked the global case in Case 1 fallback.
     // But if config is [0.6, 200] and we ask for index 0, item is 0.6.
     if (typeof item === 'number' && index === 0) {
+         const s = config[0] ?? 1;
          return {
-             scale: config[0] ?? 1,
+             scale: s,
+             scaleX: s,
+             scaleY: s,
              y: config[1] ?? 0,
              mode: 'relative',
              rotation: 0,
@@ -653,7 +665,7 @@ const getTransformForIndex = (config: any, index: number): ComponentTransform =>
          };
     }
 
-    return { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
+    return { scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
 };
 
 interface GenerateCompositeGlyphDataArgs {
@@ -689,10 +701,13 @@ export const generateCompositeGlyphData = ({
     const transformComponentPaths = (paths: Path[], charDef: Character, componentIndex: number): Path[] => {
         const transformConfig = charDef.compositeTransform;
         
-        // MODIFICATION: Retrieve rotation as well
-        const { scale, rotation } = getTransformForIndex(transformConfig, componentIndex);
+        // MODIFICATION: Retrieve rotation and split scales
+        const { scale, scaleX, scaleY, rotation } = getTransformForIndex(transformConfig, componentIndex);
+        
+        const sx = scaleX ?? scale ?? 1;
+        const sy = scaleY ?? scale ?? 1;
 
-        if (scale === 1.0 && rotation === 0) return paths;
+        if (sx === 1.0 && sy === 1.0 && rotation === 0) return paths;
 
         const componentBbox = getAccurateGlyphBBox(paths, settings.strokeThickness);
         if (!componentBbox) return paths;
@@ -706,7 +721,7 @@ export const generateCompositeGlyphData = ({
             // 1. Center
             let vec = VEC.sub(p, { x: centerX, y: centerY });
             // 2. Scale
-            vec = VEC.scale(vec, scale!);
+            vec = { x: vec.x * sx, y: vec.y * sy };
             // 3. Rotate
             if (angleRad !== 0) {
                  vec = VEC.rotate(vec, angleRad);
@@ -721,8 +736,8 @@ export const generateCompositeGlyphData = ({
             segmentGroups: p.segmentGroups ? p.segmentGroups.map((group: Segment[]) => group.map(seg => ({
                 ...seg,
                 point: transformPoint(seg.point),
-                handleIn: angleRad !== 0 ? VEC.rotate(VEC.scale(seg.handleIn, scale!), angleRad) : VEC.scale(seg.handleIn, scale!),
-                handleOut: angleRad !== 0 ? VEC.rotate(VEC.scale(seg.handleOut, scale!), angleRad) : VEC.scale(seg.handleOut, scale!)
+                handleIn: angleRad !== 0 ? VEC.rotate({ x: seg.handleIn.x * sx, y: seg.handleIn.y * sy }, angleRad) : { x: seg.handleIn.x * sx, y: seg.handleIn.y * sy },
+                handleOut: angleRad !== 0 ? VEC.rotate({ x: seg.handleOut.x * sx, y: seg.handleOut.y * sy }, angleRad) : { x: seg.handleOut.x * sx, y: seg.handleOut.y * sy }
             }))) : undefined
         }));
 

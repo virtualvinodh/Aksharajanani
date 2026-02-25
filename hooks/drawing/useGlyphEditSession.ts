@@ -128,16 +128,22 @@ export const useGlyphEditSession = ({
             transformSnapshot.current = deepClone(compositeTransform || []);
             const componentCount = (character.link || character.composite || []).length;
             while (transformSnapshot.current.length < componentCount) {
-                transformSnapshot.current.push({ scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' });
+                transformSnapshot.current.push({ scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' });
             }
         } else if (action === 'move') {
-            const initial = transformSnapshot.current[index] || { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
+            const initial = transformSnapshot.current[index] || { scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
             const updated = { ...initial };
             
             if (delta.x !== undefined) updated.x = (initial.x || 0) + delta.x;
             if (delta.y !== undefined) updated.y = (initial.y || 0) + delta.y;
             if (delta.rotation !== undefined) updated.rotation = (initial.rotation || 0) + delta.rotation;
+            
+            // Update legacy scale
             if (delta.scale !== undefined) updated.scale = (initial.scale || 1) * delta.scale;
+
+            // Update specific scales
+            if (delta.scaleX !== undefined) updated.scaleX = (initial.scaleX ?? initial.scale ?? 1) * delta.scaleX;
+            if (delta.scaleY !== undefined) updated.scaleY = (initial.scaleY ?? initial.scale ?? 1) * delta.scaleY;
             
             const newTransforms = [...transformSnapshot.current];
             newTransforms[index] = updated;

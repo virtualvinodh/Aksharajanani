@@ -4,6 +4,7 @@ import { FontMetrics, Character, CharacterSet, GlyphData, ComponentTransform, Po
 import { useLocale } from '../contexts/LocaleContext';
 import SmartGlyphInput from './rules/manager/SmartGlyphInput';
 import { SaveIcon, TrashIcon, RightArrowIcon, CloseIcon, AddIcon } from '../constants';
+import { Link, Unlink } from 'lucide-react';
 import { useRules } from '../contexts/RulesContext';
 import { GlyphDataAction } from '../contexts/GlyphDataContext';
 import { useKerning } from '../contexts/KerningContext';
@@ -25,12 +26,51 @@ const ComponentListEditor: React.FC<{
     const [inputValue, setInputValue] = useState('');
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
     const [showInput, setShowInput] = useState(false);
+    
+    // Track link state for each component
+    const [linkedStates, setLinkedStates] = useState<Record<number, boolean>>({});
+
+    // Initialize link states based on values
+    useEffect(() => {
+        if (transforms) {
+            const newLinked: Record<number, boolean> = {};
+            transforms.forEach((t, i) => {
+                if (linkedStates[i] === undefined) {
+                    const sx = t.scaleX ?? t.scale ?? 1;
+                    const sy = t.scaleY ?? t.scale ?? 1;
+                    newLinked[i] = Math.abs(sx - sy) < 0.001;
+                } else {
+                    newLinked[i] = linkedStates[i];
+                }
+            });
+            setLinkedStates(newLinked);
+        }
+    }, [transforms?.length]);
+
+    const toggleLink = (index: number) => {
+        setLinkedStates(prev => {
+            const isNowLinked = !prev[index];
+            
+            // If becoming linked, sync Y to X
+            if (isNowLinked && transforms && setTransforms) {
+                const newTransforms = [...transforms];
+                const current = { ...newTransforms[index] };
+                const sx = current.scaleX ?? current.scale ?? 1;
+                current.scaleY = sx;
+                current.scale = sx;
+                newTransforms[index] = current;
+                setTransforms(newTransforms);
+            }
+            
+            return { ...prev, [index]: isNowLinked };
+        });
+    };
 
     const handleAdd = (val: string) => {
         if (val && !components.includes(val)) {
             setComponents([...components, val]);
             if (setTransforms && transforms) {
-                setTransforms([...transforms, { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' }]);
+                setTransforms([...transforms, { scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' }]);
             }
             setInputValue('');
             setShowInput(false);
@@ -47,9 +87,23 @@ const ComponentListEditor: React.FC<{
     const handleTransformChange = (index: number, field: keyof ComponentTransform, value: any) => {
         if (!setTransforms || !transforms) return;
         const newTransforms = [...transforms];
-        if (!newTransforms[index]) newTransforms[index] = { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
+        if (!newTransforms[index]) newTransforms[index] = { scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
         const current = { ...newTransforms[index] };
-        (current as any)[field] = value;
+        
+        // Handle Linked Scaling
+        if (linkedStates[index] && (field === 'scaleX' || field === 'scaleY')) {
+            const numVal = parseFloat(value) || 0;
+            current.scaleX = numVal;
+            current.scaleY = numVal;
+            current.scale = numVal;
+        } else {
+            (current as any)[field] = value;
+            
+            // If updating one scale while unlinked, ensure the other is set (if it was undefined/fallback)
+            if (field === 'scaleX' && current.scaleY === undefined) current.scaleY = current.scale ?? 1;
+            if (field === 'scaleY' && current.scaleX === undefined) current.scaleX = current.scale ?? 1;
+        }
+
         newTransforms[index] = current;
         setTransforms(newTransforms);
     };
@@ -120,19 +174,48 @@ const ComponentListEditor: React.FC<{
                     {isAdvancedOpen && (
                         <div className="mt-2 space-y-2 max-h-60 overflow-y-auto pr-1">
                              {components.map((comp, index) => {
-                                const tr = transforms[index] || { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
+                                const tr = transforms[index] || { scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
+                                const sx = tr.scaleX ?? tr.scale ?? 1;
+                                const sy = tr.scaleY ?? tr.scale ?? 1;
+                                const isLinked = linkedStates[index] !== false; // Default to true if undefined
+
                                 return (
                                     <div key={index} className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded text-xs space-y-2">
                                         <div className="font-bold text-gray-700 dark:text-gray-300 truncate">{comp}</div>
                                         <div className="flex gap-2 items-center">
-                                            <div className="flex-1">
-                                                <label className="block text-[9px] text-gray-500 uppercase">{t('scaleShort')}</label>
-                                                <input type="text" value={tr.scale} onChange={e => handleTransformChange(index, 'scale', parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                            <div className="flex-1 flex gap-1 items-end">
+                                                <div className="flex-1">
+                                                    <label className="block text-[9px] text-gray-500 uppercase">Scale X</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={sx} 
+                                                        onChange={e => handleTransformChange(index, 'scaleX', e.target.value)} 
+                                                        className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" 
+                                                    />
+                                                </div>
+                                                <button 
+                                                    onClick={() => toggleLink(index)}
+                                                    className={`p-1 mb-0.5 rounded ${isLinked ? 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30' : 'text-gray-400 hover:text-gray-600'}`}
+                                                    title={isLinked ? "Unlink Scale" : "Link Scale"}
+                                                >
+                                                    {isLinked ? <Link className="w-3 h-3" /> : <Unlink className="w-3 h-3" />}
+                                                </button>
+                                                <div className="flex-1">
+                                                    <label className="block text-[9px] text-gray-500 uppercase">Scale Y</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={sy} 
+                                                        onChange={e => handleTransformChange(index, 'scaleY', e.target.value)} 
+                                                        className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" 
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="flex-1">
+                                            <div className="w-16">
                                                 <label className="block text-[9px] text-gray-500 uppercase">{t('rotateShort')}</label>
                                                 <input type="text" value={tr.rotation || 0} onChange={e => handleTransformChange(index, 'rotation', parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
                                             </div>
+                                        </div>
+                                        <div className="flex gap-2 items-center">
                                             <div className="flex-1">
                                                 <label className="block text-[9px] text-gray-500 uppercase">{t('xLabel')}</label>
                                                 <input type="text" value={tr.x} onChange={e => handleTransformChange(index, 'x', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />

@@ -354,15 +354,42 @@ export const useSelectTool = ({
                 const angleDelta = (Math.atan2(currentVector.y, currentVector.x) - Math.atan2(startVector.y, startVector.x)) * (180 / Math.PI);
                 onTransformComponent(activeComponentIndex.current, 'move', { rotation: angleDelta });
             } else if (type === 'scale') {
-                 // Calculate uniform scale based on distance from center (simplified for standard bounding box handles)
                  const center = { x: initialBox.x + initialBox.width / 2, y: initialBox.y + initialBox.height / 2 };
-                 const startDist = VEC.len(VEC.sub(startPoint, center));
-                 const currentDist = VEC.len(VEC.sub(point, center));
                  
-                 // Avoid division by zero
-                 if (startDist > 0.1) {
-                     const scaleRatio = currentDist / startDist;
-                     onTransformComponent(activeComponentIndex.current, 'move', { scale: scaleRatio });
+                 // Handle Directions: n, s, e, w, ne, nw, se, sw
+                 const isCorner = ['ne', 'nw', 'se', 'sw'].includes(handle || '');
+                 const isHorizontal = ['e', 'w'].includes(handle || '');
+                 const isVertical = ['n', 's'].includes(handle || '');
+
+                 if (isCorner) {
+                     // Uniform scaling for corners (default behavior requested)
+                     const startDist = VEC.len(VEC.sub(startPoint, center));
+                     const currentDist = VEC.len(VEC.sub(point, center));
+                     
+                     // Avoid division by zero
+                     if (startDist > 0.1) {
+                         const scaleRatio = currentDist / startDist;
+                         // Pass uniform scale to both X and Y to maintain aspect ratio
+                         onTransformComponent(activeComponentIndex.current, 'move', { scale: scaleRatio, scaleX: scaleRatio, scaleY: scaleRatio });
+                     }
+                 } else {
+                     // Non-uniform scaling for sides
+                     let sx = 1;
+                     let sy = 1;
+                     
+                     if (isHorizontal) {
+                         const startDistX = Math.abs(startPoint.x - center.x);
+                         const currentDistX = Math.abs(point.x - center.x);
+                         if (startDistX > 0.1) sx = currentDistX / startDistX;
+                     }
+                     
+                     if (isVertical) {
+                         const startDistY = Math.abs(startPoint.y - center.y);
+                         const currentDistY = Math.abs(point.y - center.y);
+                         if (startDistY > 0.1) sy = currentDistY / startDistY;
+                     }
+                     
+                     onTransformComponent(activeComponentIndex.current, 'move', { scaleX: sx, scaleY: sy });
                  }
             }
             return; // Skip standard path manipulation

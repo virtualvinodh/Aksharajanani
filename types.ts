@@ -51,6 +51,8 @@ export type PositioningMode = 'relative' | 'absolute' | 'touching';
 
 export interface ComponentTransform {
   scale?: number;       // Default: 1.0
+  scaleX?: number;      // Default: 1.0
+  scaleY?: number;      // Default: 1.0
   rotation?: number;    // Default: 0 (degrees)
   x?: number;           // Default: 0
   y?: number;           // Default: 0
