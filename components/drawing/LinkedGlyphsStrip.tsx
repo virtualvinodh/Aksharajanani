@@ -319,8 +319,10 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                         <Virtuoso
                             ref={virtuosoRef}
                             data={items}
+                            orientation="horizontal"
                             scrollerRef={scrollRef}
-                            style={{ height: 68, width: '100%' }}
+                            className="no-scrollbar"
+                            style={{ height: '68px', width: '100%', overflowY: 'hidden', overflowX: 'auto' }}
                             // FIX: Added 'any' type to the props of the List component to resolve TypeScript error.
                             components={{
                                 List: React.forwardRef(({ style, children }: any, ref) => (
@@ -330,6 +332,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                                             ...style,
                                             display: 'flex',
                                             flexDirection: 'row',
+                                            alignItems: 'center',
                                         }}
                                     >
                                         {children}
@@ -337,7 +340,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                                 )),
                             }}
                             itemContent={(index, char) => (
-                                <div className="pr-2 py-1">
+                                <div className="pr-2 py-0.5">
                                     {renderThumb(char, 60)}
                                 </div>
                             )}
