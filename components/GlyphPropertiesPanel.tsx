@@ -115,10 +115,10 @@ const ComponentListEditor: React.FC<{
     return (
         <div className="space-y-3">
             {label && <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</label>}
-            <div className="flex flex-nowrap overflow-x-auto gap-2 min-h-[40px] p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 items-center">
-                {components.map((comp, idx) => (
-                    <span key={idx} className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-mono border whitespace-nowrap flex-shrink-0 ${colorClasses}`}>
-                        {comp}
+            <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 items-center">
+                    {components.map((comp, idx) => (
+                    <span key={idx} className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-mono border ${colorClasses}`}>
+                                            {comp}
                         <button onClick={() => handleRemove(idx)} className="hover:text-red-500 focus:outline-none">
                             <CloseIcon className="w-3 h-3" />
                         </button>

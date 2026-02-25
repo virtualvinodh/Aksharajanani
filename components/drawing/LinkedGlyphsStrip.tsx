@@ -1,7 +1,6 @@
 
 import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Virtuoso } from 'react-virtuoso';
 import { useLocale } from '../../contexts/LocaleContext';
 import { Character, GlyphData, AppSettings, CharacterSet, MarkAttachmentRules, Path, KerningMap, MarkPositioningMap, UnifiedRenderContext } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -35,7 +34,7 @@ interface LinkedGlyphsStripProps {
 }
 
 const DRAWING_CANVAS_SIZE = 1000;
-const VIRTUOSO_THRESHOLD = 30; // Switch to virtual list if items exceed this count
+const PREVIEW_THRESHOLD = 30;
 
 declare var UnicodeProperties: any;
 
@@ -160,8 +159,8 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
     const collapsed = propCollapsed !== undefined ? propCollapsed : internalCollapsed;
     const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(p => !p));
     
-    const virtuosoRef = useRef<any>(null);
-    const useVirtuoso = items.length >= VIRTUOSO_THRESHOLD && !isExpanded;
+    const itemsToShow = items.slice(0, PREVIEW_THRESHOLD);
+    const remainingItemsCount = items.length - PREVIEW_THRESHOLD;
 
     const getDisplayData = useCallback((char: Character): { displayData: GlyphData | undefined, isAvailable: boolean } => {
         // Build the render context that injects live data from the editor for real-time previews.
@@ -314,43 +313,24 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                             </div>
                         </button>
                     )}
-
-                    {useVirtuoso && !collapsed ? (
-                        <Virtuoso
-                            ref={virtuosoRef}
-                            data={items}
-                            orientation="horizontal"
-                            scrollerRef={scrollRef}
-                            className="no-scrollbar"
-                            style={{ height: '68px', width: '100%', overflowY: 'hidden', overflowX: 'auto' }}
-                            // FIX: Added 'any' type to the props of the List component to resolve TypeScript error.
-                            components={{
-                                List: React.forwardRef(({ style, children }: any, ref) => (
-                                    <div
-                                        ref={ref as React.Ref<HTMLDivElement>}
-                                        style={{
-                                            ...style,
-                                            display: 'flex',
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        {children}
-                                    </div>
-                                )),
-                            }}
-                            itemContent={(index, char) => (
-                                <div className="pr-2 py-0.5">
-                                    {renderThumb(char, 60)}
-                                </div>
-                            )}
-                        />
-                    ) : (
-                        <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center scroll-smooth px-1 w-full">
-                            {items.map((char) => renderThumb(char, 60))}
-                        </div>
-                    )}
-
+                    <div ref={scrollRef} className="flex flex-nowrap overflow-x-auto no-scrollbar gap-2 items-center p-1 w-full scroll-smooth">
+                        {itemsToShow.map((char) => renderThumb(char, 60))}
+                        {remainingItemsCount > 0 && (
+                            <div
+                                onClick={() => setIsExpanded(true)}
+                                className="flex-shrink-0 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-700/50 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg shadow-sm transition-all p-1 group cursor-pointer hover:ring-2 hover:ring-indigo-500 hover:border-solid hover:bg-white dark:hover:bg-gray-700"
+                                style={{ width: 60, height: 60 }}
+                                title={`View all ${items.length} items`}
+                            >
+                                <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                    +{remainingItemsCount}
+                                </span>
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                    {t('more')}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     {visibility.right && !collapsed && (
                         <button
                             onClick={() => handleScroll('right')}
