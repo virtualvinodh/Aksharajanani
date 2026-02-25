@@ -24,6 +24,9 @@ const CelebrationManager: React.FC = () => {
     // 'drawing' | 'positioning' | 'kerning'
     const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
     const [runHighlight, setRunHighlight] = useState(false);
+    const [hasCelebratedDrawing, setHasCelebratedDrawing] = useState(() => {
+        return localStorage.getItem('celebration_drawing_seen_session') === 'true';
+    });
 
     const { drawingProgress, positioningProgress, kerningProgress } = useProgressCalculators({
         characterSets,
@@ -53,10 +56,12 @@ const CelebrationManager: React.FC = () => {
 
     useEffect(() => {
         // Trigger 1: Drawing Complete
-        if (isDrawingComplete) {
-            const hasCelebrated = checkAndSetFlag('celebration_drawing_seen');
-            if (!hasCelebrated) {
+        if (isDrawingComplete && !hasCelebratedDrawing) {
+            const hasCelebratedPermanently = checkAndSetFlag('celebration_drawing_seen');
+            if (!hasCelebratedPermanently) {
                 setActiveOverlay('drawing');
+                localStorage.setItem('celebration_drawing_seen_session', 'true');
+                setHasCelebratedDrawing(true);
             }
         }
     }, [isDrawingComplete, checkAndSetFlag]);
