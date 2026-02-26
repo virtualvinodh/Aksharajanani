@@ -22,6 +22,7 @@ import RulesWorkspace from './components/RulesWorkspace';
 import TestCasePage from './components/TestCasePage';
 import ExportAnimation from './components/ExportAnimation';
 import ImportGlyphsModal from './components/ImportGlyphsModal';
+import ImportFontModal from './components/ImportFontModal';
 import SnapshotRestoreModal from './components/SnapshotRestoreModal';
 import SaveAsModal from './components/SaveAsModal';
 import CreatorPage from './components/CreatorPage';
@@ -167,7 +168,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       hasSnapshot,
       openSaveAsModal,
       handleCreatorClick,
-      startExportProcess
+      startExportProcess,
+      handleLoadProjectData
   } = appActions;
   
   const mainContainerRef = useRef<HTMLElement>(null);
@@ -599,6 +601,16 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       )}
       {layout.activeModal?.name === 'addBlock' && <UnicodeBlockSelectorModal isOpen={true} onClose={layout.closeModal} onAddBlock={handleAddBlock} onCheckExists={handleCheckGlyphExists} mode="addBlocks" />}
       {layout.activeModal?.name === 'importGlyphs' && <ImportGlyphsModal isOpen={true} onClose={layout.closeModal} onImport={handleImportGlyphs} allScripts={allScripts} />}
+      {layout.activeModal?.name === 'importFont' && (
+          <ImportFontModal 
+            isOpen={true} 
+            onClose={layout.closeModal} 
+            onImport={(data) => {
+                handleLoadProjectData(data);
+                layout.closeModal();
+            }} 
+        />
+      )}
       {layout.activeModal?.name === 'confirmChangeScript' && <ConfirmationModal isOpen={true} onClose={layout.closeModal} title={t('confirmChangeScriptTitle')} message={t('confirmChangeScriptMessage')} {...layout.activeModal.props} />}
       {layout.activeModal?.name === 'confirmLoadProject' && <ConfirmationModal isOpen={true} onClose={layout.closeModal} title={t('confirmLoadProjectTitle')} message={t('confirmLoadProjectMessage')} {...layout.activeModal.props} />}
       {layout.activeModal?.name === 'incompleteWarning' && <IncompleteFontWarningModal isOpen={true} onClose={layout.closeModal} {...layout.activeModal.props} />}

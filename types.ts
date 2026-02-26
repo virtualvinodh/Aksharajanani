@@ -1,5 +1,11 @@
 
 
+declare global {
+  interface Window {
+    opentype: any;
+  }
+}
+
 export interface Point {
   x: number;
   y: number;

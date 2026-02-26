@@ -300,6 +300,7 @@ export const useAppActions = ({
         handleCheckGlyphExists,
         handleCheckNameExists,
         handleAddBlock,
-        startExportProcess
+        startExportProcess,
+        handleLoadProjectData: initializeProjectState
     };
 };

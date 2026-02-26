@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ScriptConfig, CharacterSet, CharacterDefinition, ProjectData, Character, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { AboutIcon, HelpIcon, LoadIcon, SwitchScriptIcon, SpinnerIcon, TrashIcon, DRAWING_CANVAS_SIZE, AddIcon } from '../constants';
+import { AboutIcon, HelpIcon, LoadIcon, SwitchScriptIcon, SpinnerIcon, TrashIcon, DRAWING_CANVAS_SIZE, AddIcon, ImportIcon } from '../constants';
 import LanguageSelector from './LanguageSelector';
 import Footer from './Footer';
 import { useLayout } from '../contexts/LayoutContext';
@@ -130,7 +130,8 @@ const RecentProjectPreview: React.FC<{ project: ProjectData }> = ({ project }) =
 
 const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScript, onShowAbout, onShowHelp }) => {
     const { t } = useLocale();
-    const { showNotification } = useLayout();
+    const layout = useLayout();
+    const { showNotification } = layout;
     const [isCreatingScript, setIsCreatingScript] = useState(false); // Keeping for now but unused in UI
     const [isUploadingScript, setIsUploadingScript] = useState(false);
     const [includeLatin, setIncludeLatin] = useState(false);
@@ -738,6 +739,18 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                             </div>
                             <div className="mt-2">
                                 <h3 className="text-xs sm:text-lg font-bold">{t('createScript')}</h3>
+                            </div>
+                        </button>
+                        <button
+                            onClick={() => layout.openModal('importFont')}
+                            type="button"
+                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 aspect-square"
+                        >
+                             <div className="script-card-char group-hover:scale-110 transition-transform duration-200 flex-grow flex items-center justify-center" aria-hidden="true">
+                                <ImportIcon className="w-12 h-12" />
+                            </div>
+                            <div className="mt-2">
+                                <h3 className="text-xs sm:text-lg font-bold">{t('importFont') || 'Import Font'}</h3>
                             </div>
                         </button>                        
                     </div>
