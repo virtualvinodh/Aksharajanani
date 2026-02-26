@@ -3,7 +3,7 @@
 
 This array configures exactly how each component is placed. The index in this array matches the index in `composite` or `link`.
 
-**Structure:** `[{ scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' }, ...]`
+**Structure:** Array:`[{ scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' }, ...]`
 
 **Order of Operations:**
 Transforms are applied to the component in the following specific order:
