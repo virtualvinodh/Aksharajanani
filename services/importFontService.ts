@@ -71,7 +71,11 @@ export const extractProjectData = async (
         // Helper to transform coordinates
         const tr = (x: number, y: number): Point => ({
             x: Math.round(x * scale),
-            y: Math.round(baseLineY - (y * scale))
+            // Flip Y axis: opentype.js uses Y-up, but sometimes we need to invert or preserve based on context.
+            // User reported shapes are upside down with (baseLineY - y).
+            // This implies we need to flip the rendering.
+            // Let's try inverting the direction.
+            y: Math.round(baseLineY - (y * scale * -1)) 
         });
 
         // We need to track the previous handleOut to assign to the next segment's handleIn logic
