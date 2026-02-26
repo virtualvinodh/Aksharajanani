@@ -16,6 +16,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths } from '../services/glyphRenderService';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import NewProjectModal, { NewProjectData } from './NewProjectModal';
+import ImportFontModal from './ImportFontModal';
 
 interface ScriptSelectionProps {
     scripts: ScriptConfig[];
@@ -531,6 +532,28 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
         }
     };
 
+    const handleImportFont = (projectData: ProjectData) => {
+        const baseTemplate = customScriptTemplate || scripts[0];
+        
+        const newScript: ScriptConfig = {
+            ...baseTemplate,
+            id: projectData.scriptId || `project_${Date.now()}`,
+            nameKey: 'customProject',
+            metrics: projectData.metrics,
+            defaults: {
+                ...baseTemplate.defaults,
+                ...projectData.settings,
+                fontName: projectData.name || projectData.settings.fontName,
+            },
+            characterSetData: projectData.characterSets || [],
+            rulesData: projectData.fontRules || { 'dflt': {} },
+            sampleText: "", 
+        };
+        
+        onSelectScript(newScript, projectData);
+        layout.closeModal();
+    };
+
     const handleConfirmDelete = async () => {
         if (!projectToDelete || projectToDelete.projectId === undefined) return;
     
@@ -796,6 +819,14 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                 onClose={() => setIsNewProjectModalOpen(false)}
                 onConfirm={handleCreateEmptyProject}
             />
+
+            {layout.activeModal?.name === 'importFont' && (
+                <ImportFontModal 
+                    isOpen={true} 
+                    onClose={layout.closeModal} 
+                    onImport={handleImportFont} 
+                />
+            )}
 
              <DeleteProjectConfirmationModal
                 isOpen={!!projectToDelete}

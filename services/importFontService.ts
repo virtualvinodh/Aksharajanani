@@ -48,9 +48,21 @@ export const extractProjectData = async (
         characters: []
     };
 
+    // Pre-scan for used unicodes to avoid collisions when assigning PUA
+    const usedUnicodes = new Set<number>();
     for (let i = 0; i < numGlyphs; i++) {
         const glyph = font.glyphs.get(i);
-        const unicode = glyph.unicode;
+        if (glyph.unicode) {
+            usedUnicodes.add(glyph.unicode);
+        }
+    }
+
+    let puaCounter = 0xE000; // Start of Private Use Area
+
+    for (let i = 0; i < numGlyphs; i++) {
+        const glyph = font.glyphs.get(i);
+        let unicode = glyph.unicode;
+        let isPuaAssigned = false;
         
         if (i % 50 === 0) {
             onProgress((i / numGlyphs) * 100, `Importing glyph ${i + 1}/${numGlyphs}`);
@@ -58,7 +70,15 @@ export const extractProjectData = async (
             await new Promise(resolve => setTimeout(resolve, 0));
         }
 
-        if (!unicode) continue;
+        // If no unicode, assign a PUA code
+        if (!unicode) {
+            while (usedUnicodes.has(puaCounter)) {
+                puaCounter++;
+            }
+            unicode = puaCounter;
+            usedUnicodes.add(unicode);
+            isPuaAssigned = true;
+        }
 
         const pathData = glyph.getPath(0, 0, font.unitsPerEm);
         const commands = pathData.commands;
@@ -246,7 +266,8 @@ export const extractProjectData = async (
                 glyphClass: 'base',
                 advWidth: Math.round(glyph.advanceWidth * scale),
                 lsb: Math.round((glyph.leftSideBearing || 0) * scale),
-                rsb: 0 // Calculated from advWidth usually
+                rsb: 0, // Calculated from advWidth usually
+                isPuaAssigned: isPuaAssigned
             });
         }
     }
@@ -267,7 +288,7 @@ export const extractProjectData = async (
     return {
         projectId: Date.now(),
         name: settings.fontName,
-        scriptId: 'custom',
+        scriptId: `project_${Date.now()}`,
         settings: settings,
         metrics: metrics,
         glyphs: glyphs,
