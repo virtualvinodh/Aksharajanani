@@ -113,8 +113,8 @@ async function initializePyodide() {
 
     self.postMessage({ type: 'status', payload: 'installingFonttools' });
     // await micropip.install('fonttools');
-    fonttools_url = "https://www.piwheels.org/simple/fonttools/fonttools-4.61.1-py3-none-any.whl#sha256=018b2aa0b159683474b21d3a96e53f870115700525445e84c15726bbc2b552ef"
-    await micropip.install(fonttools_url)    
+    const fonttools_url = "https://www.piwheels.org/simple/fonttools/fonttools-4.61.1-py3-none-any.whl#sha256=018b2aa0b159683474b21d3a96e53f870115700525445e84c15726bbc2b552ef";
+    await micropip.install(fonttools_url);
     
     self.postMessage({ type: 'status', payload: 'installingFontFeatures' });
     await micropip.install('fontFeatures');
