@@ -338,6 +338,9 @@ export const extractProjectData = async (
 
     let transformedFeaCode = manualFeaCode;
     if (transformedFeaCode) {
+        // Replace <NULL> with 0 before glyph name replacement
+        transformedFeaCode = transformedFeaCode.replace(/<NULL>/g, '0');
+
         const glyphMap: Record<string, string> = {};
         characterSet.characters.forEach(char => {
             if (char.name && char.unicode !== undefined) {
