@@ -879,5 +879,7 @@
     "pastedGlyphs": "Pasted {count} glyphs.",
     "pasteCountMismatch": "Selection count ({target}) does not match clipboard items ({source}).",
     "copySelection": "Copy Selection",
-    "pasteSelection": "Paste Selection"
+    "pasteSelection": "Paste Selection",
+    "cannotCopyVirtual": "Cannot copy positioned or kerned characters.",
+    "cannotPasteVirtual": "Cannot paste onto positioned or kerned characters."
 }

@@ -397,6 +397,15 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const handleBulkCopy = useCallback(() => {
         if (metricsSelection.size === 0) return;
         
+        // Validation: Check if any selected character is virtual (positioned/kerned)
+        for (const unicode of metricsSelection) {
+            const char = allCharsByUnicode.get(unicode);
+            if (char?.position || char?.kern) {
+                showNotification(t('cannotCopyVirtual'), 'error');
+                return;
+            }
+        }
+        
         const selectedUnicodes = Array.from(metricsSelection).sort((a, b) => a - b);
         const clipboardData: ClipboardItem[] = [];
         
@@ -425,6 +434,15 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         if (metricsSelection.size !== bulkClipboard.length) {
             showNotification(t('pasteCountMismatch', { target: metricsSelection.size, source: bulkClipboard.length }), 'error');
             return;
+        }
+
+        // Validation: Check if any target character is virtual (positioned/kerned)
+        for (const unicode of metricsSelection) {
+            const char = allCharsByUnicode.get(unicode);
+            if (char?.position || char?.kern) {
+                showNotification(t('cannotPasteVirtual'), 'error');
+                return;
+            }
         }
         
         const selectedUnicodes = Array.from(metricsSelection).sort((a, b) => a - b);
@@ -584,6 +602,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     onCopy={handleBulkCopy}
                     onPaste={handleBulkPaste}
                     clipboardSize={bulkClipboard?.length || 0}
+                    isSelectionVirtual={isSelectionVirtual}
                 />
             )}
 
