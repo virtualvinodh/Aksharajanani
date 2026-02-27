@@ -460,6 +460,20 @@ export const exportToOtf = async (
 ): Promise<{ blob: Blob, feaError: string | null }> => {
     
     const finalGlyphData = new Map(glyphData.entries());
+    
+    const shouldExportEmptyMap = new Map<number, boolean>();
+    // Pre-calculate shouldExportEmpty for all relevant unicodes to pass to the worker.
+    // This effectively "sends" the UnicodeProperties library's knowledge to the worker.
+    finalGlyphData.forEach((_, unicode) => {
+        shouldExportEmptyMap.set(unicode, shouldExportEmpty(unicode));
+    });
+    allCharsByUnicode.forEach((_, unicode) => {
+        shouldExportEmptyMap.set(unicode, shouldExportEmpty(unicode));
+    });
+    [32, 8205, 8204].forEach(u => {
+        shouldExportEmptyMap.set(u, shouldExportEmpty(u));
+    });
+
     const allCharsByName = new Map<string, Character>();
     allCharsByUnicode.forEach(char => allCharsByName.set(char.name, char));
     
@@ -842,7 +856,13 @@ export const exportToOtf = async (
 
         const workerCode = `
             // Load opentype.js and paper.js libraries inside the worker
-            importScripts('https://unpkg.com/opentype.js/dist/opentype.js', 'https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js');
+            importScripts(
+                'https://unpkg.com/opentype.js/dist/opentype.js', 
+                'https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js'
+            );
+
+            let shouldExportEmptyMap = new Map();
+            const shouldExportEmpty = (unicode) => shouldExportEmptyMap.get(unicode) || false;
 
             // --- DEPENDENCIES FOR createFont ---
             // These functions are copied directly from the main fontService.ts file.
@@ -868,8 +888,9 @@ export const exportToOtf = async (
             // --- Worker Message Handler ---
             self.onmessage = (e) => {
                 try {
-                    const { glyphDataArray, settings, fontRules, metrics, characterSets } = e.data;
+                    const { glyphDataArray, shouldExportEmptyMapArray, settings, fontRules, metrics, characterSets } = e.data;
                     const glyphData = new Map(glyphDataArray);
+                    shouldExportEmptyMap = new Map(shouldExportEmptyMapArray);
 
                     // Minimal 't' function for error messages inside the worker
                     const t = (key) => key;
@@ -909,6 +930,7 @@ export const exportToOtf = async (
 
         worker.postMessage({
             glyphDataArray: Array.from(finalGlyphData.entries()),
+            shouldExportEmptyMapArray: Array.from(shouldExportEmptyMap.entries()),
             settings,
             fontRules,
             metrics,

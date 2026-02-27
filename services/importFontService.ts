@@ -369,11 +369,6 @@ export const extractProjectData = async (
             const regex = new RegExp(`(?<![A-Za-z0-9_.-])${escapedName}(?![A-Za-z0-9_.-])`, 'g');
             
             transformedFeaCode = transformedFeaCode!.replace(regex, glyphMap[originalName]);
-
-            // Replace ZWJ and ZWNJ
-            transformedFeaCode = transformedFeaCode.replace(/uni200D/g, 'ZWJ');
-            transformedFeaCode = transformedFeaCode.replace(/uni200C/g, 'ZWNJ');
-
         });
     }
 

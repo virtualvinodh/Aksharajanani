@@ -14,8 +14,8 @@ export const shouldExportEmpty = (unicode: number | undefined): boolean => {
         return unicode === 32 || unicode === 8205 || unicode === 8204;
     }
     const category = UnicodeProperties.getCategory(unicode);
-    const isWhitespace = UnicodeProperties.isWhitespace(unicode);
-    return isWhitespace || category === 'Cf' || category === 'Cc';
+    const isSeparator = category && category.startsWith('Z');
+    return isSeparator || category === 'Cf' || category === 'Cc';
 };
 
 /**
