@@ -9,12 +9,16 @@ import { SpinnerIcon, CheckCircleIcon, ImportIcon } from '../constants';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import GlyphTile from './GlyphTile';
 import * as dbService from '../services/dbService';
+import { parseFontFile, extractProjectData } from '../services/importFontService';
 
 interface ImportGlyphsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (glyphsToImport: [number, GlyphData][]) => void;
   allScripts: ScriptConfig[];
+  initialProjectData?: ProjectData | null;
+  matchByUnicode?: boolean;
+  isFontImport?: boolean;
 }
 
 interface ComparisonItem {
@@ -25,7 +29,7 @@ interface ComparisonItem {
   targetCharExists: boolean;
 }
 
-const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, onImport, allScripts }) => {
+const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, onImport, allScripts, initialProjectData, matchByUnicode = false, isFontImport = false }) => {
   const { t } = useLocale();
   const { glyphDataMap: currentGlyphData, version: glyphVersion } = useGlyphData();
   const { allCharsByName: currentCharsByName, dispatchCharacterAction } = useProject();
@@ -35,17 +39,39 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
   const [sourceProject, setSourceProject] = useState<ProjectData | null>(null);
   const [selectedUnicodes, setSelectedUnicodes] = useState<Set<number>>(new Set());
   const [fileError, setFileError] = useState<string | null>(null);
+  const [isParsingFont, setIsParsingFont] = useState(false);
+  const [parsingStatus, setParsingStatus] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [recentProjects, setRecentProjects] = useState<ProjectData[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
+  // If isFontImport is true, we default matchByUnicode to true unless explicitly set to false
+  const effectiveMatchByUnicode = isFontImport ? true : matchByUnicode;
+
+  const lastProcessedProjectRef = useRef<ProjectData | null>(null);
+
+  useEffect(() => {
+    if (initialProjectData) {
+        setSourceProject(initialProjectData);
+        setStep('selectGlyphs');
+    }
+  }, [initialProjectData]);
+
   const resetState = () => {
-    setStep('selectFile');
-    setSourceProject(null);
+    if (!initialProjectData) {
+        setStep('selectFile');
+        setSourceProject(null);
+    } else {
+        setStep('selectGlyphs');
+        setSourceProject(initialProjectData);
+    }
     setSelectedUnicodes(new Set());
     setFileError(null);
     setRecentProjects([]);
+    setIsParsingFont(false);
+    setParsingStatus('');
+    lastProcessedProjectRef.current = null;
     if(fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -55,7 +81,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
   };
   
   useEffect(() => {
-      if (isOpen && step === 'selectFile') {
+      if (isOpen && step === 'selectFile' && !isFontImport) {
           setIsLoadingProjects(true);
           dbService.getRecentProjects(100) // Get up to 100 recent projects
               .then(projects => {
@@ -67,28 +93,52 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
                   setIsLoadingProjects(false);
               });
       }
-  }, [isOpen, step]);
+  }, [isOpen, step, isFontImport]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setFileError(null);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const projectData: ProjectData = JSON.parse(e.target?.result as string);
-        if (projectData && Array.isArray(projectData.glyphs) && Array.isArray(projectData.characterSets)) {
-          setSourceProject(projectData);
-          setStep('selectGlyphs');
-        } else {
-          throw new Error(t('invalidProjectFileFormat'));
+
+    if (isFontImport) {
+        setIsParsingFont(true);
+        setParsingStatus(t('parsingFontFile') || 'Parsing font file...');
+        try {
+            const font = await parseFontFile(file);
+            const projectData = await extractProjectData(font, file.name, (p, s) => {
+                setParsingStatus(s);
+            });
+            
+            if (projectData && Array.isArray(projectData.glyphs) && Array.isArray(projectData.characterSets)) {
+                setSourceProject(projectData);
+                setStep('selectGlyphs');
+            } else {
+                throw new Error(t('invalidProjectDataFormat'));
+            }
+        } catch (err: any) {
+            console.error(err);
+            setFileError(err.message || t('errorReadingFontFile') || 'Error reading font file');
+        } finally {
+            setIsParsingFont(false);
         }
-      } catch (err) {
-        setFileError(t('errorReadingProjectFile'));
-      }
-    };
-    reader.readAsText(file);
+    } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const projectData: ProjectData = JSON.parse(e.target?.result as string);
+                if (projectData && Array.isArray(projectData.glyphs) && Array.isArray(projectData.characterSets)) {
+                    setSourceProject(projectData);
+                    setStep('selectGlyphs');
+                } else {
+                    throw new Error(t('invalidProjectFileFormat'));
+                }
+            } catch (err) {
+                setFileError(t('errorReadingProjectFile'));
+            }
+        };
+        reader.readAsText(file);
+    }
   };
   
   const handleProjectSelect = async (projectId: number | undefined) => {
@@ -127,38 +177,98 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
         
         if (sourceGlyph && isGlyphDrawn(sourceGlyph)) {
             // MATCHING LOGIC:
-            // Always match by NAME first.
-            // If Target has a char with the same name, we use the Target's unicode ID.
-            // If Target does NOT have it, we use the Source's unicode ID (for display/selection),
-            // but mark it for re-assignment if it conflicts.
+            // If effectiveMatchByUnicode is true, we prioritize UNICODE matching.
+            // If false (default for project import), we prioritize NAME matching.
             
-            const targetChar = currentCharsByName.get(sourceName);
-            
-            if (targetChar && targetChar.unicode !== undefined) {
-                // Case 1: Exists in Target (Match by Name)
-                drawnSourceGlyphs.push({
-                    unicode: targetChar.unicode, // Use Target ID
-                    name: sourceName,
-                    sourceGlyph: sourceGlyph,
-                    targetIsDrawn: isGlyphDrawn(currentGlyphData.get(targetChar.unicode)),
-                    targetCharExists: true,
-                });
+            if (effectiveMatchByUnicode) {
+                // UNICODE MATCHING STRATEGY
+                const sourceUnicode = sourceChar.unicode!;
+                
+                // If the source char was auto-assigned a PUA (unmapped in font), 
+                // we should NOT match it with a target PUA, because the assignment is arbitrary.
+                // We should treat it as a new glyph.
+                const isAutoAssignedPUA = sourceChar.isPuaAssigned;
+
+                // Does target have this unicode?
+                // We check if the target project has a character with this unicode.
+                let targetChar: Character | undefined;
+                
+                if (!isAutoAssignedPUA) {
+                    // We can iterate currentCharsByName to find unicode match.
+                    // This is O(N), but N is small (thousands).
+                    for (const char of currentCharsByName.values()) {
+                        if (char.unicode === sourceUnicode) {
+                            targetChar = char;
+                            break;
+                        }
+                    }
+                }
+
+                if (targetChar) {
+                    // Match found by Unicode
+                    drawnSourceGlyphs.push({
+                        unicode: sourceUnicode,
+                        name: targetChar.name, // Use target name
+                        sourceGlyph: sourceGlyph,
+                        targetIsDrawn: isGlyphDrawn(currentGlyphData.get(sourceUnicode)),
+                        targetCharExists: true,
+                    });
+                } else {
+                    // No match by Unicode. Treat as new.
+                    // We use source name.
+                    drawnSourceGlyphs.push({
+                        unicode: sourceUnicode,
+                        name: sourceName,
+                        sourceGlyph: sourceGlyph,
+                        targetIsDrawn: false,
+                        targetCharExists: false, 
+                    });
+                }
+
             } else {
-                // Case 2: New Character (not in Target)
-                // We use the Source's unicode as a temporary key for the list
-                drawnSourceGlyphs.push({
-                    unicode: sourceChar.unicode!,
-                    name: sourceName,
-                    sourceGlyph: sourceGlyph,
-                    targetIsDrawn: false,
-                    targetCharExists: false, 
-                });
+                // NAME MATCHING STRATEGY (Legacy/Project Import)
+                const targetChar = currentCharsByName.get(sourceName);
+                
+                if (targetChar && targetChar.unicode !== undefined) {
+                    // Case 1: Exists in Target (Match by Name)
+                    drawnSourceGlyphs.push({
+                        unicode: targetChar.unicode, // Use Target ID
+                        name: sourceName,
+                        sourceGlyph: sourceGlyph,
+                        targetIsDrawn: isGlyphDrawn(currentGlyphData.get(targetChar.unicode)),
+                        targetCharExists: true,
+                    });
+                } else {
+                    // Case 2: New Character (not in Target)
+                    drawnSourceGlyphs.push({
+                        unicode: sourceChar.unicode!,
+                        name: sourceName,
+                        sourceGlyph: sourceGlyph,
+                        targetIsDrawn: false,
+                        targetCharExists: false, 
+                    });
+                }
             }
         }
     }
 
     return drawnSourceGlyphs.sort((a,b) => a.unicode - b.unicode);
-  }, [sourceProject, currentGlyphData, currentCharsByName, glyphVersion]);
+  }, [sourceProject, currentGlyphData, currentCharsByName, glyphVersion, effectiveMatchByUnicode]);
+
+  useEffect(() => {
+    if (sourceProject && sourceProject !== lastProcessedProjectRef.current && comparisons.length > 0) {
+        const autoSelected = new Set<number>();
+        comparisons.forEach(comp => {
+            // Auto-select "filled" glyphs (matched and empty in target)
+            // We interpret "those that will be filled" as safe imports that don't overwrite existing work.
+            if (comp.targetCharExists && !comp.targetIsDrawn) {
+                autoSelected.add(comp.unicode);
+            }
+        });
+        setSelectedUnicodes(autoSelected);
+        lastProcessedProjectRef.current = sourceProject;
+    }
+  }, [comparisons, sourceProject]);
 
 
   const toggleSelection = (unicode: number) => {
@@ -210,22 +320,35 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
                 // Overwrite existing glyph using its own ID
                 glyphsToImport.push([comp.unicode, comp.sourceGlyph]);
             } else {
-                // Import new character (likely a PUA from source)
-                // Assign a NEW valid PUA for the target project to ensure uniqueness
-                puaCounter++;
+                // Import new character
+                let newUnicode = comp.unicode;
                 
-                // Overflow protection: Jump to Plane 15 if BMP PUA is full
-                if (puaCounter > 0xF8FF && puaCounter < 0xF0000) {
-                    puaCounter = 0xF0000;
+                // PUA Collision Avoidance Logic
+                const isSourcePUA = (newUnicode >= 0xE000 && newUnicode <= 0xF8FF) || (newUnicode >= 0xF0000 && newUnicode <= 0xFFFFD);
+                
+                if (effectiveMatchByUnicode && isSourcePUA) {
+                     // Re-assign to ensure safety and continuity in target project
+                     puaCounter++;
+                     if (puaCounter > 0xF8FF && puaCounter < 0xF0000) {
+                        puaCounter = 0xF0000;
+                     }
+                     newUnicode = puaCounter;
+                } else if (!effectiveMatchByUnicode) {
+                     // Original logic for Name matching fallback
+                     if (isSourcePUA) {
+                         puaCounter++;
+                         if (puaCounter > 0xF8FF && puaCounter < 0xF0000) {
+                            puaCounter = 0xF0000;
+                         }
+                         newUnicode = puaCounter;
+                     }
                 }
-                
-                const newUnicode = puaCounter;
-                
+
                 // Add definition
                 newCharactersToAdd.push({
                     name: comp.name,
                     unicode: newUnicode,
-                    glyphClass: 'base', // Default to base, could be refined if source char class is known but simplified here
+                    glyphClass: 'base', 
                     isCustom: true,
                     isPuaAssigned: true
                 });
@@ -251,44 +374,63 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
 
   const renderFileSelectStep = () => (
     <div className="py-4">
-      <h3 className="text-lg font-semibold mb-4">{t('recentProjects')}</h3>
-      {isLoadingProjects ? (
-        <div className="flex justify-center items-center h-48"><SpinnerIcon /></div>
-      ) : recentProjects.length > 0 ? (
-        <div className="max-h-64 overflow-y-auto space-y-2 pr-2 mb-6">
-          {recentProjects.map(p => {
-            const scriptForProject = allScripts.find(s => s.id === p.scriptId) || (p.scriptId?.startsWith('custom_blocks_') ? { nameKey: 'customBlockFont' } : null);
-            const scriptName = scriptForProject ? t(scriptForProject.nameKey) : t('unknownScript');
-            return (
-              <button key={p.projectId} onClick={() => handleProjectSelect(p.projectId)} className="w-full flex items-center gap-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-gray-200 dark:border-gray-600 text-left transition-colors">
-                <div className="flex-grow">
-                  <p className="font-bold text-gray-900 dark:text-white">{p.settings.fontName}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{scriptName}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{new Date(p.savedAt!).toLocaleString()}</p>
+      {!isFontImport && (
+          <>
+            <h3 className="text-lg font-semibold mb-4">{t('recentProjects')}</h3>
+            {isLoadingProjects ? (
+                <div className="flex justify-center items-center h-48"><SpinnerIcon /></div>
+            ) : recentProjects.length > 0 ? (
+                <div className="max-h-64 overflow-y-auto space-y-2 pr-2 mb-6">
+                {recentProjects.map(p => {
+                    const scriptForProject = allScripts.find(s => s.id === p.scriptId) || (p.scriptId?.startsWith('custom_blocks_') ? { nameKey: 'customBlockFont' } : null);
+                    const scriptName = scriptForProject ? t(scriptForProject.nameKey) : t('unknownScript');
+                    return (
+                    <button key={p.projectId} onClick={() => handleProjectSelect(p.projectId)} className="w-full flex items-center gap-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-gray-200 dark:border-gray-600 text-left transition-colors">
+                        <div className="flex-grow">
+                        <p className="font-bold text-gray-900 dark:text-white">{p.settings.fontName}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{scriptName}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{new Date(p.savedAt!).toLocaleString()}</p>
+                        </div>
+                    </button>
+                    )
+                })}
                 </div>
-              </button>
-            )
-          })}
-        </div>
-      ) : (
-        <p className="text-center text-gray-500 py-8">{t('noSavedProjectsFound')}</p>
+            ) : (
+                <p className="text-center text-gray-500 py-8">{t('noSavedProjectsFound')}</p>
+            )}
+        
+            <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300 dark:border-gray-600" /></div>
+                <div className="relative flex justify-center"><span className="px-2 bg-white dark:bg-gray-800 text-sm text-gray-500">{t('orSeparator')}</span></div>
+            </div>
+          </>
       )}
-  
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300 dark:border-gray-600" /></div>
-        <div className="relative flex justify-center"><span className="px-2 bg-white dark:bg-gray-800 text-sm text-gray-500">{t('orSeparator')}</span></div>
-      </div>
       
       <div className="text-center">
-        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
-        <p className="text-gray-600 dark:text-gray-400 mb-4">{t('importGlyphsDescription')}</p>
-        <button 
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-3 px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
-        >
-          <ImportIcon />
-          <span>{t('selectProjectFile')}</span>
-        </button>
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            className="hidden" 
+            accept={isFontImport ? ".ttf,.otf,.woff,.woff2" : ".json"} 
+        />
+        <p className="text-gray-600 dark:text-gray-400 mb-4">{isFontImport ? (t('importFontGlyphsDescription') || 'Select a font file to import glyphs from.') : t('importGlyphsDescription')}</p>
+        
+        {isParsingFont ? (
+             <div className="flex flex-col items-center justify-center p-4">
+                <SpinnerIcon className="w-8 h-8 text-indigo-600 mb-2" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">{parsingStatus}</p>
+             </div>
+        ) : (
+            <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-3 px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
+            >
+            <ImportIcon />
+            <span>{isFontImport ? (t('selectFontFile') || 'Select Font File') : t('selectProjectFile')}</span>
+            </button>
+        )}
+        
         {fileError && <p className="mt-4 text-red-500">{fileError}</p>}
       </div>
     </div>
@@ -357,6 +499,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
 
   const getTitle = () => {
     if (step === 'confirm') return t('confirmImportTitle');
+    if (isFontImport) return t('importGlyphsFromFontTitle') || 'Import Glyphs from Font';
     return t('importGlyphsModalTitle');
   };
 

@@ -364,7 +364,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 onSaveProject={handleSaveProject}
                 onSaveToDB={handleSaveToDB}
                 onLoadProject={handleLoadProject}
-                onImportGlyphsClick={() => layout.openModal('importGlyphs')}
+                onImportGlyphsClick={(isFontImport) => layout.openModal('importGlyphs', { isFontImport })}
                 onAddGlyphClick={(options) => layout.openModal('addGlyph', options)}
                 onAddBlock={() => layout.openModal('addBlock')}
                 onExportClick={startExportProcess}
@@ -600,7 +600,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         />
       )}
       {layout.activeModal?.name === 'addBlock' && <UnicodeBlockSelectorModal isOpen={true} onClose={layout.closeModal} onAddBlock={handleAddBlock} onCheckExists={handleCheckGlyphExists} mode="addBlocks" />}
-      {layout.activeModal?.name === 'importGlyphs' && <ImportGlyphsModal isOpen={true} onClose={layout.closeModal} onImport={handleImportGlyphs} allScripts={allScripts} />}
+      {layout.activeModal?.name === 'importGlyphs' && <ImportGlyphsModal isOpen={true} onClose={layout.closeModal} onImport={handleImportGlyphs} allScripts={allScripts} isFontImport={layout.activeModal.props?.isFontImport} />}
       {layout.activeModal?.name === 'importFont' && (
           <ImportFontModal 
             isOpen={true} 

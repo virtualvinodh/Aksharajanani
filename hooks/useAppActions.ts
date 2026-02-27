@@ -7,6 +7,8 @@ import { useRules } from '../contexts/RulesContext';
 import { useProject } from '../contexts/ProjectContext';
 import { ScriptConfig, ProjectData } from '../types';
 
+import { useGlyphData } from '../contexts/GlyphDataContext';
+import { mergeFontIntoProject } from '../services/importFontService';
 import { useProjectPersistence } from './actions/useProjectPersistence';
 import { useGlyphActions } from './actions/useGlyphActions';
 import { useProjectLoad } from './actions/useProjectLoad';
@@ -33,6 +35,7 @@ export const useAppActions = ({
     const { workspace, setWorkspace } = layout;
     
     // Consolidate all project-related data from useProject
+    const { dispatch: glyphDataDispatch } = useGlyphData();
     const { 
         script, // Retrieved from ProjectContext now
         projectName, 
@@ -42,9 +45,34 @@ export const useAppActions = ({
         markAttachmentRules, 
         markAttachmentClasses, 
         baseAttachmentClasses,
-        characterSets
+        characterSets,
+        dispatch: characterDispatch
     } = useProject();
     
+    const handleMergeImportedFont = useCallback((importedProject: ProjectData) => {
+        const currentProjectState = getProjectState();
+        if (!currentProjectState) return;
+
+        const { newGlyphs, newCharacters } = mergeFontIntoProject(currentProjectState, importedProject);
+
+        if (newGlyphs.length > 0) {
+            glyphDataDispatch({ type: 'BATCH_UPDATE_GLYPHS', payload: newGlyphs });
+        }
+
+        if (newCharacters.length > 0) {
+            characterDispatch({ 
+                type: 'ADD_CHARACTERS', 
+                payload: { 
+                    characters: newCharacters, 
+                    activeTabNameKey: 'Imported' 
+                } 
+            });
+        }
+        
+        layout.showNotification(t('fontMergedSuccess', { count: newCharacters.length }) || `Imported ${newCharacters.length} glyphs`, 'success');
+        layout.closeModal();
+    }, [getProjectState, glyphDataDispatch, characterDispatch, layout, t]);
+
     const dependencyMap = useRef<Map<number, Set<number>>>(new Map());
     const [isScriptDataLoadingState, setIsScriptDataLoadingState] = useState(true);
 
@@ -301,6 +329,7 @@ export const useAppActions = ({
         handleCheckNameExists,
         handleAddBlock,
         startExportProcess,
-        handleLoadProjectData: initializeProjectState
+        handleLoadProjectData: initializeProjectState,
+        handleMergeImportedFont
     };
 };

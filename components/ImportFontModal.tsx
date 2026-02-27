@@ -9,9 +9,10 @@ interface ImportFontModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (projectData: ProjectData) => void;
+  isMergeMode?: boolean;
 }
 
-const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onImport }) => {
+const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onImport, isMergeMode }) => {
   const { t } = useLocale();
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -49,7 +50,7 @@ const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onIm
     <Modal
       isOpen={isOpen}
       onClose={!isProcessing ? onClose : () => {}}
-      title={t('importFont') || 'Import Font'}
+      title={isMergeMode ? (t('importGlyphsFromFont') || 'Import Glyphs from Font') : (t('importFont') || 'Import Font')}
       size="md"
     >
       <div className="p-4">

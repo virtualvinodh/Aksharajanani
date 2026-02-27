@@ -22,7 +22,7 @@ interface AppHeaderProps {
     onSaveProject: () => void;
     onSaveToDB: () => void;
     onLoadProject: () => void;
-    onImportGlyphsClick: () => void;
+    onImportGlyphsClick: (isFontImport?: boolean) => void;
     onAddGlyphClick: (options?: { prefillName?: string; targetSet?: string }) => void;
     onAddBlock: () => void;
     onExportClick: () => void;
@@ -224,6 +224,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 <button onClick={() => { onSaveAs(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CopyIcon /> {t('saveCopy')}</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                 <button onClick={() => { onImportGlyphsClick(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ImportIcon /> {t('importFromProject')}</button>
+                                <button onClick={() => { onImportGlyphsClick(true); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><ImportIcon /> {t('importFromFont') || 'Import from Font'}</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                                 <button onClick={() => { onTakeSnapshot(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CameraIcon /> {t('takeSnapshot')}</button>
                                 <button onClick={() => { onRestoreSnapshot(); setIsMoreMenuOpen(false); }} disabled={!hasSnapshot} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"><HistoryIcon /> {t('restoreSnapshot')}</button>
