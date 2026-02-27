@@ -49,30 +49,6 @@ export const useAppActions = ({
         dispatch: characterDispatch
     } = useProject();
     
-    const handleMergeImportedFont = useCallback((importedProject: ProjectData) => {
-        const currentProjectState = getProjectState();
-        if (!currentProjectState) return;
-
-        const { newGlyphs, newCharacters } = mergeFontIntoProject(currentProjectState, importedProject);
-
-        if (newGlyphs.length > 0) {
-            glyphDataDispatch({ type: 'BATCH_UPDATE_GLYPHS', payload: newGlyphs });
-        }
-
-        if (newCharacters.length > 0) {
-            characterDispatch({ 
-                type: 'ADD_CHARACTERS', 
-                payload: { 
-                    characters: newCharacters, 
-                    activeTabNameKey: 'Imported' 
-                } 
-            });
-        }
-        
-        layout.showNotification(t('fontMergedSuccess', { count: newCharacters.length }) || `Imported ${newCharacters.length} glyphs`, 'success');
-        layout.closeModal();
-    }, [getProjectState, glyphDataDispatch, characterDispatch, layout, t]);
-
     const dependencyMap = useRef<Map<number, Set<number>>>(new Map());
     const [isScriptDataLoadingState, setIsScriptDataLoadingState] = useState(true);
 
@@ -117,6 +93,30 @@ export const useAppActions = ({
         projectId, setProjectId, setLastSavedState, getProjectState,
         hasUnsavedChanges, handleSaveToDB
     } = useProjectPersistence(projectDataToRestore?.projectId, isScriptDataLoadingState);
+
+    const handleMergeImportedFont = useCallback((importedProject: ProjectData) => {
+        const currentProjectState = getProjectState();
+        if (!currentProjectState) return;
+
+        const { newGlyphs, newCharacters } = mergeFontIntoProject(currentProjectState, importedProject);
+
+        if (newGlyphs.length > 0) {
+            glyphDataDispatch({ type: 'BATCH_UPDATE_GLYPHS', payload: newGlyphs });
+        }
+
+        if (newCharacters.length > 0) {
+            characterDispatch({ 
+                type: 'ADD_CHARACTERS', 
+                payload: { 
+                    characters: newCharacters, 
+                    activeTabNameKey: 'Imported' 
+                } 
+            });
+        }
+        
+        layout.showNotification(t('fontMergedSuccess', { count: newCharacters.length }) || `Imported ${newCharacters.length} glyphs`, 'success');
+        layout.closeModal();
+    }, [getProjectState, glyphDataDispatch, characterDispatch, layout, t]);
 
     // 3. Glyph Actions Hook
     const {

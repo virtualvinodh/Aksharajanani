@@ -15,6 +15,24 @@ export const parseFontFile = async (file: File): Promise<any> => {
     });
 };
 
+export const mergeFontIntoProject = (
+    currentProject: ProjectData,
+    importedProject: ProjectData
+): { newGlyphs: GlyphData[], newCharacters: any[] } => {
+    const currentGlyphUnicodes = new Set(currentProject.glyphs.map(g => g.unicode));
+    const newGlyphs = importedProject.glyphs.filter(g => !currentGlyphUnicodes.has(g.unicode));
+    
+    const currentCharacterUnicodes = new Set(
+        currentProject.characterSets.flatMap(set => set.characters.map(c => c.unicode))
+    );
+    
+    const newCharacters = importedProject.characterSets
+        .flatMap(set => set.characters)
+        .filter(c => c.unicode !== undefined && !currentCharacterUnicodes.has(c.unicode));
+        
+    return { newGlyphs, newCharacters };
+};
+
 export const extractProjectData = async (
     font: any, 
     fileName: string,
