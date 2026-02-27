@@ -118,11 +118,7 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
             setFocusedPathId(grabbedPoint.pathId);
             setIsDrawing(true);
         } else {
-            // If clicking empty space (and not hitting a point or handle),
-            // switch back to select mode.
-            if (onToolChange) {
-                onToolChange('select');
-            }
+            // If clicking empty space, clear selection but remain in edit mode.
             setSelectedPointInfo(null);
             setFocusedPathId(null);
         }

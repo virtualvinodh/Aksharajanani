@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
-import { PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
+import { EditIcon, PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
 
 interface DrawingToolbarProps {
@@ -109,6 +109,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     const commonTools = (
         <>
             <ToolButton tool="select" currentTool={currentTool} label={t('select')} onClick={setCurrentTool} dataTour="tool-select"><SelectIcon /></ToolButton>
+            <ToolButton tool="edit" currentTool={currentTool} label={t('edit')} onClick={setCurrentTool} dataTour="tool-edit"><EditIcon /></ToolButton>
             <ToolButton tool="pan" currentTool={currentTool} label={t('pan')} onClick={setCurrentTool} dataTour="tool-pan"><PanIcon /></ToolButton>
         </>
     );

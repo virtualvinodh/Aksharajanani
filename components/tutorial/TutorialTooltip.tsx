@@ -84,7 +84,7 @@ const TutorialTooltip = ({
               <div className="flex justify-between items-center">
                    <div className="flex items-center">
                       {!isLastStep && (
-                           <button {...skipProps} onClick={(e) => performDismiss(e, false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs font-bold uppercase tracking-wider transition-colors">
+                                                      <button {...skipProps} onClick={(e) => performDismiss(e, true)} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs font-bold uppercase tracking-wider transition-colors">
                                {step.data?.isTutorial ? (labels.exit || 'Exit Tutorial') : (labels.close || 'Close')}
                            </button>
                       )}

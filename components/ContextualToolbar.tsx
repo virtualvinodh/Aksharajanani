@@ -210,15 +210,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
       style={style}
       onMouseDown={(e) => e.stopPropagation()} 
     >
-       <div className="flex items-center border-r border-gray-200 dark:border-gray-700 pr-2 mr-1">
-        <button
-            onClick={onEditMode}
-            title={t('editPoints')}
-            className={buttonClass}
-        >
-             <ControlPointsIcon />
-        </button>
-      </div>
+
 
       <div className="flex items-center gap-1 border-r border-gray-200 dark:border-gray-700 pr-2">
         <button 
