@@ -329,7 +329,7 @@ export const extractProjectData = async (
             glyphClass: glyphClass,
             advWidth: Math.round(glyph.advanceWidth * scale),
             lsb: Math.round((glyph.leftSideBearing || 0) * scale),
-            rsb: 0, // Calculated from advWidth usually
+            rsb: Math.round(((glyph.advanceWidth || 0) - (glyph.xMax || 0)) * scale),
             isPuaAssigned: isPuaAssigned
         });
     }
@@ -370,6 +370,17 @@ export const extractProjectData = async (
             
             transformedFeaCode = transformedFeaCode!.replace(regex, glyphMap[originalName]);
         });
+
+        // Remove script and language from aalt feature block
+        transformedFeaCode = transformedFeaCode.replace(
+            /feature aalt \{([\s\S]*?)\} aalt;/g, 
+            (match, blockContent) => {
+                const cleanedContent = blockContent
+                    .replace(/^\s*script\s+[^;]+;/gm, '')
+                    .replace(/^\s*language\s+[^;]+;/gm, '');
+                return `feature aalt {${cleanedContent}} aalt;`;
+            }
+        );
     }
 
     return {
