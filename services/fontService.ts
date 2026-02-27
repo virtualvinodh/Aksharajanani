@@ -7,7 +7,7 @@ import { VEC } from '../utils/vectorUtils';
 import { curveToPolyline, quadraticCurveToPolyline, getAccurateGlyphBBox, BoundingBox, getStrokeOutlinePoints } from './glyphRenderService';
 import { calculateDefaultMarkOffset } from './positioningHeuristicsService';
 import { DRAWING_CANVAS_SIZE } from '../constants';
-import { isGlyphDrawn, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
+import { isGlyphDrawn, getGlyphExportNameByUnicode, shouldExportEmpty } from '../utils/glyphUtils';
 import { expandMembers } from './groupExpansionService';
 import { deepClone } from '../utils/cloneUtils';
 
@@ -16,8 +16,6 @@ import { deepClone } from '../utils/cloneUtils';
 declare var opentype: any;
 // paper.js is also loaded from CDN.
 declare var paper: any;
-// unicode-properties is loaded from CDN.
-declare const UnicodeProperties: any;
 
 
 /**
@@ -138,17 +136,7 @@ const createFont = (
     // 2. Ensure essential glyphs (whitespace, format characters like ZWJ, ZWNJ) exist in the export data, even if empty.
     allCharactersMap.forEach((char, unicode) => {
         if (!finalGlyphData.has(unicode)) {
-            let shouldEnsure = false;
-            if (typeof UnicodeProperties !== 'undefined') {
-                const category = UnicodeProperties.getCategory(unicode);
-                const isWhitespace = UnicodeProperties.isWhitespace(unicode);
-                shouldEnsure = isWhitespace || category === 'Cf' || category === 'Cc';
-            } else {
-                // Fallback to hardcoded list if library is not available
-                shouldEnsure = unicode === 32 || unicode === 8205 || unicode === 8204;
-            }
-            
-            if (shouldEnsure) {
+            if (shouldExportEmpty(unicode)) {
                 finalGlyphData.set(unicode, { paths: [] });
             }
         }
@@ -172,18 +160,7 @@ const createFont = (
     finalGlyphData.forEach((data, unicode) => {
       const drawn = isGlyphDrawn(data);
       
-      // Check if this character should be exported even if not drawn (e.g. whitespace, format characters)
-      let shouldExportEmpty = false;
-      if (typeof UnicodeProperties !== 'undefined') {
-          const category = UnicodeProperties.getCategory(unicode);
-          const isWhitespace = UnicodeProperties.isWhitespace(unicode);
-          shouldExportEmpty = isWhitespace || category === 'Cf';
-      } else {
-          // Fallback to hardcoded list if library is not available
-          shouldExportEmpty = unicode === 32 || unicode === 8205 || unicode === 8204;
-      }
-
-      if (!drawn && !shouldExportEmpty) {
+      if (!drawn && !shouldExportEmpty(unicode)) {
           return;
       }
 

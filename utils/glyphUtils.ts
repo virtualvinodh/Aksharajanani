@@ -1,6 +1,23 @@
 
 import { GlyphData, Character, MarkPositioningMap, KerningMap } from '../types';
 
+declare const UnicodeProperties: any;
+
+/**
+ * Determines if a character should be exported even if it has no drawn paths.
+ * This includes whitespace, control characters (Cc), and format characters (Cf).
+ */
+export const shouldExportEmpty = (unicode: number | undefined): boolean => {
+    if (unicode === undefined) return false;
+    if (typeof UnicodeProperties === 'undefined') {
+        // Fallback to hardcoded list if library is not available
+        return unicode === 32 || unicode === 8205 || unicode === 8204;
+    }
+    const category = UnicodeProperties.getCategory(unicode);
+    const isWhitespace = UnicodeProperties.isWhitespace(unicode);
+    return isWhitespace || category === 'Cf' || category === 'Cc';
+};
+
 /**
  * Checks if a glyph has been drawn, considering both freehand points and vector outlines.
  * @param glyphData The glyph data to check.
@@ -48,8 +65,8 @@ export const isGlyphRenderable = (
     if (char.link) return areComponentsReady(char.link);
     if (char.composite) return areComponentsReady(char.composite);
 
-    // 4. Special Case: ZWJ/ZWNJ/Space are always "renderable" (though invisible)
-    if (char.unicode === 32 || char.unicode === 8204 || char.unicode === 8205) return true;
+    // 4. Special Case: Whitespace, Control, and Format characters are always "renderable" (though invisible)
+    if (shouldExportEmpty(char.unicode)) return true;
 
     return false;
 };
