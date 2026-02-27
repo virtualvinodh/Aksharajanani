@@ -136,7 +136,7 @@ const createFont = (
     // 2. Ensure essential glyphs (whitespace, format characters like ZWJ, ZWNJ) exist in the export data, even if empty.
     allCharactersMap.forEach((char, unicode) => {
         if (!finalGlyphData.has(unicode)) {
-            if (shouldExportEmpty(unicode)) {
+            if (shouldExportEmpty(unicode, char.name)) {
                 finalGlyphData.set(unicode, { paths: [] });
             }
         }
@@ -160,7 +160,8 @@ const createFont = (
     finalGlyphData.forEach((data, unicode) => {
       const drawn = isGlyphDrawn(data);
       
-      if (!drawn && !shouldExportEmpty(unicode)) {
+      const char = allCharactersMap.get(unicode);
+      if (!drawn && !shouldExportEmpty(unicode, char?.name)) {
           return;
       }
 
@@ -465,13 +466,15 @@ export const exportToOtf = async (
     // Pre-calculate shouldExportEmpty for all relevant unicodes to pass to the worker.
     // This effectively "sends" the UnicodeProperties library's knowledge to the worker.
     finalGlyphData.forEach((_, unicode) => {
-        shouldExportEmptyMap.set(unicode, shouldExportEmpty(unicode));
+        const char = allCharsByUnicode.get(unicode);
+        shouldExportEmptyMap.set(unicode, shouldExportEmpty(unicode, char?.name));
     });
-    allCharsByUnicode.forEach((_, unicode) => {
-        shouldExportEmptyMap.set(unicode, shouldExportEmpty(unicode));
+    allCharsByUnicode.forEach((char, unicode) => {
+        shouldExportEmptyMap.set(unicode, shouldExportEmpty(unicode, char.name));
     });
     [32, 8205, 8204].forEach(u => {
-        shouldExportEmptyMap.set(u, shouldExportEmpty(u));
+        const char = allCharsByUnicode.get(u);
+        shouldExportEmptyMap.set(u, shouldExportEmpty(u, char?.name));
     });
 
     const allCharsByName = new Map<string, Character>();

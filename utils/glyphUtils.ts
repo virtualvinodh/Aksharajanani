@@ -5,9 +5,10 @@ declare const UnicodeProperties: any;
 
 /**
  * Determines if a character should be exported even if it has no drawn paths.
- * This includes whitespace, control characters (Cc), and format characters (Cf).
+ * This includes whitespace, control characters (Cc), format characters (Cf), and glyphs with 'null' in their name.
  */
-export const shouldExportEmpty = (unicode: number | undefined): boolean => {
+export const shouldExportEmpty = (unicode: number | undefined, name?: string): boolean => {
+    if (name?.toLowerCase().includes('null')) return true;
     if (unicode === undefined) return false;
     if (typeof UnicodeProperties === 'undefined') {
         // Fallback to hardcoded list if library is not available
@@ -66,7 +67,7 @@ export const isGlyphRenderable = (
     if (char.composite) return areComponentsReady(char.composite);
 
     // 4. Special Case: Whitespace, Control, and Format characters are always "renderable" (though invisible)
-    if (shouldExportEmpty(char.unicode)) return true;
+    if (shouldExportEmpty(char.unicode, char.name)) return true;
 
     return false;
 };
