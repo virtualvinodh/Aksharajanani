@@ -11,7 +11,7 @@ Stored in IndexedDB `projects` store. This represents the total state of a font 
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `projectId` | `number` | Unique ID (Auto-increment PK). |
+| `projectId` | `number` | Unique ID (Auto-increment Primary-Key). |
 | `name` | `string` | User-defined project name. |
 | `scriptId` | `string` | ID of the base script (e.g., "tamil"). |
 | `settings` | `AppSettings` | Global config (Stroke, Contrast, Autosave). |
