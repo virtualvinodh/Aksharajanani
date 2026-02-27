@@ -547,6 +547,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
             },
             characterSetData: projectData.characterSets || [],
             rulesData: projectData.fontRules || { 'dflt': {} },
+            rulesFeaContent: projectData.manualFeaCode, // Pass extracted FEA to the script config
             sampleText: "", 
         };
         

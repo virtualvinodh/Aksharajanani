@@ -3,16 +3,16 @@ import React, { useState, useRef } from 'react';
 import Modal from './Modal';
 import { useLocale } from '../contexts/LocaleContext';
 import { parseFontFile, extractProjectData } from '../services/importFontService';
+import { extractFea } from '../services/importFeaService';
 import { ProjectData } from '../types';
 
 interface ImportFontModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (projectData: ProjectData) => void;
-  isMergeMode?: boolean;
 }
 
-const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onImport, isMergeMode }) => {
+const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onImport }) => {
   const { t } = useLocale();
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -32,10 +32,20 @@ const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onIm
     try {
       const font = await parseFontFile(file);
       
+      let manualFeaCode: string | undefined;
+      try {
+          setStatus(t('extractingFea') || 'Extracting OpenType features...');
+          // We pass the file directly as a Blob
+          manualFeaCode = await extractFea(file, (msg) => setStatus(msg), t);
+      } catch (feaErr) {
+          console.warn("Failed to extract FEA:", feaErr);
+          // Continue without FEA
+      }
+
       const projectData = await extractProjectData(font, file.name, (p, s) => {
         setProgress(p);
         setStatus(s);
-      });
+      }, manualFeaCode);
 
       onImport(projectData);
       onClose();
@@ -50,7 +60,7 @@ const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onIm
     <Modal
       isOpen={isOpen}
       onClose={!isProcessing ? onClose : () => {}}
-      title={isMergeMode ? (t('importGlyphsFromFont') || 'Import Glyphs from Font') : (t('importFont') || 'Import Font')}
+      title={t('importFont') || 'Import Font'}
       size="md"
     >
       <div className="p-4">

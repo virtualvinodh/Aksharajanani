@@ -18,7 +18,8 @@ export const parseFontFile = async (file: File): Promise<any> => {
 export const extractProjectData = async (
     font: any, 
     fileName: string,
-    onProgress: (progress: number, status: string) => void
+    onProgress: (progress: number, status: string) => void,
+    manualFeaCode?: string
 ): Promise<ProjectData> => {
     
     const scale = 1000 / font.unitsPerEm;
@@ -293,83 +294,7 @@ export const extractProjectData = async (
         metrics: metrics,
         glyphs: glyphs,
         characterSets: [characterSet],
-        savedAt: new Date().toISOString()
+        savedAt: new Date().toISOString(),
+        manualFeaCode: manualFeaCode
     };
-};
-
-export const mergeFontIntoProject = (
-    currentProject: ProjectData,
-    importedProject: ProjectData
-): { newGlyphs: [number, GlyphData][], newCharacters: Character[] } => {
-    
-    const newGlyphs: [number, GlyphData][] = [];
-    const newCharacters: Character[] = [];
-    
-    // 1. Find the highest PUA used in the current project
-    let maxPua = 0xE000 - 1;
-    const currentUnicodes = new Set<number>();
-    
-    if (currentProject.characterSets) {
-        currentProject.characterSets.forEach(set => {
-            set.characters.forEach(char => {
-                if (char.unicode) {
-                    currentUnicodes.add(char.unicode);
-                    if (char.unicode >= 0xE000 && char.unicode <= 0xF8FF) {
-                        if (char.unicode > maxPua) {
-                            maxPua = char.unicode;
-                        }
-                    }
-                }
-            });
-        });
-    }
-
-    // 2. Process imported glyphs
-    // importedProject.glyphs is [number, GlyphData][]
-    const importedGlyphMap = new Map(importedProject.glyphs as [number, GlyphData][]);
-    
-    // We need to map old (imported) unicode to new (merged) unicode for PUA reassignment
-    const unicodeMap = new Map<number, number>();
-
-    if (importedProject.characterSets) {
-        importedProject.characterSets.forEach(set => {
-            set.characters.forEach(char => {
-                if (!char.unicode) return;
-
-                let finalUnicode = char.unicode;
-                let finalName = char.name;
-
-                // If it was assigned PUA during import, re-assign to avoid collision
-                if (char.isPuaAssigned) {
-                    maxPua++;
-                    finalUnicode = maxPua;
-                    finalName = `uni${finalUnicode.toString(16).toUpperCase().padStart(4, '0')}`;
-                    unicodeMap.set(char.unicode, finalUnicode);
-                } else {
-                    // Standard unicode. 
-                    // If it exists in current project, we overwrite (or just add if we treat it as same char).
-                    // The user said "creates custom glyphs for those without mapping".
-                    // For those WITH mapping, we just import them.
-                    unicodeMap.set(char.unicode, finalUnicode);
-                }
-
-                // Create new character definition
-                newCharacters.push({
-                    ...char,
-                    unicode: finalUnicode,
-                    name: finalName,
-                    // Ensure isPuaAssigned is carried over or set if we just assigned it
-                    isPuaAssigned: char.isPuaAssigned || (finalUnicode >= 0xE000 && finalUnicode <= 0xF8FF)
-                });
-
-                // Get glyph data
-                const glyphData = importedGlyphMap.get(char.unicode);
-                if (glyphData) {
-                    newGlyphs.push([finalUnicode, glyphData]);
-                }
-            });
-        });
-    }
-
-    return { newGlyphs, newCharacters };
 };

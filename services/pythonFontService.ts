@@ -1,5 +1,4 @@
 
-
 declare var loadPyodide: any;
 
 let worker: Worker | null = null;
@@ -83,6 +82,23 @@ def compile_fea_and_patch(font_data, fea_text):
     
     # Return a dictionary with font data and any error message
     return { "font_data": buffer.getvalue(), "fea_error": fea_error }
+
+def extract_fea(font_data):
+    """Extracts a basic FEA structure from the font."""
+    try:
+        from fontFeatures.ttLib import unparse
+        font_bytes = font_data.to_py()
+        font = TTFont(io.BytesIO(font_bytes))
+        
+        features = unparse(font)
+        fea_code = features.asFea()
+        
+        if not fea_code or not fea_code.strip():
+            return "# No OpenType features found in the imported font."
+            
+        return fea_code
+    except Exception as e:
+        return f"# Error extracting FEA: {str(e)}"
 \`;
 
 async function initializePyodide() {
@@ -95,8 +111,12 @@ async function initializePyodide() {
     await pyodide.loadPackage("micropip");
     const micropip = pyodide.pyimport("micropip");
 
-    self.postMessage({ type: 'status', payload: 'installingFonttools' });
-    await micropip.install('fonttools');
+    #self.postMessage({ type: 'status', payload: 'installingFonttools' });
+    #await micropip.install('fonttools');
+    
+    self.postMessage({ type: 'status', payload: 'installingFontFeatures' });
+    await micropip.install('fontFeatures');
+
     micropip.destroy();
     
     pyodide.runPython(pythonCode);
@@ -147,6 +167,32 @@ self.onmessage = async (event) => {
                 }
             });
         }
+    } else if (type === 'extract') {
+        const { fontBuffer, id } = payload;
+        if (!pyodide) {
+             self.postMessage({ type: 'error', payload: { id, message: 'Pyodide not initialized yet.' } });
+             return;
+        }
+        try {
+            const extractFea = pyodide.globals.get('extract_fea');
+            const result = extractFea(fontBuffer);
+            
+            self.postMessage({
+                type: 'result',
+                payload: {
+                    id,
+                    extractedFea: result
+                }
+            });
+        } catch (error) {
+            self.postMessage({
+                type: 'error',
+                payload: {
+                    id,
+                    message: error instanceof Error ? error.message : 'Unknown extraction error'
+                }
+            });
+        }
     }
 };
 `;
@@ -171,10 +217,14 @@ export function initializePyodide() {
         const { type, payload } = event.data;
 
         if (type === 'result') {
-            const { id, blobBuffer, feaError } = payload;
+            const { id, blobBuffer, feaError, extractedFea } = payload;
             if (requestMap.has(id)) {
-                const blob = new Blob([blobBuffer], { type: 'font/opentype' });
-                requestMap.get(id)!.resolve({ blob, feaError });
+                if (extractedFea !== undefined) {
+                    requestMap.get(id)!.resolve(extractedFea);
+                } else {
+                    const blob = new Blob([blobBuffer], { type: 'font/opentype' });
+                    requestMap.get(id)!.resolve({ blob, feaError });
+                }
                 requestMap.delete(id);
             }
         } else if (type === 'error') {
@@ -205,6 +255,37 @@ export function initializePyodide() {
     };
 
     worker.postMessage({ type: 'init' });
+}
+
+export async function extractFea(
+    fontBlob: Blob,
+    showNotification?: (message: string, type?: 'success' | 'info') => void,
+    t?: (key: string) => string
+): Promise<string> {
+    if (!worker || !pyodideReadyPromise) {
+        initializePyodide();
+    }
+    
+    if (!isPyodideReady) {
+        if (showNotification && t) showNotification(t('preparingPythonEnv'), 'info');
+        await pyodideReadyPromise;
+    }
+
+    if (showNotification && t) showNotification(t('extractingFea'), 'info');
+
+    const fontBuffer = await fontBlob.arrayBuffer();
+    const currentId = requestId++;
+
+    return new Promise((resolve, reject) => {
+        requestMap.set(currentId, { resolve, reject });
+        worker!.postMessage({
+            type: 'extract',
+            payload: {
+                id: currentId,
+                fontBuffer
+            }
+        }, [fontBuffer]);
+    });
 }
 
 export async function compileFeaturesAndPatch(
