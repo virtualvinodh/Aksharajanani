@@ -289,15 +289,36 @@ export const useProjectLoad = ({
             let sampleText = currentScript.sampleText;
             try {
                 const sampleTextResponse = await fetch(`/data/sample_${currentScript.id}.txt`);
-                if (sampleTextResponse.ok) sampleText = await sampleTextResponse.text();
-            } catch (e) { /* Ignore */ }
+                if (sampleTextResponse.ok) {
+                    const text = await sampleTextResponse.text();
+                    const contentType = sampleTextResponse.headers.get("content-type");
+                    // Check if it's actually HTML (SPA fallback)
+                    if (contentType && contentType.includes("text/html")) {
+                        sampleText = "";
+                    } else if (text.trim().toLowerCase().startsWith('<!doctype html>')) {
+                        sampleText = "";
+                    } else {
+                        sampleText = text;
+                    }
+                } else {
+                    sampleText = "";
+                }
+            } catch (e) { 
+                sampleText = "";
+            }
 
             if (!sampleText && processedCharSets) {
                 const allChars = processedCharSets.flatMap(cs => cs.characters);
-                const basesAndLigs = allChars.filter(c => c.unicode !== undefined && (c.glyphClass === 'base' || c.glyphClass === 'ligature')).filter(c => c.name !== '◌');
-                const withSpaces = allChars.map(c => c.name).join(' ');
-                const withoutSpaces = basesAndLigs.map(c => c.name).join('');
-                sampleText = `${withSpaces}\n\n${withoutSpaces}`;
+                if (allChars.length > 0) {
+                    const basesAndLigs = allChars.filter(c => c.unicode !== undefined && (c.glyphClass === 'base' || c.glyphClass === 'ligature')).filter(c => c.name !== '◌');
+                    const withSpaces = allChars.filter(c => c.unicode !== undefined).map(c => String.fromCodePoint(c.unicode!)).join(' ');
+                    const withoutSpaces = basesAndLigs.filter(c => c.unicode !== undefined).map(c => String.fromCodePoint(c.unicode!)).join('');
+                    sampleText = `${withSpaces}\n\n${withoutSpaces}`.trim();
+                } else {
+                    sampleText = "";
+                }
+            } else if (!sampleText) {
+                sampleText = "";
             }
             
             if (sampleText && sampleText !== currentScript.sampleText) {

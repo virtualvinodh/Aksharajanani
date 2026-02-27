@@ -240,6 +240,7 @@ const DrawingModal: React.FC<any> = ({
         onUnlock={() => setIsUnlockConfirmOpen(true)} onRelink={() => setIsRelinkConfirmOpen(true)}
         glyphClass={glyphClass} setGlyphClass={setGlyphClass} advWidth={advWidth} setAdvWidth={setAdvWidth}
         label={label} setLabel={setLabel}
+        liga={liga} setLiga={setLiga}
         position={position} setPosition={setPosition}
         kern={kern} setKern={setKern}
         gpos={gpos} setGpos={setGpos}

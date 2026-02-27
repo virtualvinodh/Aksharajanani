@@ -1,5 +1,6 @@
 
 import { ProjectData, GlyphData, Path, Segment, Point, AppSettings, FontMetrics, CharacterSet, ScriptDefaults } from '../types';
+import { getGlyphExportNameByUnicode } from '../utils/glyphUtils';
 
 const generateId = () => `${Date.now()}-${Math.random()}`;
 
@@ -281,7 +282,7 @@ export const extractProjectData = async (
             
             characterSet.characters.push({
                 unicode: unicode,
-                name: glyph.name || `uni${unicode.toString(16).toUpperCase().padStart(4, '0')}`,
+                name: glyph.name || getGlyphExportNameByUnicode(unicode),
                 glyphClass: 'base',
                 advWidth: Math.round(glyph.advanceWidth * scale),
                 lsb: Math.round((glyph.leftSideBearing || 0) * scale),
@@ -304,6 +305,28 @@ export const extractProjectData = async (
         showUnicodeValues: true
     };
 
+    let transformedFeaCode = manualFeaCode;
+    if (transformedFeaCode) {
+        const glyphMap: Record<string, string> = {};
+        characterSet.characters.forEach(char => {
+            if (char.name && char.unicode !== undefined) {
+                glyphMap[char.name] = getGlyphExportNameByUnicode(char.unicode);
+            }
+        });
+
+        const sortedNames = Object.keys(glyphMap).sort((a, b) => b.length - a.length);
+
+        sortedNames.forEach(originalName => {
+            // Escape special regex characters in the glyph name (like periods)
+            const escapedName = originalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            // Regex: Match the name ONLY if it's not surrounded by other valid glyph characters
+            const regex = new RegExp(`(?<![A-Za-z0-9_.-])${escapedName}(?![A-Za-z0-9_.-])`, 'g');
+            
+            transformedFeaCode = transformedFeaCode!.replace(regex, glyphMap[originalName]);
+        });
+    }
+
     return {
         projectId: Date.now(),
         name: settings.fontName,
@@ -313,6 +336,6 @@ export const extractProjectData = async (
         glyphs: glyphs,
         characterSets: [characterSet],
         savedAt: new Date().toISOString(),
-        manualFeaCode: manualFeaCode
+        manualFeaCode: transformedFeaCode
     };
 };
