@@ -100,6 +100,17 @@ export const extractProjectData = async (
             isPuaAssigned = true;
         }
 
+        // Special handling for Space (32): Capture width but do not import as a glyph
+        if (unicode === 32) {
+            metrics.spaceAdvanceWidth = Math.round(glyph.advanceWidth * scale);
+            continue;
+        }
+
+        // Skip importing ZWJ (8205) and ZWNJ (8204) as they are handled automatically during export
+        if (unicode === 8205 || unicode === 8204) {
+            continue;
+        }
+
         const pathData = glyph.getPath(0, 0, font.unitsPerEm);
         const commands = pathData.commands;
         
@@ -358,6 +369,11 @@ export const extractProjectData = async (
             const regex = new RegExp(`(?<![A-Za-z0-9_.-])${escapedName}(?![A-Za-z0-9_.-])`, 'g');
             
             transformedFeaCode = transformedFeaCode!.replace(regex, glyphMap[originalName]);
+
+            // Replace ZWJ and ZWNJ
+            transformedFeaCode = transformedFeaCode.replace(/uni200D/g, 'ZWJ');
+            transformedFeaCode = transformedFeaCode.replace(/uni200C/g, 'ZWNJ');
+
         });
     }
 

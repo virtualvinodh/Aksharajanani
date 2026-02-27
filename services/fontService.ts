@@ -10,6 +10,7 @@ import { DRAWING_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
 import { expandMembers } from './groupExpansionService';
 import { deepClone } from '../utils/cloneUtils';
+import { shouldExportEmpty } from './unicodeService';
 
 // opentype.js is loaded from a CDN in index.html and will be available on the window object.
 // This declaration informs TypeScript about the global 'opentype' variable.
@@ -133,16 +134,21 @@ const createFont = (
       path: notdefPath,
     }));
     
-    // 2. Ensure essential glyphs (space, ZWJ, ZWNJ) exist, even if empty.
-    if (!finalGlyphData.has(32)) {
-        finalGlyphData.set(32, { paths: [] }); // space
-    }
-    if (!finalGlyphData.has(8205)) {
-        finalGlyphData.set(8205, { paths: [] }); // ZWJ
-    }
-    if (!finalGlyphData.has(8204)) {
-        finalGlyphData.set(8204, { paths: [] }); // ZWNJ
-    }
+    // 2. Ensure essential glyphs (whitespace, format characters like ZWJ, ZWNJ) exist in the export data, even if empty.
+    allCharactersMap.forEach((char, unicode) => {
+        if (!finalGlyphData.has(unicode)) {
+            if (shouldExportEmpty(unicode)) {
+                finalGlyphData.set(unicode, { paths: [] });
+            }
+        }
+    });
+
+    // Also ensure the absolute minimums (Space, ZWJ, ZWNJ) are present even if not in character set
+    [32, 8205, 8204].forEach(u => {
+        if (!finalGlyphData.has(u)) {
+            finalGlyphData.set(u, { paths: [] });
+        }
+    });
     
     const FONT_HEIGHT = metrics.ascender - metrics.descender;
     const scale = FONT_HEIGHT / DRAWING_CANVAS_SIZE;
@@ -155,9 +161,7 @@ const createFont = (
     finalGlyphData.forEach((data, unicode) => {
       const drawn = isGlyphDrawn(data);
       
-      // ZWJ (8205) and ZWNJ (8204) are special characters that must be exported even if empty.
-      // This check is now redundant because we ensure they exist, but it's safe to keep.
-      if (!drawn && unicode !== 32 && unicode !== 8205 && unicode !== 8204) {
+      if (!drawn && !shouldExportEmpty(unicode)) {
           return;
       }
 

@@ -1,6 +1,6 @@
 import { UnicodeBlock } from '../types';
 
-declare var UnicodeProperties: any;
+declare const UnicodeProperties: any;
 
 let blockCache: UnicodeBlock[] | null = null;
 
@@ -41,4 +41,18 @@ export const getAssignedCodepointsInBlock = (block: UnicodeBlock): number[] => {
     }
   }
   return assignedCps;
+};
+
+/**
+ * Determines if a character should be exported even if it has no drawn paths.
+ * This includes whitespace, control characters (Cc), and format characters (Cf).
+ */
+export const shouldExportEmpty = (unicode: number): boolean => {
+    if (typeof UnicodeProperties === 'undefined') {
+        // Fallback to hardcoded list if library is not available
+        return unicode === 32 || unicode === 8205 || unicode === 8204;
+    }
+    const category = UnicodeProperties.getCategory(unicode);
+    const isWhitespace = UnicodeProperties.isWhitespace(unicode);
+    return isWhitespace || category === 'Cf' || category === 'Cc';
 };
