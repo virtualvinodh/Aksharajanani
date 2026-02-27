@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
-import { TransformIcon, SettingsIcon, CompareIcon, TrashIcon, CloseIcon, CheckCircleIcon } from '../../constants';
+import { TransformIcon, SettingsIcon, CompareIcon, TrashIcon, CloseIcon, CheckCircleIcon, CopyIcon, PasteIcon } from '../../constants';
 
 interface DrawingBatchToolbarProps {
     selectionSize: number;
@@ -14,6 +14,9 @@ interface DrawingBatchToolbarProps {
     showAccept?: boolean;
     onAccept?: () => void;
     showTransform?: boolean;
+    onCopy?: () => void;
+    onPaste?: () => void;
+    clipboardSize?: number;
 }
 
 const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
@@ -53,6 +56,30 @@ const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
                         </button>
                     )}
                     
+                    {props.onCopy && (
+                        <button 
+                            onClick={props.onCopy} 
+                            disabled={props.selectionSize === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-30 transition-all shadow-md active:scale-95"
+                            title={t('copySelection')}
+                        >
+                            <CopyIcon className="w-4 h-4" />
+                            <span className="hidden lg:inline">{t('copy')}</span>
+                        </button>
+                    )}
+
+                    {props.onPaste && props.clipboardSize && props.clipboardSize > 0 && (
+                        <button 
+                            onClick={props.onPaste} 
+                            disabled={props.selectionSize === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-30 transition-all shadow-md active:scale-95"
+                            title={props.selectionSize !== props.clipboardSize ? t('pasteCountMismatch', { target: props.selectionSize, source: props.clipboardSize }) : t('pasteSelection')}
+                        >
+                            <PasteIcon className="w-4 h-4" />
+                            <span className="hidden lg:inline">{t('paste')} ({props.clipboardSize})</span>
+                        </button>
+                    )}
+
                     {props.showTransform && (
                         <button 
                             onClick={props.onTransform} 

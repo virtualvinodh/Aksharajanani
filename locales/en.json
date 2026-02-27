@@ -874,5 +874,10 @@
     "kernLabel": "Kern",
     "manualDrawingMode": "Manual drawing mode. Paths are stored directly.",
     "geometricSources": "Geometric Sources",
-    "gposTagPlaceholder": "GPOS Tag"
+    "gposTagPlaceholder": "GPOS Tag",
+    "copiedGlyphs": "Copied {count} glyphs to clipboard.",
+    "pastedGlyphs": "Pasted {count} glyphs.",
+    "pasteCountMismatch": "Selection count ({target}) does not match clipboard items ({source}).",
+    "copySelection": "Copy Selection",
+    "pasteSelection": "Paste Selection"
 }

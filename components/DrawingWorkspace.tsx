@@ -35,6 +35,15 @@ interface DrawingWorkspaceProps {
     isOverlayMode?: boolean;
 }
 
+interface ClipboardItem {
+    glyph: GlyphData;
+    metrics: {
+        lsb?: number;
+        rsb?: number;
+        advWidth?: number | string;
+    };
+}
+
 const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSelectCharacter, onAddGlyph, onAddBlock, drawingProgress, isCompactView, isOverlayMode = false }) => {
     const { t } = useLocale();
     const { 
@@ -65,6 +74,7 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const [isTransformOpen, setIsTransformOpen] = useState(false);
     const [isPropertiesOpen, setIsPropertiesOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [bulkClipboard, setBulkClipboard] = useState<ClipboardItem[] | null>(null);
     
     const virtuosoRef = useRef<VirtuosoHandle>(null);
 
@@ -384,6 +394,81 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
         setModalState({ type: 'create', isOpen: true });
     }, []);
 
+    const handleBulkCopy = useCallback(() => {
+        if (metricsSelection.size === 0) return;
+        
+        const selectedUnicodes = Array.from(metricsSelection).sort((a, b) => a - b);
+        const clipboardData: ClipboardItem[] = [];
+        
+        selectedUnicodes.forEach(unicode => {
+            const glyph = glyphDataMap.get(unicode);
+            const char = allCharsByUnicode.get(unicode);
+            
+            clipboardData.push({
+                glyph: glyph ? deepClone(glyph) : { paths: [] },
+                metrics: {
+                    lsb: char?.lsb,
+                    rsb: char?.rsb,
+                    advWidth: char?.advWidth
+                }
+            });
+        });
+        
+        setBulkClipboard(clipboardData);
+        setMetricsSelection(new Set());
+        showNotification(t('copiedGlyphs', { count: clipboardData.length }), 'success');
+    }, [metricsSelection, glyphDataMap, allCharsByUnicode, showNotification, t]);
+
+    const handleBulkPaste = useCallback(() => {
+        if (!bulkClipboard || metricsSelection.size === 0) return;
+        
+        if (metricsSelection.size !== bulkClipboard.length) {
+            showNotification(t('pasteCountMismatch', { target: metricsSelection.size, source: bulkClipboard.length }), 'error');
+            return;
+        }
+        
+        const selectedUnicodes = Array.from(metricsSelection).sort((a, b) => a - b);
+        const glyphUpdates: [number, GlyphData][] = [];
+        const metricUpdates = new Map<number, { lsb?: number; rsb?: number; advWidth?: number | string }>();
+        
+        selectedUnicodes.forEach((unicode, index) => {
+            const sourceItem = bulkClipboard[index];
+            const newPaths = deepClone(sourceItem.glyph.paths).map((p: any) => ({
+                ...p,
+                id: window.crypto.randomUUID()
+            }));
+            
+            glyphUpdates.push([unicode, { paths: newPaths }]);
+            metricUpdates.set(unicode, sourceItem.metrics);
+        });
+        
+        glyphDataDispatch({ type: 'BATCH_UPDATE_GLYPHS', payload: glyphUpdates });
+        
+        // Batch update metrics
+        characterDispatch({ 
+            type: 'UPDATE_CHARACTER_SETS', 
+            payload: (prevSets) => {
+                if (!prevSets) return null;
+                return prevSets.map(set => ({
+                    ...set,
+                    characters: set.characters.map(char => {
+                        if (char.unicode !== undefined && metricUpdates.has(char.unicode)) {
+                            const updates = metricUpdates.get(char.unicode)!;
+                            return {
+                                ...char,
+                                ...updates
+                            };
+                        }
+                        return char;
+                    })
+                }));
+            }
+        });
+
+        showNotification(t('pastedGlyphs', { count: glyphUpdates.length }), 'success');
+        setMetricsSelection(new Set());
+    }, [bulkClipboard, metricsSelection, glyphDataDispatch, characterDispatch, showNotification, t]);
+
     const handleBatchComplete = () => {
         if (selectedCharacter && metricsSelection.has(selectedCharacter.unicode!)) {
             triggerActiveEditorUpdate();
@@ -496,6 +581,9 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
                     showAccept={isSelectionVirtual}
                     onAccept={handleSelectionAccept}
                     showTransform={isSelectionTransformable}
+                    onCopy={handleBulkCopy}
+                    onPaste={handleBulkPaste}
+                    clipboardSize={bulkClipboard?.length || 0}
                 />
             )}
 
