@@ -270,26 +270,57 @@ export const extractProjectData = async (
             segmentGroups.push(currentGroup);
         }
 
-        if (segmentGroups.length > 0) {
-            const path: Path = {
-                id: generateId(),
-                type: 'outline',
-                points: [], // Not used for outline type
-                segmentGroups: segmentGroups
-            };
-            
-            glyphs.push([unicode, { paths: [path] }]);
-            
-            characterSet.characters.push({
-                unicode: unicode,
-                name: glyph.name || getGlyphExportNameByUnicode(unicode),
-                glyphClass: 'base',
-                advWidth: Math.round(glyph.advanceWidth * scale),
-                lsb: Math.round((glyph.leftSideBearing || 0) * scale),
-                rsb: 0, // Calculated from advWidth usually
-                isPuaAssigned: isPuaAssigned
-            });
+        // Determine Glyph Class using GDEF table if available, otherwise infer
+        let glyphClass: 'base' | 'ligature' | 'mark' | 'component' = 'base';
+        
+        // Try to read GDEF table
+        if (font.tables && font.tables.gdef && font.tables.gdef.glyphClassDef) {
+             try {
+                 // opentype.js GDEF table structure might vary, but usually exposes a get() method on glyphClassDef
+                 // or a 'classDef' object. The user provided snippet suggests .get(index).
+                 // We need the glyph index.
+                 const glyphIndex = glyph.index;
+                 if (typeof glyphIndex === 'number') {
+                     const classId = font.tables.gdef.glyphClassDef.get(glyphIndex);
+                     switch (classId) {
+                         case 1: glyphClass = 'base'; break;
+                         case 2: glyphClass = 'ligature'; break;
+                         case 3: glyphClass = 'mark'; break;
+                         case 4: glyphClass = 'base'; break;
+                     }
+                 }
+             } catch (e) {
+                 console.warn('Failed to read GDEF table for glyph class, falling back to inference.', e);
+             }
+        } else {
+            // Fallback Inference
+            if (glyph.unicode && glyph.advanceWidth === 0) {
+                glyphClass = 'mark';
+            } else if (glyph.name && (glyph.name.includes('_') || glyph.name.includes('.liga'))) {
+                glyphClass = 'ligature';
+            }
         }
+
+        // ALWAYS import the glyph, even if empty (segmentGroups.length === 0)
+        // This preserves Space, NBSP, ZWJ, etc.
+        const path: Path = {
+            id: generateId(),
+            type: 'outline',
+            points: [], // Not used for outline type
+            segmentGroups: segmentGroups
+        };
+        
+        glyphs.push([unicode, { paths: [path] }]);
+        
+        characterSet.characters.push({
+            unicode: unicode,
+            name: glyph.name || getGlyphExportNameByUnicode(unicode),
+            glyphClass: glyphClass,
+            advWidth: Math.round(glyph.advanceWidth * scale),
+            lsb: Math.round((glyph.leftSideBearing || 0) * scale),
+            rsb: 0, // Calculated from advWidth usually
+            isPuaAssigned: isPuaAssigned
+        });
     }
 
     const settings: AppSettings = {

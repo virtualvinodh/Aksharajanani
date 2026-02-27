@@ -87,10 +87,12 @@ def extract_fea(font_data):
     """Extracts a basic FEA structure from the font."""
     try:
         from fontFeatures.ttLib import unparse
+        from fontFeatures.optimizer import Optimizer
         font_bytes = font_data.to_py()
         font = TTFont(io.BytesIO(font_bytes))
         
         features = unparse(font)
+        Optimizer(features).optimize(level=1)
         fea_code = features.asFea()
         
         if not fea_code or not fea_code.strip():
