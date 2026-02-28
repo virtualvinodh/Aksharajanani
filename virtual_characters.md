@@ -1,4 +1,4 @@
-# Virtual vs. Baked Characters: Logic Matrix
+# Virtual vs. Baked Characters: Logic Matrix in Aksharajanani
 
 This document outlines how the system interprets the combinations of `glyphClass`, construction properties (`position`, `kern`), and OpenType tags (`gpos`, `gsub`) to determine whether to **Bake Geometry** (create a new shape) or **Generate Code** (create an OpenType rule).
 
