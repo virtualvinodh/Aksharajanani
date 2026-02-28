@@ -1,6 +1,6 @@
 {
   "name": "Aksharajanani",
-  "description": "An application to draw  characters and export them as a usable OTF font file. The UI supports both English and Tamil languages.",
+  "description": "An application to draw characters and export them as a usable OTF font file. The UI supports both English and Tamil languages.",
   "requestFramePermissions": [],
   "prompt": ""
 }

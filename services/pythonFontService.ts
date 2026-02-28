@@ -99,7 +99,11 @@ def patch_font(base_data, delta_data):
     # 1. Align Glyph Order (Crucial for preserving GID integrity)
     base_order = base_font.getGlyphOrder()
     print(f"[Python] Base glyph count: {len(base_order)}")
-    
+
+     # 1. Align Glyph Order (Crucial for preserving GID integrity)
+    delta_order = delta_font.getGlyphOrder()
+    print(f"[Python] Delta glyph count: {len(delta_order)}")   
+
     # We DO NOT set the delta font's order to match the base immediately.
     # Doing so can cause IndexError if delta_font has more glyphs (e.g. from PUA) 
     # and we try to decompile tables like hmtx that rely on the original count.
@@ -112,6 +116,8 @@ def patch_font(base_data, delta_data):
         print("[Python] Swapping 'glyf' and 'loca' tables (Targeting TTF)...")
         base_font['glyf'] = delta_font['glyf']
         base_font['loca'] = delta_font['loca']
+        import struct
+        base_font.sfntVersion = struct.pack(">BBBB", 0, 1, 0, 0) # Ensure TTF signature
         # If base was CFF, remove it
         if 'CFF ' in base_font:
             print("[Python] Removing 'CFF ' table from base font...")
@@ -119,13 +125,15 @@ def patch_font(base_data, delta_data):
     elif 'CFF ' in delta_font:
          print("[Python] Swapping 'CFF ' table (Targeting CFF)...")
          base_font['CFF '] = delta_font['CFF ']
+         base_font.sfntVersion = "OTTO" # Ensure CFF signature
          if 'glyf' in base_font: del base_font['glyf']
          if 'loca' in base_font: del base_font['loca']
     
     # 3. Table Swap: Metrics
-    print("[Python] Swapping 'hmtx' and 'maxp' tables...")
+    print("[Python] Swapping 'hmtx', 'hhea', and 'maxp' tables...")
     base_font['hmtx'] = delta_font['hmtx']
-    base_font['maxp'] = delta_font['maxp'] # Contains numGlyphs and table version (0.5 for CFF, 1.0 for TTF)
+    base_font['hhea'] = delta_font['hhea'] # Contains numberOfHMetrics
+    base_font['maxp'] = delta_font['maxp'] # Contains numGlyphs and table version
 
     # 4. Table Swap: CMAP
     # We update the cmap to ensure any NEW unicode points assigned in the editor are reachable.
@@ -146,19 +154,11 @@ def patch_font(base_data, delta_data):
         
     base_font['cmap'] = new_cmap_table
     
-    # 5. Table Swap: OS/2 (Optional but recommended for metrics consistency)
-    # The delta font (from opentype.js) might have recalculated OS/2 metrics.
-    # However, preserving original OS/2 might be desired for vertical metrics.
-    # But if we changed glyphs significantly, original metrics might be wrong.
-    # Let's stick to preserving OS/2 for now as requested ("preserve other tables").
+    # 5. Table Swap: OS/2 (Required for metrics consistency)
+    print("[Python] Swapping 'OS/2' table...")
+    base_font['OS/2'] = delta_font['OS/2']
     
-    # 6. Table Swap: head (Optional)
-    # We might need to update unitsPerEm if it changed, but usually we keep 1000.
-    # delta_font from opentype.js usually has 1000.
-    # If base_font had 2048 (standard TTF), and we import it, we scale it to 1000 in the editor.
-    # So delta_font is 1000.
-    # If we paste 1000-unit glyphs into a 2048-unit head table, they will be tiny.
-    # So we MUST swap 'head' table or at least unitsPerEm.
+    # 6. Table Swap: head (Required for UPM consistency)
     print("[Python] Swapping 'head' table to match UPM...")
     base_font['head'] = delta_font['head']
 
