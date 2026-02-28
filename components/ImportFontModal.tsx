@@ -18,6 +18,7 @@ const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onIm
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,10 +43,16 @@ const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onIm
           // Continue without FEA
       }
 
+      let baseFontBinary: Uint8Array | undefined;
+      if (isEditMode) {
+          const buffer = await file.arrayBuffer();
+          baseFontBinary = new Uint8Array(buffer);
+      }
+
       const projectData = await extractProjectData(font, file.name, (p, s) => {
         setProgress(p);
         setStatus(s);
-      }, manualFeaCode);
+      }, manualFeaCode, isEditMode, baseFontBinary);
 
       onImport(projectData);
       onClose();
@@ -65,6 +72,7 @@ const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onIm
     >
       <div className="p-4">
         {!isProcessing ? (
+          <>
           <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                onClick={() => fileInputRef.current?.click()}>
             <input 
@@ -82,6 +90,23 @@ const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onIm
               Supports TTF, OTF, WOFF
             </p>
           </div>
+          
+          <div className="mt-4 flex items-center">
+            <input
+              type="checkbox"
+              id="editMode"
+              checked={isEditMode}
+              onChange={(e) => setIsEditMode(e.target.checked)}
+              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            />
+            <label htmlFor="editMode" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+              Edit Mode (Experimental)
+            </label>
+          </div>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 ml-6">
+             Preserves original OpenType features (GSUB, GPOS) and only updates glyph shapes and metrics. Use this for modifying existing fonts.
+          </p>
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center p-8">
             <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mb-4">

@@ -68,6 +68,7 @@ export interface ComponentTransform {
 export interface Character {
   unicode?: number;
   name: string;
+  originalName?: string; // Original glyph name from imported font (for Edit Mode)
   label?: string; // Optional label for display (ghost text), defaults to name if missing
   lsb?: number;
   rsb?: number;
@@ -212,6 +213,10 @@ export interface ProjectData {
   manualFeaCode?: string;
   metrics?: FontMetrics;
   savedAt?: string;
+  
+  // Edit Mode (Binary Patching)
+  baseFontBinary?: Uint8Array;
+  isEditMode?: boolean;
   
   // Unified Model Additions:
   // These fields allow the project to be self-contained without relying on external static JSONs.

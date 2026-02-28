@@ -64,6 +64,12 @@ interface ProjectContextType {
     guideFont: GuideFont | null;
     setGuideFont: React.Dispatch<React.SetStateAction<GuideFont | null>>;
     
+    // Edit Mode
+    isEditMode: boolean;
+    setIsEditMode: React.Dispatch<React.SetStateAction<boolean>>;
+    baseFontBinary: Uint8Array | undefined;
+    setBaseFontBinary: React.Dispatch<React.SetStateAction<Uint8Array | undefined>>;
+
     // Track groups that belong to positioning to filter them in Rules UI
     positioningGroupNames: Set<string>;
     setPositioningGroupNames: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -95,6 +101,10 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [recommendedKerning, setRecommendedKerning] = useState<RecommendedKerning[] | null>(null);
     const [guideFont, setGuideFont] = useState<GuideFont | null>(null);
     const [positioningGroupNames, setPositioningGroupNames] = useState<Set<string>>(new Set());
+    
+    // Edit Mode
+    const [isEditMode, setIsEditMode] = useState<boolean>(false);
+    const [baseFontBinary, setBaseFontBinary] = useState<Uint8Array | undefined>(undefined);
 
     // Logic ported from CharacterContext reducer
     const dispatchCharacterAction = useCallback((action: CharacterAction) => {
@@ -275,6 +285,8 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                 setScript(null);
                 setCharacterSets(null);
                 setPositioningGroupNames(new Set());
+                setIsEditMode(false);
+                setBaseFontBinary(undefined);
                 break;
         }
     }, []);
@@ -318,6 +330,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         guideFont, setGuideFont,
         positioningGroupNames, setPositioningGroupNames,
         
+        isEditMode, setIsEditMode,
+        baseFontBinary, setBaseFontBinary,
+
         dispatchCharacterAction,
         dispatch: dispatchCharacterAction // Alias for compatibility
     };

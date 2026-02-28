@@ -1,5 +1,5 @@
 
-declare var loadPyodide: any;
+
 
 let worker: Worker | null = null;
 const requestMap = new Map<number, { resolve: (value: any) => void; reject: (reason?: any) => void }>();
@@ -82,6 +82,98 @@ def compile_fea_and_patch(font_data, fea_text):
     
     # Return a dictionary with font data and any error message
     return { "font_data": buffer.getvalue(), "fea_error": fea_error }
+
+def patch_font(base_data, delta_data):
+    """
+    Patches the base_font with shapes and metrics from delta_font.
+    Preserves GSUB, GPOS, GDEF, OS/2, name, etc. from base_font.
+    """
+    print("[Python] Loading base and delta fonts...")
+    # Convert JsProxy objects to Python bytes/memoryview
+    base_bytes = base_data.to_py()
+    delta_bytes = delta_data.to_py()
+    
+    base_font = TTFont(io.BytesIO(base_bytes))
+    delta_font = TTFont(io.BytesIO(delta_bytes))
+
+    # 1. Align Glyph Order (Crucial for preserving GID integrity)
+    base_order = base_font.getGlyphOrder()
+    print(f"[Python] Base glyph count: {len(base_order)}")
+    
+    # We DO NOT set the delta font's order to match the base immediately.
+    # Doing so can cause IndexError if delta_font has more glyphs (e.g. from PUA) 
+    # and we try to decompile tables like hmtx that rely on the original count.
+    # Instead, we copy tables by object/name, and let base_font filter what it needs
+    # based on its own preserved order.
+    # delta_font.setGlyphOrder(base_order)
+
+    # 2. Table Swap: Shapes
+    if 'glyf' in delta_font:
+        print("[Python] Swapping 'glyf' and 'loca' tables (Targeting TTF)...")
+        base_font['glyf'] = delta_font['glyf']
+        base_font['loca'] = delta_font['loca']
+        # If base was CFF, remove it
+        if 'CFF ' in base_font:
+            print("[Python] Removing 'CFF ' table from base font...")
+            del base_font['CFF ']
+    elif 'CFF ' in delta_font:
+         print("[Python] Swapping 'CFF ' table (Targeting CFF)...")
+         base_font['CFF '] = delta_font['CFF ']
+         if 'glyf' in base_font: del base_font['glyf']
+         if 'loca' in base_font: del base_font['loca']
+    
+    # 3. Table Swap: Metrics
+    print("[Python] Swapping 'hmtx' and 'maxp' tables...")
+    base_font['hmtx'] = delta_font['hmtx']
+    base_font['maxp'] = delta_font['maxp'] # Contains numGlyphs and table version (0.5 for CFF, 1.0 for TTF)
+
+    # 4. Table Swap: CMAP
+    # We update the cmap to ensure any NEW unicode points assigned in the editor are reachable.
+    print("[Python] Swapping 'cmap' table...")
+    
+    # Sanitize CMAP: Only keep mappings for glyphs that exist in base_font
+    # This prevents KeyErrors if delta_font has extra glyphs (like .notdef.1) not in base_font
+    base_glyph_set = set(base_order)
+    new_cmap_table = delta_font['cmap']
+    
+    for table in new_cmap_table.tables:
+        # Create a filtered dictionary
+        filtered_cmap = {
+            code: name for code, name in table.cmap.items() 
+            if name in base_glyph_set
+        }
+        table.cmap = filtered_cmap
+        
+    base_font['cmap'] = new_cmap_table
+    
+    # 5. Table Swap: OS/2 (Optional but recommended for metrics consistency)
+    # The delta font (from opentype.js) might have recalculated OS/2 metrics.
+    # However, preserving original OS/2 might be desired for vertical metrics.
+    # But if we changed glyphs significantly, original metrics might be wrong.
+    # Let's stick to preserving OS/2 for now as requested ("preserve other tables").
+    
+    # 6. Table Swap: head (Optional)
+    # We might need to update unitsPerEm if it changed, but usually we keep 1000.
+    # delta_font from opentype.js usually has 1000.
+    # If base_font had 2048 (standard TTF), and we import it, we scale it to 1000 in the editor.
+    # So delta_font is 1000.
+    # If we paste 1000-unit glyphs into a 2048-unit head table, they will be tiny.
+    # So we MUST swap 'head' table or at least unitsPerEm.
+    print("[Python] Swapping 'head' table to match UPM...")
+    base_font['head'] = delta_font['head']
+
+    # 7. Table Swap: post (Optional)
+    # opentype.js generates a standard post table.
+    print("[Python] Swapping 'post' table...")
+    base_font['post'] = delta_font['post']
+
+    # Ensure Unicode CMAP exists
+    base_font = _add_unicode_cmap_to_font_object(base_font)
+
+    # 8. Save
+    out_buffer = io.BytesIO()
+    base_font.save(out_buffer)
+    return out_buffer.getvalue()
 
 def extract_fea(font_data):
     """Extracts a basic FEA structure from the font."""
@@ -169,6 +261,34 @@ self.onmessage = async (event) => {
                 payload: {
                     id,
                     message: error instanceof Error ? error.message : 'Unknown compilation error'
+                }
+            });
+        }
+    } else if (type === 'patch') {
+        const { baseFontBuffer, deltaFontBuffer, id } = payload;
+        if (!pyodide) {
+             self.postMessage({ type: 'error', payload: { id, message: 'Pyodide not initialized yet.' } });
+             return;
+        }
+        try {
+            const patchFont = pyodide.globals.get('patch_font');
+            const resultProxy = patchFont(baseFontBuffer, deltaFontBuffer);
+            const patchedFontData = resultProxy.toJs();
+            resultProxy.destroy();
+
+            self.postMessage({
+                type: 'result',
+                payload: {
+                    id,
+                    blobBuffer: patchedFontData.buffer,
+                }
+            }, [patchedFontData.buffer]);
+        } catch (error) {
+            self.postMessage({
+                type: 'error',
+                payload: {
+                    id,
+                    message: error instanceof Error ? error.message : 'Unknown patching error'
                 }
             });
         }
@@ -290,6 +410,40 @@ export async function extractFea(
                 fontBuffer
             }
         }, [fontBuffer]);
+    });
+}
+
+export async function patchFont(
+    baseFontBlob: Blob,
+    deltaFontBlob: Blob,
+    showNotification: (message: string, type?: 'success' | 'info') => void,
+    t: (key: string) => string
+): Promise<Blob> {
+    if (!worker || !pyodideReadyPromise) {
+        initializePyodide();
+    }
+    
+    if (!isPyodideReady) {
+        showNotification(t('preparingPythonEnv'), 'info');
+        await pyodideReadyPromise;
+    }
+
+    showNotification(t('patchingFont'), 'info');
+
+    const baseFontBuffer = await baseFontBlob.arrayBuffer();
+    const deltaFontBuffer = await deltaFontBlob.arrayBuffer();
+    const currentId = requestId++;
+
+    return new Promise((resolve, reject) => {
+        requestMap.set(currentId, { resolve: (res) => resolve(res.blob), reject });
+        worker!.postMessage({
+            type: 'patch',
+            payload: {
+                id: currentId,
+                baseFontBuffer,
+                deltaFontBuffer
+            }
+        }, [baseFontBuffer, deltaFontBuffer]);
     });
 }
 

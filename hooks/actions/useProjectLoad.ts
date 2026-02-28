@@ -40,7 +40,9 @@ export const useProjectLoad = ({
         setBaseAttachmentClasses,
         setRecommendedKerning,
         setGuideFont,
-        setPositioningGroupNames
+        setPositioningGroupNames,
+        setIsEditMode,
+        setBaseFontBinary
     } = useProject();
 
     const [isScriptDataLoading, setIsScriptDataLoading] = useState(true);
@@ -351,6 +353,20 @@ export const useProjectLoad = ({
                 const { projectId: loadedProjectId, savedAt, ...loadedState } = projectToLoad;
                 setLastSavedState(JSON.stringify(loadedState));
                 setProjectName(projectToLoad.name || projectToLoad.settings.fontName);
+                
+                // Restore Edit Mode
+                setIsEditMode(!!projectToLoad.isEditMode);
+                if (projectToLoad.baseFontBinary) {
+                    // Handle potential serialization formats (Array vs Uint8Array)
+                    if (projectToLoad.baseFontBinary instanceof Uint8Array) {
+                         setBaseFontBinary(projectToLoad.baseFontBinary);
+                    } else {
+                         // Assume it's an array or object from JSON
+                         setBaseFontBinary(new Uint8Array(Object.values(projectToLoad.baseFontBinary)));
+                    }
+                } else {
+                    setBaseFontBinary(undefined);
+                }
             } else {
                 const savedSettingsRaw = localStorage.getItem(`font-creator-settings-${currentScript.id}`);
                 const savedSettings = savedSettingsRaw ? JSON.parse(savedSettingsRaw) : {};
@@ -371,6 +387,9 @@ export const useProjectLoad = ({
                 rulesDispatch({ type: 'SET_MANUAL_FEA_CODE', payload: isFeaOnly ? feaFileData || '' : '' });
                 setLastSavedState(null);
                 setProjectName(baseSettings.fontName);
+                
+                setIsEditMode(false);
+                setBaseFontBinary(undefined);
             }
 
         } catch (err) {

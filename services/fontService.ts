@@ -1,7 +1,7 @@
 
 
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Path, KerningMap, MarkPositioningMap, PositioningRules, MarkAttachmentRules, Segment } from '../types';
-import { compileFeaturesAndPatch } from './pythonFontService';
+import { compileFeaturesAndPatch, patchFont } from './pythonFontService';
 import { generateFea } from './feaService';
 import { VEC } from '../utils/vectorUtils';
 import { curveToPolyline, quadraticCurveToPolyline, getAccurateGlyphBBox, BoundingBox, getStrokeOutlinePoints } from './glyphRenderService';
@@ -84,7 +84,8 @@ const createFont = (
     t: (key: string, replacements?: { [key: string]: string | number }) => string,
     fontRules: any,
     metrics: FontMetrics,
-    characterSets: CharacterSet[]
+    characterSets: CharacterSet[],
+    isEditMode?: boolean
 ): any => {
     if (typeof opentype === 'undefined') {
         throw new Error(t('errorOpentypeNotLoaded'));
@@ -136,7 +137,7 @@ const createFont = (
     // 2. Ensure essential glyphs (whitespace, format characters like ZWJ, ZWNJ) exist in the export data, even if empty.
     allCharactersMap.forEach((char, unicode) => {
         if (!finalGlyphData.has(unicode)) {
-            if (shouldExportEmpty(unicode, char.name)) {
+            if (shouldExportEmpty(unicode, char.name) || isEditMode) {
                 finalGlyphData.set(unicode, { paths: [] });
             }
         }
@@ -161,7 +162,7 @@ const createFont = (
       const drawn = isGlyphDrawn(data);
       
       const char = allCharactersMap.get(unicode);
-      if (!drawn && !shouldExportEmpty(unicode, char?.name)) {
+      if (!drawn && !shouldExportEmpty(unicode, char?.name) && !isEditMode) {
           return;
       }
 
@@ -408,7 +409,9 @@ const createFont = (
           }
       }
 
-      const glyphName = getGlyphExportNameByUnicode(unicode);
+      const glyphName = (isEditMode && char?.originalName) 
+          ? char.originalName 
+          : getGlyphExportNameByUnicode(unicode);
 
       const glyph = new opentype.Glyph({
         name: glyphName,
@@ -457,7 +460,9 @@ export const exportToOtf = async (
     markAttachmentRules: MarkAttachmentRules | null,
     isFeaEditMode: boolean | undefined,
     manualFeaCode: string | null | undefined,
-    showNotification: (message: string, type?: 'success' | 'info') => void
+    showNotification: (message: string, type?: 'success' | 'info') => void,
+    isEditMode?: boolean,
+    baseFontBinary?: Uint8Array
 ): Promise<{ blob: Blob, feaError: string | null }> => {
     
     const finalGlyphData = new Map(glyphData.entries());
@@ -891,14 +896,14 @@ export const exportToOtf = async (
             // --- Worker Message Handler ---
             self.onmessage = (e) => {
                 try {
-                    const { glyphDataArray, shouldExportEmptyMapArray, settings, fontRules, metrics, characterSets } = e.data;
+                    const { glyphDataArray, shouldExportEmptyMapArray, settings, fontRules, metrics, characterSets, isEditMode } = e.data;
                     const glyphData = new Map(glyphDataArray);
                     shouldExportEmptyMap = new Map(shouldExportEmptyMapArray);
 
                     // Minimal 't' function for error messages inside the worker
                     const t = (key) => key;
                     
-                    const fontObject = createFont(glyphData, settings, t, fontRules, metrics, characterSets);
+                    const fontObject = createFont(glyphData, settings, t, fontRules, metrics, characterSets, isEditMode);
                     const fontBuffer = fontObject.toArrayBuffer();
 
                     // Post the buffer back as a transferable object for efficiency
@@ -937,11 +942,21 @@ export const exportToOtf = async (
             settings,
             fontRules,
             metrics,
-            characterSets
+            characterSets,
+            isEditMode
         });
     });
     
     // Stage 2: Generate the full FEA code
+    if (isEditMode && baseFontBinary) {
+        // Edit Mode: Skip FEA compilation and patch the base font
+        const deltaBlob = fontBlob; // The blob we just generated is the delta
+        const baseBlob = new Blob([baseFontBinary], { type: 'font/opentype' });
+        
+        const patchedBlob = await patchFont(baseBlob, deltaBlob, showNotification, t);
+        return { blob: patchedBlob, feaError: null };
+    }
+
     const feaContent = isFeaEditMode 
         ? manualFeaCode || '' 
         : generateFea(

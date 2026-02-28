@@ -38,7 +38,9 @@ export const extractProjectData = async (
     font: any, 
     fileName: string,
     onProgress: (progress: number, status: string) => void,
-    manualFeaCode?: string
+    manualFeaCode?: string,
+    isEditMode?: boolean,
+    baseFontBinary?: Uint8Array
 ): Promise<ProjectData> => {
     
     const scale = 1000 / font.unitsPerEm;
@@ -58,7 +60,6 @@ export const extractProjectData = async (
     };
 
     const glyphs: [number, GlyphData][] = [];
-    const characters: any[] = []; // We'll build a default character set
 
     const numGlyphs = font.glyphs.length;
     
@@ -116,8 +117,6 @@ export const extractProjectData = async (
         
         const segmentGroups: Segment[][] = [];
         let currentGroup: Segment[] = [];
-        let startPoint: Point = { x: 0, y: 0 };
-        let currentPoint: Point = { x: 0, y: 0 };
 
         // Helper to transform coordinates
         const tr = (x: number, y: number): Point => ({
@@ -153,8 +152,6 @@ export const extractProjectData = async (
                     currentGroup = [];
                 }
                 const p = tr(cmd.x, cmd.y);
-                startPoint = p;
-                currentPoint = p;
                 // We don't add a segment for M yet, because a Segment represents a point *after* a curve/line.
                 // But wait, our Segment model is a list of points that form the shape.
                 // M defines the first point.
@@ -171,7 +168,6 @@ export const extractProjectData = async (
                     handleIn: { x: 0, y: 0 },
                     handleOut: { x: 0, y: 0 }
                 });
-                currentPoint = p;
             } else if (cmd.type === 'C') {
                 const p = tr(cmd.x, cmd.y);
                 const c1 = tr(cmd.x1, cmd.y1);
@@ -202,7 +198,6 @@ export const extractProjectData = async (
                     handleIn: handleIn,
                     handleOut: { x: 0, y: 0 } // Will be set by next command if it's a curve
                 });
-                currentPoint = p;
             } else if (cmd.type === 'Q') {
                 const p = tr(cmd.x, cmd.y);
                 const c1 = tr(cmd.x1, cmd.y1); // Quadratic control point
@@ -243,7 +238,6 @@ export const extractProjectData = async (
                     handleIn: handleIn,
                     handleOut: { x: 0, y: 0 }
                 });
-                currentPoint = p;
             } else if (cmd.type === 'Z') {
                 // Close path.
                 // If last point != start point, add a line segment?
@@ -326,6 +320,7 @@ export const extractProjectData = async (
         characterSet.characters.push({
             unicode: unicode,
             name: glyph.name || getGlyphExportNameByUnicode(unicode),
+            originalName: glyph.name, // Store original name for Edit Mode
             glyphClass: glyphClass,
             advWidth: Math.round(glyph.advanceWidth * scale),
             lsb: Math.round((glyph.leftSideBearing || 0) * scale),
@@ -392,6 +387,8 @@ export const extractProjectData = async (
         glyphs: glyphs,
         characterSets: [characterSet],
         savedAt: new Date().toISOString(),
-        manualFeaCode: transformedFeaCode
+        manualFeaCode: transformedFeaCode,
+        isEditMode: isEditMode,
+        baseFontBinary: baseFontBinary
     };
 };

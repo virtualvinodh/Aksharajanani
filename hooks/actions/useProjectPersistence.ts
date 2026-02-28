@@ -32,7 +32,9 @@ export const useProjectPersistence = (
         markAttachmentRules, 
         markAttachmentClasses, 
         baseAttachmentClasses, 
-        recommendedKerning 
+        recommendedKerning,
+        isEditMode,
+        baseFontBinary
     } = useProject();
 
     const [projectId, setProjectId] = useState<number | undefined>(initialProjectId);
@@ -65,9 +67,13 @@ export const useProjectPersistence = (
             baseAttachmentClasses: baseAttachmentClasses || undefined,
             recommendedKerning: recommendedKerning || undefined,
             groups: fontRules.groups || undefined,
-            guideFont: script.guideFont || undefined
+            guideFont: script.guideFont || undefined,
+            
+            // Edit Mode
+            isEditMode,
+            baseFontBinary
         };
-    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, glyphVersion]);
+    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, glyphVersion, isEditMode, baseFontBinary]);
 
     useEffect(() => {
         if (!isScriptDataLoading && lastSavedState !== null) {
