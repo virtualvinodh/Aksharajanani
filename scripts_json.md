@@ -1,6 +1,6 @@
 # scripts.json Data Format Guide
 
-The `scripts.json` file is the master registry for Aksharajanani project. It defines the available templates (scripts) that users can choose from when starting a project. It acts as the central configuration hub, linking visual settings, font metrics, and external data files.
+The `scripts.json` file is the master registry for Aksharajanani font projects. It defines the available templates (scripts) that users can choose from when starting a project. It acts as the central configuration hub, linking visual settings, font metrics, and external data files.
 
 ## Root Structure
 
