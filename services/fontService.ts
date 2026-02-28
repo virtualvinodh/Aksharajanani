@@ -441,6 +441,7 @@ const createFont = (
       license: settings.licenseDescription, // Mapped
       licenseURL: settings.licenseInfoURL, // Mapped
       description: settings.description,
+      outlinesFormat: 'truetype', // Force TrueType (glyf/loca) export
     });
     
     return font;

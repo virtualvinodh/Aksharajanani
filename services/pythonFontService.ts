@@ -123,17 +123,67 @@ def patch_font(base_data, delta_data):
             print("[Python] Removing 'CFF ' table from base font...")
             del base_font['CFF ']
     elif 'CFF ' in delta_font:
-         print("[Python] Swapping 'CFF ' table (Targeting CFF)...")
-         base_font['CFF '] = delta_font['CFF ']
-         base_font.sfntVersion = "OTTO" # Ensure CFF signature
-         if 'glyf' in base_font: del base_font['glyf']
-         if 'loca' in base_font: del base_font['loca']
+         if 'glyf' in base_font:
+             print("[Python] Format Mismatch: Base=TTF, Delta=CFF. Converting Delta glyphs to TTF...")
+             from fontTools.pens.ttGlyphPen import TTGlyphPen
+             from fontTools.pens.cu2quPen import Cu2QuPen
+             import struct
+             
+             base_font.sfntVersion = struct.pack(">BBBB", 0, 1, 0, 0)
+             base_glyf = base_font['glyf']
+             delta_glyph_set = delta_font.getGlyphSet()
+             
+             for g_name in base_order:
+                 if g_name in delta_glyph_set:
+                     try:
+                         # Convert CFF (cubic) to TTF (quadratic)
+                         tt_pen = TTGlyphPen(delta_glyph_set)
+                         cu2qu_pen = Cu2QuPen(tt_pen, max_err=1.0, reverse_direction=True)
+                         
+                         delta_glyph_set[g_name].draw(cu2qu_pen)
+                         base_glyf[g_name] = tt_pen.glyph()
+                     except Exception as e:
+                         print(f"[Python] Error converting glyph {g_name}: {e}")
+         else:
+             print("[Python] Patching CFF CharStrings (Targeting CFF)...")
+             
+             # Access the Top DICT of the CFF font (usually at index 0)
+             try:
+                 base_cff = base_font['CFF '].cff
+                 delta_cff = delta_font['CFF '].cff
+                 
+                 base_top_dict = base_cff.topDictIndex[0]
+                 delta_top_dict = delta_cff.topDictIndex[0]
+                 
+                 base_charstrings = base_top_dict.CharStrings
+                 delta_charstrings = delta_top_dict.CharStrings
+                 
+                 # Patch individual CharStrings
+                 for g_name in base_order:
+                     if g_name in delta_charstrings:
+                         base_charstrings[g_name] = delta_charstrings[g_name]
+                         
+                 base_font.sfntVersion = "OTTO" # Ensure CFF signature
+                 if 'glyf' in base_font: del base_font['glyf']
+                 if 'loca' in base_font: del base_font['loca']
+             except Exception as e:
+                 print(f"[Python] Error patching CFF: {e}")
+                 # Fallback: If surgical patching fails, try full replacement
+                 print("[Python] Fallback: Swapping entire CFF table...")
+                 base_font['CFF '] = delta_font['CFF ']
+                 base_font.sfntVersion = "OTTO"
+                 if 'glyf' in base_font: del base_font['glyf']
+                 if 'loca' in base_font: del base_font['loca']
     
     # 3. Table Swap: Metrics
     print("[Python] Swapping 'hmtx', 'hhea', and 'maxp' tables...")
     base_font['hmtx'] = delta_font['hmtx']
     base_font['hhea'] = delta_font['hhea'] # Contains numberOfHMetrics
-    base_font['maxp'] = delta_font['maxp'] # Contains numGlyphs and table version
+    
+    # Only swap maxp if we are NOT converting CFF->TTF (which would mean base is TTF but delta is CFF)
+    # If base is TTF, we want maxp 1.0. If delta is CFF, it has maxp 0.5.
+    if not ('glyf' in base_font and 'CFF ' in delta_font):
+        base_font['maxp'] = delta_font['maxp'] # Contains numGlyphs and table version
 
     # 4. Table Swap: CMAP
     # We update the cmap to ensure any NEW unicode points assigned in the editor are reachable.
