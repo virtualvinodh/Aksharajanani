@@ -260,7 +260,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       positioningProgress,
       kerningProgress,
       rulesProgress,
-      hasKerning,
+      hasKerning: rawHasKerning,
   } = useProgressCalculators({
       characterSets,
       glyphDataMap,
@@ -272,6 +272,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       positioningRules,
       glyphVersion
   });
+
+  const hasKerning = script?.isImportedFont ? false : rawHasKerning;
   
   useEffect(() => {
     const activeGuideFont = guideFont || script?.guideFont;

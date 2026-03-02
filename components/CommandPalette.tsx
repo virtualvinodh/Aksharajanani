@@ -136,8 +136,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                 });
             }
             
-            // Rules workspace is now always available
-            items.push({ id: 'ws-rules', type: 'workspace', title: t('workspaceRules'), aliases: ['Features', 'OpenType', 'Substitution', 'Liga'], icon: <SettingsIcon />, onExecute: () => onSetWorkspace('rules') });
+            // Rules workspace is now always available unless it's an imported font
+            if (!script.isImportedFont) {
+                items.push({ id: 'ws-rules', type: 'workspace', title: t('workspaceRules'), aliases: ['Features', 'OpenType', 'Substitution', 'Liga'], icon: <SettingsIcon />, onExecute: () => onSetWorkspace('rules') });
+            }
 
             // 2. Actions
             items.push({ id: 'act-save', type: 'action', title: t('save'), icon: <SaveIcon />, onExecute: () => onAction('save') });

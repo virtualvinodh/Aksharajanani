@@ -229,11 +229,19 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 <button onClick={() => { onTakeSnapshot(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CameraIcon /> {t('takeSnapshot')}</button>
                                 <button onClick={() => { onRestoreSnapshot(); setIsMoreMenuOpen(false); }} disabled={!hasSnapshot} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"><HistoryIcon /> {t('restoreSnapshot')}</button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-                                <button onClick={() => { setCurrentView('rules'); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <button 
+                                    onClick={() => { setCurrentView('rules'); setIsMoreMenuOpen(false); }} 
+                                    disabled={script.isImportedFont}
+                                    title={script.isImportedFont ? "Character Behavior cannot be edited for imported fonts." : ""}
+                                    className={`w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${script.isImportedFont ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                     <RulesIcon /> {t('workspaceRules')}
                                     {hasUnsavedRules && <span className="ml-auto w-2 h-2 bg-yellow-400 rounded-full" title={t('unsavedChangesIndicator')}></span>}
                                 </button>
-                                <button onClick={() => { openModal('positioningRulesManager'); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <button 
+                                    onClick={() => { openModal('positioningRulesManager'); setIsMoreMenuOpen(false); }} 
+                                    disabled={script.isImportedFont}
+                                    title={script.isImportedFont ? "Positioning rules cannot be edited for imported fonts." : ""}
+                                    className={`w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${script.isImportedFont ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                     <WrenchIcon /> {t('managePositioningRules')}
                                 </button>
                                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>

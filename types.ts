@@ -326,6 +326,7 @@ export interface ScriptConfig {
   // Optional pre-loaded data for custom scripts
   characterSetData?: CharacterDefinition[];
   rulesData?: any;
+  isImportedFont?: boolean;
   support?: string;
   supportMessage?: string;
   kerning?: string;
