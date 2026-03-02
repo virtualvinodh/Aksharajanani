@@ -190,79 +190,79 @@ export const useJITHints = (
                                     ),
                                     placement,
                                     disableBeacon: true,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="tool-select"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.toolSelect }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="tool-pan"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.toolPan }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="toolbar-pen"]',
                                     content: translations.toolbarPenContent,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="tool-calligraphy"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.toolCalligraphy }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="tool-eraser"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.toolEraser }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="tool-slice"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.toolSlice }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-undo"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.actionUndo }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-redo"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.actionRedo }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-cut"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.actionCut }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-copy"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.actionCopy }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-paste"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.actionPaste }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-group"]',
                                     content: <div dangerouslySetInnerHTML={{ __html: translations.actionGroup }} />,
                                     placement,
-                                    data: { isTutorial: false, translations }
+                                    data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-ungroup"]',
@@ -348,7 +348,7 @@ export const useJITHints = (
                                  placement: 'top' as Placement,
                                  disableBeacon: true,
                                  spotlightClicks: true,
-                                 data: { isTutorial: false, translations } 
+                                 data: { isTutorial: false, storageKey: storageKey, translations } 
                              },
                              {
                                  target: '[data-tour="header-unlink"]',
@@ -400,14 +400,14 @@ export const useJITHints = (
                                 placement: 'top' as Placement,
                                 disableBeacon: true,
                                 spotlightClicks: true,
-                                data: { isTutorial: false, translations }
+                                data: { isTutorial: false, storageKey: storageKey, translations }
                             },
                             {
                                 target: '[data-tour="header-detach-pos"]',
                                 content: translations.hintDetachContent,
                                 placement: 'bottom' as Placement,
                                 disableBeacon: true,
-                                data: { isTutorial: false, translations }
+                                data: { isTutorial: false, storageKey: storageKey, translations }
                             },
                             {
                                 target: '[data-tour="header-accept-pos"]',
@@ -441,14 +441,14 @@ export const useJITHints = (
                                 placement: 'top' as Placement,
                                 disableBeacon: true,
                                 spotlightClicks: true,
-                                data: { isTutorial: false, translations }
+                                data: { isTutorial: false, storageKey: storageKey, translations }
                             },
                             {
                                 target: '[data-tour="header-detach-kern"]',
                                 content: translations.hintDetachContent,
                                 placement: 'bottom' as Placement,
                                 disableBeacon: true,
-                                data: { isTutorial: false, translations }
+                                data: { isTutorial: false, storageKey: storageKey, translations }
                             },
                             {
                                 target: '[data-tour="header-accept-kern"]',
@@ -509,7 +509,7 @@ export const useJITHints = (
                             ),
                             placement: 'bottom' as Placement,
                             disableBeacon: true,
-                            data: { isTutorial: false, translations }
+                            data: { isTutorial: false, storageKey: storageKey, translations }
                         },
                         {
                             target: '[data-tour="kerning-tabs"]',
@@ -520,7 +520,7 @@ export const useJITHints = (
                                 </div>
                             ),
                             placement: 'bottom' as Placement,
-                            data: { isTutorial: false, translations }
+                            data: { isTutorial: false, storageKey: storageKey, translations }
                         },
                         {
                             target: '[data-tour="auto-kern-btn"]',
@@ -661,7 +661,7 @@ export const useJITHints = (
                             placement: 'top',
                             disableBeacon: true,
                             spotlightClicks: true,
-                            data: { isTutorial: false, translations }
+                            data: { isTutorial: false, storageKey: 'hint_related_pairs_seen', translations }
                         },
                         {
                             target: '[data-tour="strip-link-toggle"]',
