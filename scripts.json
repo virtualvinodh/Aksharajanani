@@ -188,7 +188,7 @@
       },
       "sampleText": "",
       "defaults": {
-        "fontName": "TeluguRegular",
+        "fontName": "KannadaRegular",
         "strokeThickness": 25,
         "pathSimplification": 0.5,
         "showGridOutlines": true,

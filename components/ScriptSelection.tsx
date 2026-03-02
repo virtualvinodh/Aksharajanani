@@ -783,23 +783,20 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                             <div className="mt-2">
                                 <h3 className="text-xs sm:text-lg font-bold">{t('importFont') || 'Import Font'}</h3>
                             </div>
-                        </button>                        
-                    </div>
-                </div>
-
-                <div className="w-full max-w-5xl grid grid-cols-1 gap-8 items-center text-center border-t border-gray-200 dark:border-gray-700 pt-10">
-                    {/* Secondary Action */}
-                    <div className="space-y-4">
-                        <p className="font-semibold text-gray-700 dark:text-gray-300">{t('returningUser')}</p>
+                        </button>
                         <button
                             onClick={handleLoadProjectClick}
-                            className="w-full max-w-xs mx-auto flex items-center justify-center gap-3 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-bold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors shadow-md"
+                            type="button"
+                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 aspect-square"
                         >
-                            <LoadIcon />
-                            <span>{t('load')} Project</span>
-                        </button>
+                             <div className="script-card-char group-hover:scale-110 transition-transform duration-200 flex-grow flex items-center justify-center" aria-hidden="true">
+                                <LoadIcon className="w-12 h-12" />
+                            </div>
+                            <div className="mt-2">
+                                <h3 className="text-xs sm:text-lg font-bold">{t('load')} Project</h3>
+                            </div>
+                        </button>                        
                     </div>
-
                 </div>
             </main>
             
