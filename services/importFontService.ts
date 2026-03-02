@@ -82,6 +82,12 @@ export const extractProjectData = async (
 
     for (let i = 0; i < numGlyphs; i++) {
         const glyph = font.glyphs.get(i);
+        
+        // Skip .notdef as it is automatically generated during export
+        if (glyph.name === '.notdef') {
+            continue;
+        }
+
         let unicode = glyph.unicode;
         let isPuaAssigned = false;
         
