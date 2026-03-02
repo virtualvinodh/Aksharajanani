@@ -289,7 +289,6 @@
       "id": "sinhala",
       "nameKey": "scriptSinhala",
       "support": "full",
-      "touchingConsonants": "true",
       "metrics": {
         "unitsPerEm": 1000,
         "ascender": 800,
