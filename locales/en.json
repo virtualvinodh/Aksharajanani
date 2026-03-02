@@ -902,5 +902,7 @@
     "positioningUpdateMessage": "Positioning rule updated.",
     "positioningUpdateTitle": "Positioning Updated",
     "selectFontFile": "Select Font File",
-    "takeSnapshot": "Take Snapshot"
+    "takeSnapshot": "Take Snapshot",
+    "importFontWarningTitle": "OpenType Features Notice",
+    "importFontWarningMessage": "If the imported font contains OpenType features (like ligatures or complex positioning), the FEA code (in Character Behavior) may need to be modified under character behavior to work correctly."
 }
