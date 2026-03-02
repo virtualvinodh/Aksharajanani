@@ -128,7 +128,8 @@
 	"cornerSmoothing": "Corner Smoothing",
 	"create": "Create",
 	"createFromBlocks": "Build from Unicode Blocks",
-	"createScript": "Start New Font",
+	"createScript": "Create Empty Project",
+	"createCustomProject": "Create Custom Project",
 	"createScriptTitle": "Visual Script Creator",
 	"creatorStudio": "Creator Studio",
 	"customBlockFont": "Custom Block Font",
@@ -905,5 +906,7 @@
     "takeSnapshot": "Take Snapshot",
     "importFontWarningTitle": "OpenType Features Notice",
     "importFontWarningMessage": "If the imported font contains OpenType features (like ligatures or complex positioning), the FEA code (in Character Behavior) may need to be modified under character behavior to work correctly.",
-    "importedFontEditModeWarning": "Character positioning might not work correctly in edit mode."
+    "importedFontEditModeWarning": "Character positioning might not work correctly in edit mode.",
+		"loadproject": "Load Saved Project"
+
 }
