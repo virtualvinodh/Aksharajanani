@@ -335,9 +335,14 @@ export const extractProjectData = async (
         });
     }
 
+    const weightClass = font.tables?.os2?.usWeightClass || 400;
+    // Heuristic: 400 (Regular) -> 60 units, 700 (Bold) -> 120 units
+    // (weightClass / 400) * 60 is a decent starting point.
+    const estimatedStrokeThickness = Math.round((weightClass / 400) * 60);
+
     const settings: AppSettings = {
         fontName: font.names.fontFamily?.en || fileName.replace(/\.[^/.]+$/, ""),
-        strokeThickness: 1, // Outline font
+        strokeThickness: estimatedStrokeThickness, 
         contrast: 1,
         pathSimplification: 0,
         showGridOutlines: true,
