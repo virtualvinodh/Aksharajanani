@@ -2,7 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet, ComponentTransform, Path } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, RedoIcon, MoreIcon, LinkIcon, BrokenLinkIcon, RefreshIcon } from '../constants';
+import { useProject } from '../contexts/ProjectContext';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, MoreIcon, LinkIcon, BrokenLinkIcon, RefreshIcon } from '../constants';
 import GlyphPropertiesPanel from './GlyphPropertiesPanel';
 import { GlyphDataAction } from '../contexts/GlyphDataContext';
 
@@ -59,6 +60,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
   characterDispatch, glyphDataDispatch, onPathsChange
 }) => {
   const { t } = useLocale();
+  const { script } = useProject();
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -187,8 +189,9 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
           {/* Delete (Desktop Only) */}
           <button
               onClick={onDeleteClick}
-              title={t('deleteGlyph')}
-              className="hidden sm:flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+              disabled={script?.isImportedFont}
+              title={script?.isImportedFont ? "Deletion disabled for imported fonts" : t('deleteGlyph')}
+              className="hidden sm:flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
           >
               <TrashIcon />
               <span className="hidden xl:inline">{t('deleteGlyph')}</span>
@@ -230,7 +233,9 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
                       {/* Delete (Mobile) */}
                       <button
                           onClick={() => { onDeleteClick(); setIsMoreMenuOpen(false); }}
-                          className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          disabled={script?.isImportedFont}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title={script?.isImportedFont ? "Deletion disabled for imported fonts" : t('deleteGlyph')}
                       >
                           <TrashIcon />
                           <span>{t('deleteGlyph')}</span>

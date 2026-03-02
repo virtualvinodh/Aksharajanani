@@ -391,7 +391,7 @@ export const useGlyphActions = (
 ) => {
     const { t } = useLocale();
     const layout = useLayout();
-    const { characterSets, allCharsByUnicode, allCharsByName, dispatchCharacterAction: characterDispatch, markAttachmentRules, positioningRules, recommendedKerning } = useProject();
+    const { script, characterSets, allCharsByUnicode, allCharsByName, dispatchCharacterAction: characterDispatch, markAttachmentRules, positioningRules, recommendedKerning } = useProject();
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
     const { settings, metrics, dispatch: settingsDispatch } = useSettings();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
@@ -648,6 +648,7 @@ export const useGlyphActions = (
     }, [allCharsByUnicode, glyphDataMap, dependencyMap, markPositioningMap, characterSets, glyphDataDispatch, characterDispatch, positioningDispatch, layout, settings, metrics, markAttachmentRules, allCharsByName, t, groups, triggerAutoKernForChar]);
 
     const handleDeleteGlyph = useCallback((unicode: number) => {
+        if (script?.isImportedFont) return;
         const charToDelete = allCharsByUnicode.get(unicode); if (!charToDelete) return;
         
         const glyphDataSnapshot = new Map(glyphDataMap);

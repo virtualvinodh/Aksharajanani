@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, AppSettings, FontMetrics, GlyphData, CharacterSet, ComponentTransform, Path } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { BackIcon, LeftArrowIcon, RightArrowIcon, PropertiesIcon, TrashIcon, BroomIcon, SaveIcon, LinkIcon, BrokenLinkIcon, UndoIcon, MoreIcon, RefreshIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
 import { GlyphDataAction } from '../../contexts/GlyphDataContext';
@@ -59,6 +60,7 @@ interface DrawingEditorHeaderProps {
 
 const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
   const { t } = useLocale();
+  const { script } = useProject();
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -164,7 +166,12 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
               </button>
               {isMoreMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 z-50">
-                      <button onClick={() => { props.onDeleteClick(); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                      <button 
+                        onClick={() => { props.onDeleteClick(); setIsMoreMenuOpen(false); }} 
+                        disabled={script?.isImportedFont}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={script?.isImportedFont ? "Deletion disabled for imported fonts" : t('deleteGlyph')}
+                      >
                           <TrashIcon /> <span>{t('deleteGlyph')}</span>
                       </button>
                   </div>

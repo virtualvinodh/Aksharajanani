@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { TransformIcon, SettingsIcon, CompareIcon, TrashIcon, CloseIcon, CheckCircleIcon, CopyIcon, PasteIcon } from '../../constants';
 
 interface DrawingBatchToolbarProps {
@@ -22,6 +23,7 @@ interface DrawingBatchToolbarProps {
 
 const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
     const { t } = useLocale();
+    const { script } = useProject();
 
     const getCopyTooltip = () => {
         if (props.isSelectionVirtual) return t('cannotCopyVirtual');
@@ -114,8 +116,9 @@ const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
                     </button>
                     <button 
                         onClick={props.onDelete} 
-                        disabled={props.selectionSize === 0}
+                        disabled={props.selectionSize === 0 || script?.isImportedFont}
                         className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold text-sm rounded-xl hover:bg-red-700 disabled:opacity-30 transition-all shadow-md active:scale-95"
+                        title={script?.isImportedFont ? "Deletion disabled for imported fonts" : t('delete')}
                     >
                         <TrashIcon className="w-4 h-4" />
                         <span className="hidden lg:inline">{t('delete')}</span>

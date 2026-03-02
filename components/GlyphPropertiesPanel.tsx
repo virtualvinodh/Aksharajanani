@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { FontMetrics, Character, CharacterSet, GlyphData, ComponentTransform, PositioningMode, Path } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import SmartGlyphInput from './rules/manager/SmartGlyphInput';
-import { SaveIcon, TrashIcon, RightArrowIcon, CloseIcon, AddIcon } from '../constants';
+import { SaveIcon, RightArrowIcon, CloseIcon, AddIcon } from '../constants';
 import { Link, Unlink } from 'lucide-react';
 import { useRules } from '../contexts/RulesContext';
 import { GlyphDataAction } from '../contexts/GlyphDataContext';
