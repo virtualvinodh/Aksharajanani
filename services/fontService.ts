@@ -4,7 +4,8 @@ import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Pa
 import { compileFeaturesAndPatch, patchFont } from './pythonFontService';
 import { generateFea } from './feaService';
 import { VEC } from '../utils/vectorUtils';
-import { curveToPolyline, quadraticCurveToPolyline, getAccurateGlyphBBox, BoundingBox, getStrokeOutlinePoints } from './glyphRenderService';
+import { curveToPolyline, quadraticCurveToPolyline, getStrokeOutlinePoints, generateCap } from '../utils/strokeExpansion';
+import { getAccurateGlyphBBox, BoundingBox } from './glyphRenderService';
 import { calculateDefaultMarkOffset } from './positioningHeuristicsService';
 import { DRAWING_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn, getGlyphExportNameByUnicode, shouldExportEmpty } from '../utils/glyphUtils';
@@ -62,21 +63,7 @@ const convertPaperPathToOpenType = (paperPathItem: any, otPath: any) => {
     }
 };
 
-/**
- * Generates points for a round cap (semicircle) at the end of a stroke.
- * Rotates the startNormal vector clockwise by 180 degrees in steps.
- */
-const generateCap = (center: Point, radius: number, startNormal: Point, endNormal: Point, steps: number = 8): Point[] => {
-    const points: Point[] = [];
-    for (let i = 1; i < steps; i++) {
-        const t = i / steps;
-        // Rotate -180 degrees (clockwise in standard math, but creates correct winding for outlines)
-        const angle = -Math.PI * t; 
-        const vec = VEC.rotate(startNormal, angle);
-        points.push(VEC.add(center, VEC.scale(vec, radius)));
-    }
-    return points;
-};
+
 
 const createFont = (
     glyphData: Map<number, GlyphData>, 
@@ -632,137 +619,16 @@ export const exportToOtf = async (
         };`;
         
         // Polyline functions need to be self-contained within the worker as well.
-        const quadraticCurveToPolylineForWorker = `const quadraticCurveToPolyline = (points, density = 10) => {
-            if (points.length !== 3) return points;
-            const [p0, p1, p2] = points;
-            const polyline = [p0];
-            const quadraticPoint = (t, p0, p1, p2) => {
-                const x = Math.pow(1 - t, 2) * p0.x + 2 * (1 - t) * t * p1.x + Math.pow(t, 2) * p2.x;
-                const y = Math.pow(1 - t, 2) * p0.y + 2 * (1 - t) * t * p1.y + Math.pow(t, 2) * p2.y;
-                return { x, y };
-            };
-            for (let j = 1; j <= density; j++) {
-                polyline.push(quadraticPoint(j / density, p0, p1, p2));
-            }
-            return polyline;
-        };`;
+        const quadraticCurveToPolylineForWorker = `const quadraticCurveToPolyline = ${quadraticCurveToPolyline.toString()};`;
 
-        const curveToPolylineForWorker = `const curveToPolyline = (points, density = 15) => {
-            if (points.length < 3) return points;
-            const polyline = [points[0]];
-            const quadraticPoint = (t, p0, p1, p2) => {
-                const x = Math.pow(1 - t, 2) * p0.x + 2 * (1 - t) * t * p1.x + Math.pow(t, 2) * p2.x;
-                const y = Math.pow(1 - t, 2) * p0.y + 2 * (1 - t) * t * p1.y + Math.pow(t, 2) * p2.y;
-                return { x, y };
-            };
-            let p0 = points[0];
-            for (let i = 1; i < points.length - 2; i++) {
-                const p1 = points[i];
-                const p2 = { x: (points[i].x + points[i + 1].x) / 2, y: (points[i].y + points[i + 1].y) / 2 };
-                for (let j = 1; j <= density; j++) {
-                    polyline.push(quadraticPoint(j / density, p0, p1, p2));
-                }
-                p0 = p2;
-            }
-            const lastIndex = points.length - 1;
-            const p1 = points[lastIndex - 1];
-            const p2 = points[lastIndex];
-            for (let j = 1; j <= density; j++) {
-                polyline.push(quadraticPoint(j / density, p0, p1, p2));
-            }
-            return polyline;
-        };`;
+        const curveToPolylineForWorker = `const curveToPolyline = ${curveToPolyline.toString()};`;
         
         // Helper function for creating round caps in the worker
-        const generateCapForWorker = `const generateCap = (center, radius, startNormal, endNormal, steps = 8) => {
-             const points = [];
-             for (let i = 1; i < steps; i++) {
-                 const t = i / steps;
-                 // Rotate -180 degrees (clockwise) to create the cap
-                 const angle = -Math.PI * t; 
-                 const vec = VEC.rotate(startNormal, angle);
-                 points.push(VEC.add(center, VEC.scale(vec, radius)));
-             }
-             return points;
-        };`;
+        const generateCapForWorker = `const generateCap = ${generateCap.toString()};`;
 
         // Need to inline the outline expansion logic for the worker
         // UPDATED: Includes start/end tangent stabilization logic
-        const getStrokeOutlinePointsForWorker = `
-        const getStrokeOutlinePoints = (points, thickness, contrast = 1.0, angle) => {
-             const polyline = curveToPolyline(points, 15);
-             if (polyline.length < 2) return { outline1: [], outline2: [] };
-             
-             const outline1 = [];
-             const outline2 = [];
-             
-             const nibAngleRad = angle !== undefined ? (angle * Math.PI / 180) : (90 * Math.PI / 180);
-             const perpToNib = { x: -Math.sin(nibAngleRad), y: Math.cos(nibAngleRad) }; 
-             
-             // Smoothing window size for terminals
-             const TERMINAL_SMOOTHING_WINDOW = 4;
-
-             for (let i = 0; i < polyline.length; i++) {
-                const p_curr = polyline[i];
-                const p_prev = polyline[i - 1];
-                const p_next = polyline[i + 1];
-                let normal;
-                let dir;
-
-                if (!p_prev) {
-                    // --- START POINT STABILIZATION ---
-                    const lookAheadIndex = Math.min(polyline.length - 1, i + TERMINAL_SMOOTHING_WINDOW);
-                    const p_lookAhead = polyline[lookAheadIndex];
-                    dir = VEC.normalize(VEC.sub(p_lookAhead, p_curr));
-                    
-                    if (Math.abs(dir.x) < 1e-5 && Math.abs(dir.y) < 1e-5 && p_next) {
-                        dir = VEC.normalize(VEC.sub(p_next, p_curr));
-                    }
-                    normal = VEC.perp(dir);
-                } else if (!p_next) {
-                    // --- END POINT STABILIZATION ---
-                    const lookBehindIndex = Math.max(0, i - TERMINAL_SMOOTHING_WINDOW);
-                    const p_lookBehind = polyline[lookBehindIndex];
-                    dir = VEC.normalize(VEC.sub(p_curr, p_lookBehind));
-                    
-                    if (Math.abs(dir.x) < 1e-5 && Math.abs(dir.y) < 1e-5 && p_prev) {
-                        dir = VEC.normalize(VEC.sub(p_curr, p_prev));
-                    }
-                    normal = VEC.perp(dir);
-                } else {
-                  const dir1 = VEC.normalize(VEC.sub(p_curr, p_prev));
-                  const n1 = VEC.perp(dir1);
-                  const dir2 = VEC.normalize(VEC.sub(p_next, p_curr));
-                  const n2 = VEC.perp(dir2);
-                  let miterVec = VEC.normalize(VEC.add(n1, n2));
-                  const dotProduct = VEC.dot(miterVec, n1);
-                  if (Math.abs(dotProduct) < 1e-6) {
-                    normal = n1;
-                  } else {
-                    let miterLen = 1 / dotProduct;
-                    if (miterLen > 5) { miterLen = 5; } 
-                    normal = VEC.scale(miterVec, miterLen);
-                  }
-                  dir = VEC.normalize(VEC.add(dir1, dir2));
-                }
-
-                let thicknessAtPoint = thickness;
-                
-                if (angle !== undefined) {
-                     thicknessAtPoint = thickness * Math.max(0.1, Math.abs(VEC.dot(dir, perpToNib))); 
-                } else if (contrast < 1.0) {
-                    const unitNormal = VEC.normalize(normal);
-                    const verticalFactor = Math.abs(unitNormal.x); 
-                    const minThickness = thickness * contrast;
-                    thicknessAtPoint = minThickness + (thickness - minThickness) * verticalFactor;
-                }
-                
-                outline1.push(VEC.add(p_curr, VEC.scale(normal, thicknessAtPoint / 2)));
-                outline2.push(VEC.add(p_curr, VEC.scale(normal, -thicknessAtPoint / 2)));
-             }
-             return { outline1, outline2 };
-        };
-        `;
+        const getStrokeOutlinePointsForWorker = `const getStrokeOutlinePoints = ${getStrokeOutlinePoints.toString()};`;
 
         const getAccurateGlyphBBoxForWorker = `const getAccurateGlyphBBox = (paths, strokeThickness) => {
             paperScope.project.clear(); // Use the worker-global scope and clear it.
