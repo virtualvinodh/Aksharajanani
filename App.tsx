@@ -610,11 +610,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
             onImport={(data) => {
                 handleLoadProjectData(data);
                 layout.closeModal();
-                if (data.isEditMode) {
-                    layout.showNotification(t('importedFontEditModeWarning') || 'Character positioning might not work correctly in edit mode.', 'info', { duration: 8000 });
-                } else if (data.manualFeaCode || (data.fontRules && Object.keys(data.fontRules).length > 0)) {
-                    layout.showNotification(t('importFontWarningMessage') || 'If the imported font contains OpenType features (like ligatures or complex positioning), the FEA code (in Character Behavior) may need to be modified under character behavior to work correctly.', 'info', { duration: 8000 });
-                }
             }} 
         />
       )}
