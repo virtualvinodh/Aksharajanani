@@ -102,6 +102,10 @@ export const usePositioningSession = ({
     const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
     const [pendingNavigation, setPendingNavigation] = useState<'prev' | 'next' | 'back' | Character | null>(null);
 
+    // Track the last pair ID and fit count to allow exactly two auto-fits per pair
+    const lastPairIdRef = useRef<string | undefined>(undefined);
+    const fitCountRef = useRef(0);
+
     const autosaveTimeout = useRef<number | null>(null);
     const baseGlyph = glyphDataMap.get(baseChar.unicode);
 
@@ -256,6 +260,15 @@ export const usePositioningSession = ({
         if (allPaths.length > 0) {
             const combinedBbox = getAccurateGlyphBBox(allPaths, settings.strokeThickness);
             if (combinedBbox) {
+                // Reset if pair changed
+                if (pairIdentifier !== lastPairIdRef.current) {
+                    fitCountRef.current = 0;
+                    lastPairIdRef.current = pairIdentifier;
+                }
+
+                // Only allow up to 2 fits per pair
+                if (fitCountRef.current >= 2) return;
+
                 // Determine if we need to fit (if content is large or off-screen)
                 const isBeyond = combinedBbox.x < 0 || combinedBbox.y < 0 || (combinedBbox.x + combinedBbox.width) > 1000 || (combinedBbox.y + combinedBbox.height) > 1000;
 
@@ -281,6 +294,11 @@ export const usePositioningSession = ({
                     targetZoomRef.current = newTargetZoom;
                     targetViewOffsetRef.current = newTargetOffset;
                     startAnimation();
+
+                    // Increment fit count
+                    fitCountRef.current += 1;
+
+                    console.log("positioning fitting", pairIdentifier, "count:", fitCountRef.current);
                 }
             }
         } else {

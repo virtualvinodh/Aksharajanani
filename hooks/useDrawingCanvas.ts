@@ -54,8 +54,9 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const targetViewOffsetRef = useRef(viewOffset);
     const animationFrameRef = useRef<number | undefined>(undefined);
 
-    // Track if we have performed the initial fit
-    const didInitialFit = useRef(false);
+    // Track the last character ID and fit count to allow exactly two auto-fits per character
+    const lastCharIdRef = useRef<string | number | undefined>(undefined);
+    const fitCountRef = useRef(0);
 
     useEffect(() => {
         zoomRef.current = zoom;
@@ -112,6 +113,15 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     useEffect(() => {
         if (disableAutoFit) return;
 
+        // Reset if character changed
+        if (currentCharacter?.unicode !== lastCharIdRef.current) {
+            fitCountRef.current = 0;
+            lastCharIdRef.current = currentCharacter?.unicode;
+        }
+
+        // Only allow up to 2 fits per character
+        if (fitCountRef.current >= 2) return;
+
         // Perform Auto-Fit IMMEDIATELY using local variables
         // This ensures no race condition where we wait for state to update
         
@@ -144,6 +154,11 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
                     targetZoomRef.current = newTargetZoom;
                     targetViewOffsetRef.current = newTargetOffset;
                     startAnimation();
+
+                    // Increment fit count
+                    fitCountRef.current += 1;
+
+                    console.log("fitting", currentCharacter?.unicode, "count:", fitCountRef.current, "paths:", initialPaths.length);
                 }
             }
         }
