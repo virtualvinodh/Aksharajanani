@@ -13,7 +13,7 @@ import UnicodeBlockSelectorModal from './UnicodeBlockSelectorModal';
 import * as dbService from '../services/dbService';
 import DeleteProjectConfirmationModal from './DeleteProjectConfirmationModal';
 import { useTheme } from '../contexts/ThemeContext';
-import { renderPaths } from '../services/glyphRenderService';
+import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderService';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import NewProjectModal, { NewProjectData } from './NewProjectModal';
 import ImportFontModal from './ImportFontModal';
@@ -103,8 +103,33 @@ const RecentProjectPreview: React.FC<{ project: ProjectData }> = ({ project }) =
             const glyphData = glyphDataMap.get(char.unicode!);
 
             if (isGlyphDrawn(glyphData)) {
-                const scale = PREVIEW_SIZE / DRAWING_CANVAS_SIZE;
+                // Calculate accurate bounding box for auto-fit
+                const bbox = getAccurateGlyphBBox(glyphData!.paths, project.settings.strokeThickness);
+                
+                let scale = 1;
+                let tx = 0;
+                let ty = 0;
+
+                if (bbox) {
+                    // Add padding (10%)
+                    const padding = PREVIEW_SIZE * 0.1;
+                    const availableSize = PREVIEW_SIZE - (padding * 2);
+                    
+                    // Calculate scale to fit
+                    const scaleX = availableSize / bbox.width;
+                    const scaleY = availableSize / bbox.height;
+                    scale = Math.min(scaleX, scaleY);
+                    
+                    // Center the glyph
+                    tx = (PREVIEW_SIZE - (bbox.width * scale)) / 2 - (bbox.x * scale);
+                    ty = (PREVIEW_SIZE - (bbox.height * scale)) / 2 - (bbox.y * scale);
+                } else {
+                    // Fallback if bbox fails (e.g. empty glyph)
+                    scale = PREVIEW_SIZE / DRAWING_CANVAS_SIZE;
+                }
+
                 ctx.save();
+                ctx.translate(tx, ty);
                 ctx.scale(scale, scale);
                 renderPaths(ctx, glyphData!.paths, {
                     strokeThickness: project.settings.strokeThickness,

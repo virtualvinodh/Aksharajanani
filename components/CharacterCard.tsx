@@ -5,7 +5,7 @@ import { useLocale } from '../contexts/LocaleContext';
 import { renderPaths, calculateUnifiedTransform } from '../services/glyphRenderService';
 import { PREVIEW_CANVAS_SIZE, CheckCircleIcon, LinkIcon, PuzzleIcon, PositioningIcon, KerningIcon } from '../constants';
 import { useSettings } from '../contexts/SettingsContext';
-import { isGlyphDrawn as isDrawnCheck } from '../utils/glyphUtils';
+import { isGlyphDrawn as isDrawnCheck, shouldExportEmpty } from '../utils/glyphUtils';
 import { useLayout } from '../contexts/LayoutContext';
 
 interface CharacterCardProps {
@@ -51,7 +51,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       }
   };
 
-  const isDrawn = isDrawnCheck(glyphData) && isAvailable;
+  const isDrawn = (isDrawnCheck(glyphData) || shouldExportEmpty(character.unicode, character.name)) && isAvailable;
 
   useEffect(() => {
     const canvas = canvasRef.current;

@@ -1,7 +1,7 @@
 
 import { useMemo } from 'react';
 import { CharacterSet, GlyphData, KerningMap, MarkPositioningMap, RecommendedKerning, Character, PositioningRules } from '../types';
-import { isGlyphDrawn, isGlyphComplete } from '../utils/glyphUtils';
+import { isGlyphDrawn, isGlyphComplete, shouldExportEmpty } from '../utils/glyphUtils';
 import { useSettings } from '../contexts/SettingsContext';
 import { expandMembers } from '../services/groupExpansionService';
 
@@ -47,7 +47,7 @@ export const useProgressCalculators = ({
         const totalDrawableChars = allDrawableChars.length;
         
         const drawnGlyphCount = allDrawableChars.filter(char => {
-            return isGlyphComplete(char, glyphDataMap, markPositioningMap, kerningMap, allCharsByName);
+            return isGlyphComplete(char, glyphDataMap, markPositioningMap, kerningMap, allCharsByName) || shouldExportEmpty(char.unicode, char.name);
         }).length;
 
         return { completed: drawnGlyphCount, total: totalDrawableChars };

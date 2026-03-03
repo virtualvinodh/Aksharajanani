@@ -257,28 +257,31 @@ export const usePositioningSession = ({
             const combinedBbox = getAccurateGlyphBBox(allPaths, settings.strokeThickness);
             if (combinedBbox) {
                 // Determine if we need to fit (if content is large or off-screen)
-                // For simplified UX, we always auto-fit on pair switch
-                const PADDING = 150;
-                const availableDim = 1000 - (PADDING * 2);
-                
-                let fitScale = 1;
-                if (combinedBbox.width > 0 && combinedBbox.height > 0) {
-                     fitScale = Math.min(availableDim / combinedBbox.width, availableDim / combinedBbox.height, 1.5); // Cap max zoom
+                const isBeyond = combinedBbox.x < 0 || combinedBbox.y < 0 || (combinedBbox.x + combinedBbox.width) > 1000 || (combinedBbox.y + combinedBbox.height) > 1000;
+
+                if (isBeyond) {
+                    const PADDING = 150;
+                    const availableDim = 1000 - (PADDING * 2);
+                    
+                    let fitScale = 1;
+                    if (combinedBbox.width > 0 && combinedBbox.height > 0) {
+                         fitScale = Math.min(availableDim / combinedBbox.width, availableDim / combinedBbox.height, 1.5); // Cap max zoom
+                    }
+
+                    const contentCenterX = combinedBbox.x + combinedBbox.width / 2;
+                    const contentCenterY = combinedBbox.y + combinedBbox.height / 2;
+                    
+                    const newTargetZoom = fitScale;
+                    const newTargetOffset = {
+                        x: 500 - (contentCenterX * newTargetZoom),
+                        y: 500 - (contentCenterY * newTargetZoom)
+                    };
+
+                    // Update animation targets immediately
+                    targetZoomRef.current = newTargetZoom;
+                    targetViewOffsetRef.current = newTargetOffset;
+                    startAnimation();
                 }
-
-                const contentCenterX = combinedBbox.x + combinedBbox.width / 2;
-                const contentCenterY = combinedBbox.y + combinedBbox.height / 2;
-                
-                const newTargetZoom = fitScale;
-                const newTargetOffset = {
-                    x: 500 - (contentCenterX * newTargetZoom),
-                    y: 500 - (contentCenterY * newTargetZoom)
-                };
-
-                // Update animation targets immediately
-                targetZoomRef.current = newTargetZoom;
-                targetViewOffsetRef.current = newTargetOffset;
-                startAnimation();
             }
         } else {
              // Reset if empty

@@ -1,6 +1,6 @@
-# Aksharajanani: Drawing Workspace Data Flow
+# Aksharajanani: Drawing Workspace Data Flow 
 
-This document outlines the architecture and data transformations that occur within the Drawing Workspace, from user input to persistent storage.
+This document outlines  the architecture and data transformations that occur within the Drawing Workspace, from user input to persistent storage.
 
 ---
 

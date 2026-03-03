@@ -83,8 +83,8 @@ export const extractProjectData = async (
     for (let i = 0; i < numGlyphs; i++) {
         const glyph = font.glyphs.get(i);
         
-        // Skip .notdef as it is automatically generated during export
-        if (glyph.name === '.notdef') {
+        // Robust check: Index 0 is always .notdef, plus check for name variations
+        if (i === 0 || (glyph.name && glyph.name.toLowerCase().includes('notdef'))) {
             continue;
         }
 

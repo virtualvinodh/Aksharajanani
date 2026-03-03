@@ -54,6 +54,9 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const targetViewOffsetRef = useRef(viewOffset);
     const animationFrameRef = useRef<number | undefined>(undefined);
 
+    // Track if we have performed the initial fit
+    const didInitialFit = useRef(false);
+
     useEffect(() => {
         zoomRef.current = zoom;
         if (!animationFrameRef.current) {
@@ -105,38 +108,46 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         animationFrameRef.current = requestAnimationFrame(animate);
     }, [setZoom, setViewOffset]);
 
-    const didInitialFit = useRef(false);
+    // --- Initial Hydration & Auto-Fit (Logic from PositioningCanvas) ---
     useEffect(() => {
-        if (disableAutoFit) {
-            didInitialFit.current = true;
-            return;
-        }
+        if (disableAutoFit) return;
+
+        // Perform Auto-Fit IMMEDIATELY using local variables
+        // This ensures no race condition where we wait for state to update
         
-        if (!didInitialFit.current && initialPaths.length > 0) {
+        if (initialPaths.length > 0) {
             const bbox = getAccurateGlyphBBox(initialPaths, settings.strokeThickness);
             if (bbox) {
+                // Determine if we need to fit (if content is large or off-screen)
+                // Using the isBeyond check as requested previously, but within the robust structure
                 const isBeyond = bbox.x < 0 || bbox.y < 0 || (bbox.x + bbox.width) > 1000 || (bbox.y + bbox.height) > 1000;
-                
+
                 if (isBeyond) {
                     const PADDING = 100;
                     const availableDim = 1000 - (PADDING * 2);
-                    const fitScale = Math.min(availableDim / bbox.width, availableDim / bbox.height, 1);
+                    
+                    let fitScale = 1;
+                    if (bbox.width > 0 && bbox.height > 0) {
+                         fitScale = Math.min(availableDim / bbox.width, availableDim / bbox.height, 1); // Cap max zoom at 1 (don't zoom in too much)
+                    }
+
                     const contentCenterX = bbox.x + bbox.width / 2;
                     const contentCenterY = bbox.y + bbox.height / 2;
+                    
                     const newTargetZoom = fitScale;
                     const newTargetOffset = {
                         x: 500 - (contentCenterX * newTargetZoom),
                         y: 500 - (contentCenterY * newTargetZoom)
                     };
 
+                    // Update animation targets immediately
                     targetZoomRef.current = newTargetZoom;
                     targetViewOffsetRef.current = newTargetOffset;
                     startAnimation();
                 }
             }
-            didInitialFit.current = true;
         }
-    }, [initialPaths, settings.strokeThickness, startAnimation, disableAutoFit]);
+    }, [initialPaths, settings.strokeThickness, startAnimation, disableAutoFit, currentCharacter?.unicode]);
 
     useEffect(() => {
         return () => {
