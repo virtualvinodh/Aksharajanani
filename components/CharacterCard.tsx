@@ -20,12 +20,13 @@ interface CharacterCardProps {
   onToggleSelect?: (character: Character) => void;
   variant?: 'default' | 'compact' | 'overlay';
   disabledReason?: string;
+  onLongPress?: (character: Character) => void;
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({ 
     character, glyphData, isAvailable, isManuallySet, isConstructed, onSelect, 
     isSelectionMode = false, isSelected = false, onToggleSelect,
-    variant = 'default', disabledReason
+    variant = 'default', disabledReason, onLongPress
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -49,6 +50,64 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
               onSelect(character, cardRef.current.getBoundingClientRect());
           }
       }
+  };
+
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const isLongPress = useRef(false);
+
+  const startPress = () => {
+      isLongPress.current = false;
+      longPressTimer.current = setTimeout(() => {
+          isLongPress.current = true;
+          if (onLongPress) {
+              onLongPress(character);
+          }
+      }, 500);
+  };
+
+  const cancelPress = () => {
+      if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+      }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+      startPress();
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+      cancelPress();
+  };
+
+  const handleMouseLeave = () => {
+      cancelPress();
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+      startPress();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+      cancelPress();
+      // Prevent default click behavior if it was a long press to avoid double-firing
+      if (isLongPress.current) {
+          e.preventDefault();
+      } else {
+          // For touch, we might rely on the subsequent click event or handle it here.
+          // React's onClick usually fires after touchEnd. 
+          // To be safe and consistent with mouse, we can trigger click here if we preventDefault on click.
+          // But simpler: just let the click happen if not long press.
+      }
+  };
+
+  const handleClickWrapper = (e: React.MouseEvent) => {
+      if (isLongPress.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+      }
+      handleClick(e);
   };
 
   const isDrawn = (isDrawnCheck(glyphData) || shouldExportEmpty(character.unicode, character.name)) && isAvailable;
@@ -145,7 +204,12 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   return (
     <div
       ref={cardRef}
-      onClick={handleClick}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onClick={handleClickWrapper}
       className={`${baseContainerClasses} ${stateClasses}`}
       title={disabledReason}
       data-status={status}

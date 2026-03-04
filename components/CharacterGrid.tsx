@@ -93,6 +93,19 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
       });
   }, [isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection]);
 
+  const handleLongPress = useCallback((character: Character) => {
+      if (character.unicode === undefined) return;
+      
+      setIsMetricsSelectionMode(true);
+
+      setMetricsSelection(prev => {
+          if (prev.has(character.unicode!)) return prev;
+          const newSet = new Set(prev);
+          newSet.add(character.unicode!);
+          return newSet;
+      });
+  }, [setIsMetricsSelectionMode, setMetricsSelection]);
+
   const toggleGroupSelection = useCallback((groupChars: Character[]) => {
       setMetricsSelection(prev => {
           const newSet = new Set(prev);
@@ -161,6 +174,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                             isSelected={char.unicode !== undefined && metricsSelection.has(char.unicode)}
                             onToggleSelect={toggleSelection}
                             variant={variant}
+                            onLongPress={handleLongPress}
                         />
                     </div>
                 );
@@ -284,6 +298,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                                         isSelected={char.unicode !== undefined && metricsSelection.has(char.unicode)}
                                         onToggleSelect={toggleSelection}
                                         variant={variant}
+                                        onLongPress={handleLongPress}
                                     />
                                 </div>
                             ))}

@@ -19,10 +19,11 @@ interface UnifiedCardProps {
   isSelected?: boolean;
   onToggleSelect?: (character: Character) => void;
   variant?: 'default' | 'compact' | 'overlay';
+  onLongPress?: (character: Character) => void;
 }
 
 const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {
-  const { character } = props;
+  const { character, onLongPress } = props;
   const { t } = useLocale();
 
   // 1. Gather all data from contexts
@@ -110,6 +111,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {
       isManuallySet={isManuallySet}
       isConstructed={isConstructed}
       disabledReason={disabledReason}
+      onLongPress={onLongPress}
     />
   );
 };
