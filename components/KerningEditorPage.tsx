@@ -57,6 +57,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     const [gpos, setGpos] = useState<string | undefined>(props.character.gpos);
     const [gsub, setGsub] = useState<string | undefined>(props.character.gsub);
     const [liga, setLiga] = useState<string[] | undefined>(props.character.liga);
+    const [glyphClass, setGlyphClass] = useState<Character['glyphClass']>(props.character.glyphClass);
 
     // Notify Tutorial Manager that the view has loaded
     useEffect(() => {
@@ -72,6 +73,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
         setGpos(props.character.gpos);
         setGsub(props.character.gsub);
         setLiga(props.character.liga);
+        setGlyphClass(props.character.glyphClass);
     }, [props.character]);
 
 
@@ -127,6 +129,9 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                             if (type === 'positioning') updated.position = components as [string, string];
                             if (type === 'kerning') updated.kern = components as [string, string];
                             
+                            // Update glyph class if changed
+                            if (glyphClass) updated.glyphClass = glyphClass;
+
                             return updated;
                         }
                         return c;
@@ -254,6 +259,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 gpos={gpos} setGpos={setGpos}
                 gsub={gsub} setGsub={setGsub}
                 liga={liga} setLiga={setLiga}
+                glyphClass={glyphClass} setGlyphClass={setGlyphClass}
                 onIgnore={props.onIgnore!}
                 isIgnored={!!props.isIgnored}
             />

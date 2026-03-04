@@ -50,6 +50,8 @@ interface KerningEditorHeaderProps {
     setGsub?: (val: string | undefined) => void;
     liga?: string[];
     setLiga?: (val: string[] | undefined) => void;
+    glyphClass?: Character['glyphClass'];
+    setGlyphClass?: (val: Character['glyphClass']) => void;
 }
 
 const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
@@ -258,6 +260,8 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                         setGsub={props.setGsub}
                         liga={props.liga}
                         setLiga={props.setLiga}
+                        glyphClass={props.glyphClass}
+                        setGlyphClass={props.setGlyphClass}
                     />
                 )}
             </div>

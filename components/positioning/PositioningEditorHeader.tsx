@@ -267,8 +267,8 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                     gpos={gpos} setGpos={setGpos}
                     gsub={gsub} setGsub={setGsub}
                     
-                    // Hide structural editing in this specific workspace
-                    disableStructuralEditing={true}
+                    // Enable structural editing in this specific workspace
+                    disableStructuralEditing={false}
                 />
                 )}
             </div>
