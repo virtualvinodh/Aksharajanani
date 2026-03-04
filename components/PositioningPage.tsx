@@ -357,6 +357,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 groups={groups}
                 markAttachmentClasses={markAttachmentClasses}
                 baseAttachmentClasses={baseAttachmentClasses}
+                disableStructuralEditing={true}
             />
         );
     }

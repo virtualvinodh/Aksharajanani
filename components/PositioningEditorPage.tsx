@@ -47,6 +47,8 @@ interface PositioningEditorPageProps {
     groups: Record<string, string[]>;
     markAttachmentClasses: AttachmentClass[] | null;
     baseAttachmentClasses: AttachmentClass[] | null;
+    
+    disableStructuralEditing?: boolean;
 }
 
 const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
@@ -321,6 +323,7 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
                 kern={session.kern} setKern={session.setKern}
                 gpos={session.gpos} setGpos={session.setGpos}
                 gsub={session.gsub} setGsub={session.setGsub}
+                disableStructuralEditing={props.disableStructuralEditing}
             />
 
             <PositioningEditorWorkspace 

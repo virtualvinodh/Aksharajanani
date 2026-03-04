@@ -54,6 +54,8 @@ interface PositioningEditorHeaderProps {
     setGpos?: (val: string | undefined) => void;
     gsub?: string;
     setGsub?: (val: string | undefined) => void;
+    
+    disableStructuralEditing?: boolean;
 }
 
 const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
@@ -62,7 +64,8 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
     onSaveRequest, isLargeScreen, isStripExpanded, isDirty, onConfirmPosition, onDetach,
     allCharacterSets, onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange,
     glyphClass, setGlyphClass, advWidth, setAdvWidth, liga, setLiga,
-    position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub
+    position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
+    disableStructuralEditing = false
 }) => {
     const { t } = useLocale();
     const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -218,14 +221,16 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                     <span className="hidden xl:inline font-semibold">{t('reset')}</span>
                 </button>
 
-                {/* Properties Button - Always Visible */}
-                <button 
-                    onClick={() => setIsPropertiesPanelOpen(p => !p)}
-                    className={`p-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ${isPropertiesPanelOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                    title={t('glyphProperties')}
-                >
-                    <PropertiesIcon />
-                </button>
+                {/* Properties Button - Visible if GSUB pair or if structural editing is enabled */}
+                {(isGsubPair || !disableStructuralEditing) && (
+                    <button 
+                        onClick={() => setIsPropertiesPanelOpen(p => !p)}
+                        className={`p-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ${isPropertiesPanelOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                        title={t('glyphProperties')}
+                    >
+                        <PropertiesIcon />
+                    </button>
+                )}
                 
                 {/* MORE MENU - Visible on All Screens */}
                 <div ref={moreMenuRef} className="relative">
@@ -268,7 +273,7 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                     gsub={gsub} setGsub={setGsub}
                     
                     // Enable structural editing in this specific workspace
-                    disableStructuralEditing={false}
+                    disableStructuralEditing={disableStructuralEditing}
                 />
                 )}
             </div>

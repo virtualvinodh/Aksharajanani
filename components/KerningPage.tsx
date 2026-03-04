@@ -345,6 +345,7 @@ const KerningPage: React.FC<KerningPageProps> = ({
                 allCharsByName={allCharsByName}
                 character={character}
                 showPropertiesButton={false}
+                disableStructuralEditing={true}
             />
         );
     }

@@ -38,6 +38,8 @@ interface KerningEditorPageProps {
     showPropertiesButton?: boolean; // New optional prop
     onIgnore?: () => void;
     isIgnored?: boolean;
+    
+    disableStructuralEditing?: boolean;
 }
 
 const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
@@ -262,6 +264,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 glyphClass={glyphClass} setGlyphClass={setGlyphClass}
                 onIgnore={props.onIgnore!}
                 isIgnored={!!props.isIgnored}
+                disableStructuralEditing={props.disableStructuralEditing}
             />
             
             <KerningEditorWorkspace 

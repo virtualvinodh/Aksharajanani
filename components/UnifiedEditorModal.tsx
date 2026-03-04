@@ -251,6 +251,7 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
                     allCharacterSets={allCharacterSets} 
                     onConvertToComposite={character.gsub ? handleConvertToComposite : undefined} 
                     allCharsByName={allCharsByName} character={character}
+                    disableStructuralEditing={false}
                 />
             );
         }
@@ -268,6 +269,7 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
                     groups={groups}
                     markAttachmentClasses={markAttachmentClasses}
                     baseAttachmentClasses={baseAttachmentClasses}
+                    disableStructuralEditing={false}
                 />
             );
         }

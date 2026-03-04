@@ -52,6 +52,8 @@ interface KerningEditorHeaderProps {
     setLiga?: (val: string[] | undefined) => void;
     glyphClass?: Character['glyphClass'];
     setGlyphClass?: (val: Character['glyphClass']) => void;
+    
+    disableStructuralEditing?: boolean;
 }
 
 const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
@@ -262,6 +264,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                         setLiga={props.setLiga}
                         glyphClass={props.glyphClass}
                         setGlyphClass={props.setGlyphClass}
+                        disableStructuralEditing={props.disableStructuralEditing}
                     />
                 )}
             </div>
