@@ -50,9 +50,21 @@ This logic applies when the `liga` array is explicitly defined.
 
 | Case | `glyphClass` | Tags | FontService (Baking) | FEA Service (Code) | Resulting Behavior | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1** | `ligature` | None | **Bakes** (if `composite` set) | **No Rule.** | **Orphaned Glyph.** A new glyph is created but never substituted. | ⚠️ **Warning** |
+| **1** | `ligature` | None | **Bakes** (if `composite` set) | **Auto-Infers GSUB** | **Standard Ligature.** The system automatically guesses the correct feature (`liga`, `akhn`, `abvs`, etc.) based on the script and components. | ✅ **Valid** |
 | **2** | `ligature` | `gsub: 'liga'` | **Bakes** | Generates `sub A B C by Name`. | **Standard Ligature.** | ✅ **Standard** |
 | **3** | `virtual` | `gsub: 'liga'` | **Skipped** | Generates `sub A B C by Name`. | **Invisible Substitution.** The sequence is replaced by a glyph with no outlines. | ❌ **Invalid** |
+
+### Auto-Inference Logic (for Case 1)
+
+When a `ligature` has no `gsub` tag, the system infers it as follows:
+
+1.  **Indic Scripts (e.g., Devanagari, Tamil):**
+    *   **Virama (Halant) Conjuncts:** If the second component is a Virama, it defaults to `gsub: 'akhn'` (Akhand).
+    *   **Matra (Vowel Sign) Positioning:** If the second component is a Matra, it defaults to the correct positional feature (`abvs`, `blws`, `psts`, `pres`).
+    *   **Fallback:** Defaults to `gsub: 'akhn'` for other Indic ligatures.
+
+2.  **Non-Indic Scripts (e.g., Latin):**
+    *   Defaults to `gsub: 'liga'` (Standard Ligatures).
 
 ---
 
@@ -101,6 +113,3 @@ When generating substitution rules (GSUB), the system checks character propertie
 
 4.  **Mark Class + Non-Zero Advance Width:**
     *   *Why:* While not strictly a "Virtual" error, marks intended for GPOS should usually have `advWidth: 0` to prevent them from pushing subsequent characters forward.
-
-5.  **Ligature + No GSUB Tag:**
-    *   *Why:* The system does **not** auto-infer `gsub: 'liga'` for concrete ligatures. If you create a ligature but don't set the `gsub` property, the glyph is exported but no substitution rule is written. The user cannot type it.
