@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
-import { EditIcon, PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, ImportIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
+import { EditIcon, PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
 
 interface DrawingToolbarProps {
@@ -174,7 +174,11 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
             <ActionButton onClick={() => onZoom(0.8)} title={t('zoomOut')}><ZoomOutIcon /></ActionButton>
             <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ActionButton onClick={onImageImportClick} title={t('importGuide')}><ImageIcon/></ActionButton>
-            <ActionButton onClick={onSvgImportClick} title={t('importSvg')} disabled={isLocked}><ImportIcon/></ActionButton>
+            <ActionButton onClick={onSvgImportClick} title={t('importSvg')} disabled={isLocked}>
+                <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <text x="12" y="16" textAnchor="middle" fontSize="10" fontWeight="bold" fontFamily="sans-serif">SVG</text>
+                </svg>
+            </ActionButton>
         </>
     );
 
