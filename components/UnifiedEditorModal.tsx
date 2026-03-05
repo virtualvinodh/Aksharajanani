@@ -249,7 +249,7 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
                     onClose={() => onClose()} onDelete={() => onDelete(character.unicode!)} onNavigate={handlePageNavigate}
                     hasPrev={!!prevCharacter} hasNext={!!nextCharacter} glyphVersion={glyphVersion} isKerned={kerningMap.has(key)}
                     allCharacterSets={allCharacterSets} 
-                    onConvertToComposite={character.gsub ? handleConvertToComposite : undefined} 
+                    onConvertToComposite={handleConvertToComposite} 
                     allCharsByName={allCharsByName} character={character}
                     disableStructuralEditing={false}
                 />
