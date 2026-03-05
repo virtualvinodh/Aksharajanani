@@ -14,10 +14,19 @@ const renderFormattedText = (text: string): React.ReactNode => {
     return (
         <>
             {parts.map((part, index) => {
-                if (index % 2 === 1) {
-                    return <strong key={index} className="font-semibold text-gray-800 dark:text-gray-200">{part}</strong>;
+                const isBold = index % 2 === 1;
+                const subParts = part.split('`');
+                const content = subParts.map((subPart, subIndex) => {
+                    if (subIndex % 2 === 1) {
+                        return <code key={`${index}-${subIndex}`} className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm font-mono text-pink-600 dark:text-pink-400 mx-0.5">{subPart}</code>;
+                    }
+                    return subPart;
+                });
+
+                if (isBold) {
+                    return <strong key={index} className="font-semibold text-gray-800 dark:text-gray-200">{content}</strong>;
                 }
-                return part;
+                return <React.Fragment key={index}>{content}</React.Fragment>;
             })}
         </>
     );
@@ -58,6 +67,8 @@ const AccordionItem: React.FC<{ title: string; children: React.ReactNode }> = Re
         </div>
     );
 });
+
+AccordionItem.displayName = 'AccordionItem';
 
 const HelpPage: React.FC<HelpPageProps> = ({ onClose, scripts }) => {
   const { locale, t: appT } = useLocale();
@@ -132,8 +143,8 @@ const HelpPage: React.FC<HelpPageProps> = ({ onClose, scripts }) => {
             <AccordionItem title={hT('helpQuickStartTitle')}>
                 {renderFormattedText(hT('helpQuickStartContent'))}
             </AccordionItem>
-            <AccordionItem title={hT('helpWorkflowTitle')}>
-                {renderFormattedText(hT('helpWorkflowContent'))}
+            <AccordionItem title={hT('helpProcessTitle')}>
+                {renderFormattedText(hT('helpProcessContent'))}
             </AccordionItem>
             <AccordionItem title={hT('helpDrawingTitle')}>
                 {renderFormattedText(hT('helpDrawingContent'))}
@@ -141,8 +152,26 @@ const HelpPage: React.FC<HelpPageProps> = ({ onClose, scripts }) => {
             <AccordionItem title={hT('helpGeometryTitle')}>
                 {renderFormattedText(hT('helpGeometryContent'))}
             </AccordionItem>
+            <AccordionItem title={hT('helpCharacterGridTitle')}>
+                {renderFormattedText(hT('helpCharacterGridContent'))}
+            </AccordionItem>
+            <AccordionItem title={hT('helpGlyphPropertiesTitle')}>
+                {renderFormattedText(hT('helpGlyphPropertiesContent'))}
+            </AccordionItem>
+            <AccordionItem title={hT('helpGlyphTypesTitle')}>
+                {renderFormattedText(hT('helpGlyphTypesContent'))}
+            </AccordionItem>
+            <AccordionItem title={hT('helpLigaturesTitle')}>
+                {renderFormattedText(hT('helpLigaturesContent'))}
+            </AccordionItem>
+            <AccordionItem title={hT('helpVirtualCharactersTitle')}>
+                {renderFormattedText(hT('helpVirtualCharactersContent'))}
+            </AccordionItem>
             <AccordionItem title={hT('helpPositioningTitle')}>
                 {renderFormattedText(hT('helpPositioningContent'))}
+            </AccordionItem>
+            <AccordionItem title={hT('helpPositioningManagerTitle')}>
+                {renderFormattedText(hT('helpPositioningManagerContent'))}
             </AccordionItem>
             <AccordionItem title={hT('helpKerningTitle')}>
                 {renderFormattedText(hT('helpKerningContent'))}
@@ -158,6 +187,18 @@ const HelpPage: React.FC<HelpPageProps> = ({ onClose, scripts }) => {
             </AccordionItem>
             <AccordionItem title={hT('helpSettingsTitle')}>
                 {renderFormattedText(hT('helpSettingsContent'))}
+            </AccordionItem>
+            <AccordionItem title={hT('helpShortcutsTitle')}>
+                {renderFormattedText(hT('helpShortcutsContent'))}
+            </AccordionItem>
+            <AccordionItem title={hT('helpTestPageTitle')}>
+                {renderFormattedText(hT('helpTestPageContent'))}
+            </AccordionItem>
+            <AccordionItem title={hT('helpTroubleshootingTitle')}>
+                {renderFormattedText(hT('helpTroubleshootingContent'))}
+            </AccordionItem>
+            <AccordionItem title={hT('helpAdvancedExportTitle')}>
+                {renderFormattedText(hT('helpAdvancedExportContent'))}
             </AccordionItem>
             <AccordionItem title={hT('helpSupportedScriptsTitle')}>
                 <ul className="list-disc list-inside space-y-3 text-gray-600 dark:text-gray-400">

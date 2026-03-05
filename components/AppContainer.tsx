@@ -125,7 +125,7 @@ const AppContainer: React.FC = () => {
     return (
         <>
             {activeModal?.name === 'about' && <AboutPage onClose={closeModal} />}
-            {activeModal?.name === 'help' && <HelpPage onClose={closeModal} scripts={scriptsFile.scripts} />}
+            {activeModal?.name === 'help' && <HelpPage onClose={closeModal} />}
             
             {!script ? (
                  <ScriptSelection 
