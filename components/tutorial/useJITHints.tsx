@@ -12,7 +12,7 @@ export const useJITHints = (
 ) => {
     const { script } = useProject();
     const { glyphDataMap, version } = useGlyphData();
-    const { selectedCharacter, activeModal, workspace, currentView } = useLayout();
+    const { selectedCharacter, activeModal, workspace, currentView, isNavDrawerOpen } = useLayout();
     
     const [run, setRun] = useState(false);
     const [steps, setSteps] = useState<Step[]>([]);
@@ -472,14 +472,14 @@ export const useJITHints = (
                 if (!localStorage.getItem(storageKey)) {
                     const timer = setTimeout(() => {
                         setSteps([{
-                            target: '[data-tour="header-back"]',
+                            target: '[data-tour="floating-grid-btn"]',
                             content: (
                                 <div>
-                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintMobileBackTitle}</h3>
-                                    <p dangerouslySetInnerHTML={{__html: translations.hintMobileBackContent}}></p>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Test Your Font</h3>
+                                    <p>Tap here to open the navigation menu, then click the <strong>Test</strong> icon to try out your new character!</p>
                                 </div>
                             ),
-                            placement: 'bottom',
+                            placement: 'right',
                             disableBeacon: true,
                             spotlightClicks: true,
                             hideFooter: true,
@@ -488,6 +488,31 @@ export const useJITHints = (
                         setStepIndex(0);
                         setRun(true);
                     }, 1000);
+                    return () => clearTimeout(timer);
+                }
+            }
+            
+            // Hint: Mobile Drawer Test
+            if (!isLargeScreen && isNavDrawerOpen && drawnCount > 0) {
+                const storageKey = 'hint_drawer_test_seen';
+                if (!localStorage.getItem(storageKey)) {
+                    const timer = setTimeout(() => {
+                        setSteps([{
+                            target: '[data-tour="drawer-test-btn"]',
+                            content: (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Test Your Font</h3>
+                                    <p>Click here to type with the characters you've drawn so far!</p>
+                                </div>
+                            ),
+                            placement: 'bottom',
+                            disableBeacon: true,
+                            spotlightClicks: true,
+                            data: { isTutorial: false, storageKey: storageKey, translations }
+                        }]);
+                        setStepIndex(0);
+                        setRun(true);
+                    }, 500); // Shorter delay since drawer animation is fast
                     return () => clearTimeout(timer);
                 }
             }
@@ -704,8 +729,13 @@ export const useJITHints = (
                  setRun(false);
                  setSteps([]);
              }
+             if (currentStepTarget === '[data-tour="floating-grid-btn"]' && isNavDrawerOpen) {
+                 localStorage.setItem('hint_mobile_back_seen', 'true');
+                 setRun(false);
+                 setSteps([]);
+             }
         }
-    }, [run, steps, selectedCharacter, workspace]);
+    }, [run, steps, selectedCharacter, workspace, isNavDrawerOpen]);
 
     const handleCallback = useCallback((data: CallBackProps) => {
         if (isTutorialActive) return;

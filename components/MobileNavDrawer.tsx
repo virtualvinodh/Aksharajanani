@@ -72,7 +72,7 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
                     <button onClick={() => { onCreatorClick(); onClose(); }} disabled={exportingType !== null} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
                         <CreatorIcon />
                     </button>
-                    <button onClick={() => { onTestClick(); onClose(); }} disabled={exportingType !== null} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    <button data-tour="drawer-test-btn" onClick={() => { onTestClick(); onClose(); }} disabled={exportingType !== null} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
                         <TestIcon />
                     </button>
                     <button onClick={() => { onSettingsClick(); onClose(); }} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
