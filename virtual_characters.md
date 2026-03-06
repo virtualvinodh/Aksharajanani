@@ -1,115 +1,45 @@
 # Virtual vs. Baked Characters: Logic Matrix
 
-This document outlines how the system interprets the combinations of `glyphClass`, construction properties (`position`, `kern`), and OpenType tags (`gpos`, `gsub`) to determine whether to **Bake Geometry** (create a new shape) or **Generate Code** (create an OpenType rule).
+This document outlines how the system interprets the combinations of `glyphClass`, construction properties (`position`, `kern`, `composite`, `link`), and OpenType tags (`gpos`, `gsub`) to determine whether to **Bake Geometry** (create a new shape) or **Generate Code** (create an OpenType rule).
 
 ---
 
-## Definitions
+## The Core Philosophy
+**Visual construction arrays (`composite`, `link`, `position`, `kern`) dictate *only* how a glyph is drawn and baked. They NEVER automatically generate OpenType rules.**
 
-1.  **Baking (FontService):** The process of physically merging vector paths from component glyphs into a new, permanent glyph outline in the `.otf` file. This requires a Unicode codepoint (standard or PUA).
-2.  **Virtual (`glyphClass: 'virtual'`):** A flag indicating the character is a logic container only. It has no Unicode, no geometry in the final font, and is used strictly to generate FEA rules.
-3.  **Concrete (`glyphClass: 'base' | 'ligature' | 'mark'`):** A standard character that will exist in the font file with geometry.
-4.  **Inference:** The system's attempt to guess the correct Feature Tag if one is not explicitly provided.
+OpenType rules are generated *exclusively* by explicit, dedicated properties (`liga` for GSUB, and `gpos`/`gsub` tags).
 
 ---
 
-## 1. Positioning Logic (`position: [Base, Mark]`)
+## 1. Baking Logic (Font Creation)
+*Baking is determined entirely by the `glyphClass`.*
 
-This table explains what happens when a character is defined with a `position` pair.
-
-| Case | `glyphClass` | Tags | FontService (Baking) | FEA Service (Code) | Resulting Behavior | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1** | `virtual` | None | **Skipped** | Infers `mark` or `mkmk`. Generates `pos base <anchor> mark <anchor>`. | **Standard Positioning.** Typing Base + Mark moves the mark visually. No new glyph is substituted. | ✅ **Standard** |
-| **2** | `virtual` | `gpos: 'abvm'` | **Skipped** | Generates `pos` rule inside `feature abvm`. | **Specific Positioning.** Same as above, but scoped to a specific feature. | ✅ **Valid** |
-| **3** | `virtual` | `gsub: 'liga'` | **Skipped** | Generates `sub Base Mark by Name`. | **Invisible Substitution.** The engine substitutes Base+Mark with "Name", but "Name" has no outline (because it is virtual). Text disappears. | ❌ **Invalid** |
-| **4** | `virtual` | `gpos` + `gsub` | **Skipped** | Generates **BOTH** rules. | **Conflict.** The engine might try to position them AND substitute them. Usually, GSUB takes precedence, resulting in invisible text (see Case 3). | ❌ **Invalid** |
-| **5** | `ligature` | None | **Bakes Geometry** | **No Rule.** | **Orphaned Glyph.** A new glyph is created in the font, but no OpenType rule maps to it. It cannot be typed unless a rule is added manually. | ⚠️ **Warning** |
-| **6** | `ligature` | `gsub: 'liga'` | **Bakes Geometry** | Generates `sub Base Mark by Name` inside `feature liga`. | **Standard Ligature.** Typing Base + Mark replaces them with a single new glyph containing the merged shapes. | ✅ **Standard** |
-| **7** | `ligature` | `gpos: 'mark'` | **Bakes Geometry** | Generates `pos base <anchor> mark <anchor>`. | **Redundant/Confusing.** A new glyph is baked (wasting file size), but the font engine executes a Move command on the original components. The baked glyph is never used. | ⚠️ **Inefficient** |
-| **8** | `base` | None | **Bakes Geometry** | **No Rule.** | **Pre-composed Character.** A new glyph is created. It must be typed directly (via keyboard or palette) or referenced by *other* rules. It does not automatically substitute. | ✅ **Valid** |
+| `glyphClass` | Action | Source Data Used | Result |
+| :--- | :--- | :--- | :--- |
+| `virtual` | **Skipped** | None | No physical glyph is added to the font file. |
+| `base`, `ligature`, `mark` | **Bakes Geometry** | `composite`, `link`, `position`, or `kern` | A permanent glyph outline is created in the font file. |
 
 ---
 
-## 2. Kerning Logic (`kern: [Left, Right]`)
+## 2. OpenType Logic (Rule Generation)
+*Rule generation is triggered exclusively by specific data arrays (`liga`, `position`, `kern`). Visual arrays (`composite`, `link`) never trigger rules.*
 
-This table explains what happens when a character is defined with a `kern` pair.
-
-| Case | `glyphClass` | Tags | FontService (Baking) | FEA Service (Code) | Resulting Behavior | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1** | `virtual` | None | **Skipped** | Infers `kern` / `dist`. Generates `pos Left Right <value>`. | **Standard Kerning.** Typing Left then Right adjusts the spacing between them. | ✅ **Standard** |
-| **2** | `virtual` | `gpos: 'dist'` | **Skipped** | Generates `pos` rule inside `feature dist`. | **Distance Adjustment.** Used for script-specific spacing (e.g., Indic). | ✅ **Valid** |
-| **3** | `virtual` | `gsub` | **Skipped** | Generates `sub Left Right by Name`. | **Invisible Substitution.** Replaces the pair with a ghost glyph. Text disappears. | ❌ **Invalid** |
-| **4** | `ligature` | `gsub: 'liga'` | **Bakes Geometry** | Generates `sub Left Right by Name`. | **Fused Ligature.** Visual result looks like kerning, but it is actually a substitution of a single baked glyph. Useful for connecting scripts or "touching" kerning. | ✅ **Valid** |
-| **5** | `ligature` | `gpos: 'kern'` | **Bakes Geometry** | Generates `pos Left Right <value>`. | **Redundant.** A fused glyph is created but never used. The system just kerns the originals. | ⚠️ **Inefficient** |
+| Rule Type | Trigger (Required Data) | Tag Inference (If Tag is Empty) | Action |
+| :--- | :--- | :--- | :--- |
+| **GSUB** (Substitution) | `liga` array has items | Infers `gsub` tag (`liga`, `akhn`, `abvs`, etc.) based on script and `liga` components. | Generates `sub [liga components] by [name];` inside the `gsub` feature. |
+| **GPOS** (Positioning) | `position` array has items | If `glyphClass` is `virtual`: Infers `gpos` tag (`mark` or `mkmk`) based on component classes. | Generates anchor attachment rules inside the `gpos` feature. |
+| **GPOS** (Kerning) | `kern` array has items | If `glyphClass` is `virtual`: Infers `gpos` tag (`kern` or `dist`) based on script. | Generates kerning value rules inside the `gpos` feature. |
 
 ---
 
-## 3. Explicit Ligature Logic (`liga: [A, B, C]`)
+## 3. Common Scenarios (How the rules apply in practice)
 
-This logic applies when the `liga` array is explicitly defined.
+This table demonstrates how the strict separation of Baking and Logic handles common user intents without the need for complex conflict resolution.
 
-| Case | `glyphClass` | Tags | FontService (Baking) | FEA Service (Code) | Resulting Behavior | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1** | `ligature` | None | **Bakes** (if `composite` set) | **Auto-Infers GSUB** | **Standard Ligature.** The system automatically guesses the correct feature (`liga`, `akhn`, `abvs`, etc.) based on the script and components. | ✅ **Valid** |
-| **2** | `ligature` | `gsub: 'liga'` | **Bakes** | Generates `sub A B C by Name`. | **Standard Ligature.** | ✅ **Standard** |
-| **3** | `virtual` | `gsub: 'liga'` | **Skipped** | Generates `sub A B C by Name`. | **Invisible Substitution.** The sequence is replaced by a glyph with no outlines. | ❌ **Invalid** |
-
-### Auto-Inference Logic (for Case 1)
-
-When a `ligature` has no `gsub` tag, the system infers it as follows:
-
-1.  **Indic Scripts (e.g., Devanagari, Tamil):**
-    *   **Virama (Halant) Conjuncts:** If the second component is a Virama, it defaults to `gsub: 'akhn'` (Akhand).
-    *   **Matra (Vowel Sign) Positioning:** If the second component is a Matra, it defaults to the correct positional feature (`abvs`, `blws`, `psts`, `pres`).
-    *   **Fallback:** Defaults to `gsub: 'akhn'` for other Indic ligatures.
-
-2.  **Non-Indic Scripts (e.g., Latin):**
-    *   Defaults to `gsub: 'liga'` (Standard Ligatures).
-
----
-
-## 4. GSUB Generation Precedence
-
-When generating substitution rules (GSUB), the system checks character properties in a specific order. Once a match is found for a specific feature tag, it generates the rule and stops checking further properties for that character.
-
-**Prerequisite:** `char.gsub` must equal the current feature tag (e.g., `'liga'`, `'akhn'`) being processed.
-
-1.  **Explicit `liga` Property**
-    *   *Input:* `char.liga` (Array of component names).
-    *   *Rule:* `sub [liga components] by [char name];`
-    *   *Use Case:* Complex ligatures with 3+ components or components different from the visual construction.
-
-2.  **Positioning Pair (`position` + No GPOS)**
-    *   *Input:* `char.position` (Tuple: `[Base, Mark]`).
-    *   *Condition:* `!char.gpos` (Must not have a GPOS tag defined).
-    *   *Rule:* `sub Base Mark by [char name];`
-    *   *Use Case:* "Baked" positioning where the result is a single pre-composed glyph (e.g., Indic conjuncts `ka`+`virama` -> `k_virama`).
-
-3.  **Kerning Pair (`kern` + No GPOS)**
-    *   *Input:* `char.kern` (Tuple: `[Left, Right]`).
-    *   *Condition:* `!char.gpos` (Must not have a GPOS tag defined, which would imply distance positioning).
-    *   *Rule:* `sub Left Right by [char name];`
-    *   *Use Case:* Fused ligatures created via the kerning tool interface (e.g., `A` + `V` -> `AV` ligature).
-
-4.  **Visual Components (`composite` or `link`)**
-    *   *Input:* `char.composite` OR `char.link`.
-    *   *Rule:* `sub [components] by [char name];`
-    *   *Use Case:* Standard ligatures where the logical components match the visual components (e.g., `f` + `i` -> `fi`).
-
----
-
-## 5. Summary of Invalid Configurations
-
-1.  **Virtual + GSUB (`gsub` tag present):**
-    *   *Why:* Virtual glyphs have no geometry. Substituting existing characters with a virtual character deletes them visually.
-    *   *Fix:* Change `glyphClass` to `ligature` if you want a substitution, or remove the `gsub` tag/property if you want positioning.
-
-2.  **Concrete (Base/Ligature) + GPOS (`gpos` tag present):**
-    *   *Why:* You are baking a complex shape into the font file (increasing size) but telling the font engine to move the *original* components instead of using your new shape.
-    *   *Fix:* Either change `glyphClass` to `virtual` (if you just want positioning), or remove the `gpos` tag (if you want the fused shape to appear).
-
-3.  **Virtual + No Positioning/Kerning Data:**
-    *   *Why:* A virtual character needs logic to exist. If it has no `position` or `kern` array, it generates no FEA code and serves no purpose.
-
-4.  **Mark Class + Non-Zero Advance Width:**
-    *   *Why:* While not strictly a "Virtual" error, marks intended for GPOS should usually have `advWidth: 0` to prevent them from pushing subsequent characters forward.
+| User Intent | Setup | Resulting Behavior |
+| :--- | :--- | :--- |
+| **Standard Ligature** (e.g., `fi`) | `glyphClass: 'ligature'`<br>`composite: ['f', 'i']`<br>`liga: ['f', 'i']` | **Bakes** the `fi` shape.<br>**Infers** `gsub: 'liga'`.<br>**Generates** substitution rule. |
+| **Standard Mark Positioning** (e.g., `A` + `acute`) | `glyphClass: 'virtual'`<br>`position: ['A', 'acute']` | **Skips** baking.<br>**Infers** `gpos: 'mark'`.<br>**Generates** anchor positioning rule. |
+| **Bake Positioned Glyph (No Rules)** (e.g., pre-composed `Aacute`) | `glyphClass: 'base'`<br>`position: ['A', 'acute']` | **Bakes** the `Aacute` shape.<br>**No Inference** (because `liga` is empty and it's not `virtual`).<br>**Generates NO rules.** |
+| **Fused Kerning Ligature** (e.g., touching `AV`) | `glyphClass: 'ligature'`<br>`kern: ['A', 'V']`<br>`liga: ['A', 'V']` | **Bakes** the fused `AV` shape.<br>**Infers** `gsub: 'liga'`.<br>**Generates** substitution rule. |
+| **Standard Kerning** (e.g., spacing `A` and `V`) | `glyphClass: 'virtual'`<br>`kern: ['A', 'V']` | **Skips** baking.<br>**Infers** `gpos: 'kern'`.<br>**Generates** kerning value rule. |

@@ -208,7 +208,11 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
       // Save original class before conversion to ligature
       newChar.sourceGlyphClass = character.glyphClass;
       
-      newChar.composite = components; newChar.compositeTransform = newTransforms; newChar.glyphClass = 'ligature';
+      newChar.composite = components; 
+      newChar.compositeTransform = newTransforms; 
+      newChar.glyphClass = 'ligature';
+      newChar.liga = components; // Auto-fill GSUB substitution sequence
+      
       if (character.position) {
            const base = allCharsByName.get(components[0]); const mark = allCharsByName.get(components[1]);
            if (base && mark) { const key = `${base.unicode}-${mark.unicode}`; const newMap = new Map(markPositioningMap); newMap.delete(key); positioningDispatch({ type: 'SET_MAP', payload: newMap }); }

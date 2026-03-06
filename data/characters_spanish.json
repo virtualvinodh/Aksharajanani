@@ -346,7 +346,7 @@
       },
       {
         "name": "Ó",
-        "glyphClass": "base",
+        "glyphClass": "virtual",
         "unicode": 211,
         "position": [
           "O", "́"
@@ -356,13 +356,11 @@
       },
       {
         "name": "Ú",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 218,
         "position": [
           "U", "́"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       },
       {
         "name": "Ü",
