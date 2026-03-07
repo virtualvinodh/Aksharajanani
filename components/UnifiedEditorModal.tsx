@@ -211,7 +211,9 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
       newChar.composite = components; 
       newChar.compositeTransform = newTransforms; 
       newChar.glyphClass = 'ligature';
-      newChar.liga = components; // Auto-fill GSUB substitution sequence
+      if (!newChar.liga || newChar.liga.length === 0) {
+          newChar.liga = components; // Auto-fill GSUB substitution sequence only if empty
+      }
       
       if (character.position) {
            const base = allCharsByName.get(components[0]); const mark = allCharsByName.get(components[1]);
