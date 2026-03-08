@@ -296,18 +296,17 @@
       },      
       {
         "name": "Ñ",
-        "glyphClass": "ligature",
+        "glyphClass": "base",
         "unicode": 209,
-        "liga": [
-          "N", "̃"
-        ],        
         "position": [
           "N", "̃"
-        ]
+        ],
+        "gpos": "mark",
+        "gsub": "liga"
       },
       {
         "name": "ñ",
-        "glyphClass": "ligature",
+        "glyphClass": "base",
         "unicode": 241,
         "position": [
           "n", "̃"
