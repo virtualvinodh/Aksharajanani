@@ -65,13 +65,13 @@
         "glyphClass": "mark",
         "advWidth": 0      
       },        
-      { "unicode": 196, "name": "Ä", "glyphClass": "base", "link": ["A", "̈"] },
-      { "unicode": 214, "name": "Ö", "glyphClass": "base", "link": ["O", "̈"] },
-      { "unicode": 220, "name": "Ü", "glyphClass": "base", "link": ["U", "̈"] },
+      { "unicode": 196, "name": "Ä", "glyphClass": "ligature", "position": ["A", "̈"], "liga": ["A", "̈"] },
+      { "unicode": 214, "name": "Ö", "glyphClass": "ligature", "position": ["O", "̈"], "liga": ["O", "̈"]},
+      { "unicode": 220, "name": "Ü", "glyphClass": "ligature", "position": ["U", "̈"], "liga": ["U", "̈"]},
+      { "unicode": 228, "name": "ä", "glyphClass": "ligature", "position": ["a", "̈"], "liga": ["a", "̈"]},
+      { "unicode": 246, "name": "ö", "glyphClass": "ligature", "position": ["o", "̈"], "liga": ["o", "̈"]},
+      { "unicode": 252, "name": "ü", "glyphClass": "ligature", "position": ["u", "̈"], "liga": ["u", "̈"]},
       { "unicode": 223, "name": "ß", "glyphClass": "base" },
-      { "unicode": 228, "name": "ä", "glyphClass": "base", "link": ["a", "̈"] },
-      { "unicode": 246, "name": "ö", "glyphClass": "base", "link": ["o", "̈"] },
-      { "unicode": 252, "name": "ü", "glyphClass": "base", "link": ["u", "̈"] },
       { "unicode": 7838, "name": "ẞ", "glyphClass": "base" }
 
     ]

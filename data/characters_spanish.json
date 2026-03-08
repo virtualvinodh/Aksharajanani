@@ -184,10 +184,9 @@
       {
         "unicode": 105,
         "name": "i",
-        "glyphClass": "base",
-        "position": ["ı", "̇"],
-        "gpos": "mark",
-        "gsub": "liga"
+        "glyphClass": "ligature",
+        "liga": ["ı", "̇"],
+        "position": ["ı", "̇"]
       },
       {
         "unicode": 106,
@@ -298,36 +297,42 @@
         "name": "Ñ",
         "glyphClass": "base",
         "unicode": 209,
+        "liga": [
+          "N", "̃"
+        ],        
         "position": [
           "N", "̃"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       },
       {
         "name": "ñ",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 241,
+        "liga": [
+          "n", "̃"
+        ],        
         "position": [
           "n", "̃"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       },
       {
         "name": "Á",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 193,
+        "liga": [
+          "A", "́"
+        ],      
         "position": [
           "A", "́"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       },
       {
         "name": "É",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 201,
+        "liga": [
+          "E", "́"
+        ],        
         "position": [
           "E", "́"
         ],
@@ -336,8 +341,11 @@
       },
       {
         "name": "Í",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 205,
+        "liga": [
+          "I", "́"
+        ],    
         "position": [
           "I", "́"
         ],
@@ -346,8 +354,11 @@
       },
       {
         "name": "Ó",
-        "glyphClass": "virtual",
+        "glyphClass": "ligature",
         "unicode": 211,
+        "liga": [
+          "O", "́"
+        ],        
         "position": [
           "O", "́"
         ],
@@ -358,79 +369,89 @@
         "name": "Ú",
         "glyphClass": "ligature",
         "unicode": 218,
+        "liga": [
+          "U", "́"
+        ],        
         "position": [
           "U", "́"
         ]
       },
       {
         "name": "Ü",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 220,
+        "liga": [
+          "U", "̈"
+        ],        
         "position": [
           "U", "̈"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       },
       {
         "name": "á",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 225,
+        "ligature": [
+          "a", "́"
+        ],        
         "position": [
           "a", "́"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       },
       {
         "name": "é",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 233,
+        "liga": [
+          "e", "́"
+        ],     
         "position": [
           "e", "́"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       },
       {
         "name": "í",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 237,
+        "liga": [
+          "ı", "́"
+        ],        
         "position": [
           "ı", "́"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       },
       {
         "name": "ó",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 243,
+        "liga": [
+          "o",  "́"
+        ],        
         "position": [
           "o",  "́"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       },
       {
         "name": "ú",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 250,
+        "liga": [
+          "u", "́"
+        ],        
         "position": [
           "u", "́"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       },
       {
         "name": "ü",
-        "glyphClass": "base",
+        "glyphClass": "ligature",
         "unicode": 252,
+        "liga": [
+          "u", "̈"
+        ],        
         "position": [
           "u", "̈"
-        ],
-        "gpos": "mark",
-        "gsub": "liga"
+        ]
       }
     ]
   }
