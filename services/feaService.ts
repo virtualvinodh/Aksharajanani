@@ -66,7 +66,7 @@ const getIndicFeatureForLigature = (components: Character[], scriptTag: string):
         
         // Rule 2: Half Form (half)
         if (seq[0].syllabic === 'Consonant' && seq[1].syllabic === 'Virama') {
-            return 'half';
+            return 'haln';
         }
         
         // Rule 3: Post-Base Form (pstf)
