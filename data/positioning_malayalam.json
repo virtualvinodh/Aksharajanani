@@ -2,12 +2,12 @@
   { "positioning":  [
         {
             "base": ["$consonants", "$conjuncts"],
-            "mark": ["്", "ഁ", "ൢ", "ൣ"],
+            "mark": ["്", "ഁ", "ഀ", "഻", "ൎ", "഼"],
             "gpos": "abvm"
         },
         {
             "base": ["$consonants", "$conjuncts"],
-            "mark": ["ൢ", "ൣ"],
+            "mark": ["ൢ", "ൣ", ""],
             "gpos": "blwm"
         }
     ]      
@@ -18,16 +18,31 @@
       "്": ["topRight", "bottomCenter", "0", "-70"],
       "ഁ": ["topCenter", "bottomCenter", "0", "-70"],
       "ൢ": ["bottomCenter", "topCenter", "0", "70"], 
-      "ൣ": ["bottomCenter", "topCenter", "0", "70"] 
+      "ൣ": ["bottomCenter", "topCenter", "0", "70"],
+      "": ["bottomCenter", "topCenter", "0", "70"],
+      "": ["bottomRight", "topRight"]
       },
       "$conjuncts":  {
+      "ൢ": ["bottomCenter", "topCenter", "0", "70"], 
+      "ൣ": ["bottomCenter", "topCenter", "0", "70"],        
       "്": ["topRight", "bottomCenter"],
-      "ഁ": ["topCenter", "bottomCenter", "0", "-70"] 
+      "ഁ": ["topCenter", "bottomCenter", "0", "-70"],
+      "": ["bottomCenter", "topCenter", "0", "70"]
       }   
     }
   },
   {
-    "markAttachmentClass": []
+    "markAttachmentClass": [
+      {
+        "members": ["ൢ", "ൣ", ""]
+      },
+      {
+        "members": ["ഁ", "ഀ", "഻", "ൎ"]
+      },
+      {
+         "members": ["്", "഼"]
+      }
+    ]
   },
   { "recommendedKerning": [ 
   ["$consonants", "ി"],

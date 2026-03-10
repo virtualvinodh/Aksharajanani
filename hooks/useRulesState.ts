@@ -7,6 +7,9 @@ import { useLayout } from '../contexts/LayoutContext';
 import { useProject } from '../contexts/ProjectContext';
 import { deepClone } from '../utils/cloneUtils';
 import { useRefactoring } from './useRefactoring';
+import { inferGsubTag } from '../services/feaService';
+import indicScriptsData from '../data/indicScripts.json';
+import { Character } from '../types';
 
 export type RuleType = 'ligature' | 'contextual' | 'multiple' | 'single';
 export type DistRuleType = 'simple' | 'contextual';
@@ -88,9 +91,16 @@ export const useRulesState = () => {
         const explicitFeatures = localRules[scriptTag] ? Object.keys(localRules[scriptTag]) : [];
         const impliedFeatures = new Set<string>();
         
+        const indicScripts = new Set(indicScriptsData.indicScripts);
+        const isIndic = indicScripts.has(scriptTag);
+        const nameToCharMap = new Map<string, Character>();
+        allCharsByUnicode.forEach(char => nameToCharMap.set(char.name, char));
+
         allCharsByUnicode.forEach(char => {
-            if (char.gsub) {
-                impliedFeatures.add(char.gsub);
+            // Use the shared inference logic
+            const inferredTag = inferGsubTag(char, nameToCharMap, isIndic, scriptTag);
+            if (inferredTag) {
+                impliedFeatures.add(inferredTag);
             }
         });
 
