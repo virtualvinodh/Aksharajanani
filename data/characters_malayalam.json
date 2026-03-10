@@ -33,7 +33,7 @@
   {
     "nameKey": "vowels",
     "characters": [
-  { "unicode": 3333, "name": "അ", "glyphClass": "base" },
+  { "name": "അ", "glyphClass": "base" },
   { "unicode": 3334, "name": "ആ", "glyphClass": "base" },
   { "unicode": 3335, "name": "ഇ", "glyphClass": "base" },
   { "unicode": 3336, "name": "ഈ", "glyphClass": "base", "composite":[ "ഇ", "ൗ"] },

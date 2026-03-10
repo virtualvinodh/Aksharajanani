@@ -158,7 +158,6 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
     const { t } = useLocale();
     const layout = useLayout();
     const { showNotification } = layout;
-    const [isCreatingScript, setIsCreatingScript] = useState(false); // Keeping for now but unused in UI
     const [isUploadingScript, setIsUploadingScript] = useState(false);
     const [includeLatin, setIncludeLatin] = useState(false);
     const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
@@ -168,6 +167,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
     const [pendingScript, setPendingScript] = useState<ScriptConfig | null>(null);
     const [variantGroups, setVariantGroups] = useState<VariantGroup[]>([]);
     const [recentProjects, setRecentProjects] = useState<ProjectData[]>([]);
+    const [showAllProjects, setShowAllProjects] = useState(false);
     const [isLoadingProjects, setIsLoadingProjects] = useState(true);
     const [projectToDelete, setProjectToDelete] = useState<ProjectData | null>(null);
     
@@ -180,7 +180,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
 
     useEffect(() => {
         setIsLoadingProjects(true);
-        dbService.getRecentProjects(6)
+        dbService.getRecentProjects(100)
             .then(projects => {
                 setRecentProjects(projects);
                 setIsLoadingProjects(false);
@@ -320,9 +320,8 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                     } else {
                         console.warn(`Could not load positioning data from ${positioningPath}.`);
                     }
-                } catch (error) {
-                    console.warn(`Could not load positioning data from ${positioningPath}.`);
-
+                } catch (err) {
+                    console.warn(`Could not load positioning data from ${positioningPath}.`, err);
                 }
             }
             
@@ -679,7 +678,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                              <div className="flex justify-center items-center p-8"><SpinnerIcon/></div>
                          ) : (
                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                 {recentProjects.map(p => {
+                                 {(showAllProjects ? recentProjects : recentProjects.slice(0, 6)).map(p => {
                                      const scriptForSubtitle = scripts.find(s => s.id === p.scriptId) || (p.scriptId?.startsWith('custom_blocks_') ? { nameKey: 'customBlockFont' } : (p.scriptId?.startsWith('project_') ? { nameKey: 'customProject' } : { nameKey: '' }));
                                      const isDeleteVisible = longPressedProjectId === p.projectId;
                                      // Use the new 'name' field if available, otherwise fallback to fontName for backward compatibility
@@ -713,6 +712,17 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                                         </div>
                                      )
                                  })}
+                                 {recentProjects.length > 6 && (
+                                     <button
+                                         onClick={() => setShowAllProjects(!showAllProjects)}
+                                         className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 group text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                     >
+                                         <div className="text-4xl mb-2 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                                             {showAllProjects ? <SwitchScriptIcon /> : <LoadIcon />}
+                                         </div>
+                                         <h3 className="text-lg font-bold">{showAllProjects ? t('less') : t('more')}</h3>
+                                     </button>
+                                 )}
                              </div>
                          )}
                     </div>

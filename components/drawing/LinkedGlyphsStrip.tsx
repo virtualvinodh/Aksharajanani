@@ -172,19 +172,19 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                             if (key === sourceCharacter?.unicode && liveSourcePaths) {
                                 return { paths: liveSourcePaths };
                             }
-                            return target.get(key);
+                            return target?.get ? target.get(key) : undefined;
                         };
                     }
-                    return (target as any)[prop];
+                    return (target as any)?.[prop];
                 }
             }),
-            allCharsByName: allCharsByName!,
-            markPositioningMap: markPositioningMap!,
-            kerningMap: kerningMap!,
-            metrics: metrics!,
-            markAttachmentRules: markAttachmentRules!,
+            allCharsByName: allCharsByName || new Map(),
+            markPositioningMap: markPositioningMap || new Map(),
+            kerningMap: kerningMap || new Map(),
+            metrics: metrics || {},
+            markAttachmentRules: markAttachmentRules || null,
             strokeThickness: settings.strokeThickness,
-            characterSets: characterSets!,
+            characterSets: characterSets || [],
             groups: groups || {}
         };
 

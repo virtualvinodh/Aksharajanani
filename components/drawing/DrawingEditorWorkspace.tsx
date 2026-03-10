@@ -173,6 +173,9 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
                             <LinkedGlyphsStrip 
                                 title="Sources" items={props.sourceGlyphs} glyphDataMap={props.allGlyphData} 
                                 settings={props.settings} onSelect={props.handleNavigationAttempt} variant="sources"
+                                allCharsByName={props.allCharsByName} metrics={props.metrics}
+                                markAttachmentRules={props.markAttachmentRules} characterSets={props.allCharacterSets} groups={props.groups}
+                                kerningMap={props.kerningMap} markPositioningMap={props.markPositioningMap}
                                 isCollapsed={isSourcesCollapsed}
                                 onToggleCollapse={() => setIsSourcesCollapsed(!isSourcesCollapsed)}
                             />

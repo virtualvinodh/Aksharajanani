@@ -5,7 +5,7 @@
     "characters": [
       { "unicode": 3530, "name": "්", "glyphClass": "mark", "advWidth": 0 },
       { "unicode": 3535, "name": "ා", "glyphClass": "base" },
-      { "unicode": 57824, "name": "ා්", "glyphClass": "base", "composite": ["ා", "්"] },
+      { "unicode": 57824, "name": "ා්", "glyphClass": "base", "link": ["ා", "්"] },
       { "unicode": 3536, "name": "ැ", "glyphClass": "base" },
       { "unicode": 3537, "name": "ෑ", "glyphClass": "base" },
       { "unicode": 3538, "name": "ි", "glyphClass": "mark", "advWidth": 0 },
@@ -13,15 +13,15 @@
       { "unicode": 3540, "name": "ු", "glyphClass": "mark", "advWidth": 0 },
       { "unicode": 3542, "name": "ූ", "glyphClass": "mark", "advWidth": 0 },
       { "unicode": 3544, "name": "ෘ", "glyphClass": "base" },
-      { "unicode": 3570, "name": "ෲ", "glyphClass": "base", "composite": ["ෘ", "ෘ"] },
+      { "unicode": 3570, "name": "ෲ", "glyphClass": "base", "link": ["ෘ", "ෘ"] },
       { "unicode": 3551, "name": "ෟ", "glyphClass": "base" },
       { "unicode": 3571, "name": "ෳ", "glyphClass": "base" },      
       { "unicode": 3545, "name": "ෙ", "glyphClass": "base" },
-      { "unicode": 3546, "name": "ේ", "glyphClass": "base", "composite": ["ෙ","්"] },
-      { "unicode": 3547, "name": "ෛ", "glyphClass": "base", "composite": ["ෙ","ෙ"] },
-      { "unicode": 3548, "name": "ො", "glyphClass": "base", "composite": ["ෙ","ා"] },
-      { "unicode": 3549, "name": "ෝ", "glyphClass": "base", "composite": ["ෙ","ා","්"] },
-      { "unicode": 3550, "name": "ෞ", "glyphClass": "base", "composite": ["ෙ","ෟ"] },
+      { "unicode": 3546, "name": "ේ", "glyphClass": "base", "link": ["ෙ","්"] },
+      { "unicode": 3547, "name": "ෛ", "glyphClass": "base", "link": ["ෙ","ෙ"] },
+      { "unicode": 3548, "name": "ො", "glyphClass": "base", "link": ["ෙ","ා"] },
+      { "unicode": 3549, "name": "ෝ", "glyphClass": "base", "link": ["ෙ","ා","්"] },
+      { "unicode": 3550, "name": "ෞ", "glyphClass": "base", "link": ["ෙ","ෟ"] },
       { "unicode": 3458, "name": "ං", "glyphClass": "base" },
       { "unicode": 3459, "name": "ඃ", "glyphClass": "base" }
     ]
@@ -30,23 +30,23 @@
     "nameKey": "vowels",
     "characters": [
       { "unicode": 3461, "name": "අ", "glyphClass": "base" },
-      { "unicode": 3462, "name": "ආ", "glyphClass": "base", "composite": ["අ","ා"] },
-      { "unicode": 3463, "name": "ඇ", "glyphClass": "base", "composite": ["අ","ැ"] },
-      { "unicode": 3464, "name": "ඈ", "glyphClass": "base", "composite": ["අ","ෑ"] },
+      { "unicode": 3462, "name": "ආ", "glyphClass": "base", "link": ["අ","ා"] },
+      { "unicode": 3463, "name": "ඇ", "glyphClass": "base", "link": ["අ","ැ"] },
+      { "unicode": 3464, "name": "ඈ", "glyphClass": "base", "link": ["අ","ෑ"] },
       { "unicode": 3465, "name": "ඉ", "glyphClass": "base" },
       { "unicode": 3466, "name": "ඊ", "glyphClass": "base" },
       { "unicode": 3467, "name": "උ", "glyphClass": "base" },
-      { "unicode": 3468, "name": "ඌ", "glyphClass": "base", "composite": ["උ","ෟ"] },
+      { "unicode": 3468, "name": "ඌ", "glyphClass": "base", "link": ["උ","ෟ"] },
       { "unicode": 3469, "name": "ඍ", "glyphClass": "base" },
-      { "unicode": 3470, "name": "ඎ", "glyphClass": "base", "composite": ["ඍ","ෘ"] },
+      { "unicode": 3470, "name": "ඎ", "glyphClass": "base", "link": ["ඍ","ෘ"] },
       { "unicode": 3471, "name": "ඏ", "glyphClass": "base" },
-      { "unicode": 3472, "name": "ඐ", "glyphClass": "base", "composite": ["ඏ","ෟ"] },
+      { "unicode": 3472, "name": "ඐ", "glyphClass": "base", "link": ["ඏ","ෟ"] },
       { "unicode": 3473, "name": "එ", "glyphClass": "base" },
-      { "unicode": 3474, "name": "ඒ", "glyphClass": "base", "composite": ["එ","්"] },
-      { "unicode": 3475, "name": "ඓ", "glyphClass": "base", "composite": ["ෙ", "එ"] },
+      { "unicode": 3474, "name": "ඒ", "glyphClass": "base", "link": ["එ","්"] },
+      { "unicode": 3475, "name": "ඓ", "glyphClass": "base", "link": ["ෙ", "එ"] },
       { "unicode": 3476, "name": "ඔ", "glyphClass": "base" },
       { "unicode": 3477, "name": "ඕ", "glyphClass": "base" },
-      { "unicode": 3478, "name": "ඖ", "glyphClass": "base", "composite": ["ඔ","ෟ"] }
+      { "unicode": 3478, "name": "ඖ", "glyphClass": "base", "link": ["ඔ","ෟ"] }
     ]
   },
   {
@@ -262,7 +262,7 @@
   {
     "nameKey": "halfCons",
     "characters": [
-      { "unicode": 57714, "name": "ක්", "glyphClass": "ligature", "composite": ["ක", "්"] },
+      { "unicode": 57714, "name": "ක්", "glyphClass": "virtual", "position": ["ක", "්"] },
       { "unicode": 57715, "name": "ඛ්", "glyphClass": "ligature", "composite": ["ඛ"] },
       { "unicode": 57716, "name": "ග්", "glyphClass": "ligature", "composite": ["ග", "්"] },
       { "unicode": 57717, "name": "ඝ්", "glyphClass": "ligature", "composite": ["ඝ", "්"] },
