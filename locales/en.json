@@ -553,6 +553,8 @@
 	"scriptInformation": "Script Information",
 	"scriptKannada": "Kannada",
 	"scriptKannadaMessage": "Kannada script with full character support",
+	"scriptLatinIndic": "Latin (Indic)",
+	"scriptLatinIndicMessage": "IAST/ISO transliteration for Indic languages.",
 	"scriptMalayalam": "Malayalam",
 	"scriptMalayalamMessage": "Malayalam script with full character support",
 	"scriptNameCustomSuffix": "(Custom)",

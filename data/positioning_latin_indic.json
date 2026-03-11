@@ -1,0 +1,27 @@
+[
+  {
+    "markAttachment": {
+      "$basicLatinLetters": {
+        "̄": ["topCenter", "bottomCenter", 0, -30],
+        "̇": ["topCenter", "bottomCenter", 0, -30],
+        "̣": ["bottomCenter", "topCenter", 0, 30],
+        "̃": ["topCenter", "bottomCenter", 0, -30],
+        "́": ["topCenter", "bottomCenter", 0, -30],
+        "̆": ["topCenter", "bottomCenter", 0, -30],
+        "̤": ["bottomCenter", "topCenter", 0, 30],
+        "̥": ["bottomCenter", "topCenter", 0, 30]
+      },
+      "ṛ": { "̄": ["topCenter", "bottomCenter", 0, -30] },
+      "Ṛ": { "̄": ["topCenter", "bottomCenter", 0, -30] },
+      "ḷ": { "̄": ["topCenter", "bottomCenter", 0, -30] },
+      "Ḷ": { "̄": ["topCenter", "bottomCenter", 0, -30] },
+      "r̥": { "̄": ["topCenter", "bottomCenter", 0, -30] },
+      "R̥": { "̄": ["topCenter", "bottomCenter", 0, -30] },
+      "l̥": { "̄": ["topCenter", "bottomCenter", 0, -30] },
+      "L̥": { "̄": ["topCenter", "bottomCenter", 0, -30] }
+    }
+  },
+  {
+    "recommendedKerning": []
+  }
+]

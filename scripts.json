@@ -539,6 +539,46 @@
       }
     },
     {
+      "id": "latin_indic",
+      "nameKey": "scriptLatinIndic",
+      "support": "full",
+      "metrics": {
+        "unitsPerEm": 1000,
+        "ascender": 1000,
+        "descender": -500,
+        "defaultAdvanceWidth": 800,
+        "superTopLineY": 260,
+        "topLineY": 460,
+        "baseLineY": 660,
+        "subBaseLineY": 860,
+        "styleName": "Medium",
+        "spaceAdvanceWidth": 400,
+        "defaultLSB": 50,
+        "defaultRSB": 50
+      },
+      "defaults": {
+        "fontName": "LatinIndicSimple",
+        "strokeThickness": 25,
+        "pathSimplification": 0.5,
+        "showGridOutlines": true,
+        "isAutosaveEnabled": true,
+        "editorMode": "simple",
+        "isPrefillEnabled": true
+      },
+      "grid": {
+        "characterNameSize": 560
+      },
+      "sampleText": "ā ī ū ē ō ṁ ḥ ṅ ñ ṭ ḍ ṇ ś ṣ ḷ ĕ ŏ ṃ l̤ ṛ ṝ ḷ ḹ r̥ r̥̄ l̥ l̥̄ ’",
+      "testPage": {
+        "fontSize": {
+          "default": 48
+        },
+        "lineHeight": {
+          "default": 1.5
+        }
+      }
+    },
+    {
       "id": "french",
       "nameKey": "scriptFrench",
       "support": "full",
