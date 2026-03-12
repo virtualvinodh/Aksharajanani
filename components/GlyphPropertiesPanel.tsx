@@ -334,6 +334,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
   const [kernComps, setKernComps] = useState<[string, string]>(character?.kern || ['', '']);
   
   // Set default state to false to close accordions by default
+  const [isMetricsExpanded, setIsMetricsExpanded] = useState(true);
   const [isClassificationExpanded, setIsClassificationExpanded] = useState(false);
   const [isConstructionExpanded, setIsConstructionExpanded] = useState(false);
 
@@ -485,67 +486,81 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
         sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-80 sm:h-auto sm:max-h-[80vh] sm:mx-0
       "
     >
-      <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2 flex-shrink-0">
+      <div className="flex justify-between items-center pb-2 flex-shrink-0">
         <h4 className="font-bold text-gray-900 dark:text-white">{t('glyphProperties')}</h4>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:white">
           <CloseIcon className="w-5 h-5" />
         </button>
       </div>
       
-      {!isNonSpacing && type !== 'kerning' && !gpos && (
-      <div className="grid grid-cols-2 gap-3 flex-shrink-0">
-          <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
-                  {t('leftSpace')}
-              </label>
-              <input
-                  type="text"
-                  placeholder={String(metrics.defaultLSB)}
-                  value={lsb ?? ''}
-                  onChange={(e) => setLsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-          </div>
-          <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
-                  {t('rightSpace')}
-              </label>
-              <input
-                  type="text"
-                  placeholder={String(metrics.defaultRSB)}
-                  value={rsb ?? ''}
-                  onChange={(e) => setRsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-          </div>
-      </div>
-      )}
+      <div className="pt-3 flex-shrink-0">
+        <button 
+            onClick={() => setIsMetricsExpanded(!isMetricsExpanded)}
+            className="flex items-center justify-between w-full text-xs font-bold text-gray-500 dark:text-gray-400 uppercase hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+        >
+            <span>{t('metrics')}</span>
+            <RightArrowIcon className={`w-3 h-3 transition-transform ${isMetricsExpanded ? 'rotate-90' : ''}`} />
+        </button>
+        
+        {isMetricsExpanded && (
+          <div className="mt-3 space-y-4 animate-fade-in-up">
+            {!isNonSpacing && type !== 'kerning' && !gpos && (
+            <div className="grid grid-cols-2 gap-3 flex-shrink-0">
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
+                        {t('leftSpace')}
+                    </label>
+                    <input
+                        type="text"
+                        placeholder={String(metrics.defaultLSB)}
+                        value={lsb ?? ''}
+                        onChange={(e) => setLsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
+                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
+                        {t('rightSpace')}
+                    </label>
+                    <input
+                        type="text"
+                        placeholder={String(metrics.defaultRSB)}
+                        value={rsb ?? ''}
+                        onChange={(e) => setRsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
+                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                </div>
+            </div>
+            )}
 
-      {/* Label and Codepoint */}
-      <div className="grid grid-cols-2 gap-3 flex-shrink-0">
-          <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
-                  {t('labelGhost')}
-              </label>
-              <input
-                  type="text"
-                  placeholder={character?.name}
-                  value={label || ''}
-                  onChange={(e) => setLabel && setLabel(e.target.value === '' ? undefined : e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
+            {/* Label and Codepoint */}
+            <div className="grid grid-cols-2 gap-3 flex-shrink-0">
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
+                        {t('labelGhost')}
+                    </label>
+                    <input
+                        type="text"
+                        placeholder={character?.name}
+                        value={label || ''}
+                        onChange={(e) => setLabel && setLabel(e.target.value === '' ? undefined : e.target.value)}
+                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
+                        {t('codepointLabel')}
+                    </label>
+                    <input
+                        type="text"
+                        value={character?.unicode !== undefined && character.glyphClass !== 'virtual' ? `U+${character.unicode.toString(16).toUpperCase().padStart(4, '0')}` : t('virtual')}
+                        disabled
+                        className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm text-gray-500 cursor-not-allowed font-mono"
+                    />
+                </div>
+            </div>
           </div>
-          <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">
-                  {t('codepointLabel')}
-              </label>
-              <input
-                  type="text"
-                  value={character?.unicode !== undefined && character.glyphClass !== 'virtual' ? `U+${character.unicode.toString(16).toUpperCase().padStart(4, '0')}` : t('virtual')}
-                  disabled
-                  className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm text-gray-500 cursor-not-allowed font-mono"
-              />
-          </div>
+        )}
       </div>
       
       {!disableStructuralEditing && setGlyphClass && (
