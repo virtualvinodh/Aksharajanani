@@ -84,7 +84,7 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
                 autoFocus={autoFocus}
                 onKeyDown={onKeyDown}
                 placeholder={placeholder}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow guide-font-input"
                 style={{ 
                     fontFamily: 'var(--guide-font-family), monospace',
                     fontFeatureSettings: 'var(--guide-font-feature-settings)'

@@ -84,20 +84,24 @@ const ComponentListEditor: React.FC<{
         }
     };
 
-    const handleTransformChange = (index: number, field: keyof ComponentTransform, value: any) => {
+    const handleTransformChange = (index: number, field: keyof ComponentTransform, value: string) => {
         if (!setTransforms || !transforms) return;
         const newTransforms = [...transforms];
         if (!newTransforms[index]) newTransforms[index] = { scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
         const current = { ...newTransforms[index] };
         
+        // Allow partial numeric input (-, ., -.)
+        const isPartial = value === '-' || value === '' || value === '.' || value === '-.' || value === '-0';
+        
         // Handle Linked Scaling
         if (linkedStates[index] && (field === 'scaleX' || field === 'scaleY')) {
-            const numVal = parseFloat(value) || 0;
-            current.scaleX = numVal;
-            current.scaleY = numVal;
-            current.scale = numVal;
+            const numVal = isPartial ? value : (parseFloat(value) || 0);
+            current.scaleX = numVal as any;
+            current.scaleY = numVal as any;
+            current.scale = typeof numVal === 'number' ? numVal : 1;
         } else {
-            (current as any)[field] = value;
+            const numVal = isPartial ? value : (field === 'x' || field === 'y' ? (parseInt(value, 10) || 0) : (parseFloat(value) || 0));
+            (current as any)[field] = numVal;
             
             // If updating one scale while unlinked, ensure the other is set (if it was undefined/fallback)
             if (field === 'scaleX' && current.scaleY === undefined) current.scaleY = current.scale ?? 1;
@@ -117,7 +121,14 @@ const ComponentListEditor: React.FC<{
             {label && <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</label>}
             <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 items-center">
                     {components.map((comp, idx) => (
-                    <span key={idx} className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-mono border ${colorClasses}`}>
+                    <span 
+                        key={idx} 
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs border ${colorClasses}`}
+                        style={{ 
+                            fontFamily: 'var(--guide-font-family), sans-serif',
+                            fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                        }}
+                    >
                                             {comp}
                         <button onClick={() => handleRemove(idx)} className="hover:text-red-500 focus:outline-none">
                             <CloseIcon className="w-3 h-3" />
@@ -181,7 +192,15 @@ const ComponentListEditor: React.FC<{
 
                                 return (
                                     <div key={index} className="p-2 bg-gray-100 dark:bg-gray-700/50 rounded text-xs space-y-2">
-                                        <div className="font-bold text-gray-700 dark:text-gray-300 truncate">{comp}</div>
+                                        <div 
+                                            className="font-bold text-gray-700 dark:text-gray-300 truncate"
+                                            style={{ 
+                                                fontFamily: 'var(--guide-font-family), sans-serif',
+                                                fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                                            }}
+                                        >
+                                            {comp}
+                                        </div>
                                         <div className="flex gap-2 items-center">
                                             <div className="flex-1 flex gap-1 items-end">
                                                 <div className="flex-1">
@@ -212,17 +231,32 @@ const ComponentListEditor: React.FC<{
                                             </div>
                                             <div className="w-16">
                                                 <label className="block text-[9px] text-gray-500 uppercase">{t('rotateShort')}</label>
-                                                <input type="text" value={tr.rotation || 0} onChange={e => handleTransformChange(index, 'rotation', parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                                <input 
+                                                    type="text" 
+                                                    value={tr.rotation ?? 0} 
+                                                    onChange={e => handleTransformChange(index, 'rotation', e.target.value)} 
+                                                    className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" 
+                                                />
                                             </div>
                                         </div>
                                         <div className="flex gap-2 items-center">
                                             <div className="flex-1">
                                                 <label className="block text-[9px] text-gray-500 uppercase">{t('xLabel')}</label>
-                                                <input type="text" value={tr.x} onChange={e => handleTransformChange(index, 'x', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                                <input 
+                                                    type="text" 
+                                                    value={tr.x} 
+                                                    onChange={e => handleTransformChange(index, 'x', e.target.value)} 
+                                                    className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" 
+                                                />
                                             </div>
                                             <div className="flex-1">
                                                 <label className="block text-[9px] text-gray-500 uppercase">{t('yLabel')}</label>
-                                                <input type="text" value={tr.y} onChange={e => handleTransformChange(index, 'y', parseInt(e.target.value, 10) || 0)} className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" />
+                                                <input 
+                                                    type="text" 
+                                                    value={tr.y} 
+                                                    onChange={e => handleTransformChange(index, 'y', e.target.value)} 
+                                                    className="w-full p-1 border rounded bg-white dark:bg-gray-600 dark:border-gray-500" 
+                                                />
                                             </div>
                                         </div>
                                         {index > 0 && (
@@ -476,6 +510,12 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
 
   return (
     <>
+    <style>{`
+        .guide-font-input::placeholder {
+            font-family: var(--guide-font-family), sans-serif !important;
+            font-feature-settings: var(--guide-font-feature-settings) !important;
+        }
+    `}</style>
     <div className="fixed inset-0 bg-black/50 z-[90] sm:hidden" onClick={onClose} aria-hidden="true" />
 
     <div 
@@ -515,7 +555,11 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                         placeholder={String(metrics.defaultLSB)}
                         value={lsb ?? ''}
                         onChange={(e) => setLsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
-                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none guide-font-input"
+                        style={{ 
+                            fontFamily: 'var(--guide-font-family), sans-serif',
+                            fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                        }}
                     />
                 </div>
                 <div>
@@ -527,7 +571,11 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                         placeholder={String(metrics.defaultRSB)}
                         value={rsb ?? ''}
                         onChange={(e) => setRsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
-                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none guide-font-input"
+                        style={{ 
+                            fontFamily: 'var(--guide-font-family), sans-serif',
+                            fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                        }}
                     />
                 </div>
             </div>
@@ -544,7 +592,11 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                         placeholder={character?.name}
                         value={label || ''}
                         onChange={(e) => setLabel && setLabel(e.target.value === '' ? undefined : e.target.value)}
-                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none guide-font-input"
+                        style={{ 
+                            fontFamily: 'var(--guide-font-family), sans-serif',
+                            fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                        }}
                     />
                 </div>
                 <div>
@@ -615,9 +667,13 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                                     type="text" 
                                     value={gsub || ''} 
                                     onChange={e => setGsub(e.target.value)} 
-                                    className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 text-xs font-mono" 
+                                    className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 text-xs font-mono guide-font-input" 
                                     placeholder={t('featureTagPlaceholder')}
                                     title={t('gsubFeatureTagTitle')}
+                                    style={{ 
+                                        fontFamily: 'var(--guide-font-family), sans-serif',
+                                        fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                                    }}
                                 />
                             )}
                         </div>
@@ -714,7 +770,17 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                      <div className="grid grid-cols-2 gap-2">
                         <div>
                             {/* Note: This is an extra input for GPOS if used in Positioning construction mode. GSUB is handled in Metadata section for Ligatures. */}
-                            <input type="text" value={gpos || ''} onChange={e => setGpos && setGpos(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 text-xs" placeholder={t('gposTagPlaceholder')} />
+                            <input 
+                                type="text" 
+                                value={gpos || ''} 
+                                onChange={e => setGpos && setGpos(e.target.value)} 
+                                className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 text-xs guide-font-input" 
+                                placeholder={t('gposTagPlaceholder')} 
+                                style={{ 
+                                    fontFamily: 'var(--guide-font-family), sans-serif',
+                                    fontFeatureSettings: 'var(--guide-font-feature-settings)'
+                                }}
+                            />
                         </div>
                     </div>
                 </div>
