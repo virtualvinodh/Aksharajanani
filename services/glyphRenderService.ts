@@ -315,9 +315,9 @@ export const calculateDefaultMarkOffset = (
         if (!rule) {
             // Only use topCenter/bottomCenter default if the mark is explicitly non-spacing (advWidth: 0)
             const isNonSpacing = markChar.advWidth === 0 || markChar.advWidth === '0';
-            if (isNonSpacing) {
-                rule = ["topCenter", "bottomCenter"];
-            }
+            // if (isNonSpacing) {
+            //    rule = ["topCenter", "bottomCenter"];
+            //}
         }
 
         if (rule) {
@@ -337,11 +337,17 @@ export const calculateDefaultMarkOffset = (
             offset = VEC.sub(baseAttachPoint, markAttachPoint);
         } else {
              // Priority 2: Absolute Fallback (Side-by-side) 
-             const baseRsb = baseChar.rsb ?? metrics.defaultRSB;
-             const markLsb = markChar.lsb ?? metrics.defaultLSB;
-             const targetX = baseBbox.x + baseBbox.width + baseRsb;
-             const dx = (targetX + markLsb) - markBbox.x;
-             offset = { x: dx, y: 0 };
+             const isNonSpacing = markChar.advWidth === 0 || markChar.advWidth === '0';
+
+             if (!isNonSpacing) {
+
+                const baseRsb = baseChar.rsb ?? metrics.defaultRSB;
+                const markLsb = markChar.lsb ?? metrics.defaultLSB;
+                const targetX = baseBbox.x + baseBbox.width + baseRsb;
+                const dx = (targetX + markLsb) - markBbox.x;
+                offset = { x: dx, y: 0 };
+
+             }
         }
     }
     
