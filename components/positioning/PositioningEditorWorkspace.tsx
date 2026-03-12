@@ -78,7 +78,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     sourceGlyphs, onSelectCharacter, allCharsByName, markPositioningMap
 }) => {
     const [activeTab, setActiveTab] = useState<'class' | 'sources'>('class');
-    const [isClassStripCollapsed, setIsClassStripCollapsed] = useState(false);
+    const [isClassStripCollapsed, setIsClassStripCollapsed] = useState(!isLargeScreen);
     const { showNotification } = useLayout();
 
     // Automatically switch tabs based on class availability

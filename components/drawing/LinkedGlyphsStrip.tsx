@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useLocale } from '../../contexts/LocaleContext';
 import { Character, GlyphData, AppSettings, CharacterSet, MarkAttachmentRules, Path, KerningMap, MarkPositioningMap, UnifiedRenderContext } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { renderPaths, getAccurateGlyphBBox, getUnifiedPaths } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 import { LeftArrowIcon, RightArrowIcon, LinkIcon, BrokenLinkIcon, FoldIcon, CloseIcon, ChevronUpIcon, ChevronDownIcon } from '../../constants';
@@ -152,9 +153,10 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
     kerningMap, markPositioningMap, isCollapsed: propCollapsed, onToggleCollapse
 }) => {
     const { t } = useLocale();
+    const isMobile = useMediaQuery('(max-width: 1023px)');
     const { visibility, handleScroll, scrollRef } = useHorizontalScroll([items]);
     const [isExpanded, setIsExpanded] = useState(false); // Fullscreen
-    const [internalCollapsed, setInternalCollapsed] = useState(false); // Minimize
+    const [internalCollapsed, setInternalCollapsed] = useState(isMobile); // Minimize
 
     const collapsed = propCollapsed !== undefined ? propCollapsed : internalCollapsed;
     const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(p => !p));

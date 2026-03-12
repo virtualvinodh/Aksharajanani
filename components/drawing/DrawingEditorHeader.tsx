@@ -143,13 +143,13 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
           )}
 
           {(props.isLocked || props.isComposite) && props.onRefresh && (
-             <button onClick={props.onRefresh} title={t('refresh')} className="p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95" data-tour="header-refresh">
+             <button onClick={props.onRefresh} title={t('refresh')} className="hidden sm:flex p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95" data-tour="header-refresh">
                 <RefreshIcon />
              </button>
           )}
 
-          {(props.isLocked || props.isComposite) && (
-              <button onClick={props.onReset} title={t('reset')} className="p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95" data-tour="header-reset">
+          {(props.isLocked || props.isComposite) && props.onReset && (
+              <button onClick={props.onReset} title={t('reset')} className="hidden sm:flex p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-gray-300 transition-all active:scale-95" data-tour="header-reset">
                   <UndoIcon />
               </button>
           )}
@@ -166,6 +166,22 @@ const DrawingEditorHeader: React.FC<DrawingEditorHeaderProps> = (props) => {
               </button>
               {isMoreMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 z-50">
+                      {(props.isLocked || props.isComposite) && props.onRefresh && (
+                          <button 
+                              onClick={() => { props.onRefresh!(); setIsMoreMenuOpen(false); }} 
+                              className="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex sm:hidden items-center gap-2"
+                          >
+                              <RefreshIcon /> <span>{t('refresh')}</span>
+                          </button>
+                      )}
+                      {(props.isLocked || props.isComposite) && props.onReset && (
+                          <button 
+                              onClick={() => { props.onReset!(); setIsMoreMenuOpen(false); }} 
+                              className="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex sm:hidden items-center gap-2"
+                          >
+                              <UndoIcon /> <span>{t('reset')}</span>
+                          </button>
+                      )}
                       <button 
                         onClick={() => { props.onDeleteClick(); setIsMoreMenuOpen(false); }} 
                         disabled={script?.isImportedFont}

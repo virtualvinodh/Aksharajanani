@@ -214,7 +214,7 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                 <button 
                     onClick={onResetRequest} 
                     disabled={!isPositioned} 
-                    className="flex items-center gap-2 px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-yellow-400 transition-all active:scale-95 shadow-sm"
+                    className="hidden sm:flex items-center gap-2 px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-yellow-400 transition-all active:scale-95 shadow-sm"
                     title={t('resetPosition')}
                 >
                     <UndoIcon />
@@ -243,6 +243,13 @@ const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
                     </button>
                     {isMoreMenuOpen && (
                         <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 z-50">
+                            <button 
+                                onClick={() => { onResetRequest(); setIsMoreMenuOpen(false); }} 
+                                disabled={!isPositioned}
+                                className="w-full text-left px-4 py-2 text-sm text-yellow-600 dark:text-yellow-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex sm:hidden items-center gap-2 disabled:opacity-50"
+                            >
+                                <UndoIcon /> <span>{t('reset')}</span>
+                            </button>
                             <button onClick={() => { onDelete(); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                                 <TrashIcon /> <span>{t('deleteGlyph')}</span>
                             </button>

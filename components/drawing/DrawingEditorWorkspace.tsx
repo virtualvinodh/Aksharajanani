@@ -74,8 +74,8 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     
     // New States for collapsible strips
-    const [isSourcesCollapsed, setIsSourcesCollapsed] = useState(false);
-    const [isDependentsCollapsed, setIsDependentsCollapsed] = useState(false);
+    const [isSourcesCollapsed, setIsSourcesCollapsed] = useState(!props.isLargeScreen);
+    const [isDependentsCollapsed, setIsDependentsCollapsed] = useState(!props.isLargeScreen);
 
     useEffect(() => {
         if (canvasContainerRef.current) {
