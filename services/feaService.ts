@@ -117,9 +117,9 @@ const getIndicFeatureForLigature = (components: Character[], scriptTag: string, 
 
     if (components.length === 2) {
         // Rule 1: Reph (rphf)
-        if (isIndicRa(components[0].unicode) && seq[1].syllabic === 'Virama') {
-            return 'rphf';
-        }
+       // if (isIndicRa(components[0].unicode) && seq[1].syllabic === 'Virama') {
+       //     return 'rphf';
+       // }
         
         // Rule 2: Half Form (half)
         if (seq[0].syllabic === 'Consonant' && seq[1].syllabic === 'Virama') {

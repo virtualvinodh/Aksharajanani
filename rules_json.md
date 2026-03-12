@@ -66,16 +66,48 @@ For most standard features, you can simply define the rule types directly inside
 ### B. Advanced Ordering (`children`)
 If you need precise control over the execution order (e.g., running a specific lookup *before* inline rules, or placing auto-generated rules at the end), use the `children` array.
 
+**The order in this array is strictly preserved** in the final font file. In OpenType, if multiple rules could apply, the first one listed takes priority.
+
+| Type | Description |
+| :--- | :--- |
+| `lookup` | References a named lookup from the root `lookups` object. |
+| `inline` | Processes rules defined directly within the feature object (e.g., `liga`, `context`). |
+| `auto_generated` | Automatically builds rules based on character metadata (e.g., `liga` and `gsub` properties in `characters.json`). |
+
+**Example:** Combining custom logic with automatic rules.
 ```json
-"akhn": {
+"haln": {
+  "lookupflags": {
+    "UseMarkFilteringSet": "@virama"
+  },
   "children": [
-    { "type": "lookup", "name": "my_custom_lookup" },
-    { "type": "inline" },
-    { "type": "auto_generated" }
+    { "type": "lookup", "name": "special_edge_cases" },
+    { "type": "auto_generated" },
+    { "type": "inline" }
   ],
-  "liga": { ... } // These go into the "inline" block defined above
+  "liga": {
+    "క్": ["క", "్"] // This goes into the "inline" block
+  }
 }
 ```
+*In this example, `special_edge_cases` runs first, followed by all auto-generated ligatures from `characters.json`, and finally the inline `క్` rule.*
+
+### C. Legacy Ordering (`lookups`)
+Older versions of the system used a simple string array to reference lookups. This format is still supported for backward compatibility but is **deprecated**.
+
+```json
+"blws": {
+  "lookups": ["swapK_1", "swapK_2"]
+}
+```
+
+#### Migration Behavior
+When the application loads a project with the legacy `lookups` format, it automatically:
+1.  Converts the string array into the `children` format.
+2.  Wraps any existing inline rules (like `liga` or `context`) into an `{ "type": "inline" }` block.
+3.  **Appends** `{ "type": "auto_generated" }` to the end of the `children` list.
+
+**Note:** If you need auto-generated rules to run *before* your lookups, you must manually convert to the `children` format.
 
 ---
 
