@@ -43,7 +43,9 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
 
         // 3. Add Individual Characters
         characterSets.flatMap(s => s.characters).forEach(c => {
-            opts.push({ label: c.name, value: c.name, type: 'char' });
+            if (c.glyphClass !== 'virtual') {
+                opts.push({ label: c.name, value: c.name, type: 'char' });
+            }
         });
 
         return opts;

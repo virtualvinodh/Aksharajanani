@@ -40,7 +40,7 @@
       {  "name": "ఋ", "glyphClass": "base", "link": ["బ", "ు", "ు"] },
       {  "name": "ౠ", "glyphClass": "base", "link": ["ఋ", "ా"] },
       {  "name": "ఌ", "glyphClass": "base" },
-      {  "name": "ౡ", "glyphClass": "base", "compoiste": ["ఌ", "ా"] },
+      {  "name": "ౡ", "glyphClass": "base", "composite": ["ఌ", "ా"] },
       {  "name": "ఎ", "glyphClass": "base" },
       {  "name": "ఏ", "glyphClass": "base", "composite": ["ఎ"] },
       {  "name": "ఐ", "glyphClass": "base" },
@@ -57,7 +57,7 @@
       { "name": "、", "glyphClass": "base", "advWidth": 0 },
       { "name": "", "glyphClass": "base", "composite": ["ం"] },
       { "name": "", "glyphClass": "base", "link": ["", "·"] },
-      { "name": "", "glyphClass": "base", "composite": ["", "ు", "", "ు"] },
+      { "name": "", "glyphClass": "base", "composite": ["", "ు", "ు"] },
       { "name": "", "glyphClass": "base", "link": ["", ""] },
       { "name": "", "glyphClass": "base" },
       { "name": "", "glyphClass": "base", "composite": ["", "ా"] },
@@ -239,7 +239,7 @@
 
   { "name":"్హౖ", "glyphClass": "mark", "link": [ "్హ",  "ౖ"], "advWidth": 0, "liga": ["ౖ", "్", "హ"], "gsub": "pstf" },
  
- { "name":"్ఞౖ", "glyphClass": "mark", "link": [ "్ఞ",  "ౖ"], "advWidth": 0, "liga": ["ౖ", "్ఞ"], "gsub": "pstf" },
+ { "name":"్ఞౖ", "glyphClass": "mark", "link": [ "్ఞ",  "ౖ"], "advWidth": 0, "liga": ["ౖ",  "్", "ఞ"], "gsub": "pstf" },
  
  { "name":"్ణౖ", "glyphClass": "mark", "link": [ "్ణ",  "ౖ"] , "advWidth": 0, "liga": ["ౖ", "్", "ణ"], "gsub": "pstf"},
  
@@ -438,8 +438,8 @@
       { "name": "ఫు", "glyphClass": "ligature", "link": ["పు"], "liga": ["ఫ", "ు"]  },
       { "name": "పూ", "glyphClass": "ligature", "link": ["పు", "ా"], "liga": ["ప", "ూ"]  },
       { "name": "ఫూ", "glyphClass": "ligature", "link": ["పూ"], "liga": ["ఫ", "ూ"]  },
-      { "name": "వు", "glyphClass": "ligature", "link": ["వ"], "liga": ["వ", "ూ"]  },
-      { "name": "వూ", "glyphClass": "ligature", "link": ["వు", "ా"], "liga": ["వ", "ు"]  },
+      { "name": "వు", "glyphClass": "ligature", "link": ["వ"], "liga": ["వ", "ు" ]  },
+      { "name": "వూ", "glyphClass": "ligature", "link": ["వు", "ా"], "liga": ["వ", "ూ"]  },
       { "name": "", "glyphClass": "ligature", "link": ["్ప", "ు"], "liga": ["్", "ప", "ు"], "gsub": "akhn"  },
       { "name": "", "glyphClass": "ligature", "link": ["్ప", "ూ"], "liga": ["్", "ప", "ూ"], "gsub": "akhn"  },
 

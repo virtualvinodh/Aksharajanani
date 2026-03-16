@@ -42,34 +42,42 @@ export const isGlyphDrawn = (glyphData: GlyphData | undefined): boolean => {
 export const isGlyphRenderable = (
     char: Character,
     glyphDataMap: Map<number, GlyphData>,
-    allCharsByName: Map<string, Character>
+    allCharsByName: Map<string, Character>,
+    visited = new Set<string>(),
+    memo = new Map<string, boolean>()
 ): boolean => {
+    if (memo.has(char.name)) return memo.get(char.name)!;
+
+    // Prevent infinite recursion
+    if (visited.has(char.name)) return false;
+    const nextVisited = new Set(visited);
+    nextVisited.add(char.name);
+
+    let result = false;
+
     // 1. If it has direct drawing data, it is renderable.
     if (char.unicode !== undefined && isGlyphDrawn(glyphDataMap.get(char.unicode))) {
-        return true;
+        result = true;
+    } else {
+        // 2. Helper to check a list of component names
+        const areComponentsReady = (names: string[]): boolean => {
+            return names.every(name => {
+                const comp = allCharsByName.get(name);
+                return comp && isGlyphRenderable(comp, glyphDataMap, allCharsByName, nextVisited, memo);
+            });
+        };
+
+        // 3. Check specific construction types
+        if (char.position) result = areComponentsReady(char.position);
+        else if (char.kern) result = areComponentsReady(char.kern);
+        else if (char.link) result = areComponentsReady(char.link);
+        else if (char.composite) result = areComponentsReady(char.composite);
+        // 4. Special Case: Whitespace, Control, and Format characters are always "renderable" (though invisible)
+        else if (shouldExportEmpty(char.unicode, char.name)) result = true;
     }
 
-    // 2. Helper to check a list of component names
-    const areComponentsReady = (names: string[]): boolean => {
-        return names.every(name => {
-            const comp = allCharsByName.get(name);
-            // We verify the component exists, has a unicode, and that unicode slot has drawing data.
-            // Note: This does not currently support deep recursion (linked glyphs linking to linked glyphs),
-            // but fits the current flat architecture where components are usually base glyphs.
-            return comp && comp.unicode !== undefined && isGlyphDrawn(glyphDataMap.get(comp.unicode));
-        });
-    };
-
-    // 3. Check specific construction types
-    if (char.position) return areComponentsReady(char.position);
-    if (char.kern) return areComponentsReady(char.kern);
-    if (char.link) return areComponentsReady(char.link);
-    if (char.composite) return areComponentsReady(char.composite);
-
-    // 4. Special Case: Whitespace, Control, and Format characters are always "renderable" (though invisible)
-    if (shouldExportEmpty(char.unicode, char.name)) return true;
-
-    return false;
+    memo.set(char.name, result);
+    return result;
 };
 
 /**
@@ -105,46 +113,59 @@ export const isGlyphComplete = (
     glyphDataMap: Map<number, GlyphData>,
     markPositioningMap: MarkPositioningMap,
     kerningMap: KerningMap,
-    allCharsByName: Map<string, Character>
+    allCharsByName: Map<string, Character>,
+    visited = new Set<string>(),
+    memo = new Map<string, boolean>()
 ): boolean => {
     if (!character) return false;
 
-    // 1. Manually drawn in the editor
-    if (isGlyphDrawn(glyphDataMap.get(character.unicode))) {
-        return true;
-    }
+    if (memo.has(character.name)) return memo.get(character.name)!;
 
+    // Prevent infinite recursion
+    if (visited.has(character.name)) return false;
+    const nextVisited = new Set(visited);
+    nextVisited.add(character.name);
+
+    let result = false;
+
+    // 1. Manually drawn in the editor
+    if (character.unicode !== undefined && isGlyphDrawn(glyphDataMap.get(character.unicode))) {
+        result = true;
+    }
+    
     // 2. An accepted (saved) positioned pair
-    if (character.position) {
+    if (!result && character.position) {
         const base = allCharsByName.get(character.position[0]);
         const mark = allCharsByName.get(character.position[1]);
         if (base?.unicode !== undefined && mark?.unicode !== undefined) {
             if (markPositioningMap.has(`${base.unicode}-${mark.unicode}`)) {
-                return true;
+                result = true;
             }
         }
     }
-
+    
     // 3. An accepted (saved) kerned pair
-    if (character.kern) {
+    if (!result && character.kern) {
         const left = allCharsByName.get(character.kern[0]);
         const right = allCharsByName.get(character.kern[1]);
         if (left?.unicode !== undefined && right?.unicode !== undefined) {
             if (kerningMap.has(`${left.unicode}-${right.unicode}`)) {
-                return true;
+                result = true;
             }
         }
     }
-
+    
     // 4. A linked or composite glyph whose source components are drawn
-    const components = character.link || character.composite;
-    if (components) {
-         return components.every(name => {
-            const comp = allCharsByName.get(name);
-            // Use isGlyphDrawn for source components, not isGlyphComplete, to avoid infinite recursion.
-            return comp && isGlyphDrawn(glyphDataMap.get(comp.unicode));
-        });
+    if (!result) {
+        const components = character.link || character.composite;
+        if (components) {
+             result = components.every(name => {
+                const comp = allCharsByName.get(name);
+                return comp && isGlyphComplete(comp, glyphDataMap, markPositioningMap, kerningMap, allCharsByName, nextVisited, memo);
+            });
+        }
     }
 
-    return false;
+    memo.set(character.name, result);
+    return result;
 };

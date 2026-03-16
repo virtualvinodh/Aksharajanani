@@ -3,7 +3,10 @@
   "groups": {
     "virama": [ "్"],
     "vsuuu": [ "ు", "ూ"],
-    "ottuG": ["$subCons", "$subConsAdd"]
+    "ottuG": ["$subCons", "$subConsAdd"],
+    "spacingNonSpacingOttu": [
+      "్ఖ.sp", "్గ.sp", "్ఘ.sp", "్ఙ.sp", "్జ.sp", "్ఝ.sp", "్ఞ.sp", "్ట.sp", "్ఠ.sp", "్డ.sp", "్ఢ.sp", "్ణ.sp", "్త.sp", "్ద.sp", "్ధ.sp", "్థ.sp", "్ఱ.sp", "్ల.sp", "్ష.sp", "్హ.sp", "్ఴ.sp"
+    ]
   },
   "lookups": {
     "swapK_1": {       
@@ -628,8 +631,15 @@
     },
     "pstf": {   
       "children": [
-        { "type": "auto_generated" }
-      ]
+        { "type": "auto_generated" },
+        { "type": "inline" } 
+      ],
+      "context": {
+        "": {
+          "left": ["@ottuG"],
+          "replace": [""]
+        }
+      }      
     },
     "psts": {
       "lookupflags": {
@@ -673,13 +683,7 @@
         { "type": "lookup", "name": "swapSHR_1R" }, { "type": "lookup", "name": "swapSHR_2R" },
         { "type": "lookup", "name": "swapSR_1R" }, { "type": "lookup", "name": "swapSR_2R" },
         { "type": "lookup", "name": "swapOTTUR_1R" }, { "type": "lookup", "name": "swapOTTUR_2R" }
-      ],
-      "context": {
-        "": {
-          "left": ["@ottuG"],
-          "replace": [""]
-        }
-      }
+      ]
     },
     "abvs": {
       "children": [

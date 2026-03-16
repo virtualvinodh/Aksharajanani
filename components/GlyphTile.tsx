@@ -1,21 +1,57 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { Character, GlyphData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
-import { renderPaths } from '../services/glyphRenderService';
-import { TILE_CANVAS_SIZE, DRAWING_CANVAS_SIZE } from '../constants';
+import { renderPaths, calculateUnifiedTransform, getUnifiedPaths } from '../services/glyphRenderService';
+import { TILE_CANVAS_SIZE } from '../constants';
 import { isGlyphDrawn } from '../utils/glyphUtils';
+import { useSettings } from '../contexts/SettingsContext';
+import { useProject } from '../contexts/ProjectContext';
+import { useGlyphData } from '../contexts/GlyphDataContext';
+import { useKerning } from '../contexts/KerningContext';
+import { usePositioning } from '../contexts/PositioningContext';
+import { useRules } from '../contexts/RulesContext';
 
 interface GlyphTileProps {
   character: Character;
-  glyphData: GlyphData | undefined;
-  strokeThickness: number;
+  glyphData?: GlyphData;
+  strokeThickness?: number;
   isDraggable?: boolean;
 }
 
-const GlyphTile: React.FC<GlyphTileProps> = ({ character, glyphData, strokeThickness, isDraggable = false }) => {
+const GlyphTile: React.FC<GlyphTileProps> = ({ 
+  character, 
+  glyphData: propGlyphData, 
+  strokeThickness: propStrokeThickness, 
+  isDraggable = false 
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
+  const { settings } = useSettings();
+  const { metrics, allCharsByName, characterSets } = useProject();
+  const { glyphDataMap } = useGlyphData();
+  const { kerningMap } = useKerning();
+  const { markPositioningMap } = usePositioning();
+  const { groups } = useRules();
+
+  const strokeThickness = propStrokeThickness ?? settings.strokeThickness;
+
+  // Resolve glyph data if not provided (Unified logic)
+  const resolvedGlyphData = useMemo(() => {
+    if (propGlyphData) return propGlyphData;
+    
+    const resolvedPaths = getUnifiedPaths(character, {
+      glyphDataMap,
+      allCharsByName,
+      markPositioningMap,
+      kerningMap,
+      characterSets,
+      groups,
+      metrics
+    });
+
+    return resolvedPaths.length > 0 ? { paths: resolvedPaths } : undefined;
+  }, [propGlyphData, character, glyphDataMap, allCharsByName, markPositioningMap, kerningMap, characterSets, groups, metrics]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -24,21 +60,34 @@ const GlyphTile: React.FC<GlyphTileProps> = ({ character, glyphData, strokeThick
 
     ctx.clearRect(0, 0, TILE_CANVAS_SIZE, TILE_CANVAS_SIZE);
 
-    if (!isGlyphDrawn(glyphData)) {
+    if (!isGlyphDrawn(resolvedGlyphData)) {
         return;
     }
 
-    const scale = TILE_CANVAS_SIZE / DRAWING_CANVAS_SIZE;
+    // Use calculateUnifiedTransform for auto-fitting and centering
+    const { scale, tx, ty } = calculateUnifiedTransform(
+        resolvedGlyphData.paths, 
+        TILE_CANVAS_SIZE, 
+        strokeThickness, 
+        {
+            character,
+            metrics,
+            contrast: settings.contrast
+        }
+    );
     
     ctx.save();
+    ctx.translate(tx, ty);
     ctx.scale(scale, scale);
-    renderPaths(ctx, glyphData!.paths, {
+    
+    renderPaths(ctx, resolvedGlyphData.paths, {
         strokeThickness,
         color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
     });
+    
     ctx.restore();
     
-  }, [glyphData, strokeThickness, theme]);
+  }, [resolvedGlyphData, strokeThickness, theme, character, metrics, settings.contrast]);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData("text/plain", character.name);

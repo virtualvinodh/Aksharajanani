@@ -1,0 +1,98 @@
+[
+  {
+    "positioning": [
+      {
+        "base": ["$consonants", "$conjuncts"],
+        "mark": ["്", "ഁ", "ഀ", "഻", "ൎ", "഼"],
+        "gpos": "abvm"
+      },
+      {
+        "base": ["$consonants", "$conjuncts", "$mini_cons", "$mini_conj"],
+        "mark": ["ൢ", "ൣ", "", "ു", "ൂ", "ൃ", "ൄ", "$mini_marks"],
+        "gpos": "blwm"
+      }
+    ]
+  },
+  {
+    "markAttachment": {
+      "$consonants": {
+        "്": ["topRight", "bottomCenter", "0", "-70"],
+        "ഁ": ["topCenter", "bottomCenter", "0", "-70"],
+        "ൢ": ["bottomCenter", "topCenter", "0", "70"],
+        "ൣ": ["bottomCenter", "topCenter", "0", "70"],
+        "": ["bottomCenter", "topCenter", "0", "70"],
+        "": ["bottomRight", "topRight"],
+        "ു": ["bottomRight", "topRight"],
+        "ൂ": ["bottomRight", "topRight"],
+        "ൃ": ["bottomRight", "topRight"],
+        "ൄ": ["bottomRight", "topRight"]
+      },
+      "$conjuncts": {
+        "ൢ": ["bottomCenter", "topCenter", "0", "70"],
+        "ൣ": ["bottomCenter", "topCenter", "0", "70"],
+        "്": ["topRight", "bottomCenter"],
+        "ഁ": ["topCenter", "bottomCenter", "0", "-70"],
+        "": ["bottomCenter", "topCenter", "0", "70"],
+        "ു": ["bottomRight", "topRight"],
+        "ൂ": ["bottomRight", "topRight"],
+        "ൃ": ["bottomRight", "topRight"],
+        "ൄ": ["bottomRight", "topRight"]
+      },
+      "$mini_cons": {
+        "ു": ["bottomRight", "topRight"],
+        "ൂ": ["bottomRight", "topRight"],
+        "ു.mini": ["bottomRight", "topRight"],
+        "ൂ.mini": ["bottomRight", "topRight"],
+        "ൃ": ["bottomRight", "topRight"],
+        "ൄ": ["bottomRight", "topRight"],
+        "ൃ.mini": ["bottomRight", "topRight"],
+        "ൄ.mini": ["bottomRight", "topRight"]
+      },
+      "$mini_conj": {
+        "ു": ["bottomRight", "topRight"],
+        "ൂ": ["bottomRight", "topRight"],
+        "ു.mini": ["bottomRight", "topRight"],
+        "ൂ.mini": ["bottomRight", "topRight"],
+        "ൃ": ["bottomRight", "topRight"],
+        "ൄ": ["bottomRight", "topRight"],
+        "ൃ.mini": ["bottomRight", "topRight"],
+        "ൄ.mini": ["bottomRight", "topRight"]
+      }
+    }
+  },
+  {
+    "markAttachmentClass": [
+      {
+        "members": ["ൢ", "ൣ", "", "ു", "ൂ", "ൃ", "ൄ", "$mini_marks"]
+      },
+      {
+        "members": ["ഁ", "ഀ", "഻", "ൎ"]
+      },
+      {
+        "members": ["്", "഼"]
+      }
+    ]
+  },
+  {
+    "recommendedKerning": [
+      ["$consonants", "ി"],
+      ["$consonants", "ീ"],
+      ["$consonants", "ു"],
+      ["$consonants", "ൂ"],
+      ["$consonants", "്യ"],
+      ["$consonants", "ൃ"],
+      ["$consonants", "ൄ"],
+      ["$consonants", "്വ"],
+      ["$conjuncts", "ി"],
+      ["$conjuncts", "ീ"],
+      ["$conjuncts", "ു"],
+      ["$conjuncts", "ൂ"],
+      ["$conjuncts", "്യ"],
+      ["$conjuncts", "ൃ"],
+      ["$conjuncts", "ൄ"],
+      ["$conjuncts", "്വ"],
+      ["്ര", "$consonants"],
+      ["്ര", "$conjuncts"]
+    ]
+  }
+]

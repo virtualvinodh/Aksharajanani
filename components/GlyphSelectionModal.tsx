@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Character, CharacterSet, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import Modal from './Modal';
@@ -78,7 +78,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
     return characterSets
         .map(set => ({
             ...set,
-            characters: set.characters.filter(char => !char.hidden)
+            characters: set.characters.filter(char => !char.hidden && char.glyphClass !== 'virtual')
         }))
         .filter(set => set.characters.length > 0);
   }, [characterSets]);

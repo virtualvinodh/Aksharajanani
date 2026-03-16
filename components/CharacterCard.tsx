@@ -54,9 +54,13 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const isLongPress = useRef(false);
+  const touchStartPos = useRef<{ x: number, y: number } | null>(null);
 
-  const startPress = () => {
+  const startPress = (x?: number, y?: number) => {
       isLongPress.current = false;
+      if (x !== undefined && y !== undefined) {
+          touchStartPos.current = { x, y };
+      }
       longPressTimer.current = setTimeout(() => {
           isLongPress.current = true;
           if (onLongPress) {
@@ -85,11 +89,25 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-      startPress();
+      const touch = e.touches[0];
+      startPress(touch.clientX, touch.clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+      if (!touchStartPos.current) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - touchStartPos.current.x;
+      const dy = touch.clientY - touchStartPos.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance > 10) { // 10px threshold for scrolling
+          cancelPress();
+      }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
       cancelPress();
+      touchStartPos.current = null;
       // Prevent default click behavior if it was a long press to avoid double-firing
       if (isLongPress.current) {
           e.preventDefault();
@@ -208,6 +226,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onClick={handleClickWrapper}
       className={`${baseContainerClasses} ${stateClasses}`}

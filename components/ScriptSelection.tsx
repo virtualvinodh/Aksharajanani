@@ -30,6 +30,7 @@ const representativeChars: { [key: string]: string } = {
     tamil_simple_design: 'க',
     tamil_old: 'னா',
     malayalam: 'ക',
+    malayalam_traditional: 'ക',
     telugu: 'క',
     devanagari: 'क',
     sinhala: 'ක',
@@ -176,6 +177,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
 
     const [longPressedProjectId, setLongPressedProjectId] = useState<number | null>(null);
     const longPressTimeout = useRef<number | null>(null);
+    const touchStartPos = useRef<{ x: number, y: number } | null>(null);
 
 
     useEffect(() => {
@@ -595,7 +597,10 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
         }
     };
 
-    const handleTouchStart = (projectId: number) => {
+    const handleTouchStart = (projectId: number, e: React.TouchEvent) => {
+        const touch = e.touches[0];
+        touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+        
         // Clear any existing timeout
         if (longPressTimeout.current) {
             clearTimeout(longPressTimeout.current);
@@ -609,10 +614,26 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
         }, 500); // 500ms for long press
     };
 
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!touchStartPos.current) return;
+        const touch = e.touches[0];
+        const dx = touch.clientX - touchStartPos.current.x;
+        const dy = touch.clientY - touchStartPos.current.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > 10) { // 10px threshold for scrolling
+            if (longPressTimeout.current) {
+                clearTimeout(longPressTimeout.current);
+                longPressTimeout.current = null;
+            }
+        }
+    };
+
     const handleTouchInteractionEnd = () => {
         if (longPressTimeout.current) {
             clearTimeout(longPressTimeout.current);
         }
+        touchStartPos.current = null;
     };
     
     /* 
@@ -688,9 +709,9 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                                         <div
                                             key={p.projectId}
                                             className="relative select-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-between text-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-900 focus-within:ring-indigo-500"
-                                            onTouchStart={() => p.projectId !== undefined && handleTouchStart(p.projectId)}
+                                            onTouchStart={(e) => p.projectId !== undefined && handleTouchStart(p.projectId, e)}
+                                            onTouchMove={handleTouchMove}
                                             onTouchEnd={handleTouchInteractionEnd}
-                                            onTouchMove={handleTouchInteractionEnd}
                                             onContextMenu={(e) => e.preventDefault()}
                                         >
                                             <button
