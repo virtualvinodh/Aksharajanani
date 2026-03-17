@@ -346,17 +346,20 @@ export const generateFea = (
         // ZWJ and ZWNJ are special zero-width characters that should always be considered 'drawn' for rule generation.
         if (char.unicode === 8205 || char.unicode === 8204) {
             result = true;
-        } else if (char.unicode !== undefined && isGlyphDrawnUtil(glyphDataMap.get(char.unicode))) {
-            // If it has direct drawing data, it is drawn
-            result = true;
         } else {
-            // If it's a linked, composite, or positioned glyph, it's drawn if all its components are drawn
+            const hasDirectPaths = char.unicode !== undefined && isGlyphDrawnUtil(glyphDataMap.get(char.unicode));
+            const isComposite = !!char.composite;
             const components = char.link || char.composite || char.position;
-            if (components) {
+
+            if (isComposite) {
+                result = hasDirectPaths;
+            } else if (components) {
                 result = components.every(name => {
                     const comp = allCharsByNameForFea.get(name);
                     return comp && isGlyphDrawn(comp, nextVisited);
                 });
+            } else {
+                result = hasDirectPaths;
             }
         }
 
