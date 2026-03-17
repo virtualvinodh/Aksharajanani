@@ -6,7 +6,6 @@ import { paperScope } from '../../services/glyphRenderService';
 import { VEC } from '../../utils/vectorUtils';
 import { simplifyPath } from '../../utils/pathUtils';
 
-declare var paper: any;
 
 export const useSliceTool = ({
     isDrawing, setIsDrawing, currentPaths, onPathsChange, previewPath, setPreviewPath,

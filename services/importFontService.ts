@@ -1,6 +1,7 @@
 
 import { ProjectData, GlyphData, Path, Segment, Point, AppSettings, FontMetrics, CharacterSet, ScriptDefaults } from '../types';
 import { getGlyphExportNameByUnicode } from '../utils/glyphUtils';
+import opentype from 'opentype.js';
 
 const generateId = () => `${Date.now()}-${Math.random()}`;
 
@@ -8,7 +9,7 @@ export const parseFontFile = async (file: File): Promise<any> => {
     const buffer = await file.arrayBuffer();
     return new Promise((resolve, reject) => {
         try {
-            const font = window.opentype.parse(buffer);
+            const font = opentype.parse(buffer);
             resolve(font);
         } catch (e) {
             reject(e);

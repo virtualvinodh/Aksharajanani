@@ -6,7 +6,6 @@ import { VEC } from '../../utils/vectorUtils';
 import { getAccurateGlyphBBox, BoundingBox } from '../../services/glyphRenderService';
 import { ToolHookProps, TransformAction, Handle, HandleDirection } from './types';
 
-declare var paper: any;
 
 export const useSelectTool = ({
     isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange,

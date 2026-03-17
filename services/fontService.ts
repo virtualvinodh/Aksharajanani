@@ -14,9 +14,8 @@ import { deepClone } from '../utils/cloneUtils';
 
 // opentype.js is loaded from a CDN in index.html and will be available on the window object.
 // This declaration informs TypeScript about the global 'opentype' variable.
-declare var opentype: any;
-// paper.js is also loaded from CDN.
-declare var paper: any;
+import opentype from 'opentype.js';
+import paper from 'paper';
 
 
 /**

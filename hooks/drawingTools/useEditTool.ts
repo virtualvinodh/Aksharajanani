@@ -7,7 +7,6 @@ import { DraggedPointInfo, ToolHookProps } from './types';
 import { paperScope } from '../../services/glyphRenderService';
 import { deepClone } from '../../utils/cloneUtils';
 
-declare var paper: any;
 
 export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, zoom, onToolChange, ...props }: ToolHookProps) => {
     const [draggedPointInfo, setDraggedPointInfo] = useState<DraggedPointInfo | null>(null);

@@ -37,7 +37,7 @@ interface LinkedGlyphsStripProps {
 const DRAWING_CANVAS_SIZE = 1000;
 const PREVIEW_THRESHOLD = 30;
 
-declare var UnicodeProperties: any;
+import UnicodeProperties from 'unicode-properties';
 
 const GlyphThumbnail: React.FC<{
     character: Character;

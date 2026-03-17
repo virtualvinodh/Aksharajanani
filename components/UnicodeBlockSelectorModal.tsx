@@ -7,7 +7,7 @@ import { getUnicodeBlocks, getAssignedCodepointsInBlock } from '../services/unic
 import { SpinnerIcon } from '../constants';
 import { useLayout } from '../contexts/LayoutContext';
 
-declare var UnicodeProperties: any;
+import UnicodeProperties from 'unicode-properties';
 
 interface UnicodeBlockSelectorModalProps {
   isOpen: boolean;

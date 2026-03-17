@@ -1,6 +1,5 @@
 
-// Requires paper.js and imagetracer.js loaded globally
-declare var ImageTracer: any;
+import ImageTracer from 'imagetracerjs';
 import paper from 'paper';
 
 interface TraceOptions {

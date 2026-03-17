@@ -16,7 +16,7 @@ import { deepClone } from '../../utils/cloneUtils';
 import { useRules } from '../../contexts/RulesContext';
 import { expandMembers } from '../../services/groupExpansionService';
 
-declare var UnicodeProperties: any;
+import UnicodeProperties from 'unicode-properties';
 
 export interface SaveOptions {
     isDraft?: boolean;

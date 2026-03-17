@@ -13,7 +13,7 @@ import { VEC } from '../utils/vectorUtils';
 import { getAccurateGlyphBBox } from './glyphRenderService';
 import { expandMembers } from './groupExpansionService';
 
-declare var UnicodeProperties: any;
+import UnicodeProperties from 'unicode-properties';
 
 let indicPosCategoryData: any | null = null;
 

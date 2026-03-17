@@ -1,7 +1,6 @@
 
 import { GlyphData, Character, MarkPositioningMap, KerningMap } from '../types';
-
-declare const UnicodeProperties: any;
+import UnicodeProperties from 'unicode-properties';
 
 /**
  * Determines if a character should be exported even if it has no drawn paths.
@@ -10,10 +9,7 @@ declare const UnicodeProperties: any;
 export const shouldExportEmpty = (unicode: number | undefined, name?: string): boolean => {
     if (name?.toLowerCase().includes('null')) return true;
     if (unicode === undefined) return false;
-    if (typeof UnicodeProperties === 'undefined') {
-        // Fallback to hardcoded list if library is not available
-        return unicode === 32 || unicode === 8205 || unicode === 8204;
-    }
+    
     const category = UnicodeProperties.getCategory(unicode);
     const isSeparator = category && category.startsWith('Z');
     return isSeparator || category === 'Cf' || category === 'Cc';

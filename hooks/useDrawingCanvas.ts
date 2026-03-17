@@ -19,7 +19,6 @@ import { getAccurateGlyphBBox, curveToPolyline, quadraticCurveToPolyline, paperS
 
 export type { DraggedPointInfo, Handle };
 
-declare var paper: any;
 
 export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const {

@@ -6,8 +6,8 @@ import { DRAWING_CANVAS_SIZE } from '../constants';
 import { deepClone } from '../utils/cloneUtils';
 import { expandMembers } from './groupExpansionService';
 
-declare var paper: any;
-declare var UnicodeProperties: any;
+import paper from 'paper';
+import UnicodeProperties from 'unicode-properties';
 
 // A single, persistent paper.js instance to avoid memory churn.
 // Exported to be reused by hooks and other services.
@@ -931,7 +931,7 @@ export const calculateUnifiedTransform = (
 
         if (char?.glyphClass === 'mark' || char?.kern) {
             shouldVerticallyCenter = false;
-        } else if (char?.unicode && typeof UnicodeProperties !== 'undefined') {
+        } else if (char?.unicode) {
             try {
                 const cat = UnicodeProperties.getCategory(char.unicode);
                 if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {

@@ -5,7 +5,7 @@ import { UnicodeBlock, Character } from '../types';
 import { getUnicodeBlocks, getAssignedCodepointsInBlock } from '../services/unicodeService';
 import { SpinnerIcon } from '../constants';
 
-declare var UnicodeProperties: any;
+import UnicodeProperties from 'unicode-properties';
 
 interface AddBlockModalProps {
   isOpen: boolean;

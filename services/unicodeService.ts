@@ -1,6 +1,5 @@
 import { UnicodeBlock } from '../types';
-
-declare const UnicodeProperties: any;
+import UnicodeProperties from 'unicode-properties';
 
 let blockCache: UnicodeBlock[] | null = null;
 

@@ -20,6 +20,7 @@ interface UnifiedCardProps {
   onToggleSelect?: (character: Character) => void;
   variant?: 'default' | 'compact' | 'overlay';
   onLongPress?: (character: Character) => void;
+  onRegisterRef?: (name: string, el: HTMLElement | null) => void;
 }
 
 const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {

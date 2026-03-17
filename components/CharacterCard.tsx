@@ -21,12 +21,13 @@ interface CharacterCardProps {
   variant?: 'default' | 'compact' | 'overlay';
   disabledReason?: string;
   onLongPress?: (character: Character) => void;
+  onRegisterRef?: (name: string, el: HTMLElement | null) => void;
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({ 
     character, glyphData, isAvailable, isManuallySet, isConstructed, onSelect, 
     isSelectionMode = false, isSelected = false, onToggleSelect,
-    variant = 'default', disabledReason, onLongPress
+    variant = 'default', disabledReason, onLongPress, onRegisterRef
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -154,6 +155,13 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
     });
     ctx.restore();
   }, [glyphData, settings, theme, isDrawn, character, metrics]);
+
+  useEffect(() => {
+    if (onRegisterRef) {
+        onRegisterRef(character.name, cardRef.current);
+        return () => onRegisterRef(character.name, null);
+    }
+  }, [character.name, onRegisterRef]);
 
   if (!settings) return null;
 

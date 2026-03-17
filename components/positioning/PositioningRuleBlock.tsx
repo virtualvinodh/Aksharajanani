@@ -22,7 +22,7 @@ interface PositioningRuleBlockProps {
 
 const MINI_SIZE = 48; // Size of thumbnail
 
-declare var UnicodeProperties: any;
+import UnicodeProperties from 'unicode-properties';
 
 // Internal component for a single mini glyph canvas
 const MiniGlyphCanvas: React.FC<{ 

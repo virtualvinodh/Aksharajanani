@@ -8,7 +8,6 @@ import { VEC } from '../../utils/vectorUtils';
 import { DRAWING_CANVAS_SIZE } from '../../constants';
 import { paperScope } from '../../services/glyphRenderService';
 
-declare var paper: any;
 
 interface UseImportLogicProps {
     setBackgroundImage: (img: string | null) => void;
@@ -81,7 +80,7 @@ export const useImportLogic = ({
             const bounds = importedItem.bounds;
             const availableHeight = metrics.baseLineY - metrics.topLineY;
             const scale = availableHeight / bounds.height;
-            importedItem.scale(scale, new paper.Point(0,0));
+            importedItem.scale(scale, new paperScope.Point(0,0));
             
             const newBounds = importedItem.bounds;
             const targetCenter = {
@@ -89,7 +88,7 @@ export const useImportLogic = ({
                 y: metrics.topLineY + availableHeight / 2
             };
             const translation = VEC.sub(targetCenter, {x: newBounds.center.x, y: newBounds.center.y});
-            importedItem.translate(new paper.Point(translation.x, translation.y));
+            importedItem.translate(new paperScope.Point(translation.x, translation.y));
             
             const newPaths: Path[] = [];
             const extractPaths = (item: any) => {
