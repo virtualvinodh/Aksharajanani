@@ -144,36 +144,53 @@ export const useExportActions = ({
         const currentHash = simpleHash(projectString);
         let feaError: string | null = null;
         let fontBlob: Blob | null = null;
-    
-        if (projectId) {
-            const cachedData = await dbService.getFontCache(projectId);
-            if (cachedData && cachedData.hash === currentHash) {
-                fontBlob = cachedData.fontBinary;
-            }
-        }
-    
-        if (!fontBlob) {
-            // MERGE KERNING: Use suggested values as base, overwrite with manual values
-            const effectiveKerningMap = new Map(suggestedKerningMap);
-            kerningMap.forEach((value, key) => {
-                effectiveKerningMap.set(key, value);
-            });
-            // Ensure ignored pairs are NOT in the export
-            ignoredPairs.forEach(key => effectiveKerningMap.delete(key));
 
-            const result = await exportToOtf(
-                glyphDataMap, settings, t, fontRules, metrics, characterSets, 
-                effectiveKerningMap, markPositioningMap, allCharsByUnicode, 
-                positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, 
-                layout.showNotification, isEditMode, baseFontBinary
-            );
-            fontBlob = result.blob;
-            feaError = result.feaError;
-            if (projectId && fontBlob && !feaError) {
-                await dbService.setFontCache(projectId, currentHash, fontBlob);
+        // Any failure (worker, Pyodide/CDN, IndexedDB) must surface as an error and resolve to null;
+        // an uncaught rejection here previously left the export spinner running forever.
+        try {
+            if (projectId) {
+                try {
+                    const cachedData = await dbService.getFontCache(projectId);
+                    if (cachedData && cachedData.hash === currentHash) {
+                        fontBlob = cachedData.fontBinary;
+                    }
+                } catch (cacheError) {
+                    console.warn('Font cache read failed; regenerating.', cacheError);
+                }
             }
+
+            if (!fontBlob) {
+                // MERGE KERNING: Use suggested values as base, overwrite with manual values
+                const effectiveKerningMap = new Map(suggestedKerningMap);
+                kerningMap.forEach((value, key) => {
+                    effectiveKerningMap.set(key, value);
+                });
+                // Ensure ignored pairs are NOT in the export
+                ignoredPairs.forEach(key => effectiveKerningMap.delete(key));
+
+                const result = await exportToOtf(
+                    glyphDataMap, settings, t, fontRules, metrics, characterSets, 
+                    effectiveKerningMap, markPositioningMap, allCharsByUnicode, 
+                    positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, 
+                    layout.showNotification, isEditMode, baseFontBinary
+                );
+                fontBlob = result.blob;
+                feaError = result.feaError;
+                if (projectId && fontBlob && !feaError) {
+                    try {
+                        await dbService.setFontCache(projectId, currentHash, fontBlob);
+                    } catch (cacheError) {
+                        console.warn('Font cache write failed.', cacheError);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Font generation failed:', error);
+            const message = error instanceof Error ? error.message : String(error);
+            layout.showNotification(t('errorFontGeneration', { error: message }), 'error');
+            return null;
         }
-        
+
         if (!fontBlob) return null;
         return { blob: fontBlob, feaError: feaError };
     }, [getProjectState, projectId, settings, metrics, characterSets, glyphDataMap, t, fontRules, kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification, isEditMode, baseFontBinary]);
@@ -183,21 +200,22 @@ export const useExportActions = ({
         layout.showNotification(t('exportingNotice'), 'info');
         setFeaErrorState(null);
         
-        const result = await getCachedOrGeneratedFont();
-    
-        if (result) {
-            const { blob, feaError } = result;
-            if (feaError) {
-                setFeaErrorState({ error: feaError, blob });
-                layout.openModal('feaError');
-            } else {
-                downloadFontBlob(blob, projectName);
-                layout.showNotification(t('fontExportedSuccess'));
+        try {
+            // Resolves to null after notifying the user of the specific failure.
+            const result = await getCachedOrGeneratedFont();
+            if (result) {
+                const { blob, feaError } = result;
+                if (feaError) {
+                    setFeaErrorState({ error: feaError, blob });
+                    layout.openModal('feaError');
+                } else {
+                    downloadFontBlob(blob, projectName);
+                    layout.showNotification(t('fontExportedSuccess'));
+                }
             }
-        } else {
-            layout.showNotification(t('errorFontGeneration', { error: 'Failed to generate font.' }), 'error');
+        } finally {
+            setExportingType(null);
         }
-        setExportingType(null);
     }, [getCachedOrGeneratedFont, downloadFontBlob, layout, t, projectName]);
 
     // Shared logic to check for completeness and warn if necessary
@@ -243,13 +261,16 @@ export const useExportActions = ({
     const handleTestClick = useCallback(async () => {
         setExportingType('test');
         layout.showNotification(t('exportingNotice'), 'info');
-        const result = await getCachedOrGeneratedFont();
-        setExportingType(null);
+        let result: Awaited<ReturnType<typeof getCachedOrGeneratedFont>> = null;
+        try {
+            // Resolves to null after notifying the user of the specific failure.
+            result = await getCachedOrGeneratedFont();
+        } finally {
+            setExportingType(null);
+        }
         if (result) {
             setTestPageFont(result);
             layout.openModal('testPage');
-        } else {
-            layout.showNotification(t('errorFontGeneration', { error: 'Failed to prepare font for testing.' }), 'error');
         }
     }, [getCachedOrGeneratedFont, layout, t]);
     
@@ -260,11 +281,10 @@ export const useExportActions = ({
             layout.showNotification(t('exportingNotice'), 'info');
             try {
                 const result = await getCachedOrGeneratedFont();
+                // Resolves to null after notifying the user of the specific failure.
                 if (result) {
                     setCreatorFont(result);
                     layout.setCurrentView('creator');
-                } else {
-                    layout.showNotification('Failed to prepare font for Creator.', 'error');
                 }
             } finally {
                 setExportingType(null);

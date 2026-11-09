@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
-import { useSettings } from '../contexts/SettingsContext';
 import { useRules } from '../contexts/RulesContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useProject } from '../contexts/ProjectContext';
@@ -16,7 +15,6 @@ export type DistRuleType = 'simple' | 'contextual';
 
 export const useRulesState = () => {
     const { t } = useLocale();
-    const { settings } = useSettings();
     const { state: rulesState, dispatch: rulesDispatch } = useRules();
     const { showNotification } = useLayout();
     const { allCharsByUnicode } = useProject();
@@ -39,7 +37,6 @@ export const useRulesState = () => {
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     const [ruleToDelete, setRuleToDelete] = useState<{ context: 'feature' | 'lookup', name: string, ruleKey: string, ruleType: RuleType | DistRuleType } | null>(null);
     
-    const autosaveTimeout = useRef<number | null>(null);
     
     // Sync global fontRules to localRules only if they differ content-wise
     useEffect(() => {
@@ -58,29 +55,18 @@ export const useRulesState = () => {
     }, [localRules, rulesDispatch]);
 
 
+    // Commit every local edit to the global rules state immediately.
+    // Persisting to the database is handled by project-level persistence (autosave, or manual
+    // save in manual mode, with its own unsaved-changes tracking). Previously edits only reached
+    // the global state via a 1s timer in autosave mode, so leaving the Rules view within that
+    // window — or editing at all in manual-save mode — silently discarded them.
+    // Only depends on localRules: when fontRules changes externally, the sync effect above
+    // copies it into localRules, and this effect then sees identical content and does nothing.
     useEffect(() => {
-        if (!settings?.isAutosaveEnabled) {
-          return;
+        if (JSON.stringify(localRules) !== JSON.stringify(fontRules)) {
+            rulesDispatch({ type: 'SET_FONT_RULES', payload: localRules });
         }
-        if (JSON.stringify(localRules) === JSON.stringify(fontRules)) {
-            rulesDispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: false });
-            return;
-        }
-        
-        rulesDispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: true });
-        if (autosaveTimeout.current) {
-            clearTimeout(autosaveTimeout.current);
-        }
-        autosaveTimeout.current = window.setTimeout(() => {
-            saveChanges();
-            rulesDispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: false });
-        }, 1000);
-        return () => {
-            if (autosaveTimeout.current) {
-                clearTimeout(autosaveTimeout.current);
-            }
-        };
-    }, [localRules, fontRules, rulesDispatch, settings?.isAutosaveEnabled, saveChanges]);
+    }, [localRules]);
 
     const scriptTag = useMemo(() => Object.keys(localRules).find(key => key !== 'groups' && key !== 'lookups'), [localRules]);
     const groups = useMemo(() => localRules.groups || {}, [localRules]);
@@ -164,7 +150,9 @@ export const useRulesState = () => {
                 targetObject = newRules[scriptTag!][contextName];
                 
                 if (!targetObject.children) {
-                    targetObject.children = [];
+                    // A new feature object (e.g. one that was only implied by character data) must keep
+                    // its auto-generated rules: generateFea only adds them implicitly when children is empty.
+                    targetObject.children = [{ type: 'auto_generated' }];
                 }
                 const hasInline = targetObject.children.some((c: any) => c.type === 'inline');
                 if (!hasInline) {
@@ -218,7 +206,7 @@ export const useRulesState = () => {
         setLocalRules(prev => {
             const newRules = deepClone(prev);
             if (!newRules[scriptTag]) newRules[scriptTag] = {};
-            newRules[scriptTag][tag] = { children: [{ type: 'inline' }] };
+            newRules[scriptTag][tag] = { children: [{ type: 'inline' }, { type: 'auto_generated' }] };
             return newRules;
         });
         setActiveFeature(tag);

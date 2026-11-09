@@ -532,7 +532,10 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
         reader.onload = (e) => {
             try {
                 const text = e.target?.result as string;
-                const projectData: ProjectData = JSON.parse(text);
+                // The file's projectId is the exporting browser's local IndexedDB key. Never reuse it:
+                // adopting it would make the next autosave overwrite whichever local project has that id.
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { projectId: _fileProjectId, ...projectData }: ProjectData = JSON.parse(text);
 
                 if (projectData.scriptId) {
                     const scriptToLoad = scripts.find(s => s.id === projectData.scriptId);

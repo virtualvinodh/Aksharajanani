@@ -854,8 +854,10 @@ export const generateFea = (
 
             if (!gposFeatures.has(gposTag)) gposFeatures.set(gposTag, []);
             
-            const LSB_f = baseChar.lsb ?? metrics.defaultLSB;
-            
+            // Side bearings are authored in canvas units; createFont places the base outline at
+            // LSB * scale in font units, so the anchor must use the same conversion.
+            const LSB_f = (baseChar.lsb ?? metrics.defaultLSB) * scale;
+
             const canvas_distance_x = (markBbox.x + offset.x) - baseBbox.x;
             const font_distance_x = canvas_distance_x * scale;
             const anchorX = Math.round(LSB_f + font_distance_x);
@@ -895,8 +897,11 @@ export const generateFea = (
         if (leftChar && rightChar && isGlyphDrawn(leftChar) && isGlyphDrawn(rightChar) && leftChar.glyphClass !== 'virtual' && rightChar.glyphClass !== 'virtual' && value !== 0) {
             const leftGlyph = getGlyphName(leftChar);
             const rightGlyph = getGlyphName(rightChar);
-            if (leftGlyph && rightGlyph) {
-                distContent += `  pos ${leftGlyph} ${rightGlyph} ${value};\n`;
+            // Kerning values are authored (and previewed, and auto-computed) in canvas units,
+            // while outlines are scaled into font units by `scale`. Convert to match.
+            const fontUnitsValue = Math.round(value * scale);
+            if (leftGlyph && rightGlyph && fontUnitsValue !== 0) {
+                distContent += `  pos ${leftGlyph} ${rightGlyph} ${fontUnitsValue};\n`;
             }
         }
     });

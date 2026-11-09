@@ -12,6 +12,18 @@ import { useLocale } from '../../contexts/LocaleContext';
 import { ScriptConfig, ProjectData, Character, CharacterSet, CharacterDefinition, AttachmentClass, RecommendedKerning, MarkAttachmentRules, PositioningRules, AppSettings } from '../../types';
 import { FONT_META_DEFAULTS } from '../../constants';
 
+/**
+ * `composite` and `link` must be string arrays, but hand-written data (script files,
+ * custom scripts, project JSON) sometimes uses a bare string for a single component.
+ * Code downstream calls array methods on these, so coerce them at load time.
+ */
+const normalizeComponentLists = (char: Character): Character => {
+    const fix = (value: unknown): string[] | undefined =>
+        typeof value === 'string' ? [value] : (value as string[] | undefined);
+    if (typeof char.composite !== 'string' && typeof char.link !== 'string') return char;
+    return { ...char, composite: fix(char.composite), link: fix(char.link) };
+};
+
 interface UseProjectLoadProps {
     allScripts: ScriptConfig[];
     setProjectId: (id: number | undefined) => void;
@@ -175,7 +187,8 @@ export const useProjectLoad = ({
 
             const processedCharSets = finalCharacterSets.map(set => ({
                 ...set,
-                characters: set.characters.map(char => {
+                characters: set.characters.map(rawChar => {
+                    const char = normalizeComponentLists(rawChar);
                     if (char.unicode === undefined || char.unicode === null) {
                         if ([...char.name].length === 1) {
                             const codepoint = char.name.codePointAt(0)!;
@@ -405,7 +418,10 @@ export const useProjectLoad = ({
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const projectData: ProjectData = JSON.parse(event.target?.result as string);
+                // The file's projectId is the exporting browser's local IndexedDB key. Never reuse it:
+                // adopting it would make the next autosave overwrite whichever local project has that id.
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { projectId: _fileProjectId, ...projectData }: ProjectData = JSON.parse(event.target?.result as string);
                 const currentScript = scriptRef.current;
                 
                 if (projectData.scriptId && projectData.scriptId !== currentScript?.id && !projectData.characterSets) {

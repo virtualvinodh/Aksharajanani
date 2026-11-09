@@ -128,18 +128,72 @@ export const useProjectPersistence = (
         }
     }, [projectId, getProjectState, lastSavedState, hasUnsavedRules, rulesDispatch, layout]);
 
+    // Latest values for timers and window event handlers, so they never act on stale state
+    // and don't need to be re-armed whenever these callbacks change identity.
+    const saveProjectToDBRef = useRef(saveProjectToDB);
+    const getProjectStateRef = useRef(getProjectState);
+    const lastSavedStateRef = useRef(lastSavedState);
+    const isAutosaveEnabledRef = useRef(!!settings?.isAutosaveEnabled);
+    const isScriptDataLoadingRef = useRef(isScriptDataLoading);
+    saveProjectToDBRef.current = saveProjectToDB;
+    getProjectStateRef.current = getProjectState;
+    lastSavedStateRef.current = lastSavedState;
+    isAutosaveEnabledRef.current = !!settings?.isAutosaveEnabled;
+    isScriptDataLoadingRef.current = isScriptDataLoading;
+
     // Autosave Effect
-    const autosaveTimeout = React.useRef<number | null>(null);
+    // The timer is deliberately NOT re-armed when saveProjectToDB changes identity: it depends on
+    // `layout`, which changes on every notification/selection, and re-arming on each change could
+    // postpone the save indefinitely. The timeout calls the latest saveProjectToDB through the ref.
+    const autosaveTimeout = useRef<number | null>(null);
+    const isAutosaveEnabled = !!settings?.isAutosaveEnabled;
     useEffect(() => {
-        if (isScriptDataLoading || !script || !settings?.isAutosaveEnabled || !hasUnsavedChanges) {
+        if (isScriptDataLoading || !script || !isAutosaveEnabled || !hasUnsavedChanges) {
             return;
         }
         if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
         autosaveTimeout.current = window.setTimeout(() => {
-            saveProjectToDB();
+            saveProjectToDBRef.current();
         }, 1500);
         return () => { if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current); };
-    }, [hasUnsavedChanges, isScriptDataLoading, script, settings, saveProjectToDB]);
+    }, [hasUnsavedChanges, isScriptDataLoading, script, isAutosaveEnabled]);
+
+    // Protect against losing work when the tab is hidden, reloaded or closed.
+    useEffect(() => {
+        // Exact check (rather than the hasUnsavedChanges flag, which can be set spuriously).
+        const hasUnpersistedState = () => {
+            if (isScriptDataLoadingRef.current) return false;
+            const state = getProjectStateRef.current();
+            return !!state && JSON.stringify(state) !== lastSavedStateRef.current;
+        };
+
+        const flushIfAutosave = () => {
+            if (isAutosaveEnabledRef.current && hasUnpersistedState()) {
+                if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
+                saveProjectToDBRef.current();
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') flushIfAutosave();
+        };
+
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (!hasUnpersistedState()) return;
+            // Start the save (it may complete if the user chooses to stay), and ask the browser
+            // to confirm leaving so the user isn't silently losing work.
+            flushIfAutosave();
+            e.preventDefault();
+            e.returnValue = '';
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, []);
 
     // Initial Save State Effect
     useEffect(() => {

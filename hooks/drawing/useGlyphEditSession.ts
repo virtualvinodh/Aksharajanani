@@ -619,6 +619,36 @@ export const useGlyphEditSession = ({
         };
     }, []);
 
+    // Edits in the open editor reach the project only after the 500ms draft debounce. Commit them
+    // immediately when the tab is hidden, and ask the browser to confirm before a reload/close
+    // would discard them.
+    const unloadStateRef = useRef({ hasUnsavedChanges, isAutosaveEnabled: settings.isAutosaveEnabled, performSave, currentPaths });
+    unloadStateRef.current = { hasUnsavedChanges, isAutosaveEnabled: settings.isAutosaveEnabled, performSave, currentPaths };
+    useEffect(() => {
+        const flushDraft = () => {
+            const s = unloadStateRef.current;
+            if (s.isAutosaveEnabled && s.hasUnsavedChanges) {
+                if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
+                s.performSave(s.currentPaths, { isDraft: true, silent: true });
+            }
+        };
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') flushDraft();
+        };
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (!unloadStateRef.current.hasUnsavedChanges) return;
+            flushDraft();
+            e.preventDefault();
+            e.returnValue = '';
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, []);
+
     return {
         currentPaths,
         handlePathsChange,
