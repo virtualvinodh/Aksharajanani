@@ -352,10 +352,10 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
         
         {!isFeaOnlyMode && (
             <div className="mb-4"><div className="flex border-b border-gray-200 dark:border-gray-700">
-                <button onClick={() => setActiveSubTab('groups')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'groups' ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('glyphGroups')}</button>
-                <button onClick={() => setActiveSubTab('lookups')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'lookups' ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('lookups')}</button>
-                <button onClick={() => setActiveSubTab('gui')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'gui' ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('rulesTabDescription')}</button>
-                <button onClick={() => setActiveSubTab('fea')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'fea' ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('workspaceFeaCode')}</button>
+                <button onClick={() => setActiveSubTab('groups')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'groups' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('glyphGroups')}</button>
+                <button onClick={() => setActiveSubTab('lookups')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'lookups' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('lookups')}</button>
+                <button onClick={() => setActiveSubTab('gui')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'gui' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('rulesTabDescription')}</button>
+                <button onClick={() => setActiveSubTab('fea')} className={`px-4 py-2 text-sm font-medium transition-colors ${activeSubTab === 'fea' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{t('workspaceFeaCode')}</button>
             </div></div>
         )}
         
@@ -380,13 +380,13 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                                           onBlur={() => handleSaveFeatureTag(feature)}
                                           onKeyDown={e => { if (e.key === 'Enter') handleSaveFeatureTag(feature); if (e.key === 'Escape') setEditingFeature(null); }}
                                           maxLength={4}
-                                          className="whitespace-nowrap py-4 px-2 border-b-2 font-mono text-sm bg-transparent border-indigo-500 text-indigo-600 dark:text-indigo-400 focus:outline-none"
+                                          className="whitespace-nowrap py-4 px-2 border-b-2 font-mono text-sm bg-transparent border-accent text-accent focus:outline-none"
                                           style={{ width: '4rem' }} autoFocus
                                       />
                                   ) : (
                                       <button
                                           onClick={() => { setActiveFeature(feature); setAddingRuleType(null); setAddingDistRuleType(null); setEditingRule(null); }}
-                                          className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm transition-colors ${activeFeature === feature ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-500'}`}
+                                          className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm transition-colors ${activeFeature === feature ? 'border-b-2 border-accent text-accent' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-500'}`}
                                       >
                                           {feature.toUpperCase()}
                                       </button>
@@ -602,7 +602,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                         : <button onClick={handleEnterEditMode} title={t('editFeaManuallyTooltip')} className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">{t('editFeaManually')}</button>)}
                 </div>
                 <textarea readOnly={isFeaOnlyMode ? isFeaCodeLocked : !isFeaEditMode} value={isFeaEditMode ? manualFeaCode ?? '' : generatedFeaCode} onChange={(e) => onManualFeaCodeChange(e.target.value)}
-                    className="w-full h-[60vh] font-mono p-4 border rounded-md bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500 read-only:bg-gray-200 dark:read-only:bg-gray-800 read-only:cursor-not-allowed transition-colors"
+                    className="w-full h-[60vh] font-mono p-4 border rounded-md bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 focus:ring-accent focus:border-accent read-only:bg-gray-200 dark:read-only:bg-gray-800 read-only:cursor-not-allowed transition-colors"
                     placeholder="OpenType Feature Code..." spellCheck="false"/>
             </div>
         )}

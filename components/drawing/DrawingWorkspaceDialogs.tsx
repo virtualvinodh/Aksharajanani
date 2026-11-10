@@ -142,10 +142,10 @@ const DrawingWorkspaceDialogs: React.FC<DrawingWorkspaceDialogsProps> = (props) 
                         value={props.modalInputValue} 
                         onChange={e => props.setModalInputValue(sanitizeIdentifier(e.target.value))} 
                         autoFocus 
-                        className={`w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none ${props.showNamingHint ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
+                        className={`w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-accent focus:outline-none ${props.showNamingHint ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
                     />
                     {props.showNamingHint && (
-                        <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
                             {t('namingRestrictionHint')}
                         </p>
                     )}

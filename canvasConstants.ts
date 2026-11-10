@@ -4,3 +4,7 @@
 
 /** Width/height of the glyph drawing canvas, in canvas units. */
 export const DRAWING_CANVAS_SIZE = 1000;
+
+/** Ink-blue accent for canvas selection, handles and active guides (matches --color-accent in index.css). */
+export const ACCENT = { light: '#1F4B99', dark: '#7EA6E8' } as const;
+export const accentFor = (theme: 'light' | 'dark'): string => ACCENT[theme];

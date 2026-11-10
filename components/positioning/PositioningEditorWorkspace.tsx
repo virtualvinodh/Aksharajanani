@@ -178,14 +178,14 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                                 className={`
                                     flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-all rounded-t-md
                                     ${activeTab === 'class' 
-                                        ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-white/50 dark:bg-gray-800/50' 
+                                        ? 'border-accent text-accent bg-white/50 dark:bg-gray-800/50' 
                                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100/30 dark:hover:bg-gray-700/30'}
                                     ${!activeAttachmentClass ? 'opacity-50 cursor-not-allowed' : ''}
                                 `}
                             >
                                 Related Pairs
                                 {classSiblings && classSiblings.length > 0 && (
-                                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-[9px] min-w-[16px] text-center">
+                                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-[11px] min-w-[16px] text-center">
                                         {classSiblings.length}
                                     </span>
                                 )}
@@ -195,13 +195,13 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                                 className={`
                                     flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-all rounded-t-md
                                     ${activeTab === 'sources' 
-                                        ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-white/50 dark:bg-gray-800/50' 
+                                        ? 'border-accent text-accent bg-white/50 dark:bg-gray-800/50' 
                                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100/30 dark:hover:bg-gray-700/30'}
                                 `}
                             >
                                 Components
                                 {sourceGlyphs && sourceGlyphs.length > 0 && (
-                                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-[9px] min-w-[16px] text-center">
+                                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-[11px] min-w-[16px] text-center">
                                         {sourceGlyphs.length}
                                     </span>
                                 )}

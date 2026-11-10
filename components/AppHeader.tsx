@@ -79,13 +79,13 @@ const WorkspaceTab: React.FC<{
         data-tour={dataTour}
         className={`flex-shrink-0 flex items-center gap-2 py-3 lg:py-2 px-4 text-sm font-medium border-b-2 transition-colors relative ${
           isActive
-            ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+            ? 'border-accent text-accent'
             : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
         }`}
       >
         {icon}
         <span className="hidden sm:inline">{label}</span>
-        {showCompletion && !showUnsavedIndicator && <CheckCircleIcon className="h-4 w-4 text-green-500" />}
+        {showCompletion && !showUnsavedIndicator && <CheckCircleIcon className="h-4 w-4 text-accent" />}
         {showUnsavedIndicator && <div className="ml-2 w-2 h-2 bg-yellow-400 rounded-full" title="Unsaved changes"></div>}
       </button>
     );

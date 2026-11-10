@@ -49,7 +49,7 @@ const CharacterSetTab: React.FC<{
                 }`}
         >
             <span>{t(set.nameKey)}</span>
-            {isSetComplete && <CheckCircleIcon className="h-4 w-4 text-green-500 animate-pop-in" />}
+            {isSetComplete && <CheckCircleIcon className="h-4 w-4 text-accent animate-pop-in" />}
         </button>
     );
 };

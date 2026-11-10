@@ -154,7 +154,7 @@ const ImageTracerModal: React.FC<ImageTracerModalProps> = ({ isOpen, onClose, im
                         type="checkbox"
                         checked={traceRemoveBackground}
                         onChange={e => setTraceRemoveBackground(e.target.checked)}
-                        className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600"
+                        className="h-4 w-4 rounded text-indigo-600 focus:ring-accent border-gray-300 dark:border-gray-600"
                     />
                     <span>{t('removeWhiteBackground')}</span>
                 </label>

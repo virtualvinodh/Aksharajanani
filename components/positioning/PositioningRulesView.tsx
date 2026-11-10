@@ -198,7 +198,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                                 />
                                 {/* Stack count badge */}
                                 {isStacked && (
-                                    <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-bold px-1.5 rounded-bl-lg rounded-tr-lg shadow-sm z-10">
+                                    <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[11px] font-bold px-1.5 rounded-bl-lg rounded-tr-lg shadow-sm z-10">
                                         +{siblingCount - 1}
                                     </div>
                                 )}

@@ -252,7 +252,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                                             onChange={(e) => setEditValue(e.target.value)}
                                             onKeyDown={(e) => { if(e.key === 'Enter') saveEditing(index); if(e.key === 'Escape') cancelEditing(); }}
                                             autoFocus
-                                            className="px-2 py-1 text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 border border-indigo-300 dark:border-indigo-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
+                                            className="px-2 py-1 text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 border border-indigo-300 dark:border-indigo-700 rounded focus:outline-none focus:ring-2 focus:ring-accent w-full"
                                         />
                                         <button onClick={() => saveEditing(index)} className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors" title={t('saveName')}>
                                             <CheckCircleIcon className="w-5 h-5"/>
@@ -267,7 +267,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                                 ) : (
                                     <div className="flex items-center gap-2 group/header">
                                         <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t(group.nameKey)}</h3>
-                                        {isGroupComplete && <CheckCircleIcon className="w-5 h-5 text-green-500 animate-pop-in" />}
+                                        {isGroupComplete && <CheckCircleIcon className="w-5 h-5 text-accent animate-pop-in" />}
                                         {onRenameGroup && (
                                             <button 
                                                 onClick={() => startEditing(index, group.nameKey)}
@@ -310,7 +310,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                                 title={t('addGlyph')}
                             >
                                 <AddIcon className="w-8 h-8 mb-1 opacity-50 group-hover:opacity-100 transition-opacity" />
-                                <span className="text-[10px] font-bold uppercase tracking-wide opacity-50 group-hover:opacity-100 text-center transition-opacity">{t('addGlyph')}</span>
+                                <span className="text-[11px] font-bold uppercase tracking-wide opacity-50 group-hover:opacity-100 text-center transition-opacity">{t('addGlyph')}</span>
                             </div>
 
 
@@ -320,7 +320,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
                                     title={t('addBlock')}
                                 >
                                     <SwitchScriptIcon className="w-8 h-8 mb-1 opacity-50 group-hover:opacity-100 transition-opacity" />
-                                    <span className="text-[10px] font-bold uppercase tracking-wide opacity-50 group-hover:opacity-100 text-center transition-opacity">{t('addBlock')}</span>
+                                    <span className="text-[11px] font-bold uppercase tracking-wide opacity-50 group-hover:opacity-100 text-center transition-opacity">{t('addBlock')}</span>
                                 </div>
                         </div>
                     </div>

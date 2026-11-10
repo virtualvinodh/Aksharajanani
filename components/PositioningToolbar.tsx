@@ -61,7 +61,7 @@ const CoordinateInput: React.FC<{
 
     return (
         <div className="flex flex-col items-center gap-0.5">
-            <label className="text-[9px] font-black text-gray-400 uppercase leading-none">{axis}</label>
+            <label className="text-[11px] font-black text-gray-400 uppercase leading-none">{axis}</label>
             <input
                 type="text"
                 value={localValue}
@@ -85,7 +85,7 @@ const CoordinateInput: React.FC<{
                     }
                 }}
                 disabled={disabled}
-                className="w-10 p-1 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-[10px] focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-10 p-1 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-[11px] focus:ring-2 focus:ring-accent focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             />
         </div>
     );

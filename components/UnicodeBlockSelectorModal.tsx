@@ -207,7 +207,7 @@ const UnicodeBlockSelectorModal: React.FC<UnicodeBlockSelectorModalProps> = ({
                       type="checkbox"
                       checked={selectedBlocks.has(block.name)}
                       onChange={() => handleToggleBlock(block.name)}
-                      className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-900"
+                      className="h-4 w-4 rounded text-indigo-600 focus:ring-accent border-gray-300 dark:border-gray-600 dark:bg-gray-900"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-800 dark:text-gray-200">
                       {block.name}

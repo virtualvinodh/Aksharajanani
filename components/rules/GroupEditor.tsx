@@ -89,7 +89,7 @@ const GroupEditor: React.FC<GroupEditorProps> = ({ onSave, onCancel, initialData
                     className={`w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mt-1 ${showHint ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
                 />
                 {showHint && (
-                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
                         {t('namingRestrictionHint')}
                     </p>
                 )}

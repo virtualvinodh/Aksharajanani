@@ -358,14 +358,14 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
                 <label className="flex flex-col items-center cursor-pointer group w-full" title="Text Color">
                     <div className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-600 shadow-sm flex items-center justify-center font-bold text-xs" style={{ backgroundColor: textColor, color: textColor === '#ffffff' ? '#000' : '#fff' }}>T</div>
                     <input type="color" className="sr-only" value={textColor} onChange={(e) => setTextColor(e.target.value)} />
-                    <span className="text-[10px] text-gray-500 mt-1">Text</span>
+                    <span className="text-[11px] text-gray-500 mt-1">Text</span>
                 </label>
 
                 {/* Bg Color */}
                 <label className={`flex flex-col items-center cursor-pointer group w-full ${bgImage ? 'opacity-50' : ''}`} title="Background Color">
                     <div className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-600 shadow-sm flex items-center justify-center font-bold text-xs text-white" style={{ backgroundColor: bgColor }}>B</div>
                     <input type="color" className="sr-only" value={bgColor} onChange={(e) => setBgColor(e.target.value)} disabled={!!bgImage} />
-                    <span className="text-[10px] text-gray-500 mt-1">Back</span>
+                    <span className="text-[11px] text-gray-500 mt-1">Back</span>
                 </label>
 
                 {/* Shadow Toggle */}
@@ -377,7 +377,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
                     >
                         <span className="font-bold text-xs">S</span>
                     </button>
-                    <span className="text-[10px] text-gray-500 mt-1">Shadow</span>
+                    <span className="text-[11px] text-gray-500 mt-1">Shadow</span>
                 </div>
 
                 {/* Image Upload */}
@@ -389,7 +389,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
                             <ImageIcon />
                         </button>
                     )}
-                    <span className="text-[10px] text-gray-500 mt-1">Image</span>
+                    <span className="text-[11px] text-gray-500 mt-1">Image</span>
                     <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
                 </div>
              </div>
@@ -438,7 +438,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
                      <textarea 
                         value={text}
                         onChange={(e) => setText(e.target.value)}
-                        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 shadow-sm resize-none"
+                        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-accent shadow-sm resize-none"
                         rows={4}
                         placeholder="Your text..."
                     />
@@ -472,7 +472,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
                      <textarea 
                         value={text}
                         onChange={(e) => setText(e.target.value)}
-                        className="w-full p-2 rounded-md border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 text-base resize-none"
+                        className="w-full p-2 rounded-md border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-accent text-base resize-none"
                         rows={2}
                         placeholder="Type here..."
                     />

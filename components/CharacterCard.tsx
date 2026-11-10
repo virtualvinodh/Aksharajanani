@@ -289,7 +289,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                     </p>
                 )}
                 {settings.showUnicodeValues && character.unicode !== undefined && character.glyphClass !== 'virtual' && (
-                    <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
+                    <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</p>
                 )}
               </div>
           )}
@@ -306,7 +306,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                 {displayLabel}
             </span>
              {!isCompact && settings.showUnicodeValues && character.unicode !== undefined && character.glyphClass !== 'virtual' && (
-                <span className="absolute bottom-2 text-[10px] text-gray-300 dark:text-gray-600">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</span>
+                <span className="absolute bottom-2 text-[11px] text-gray-300 dark:text-gray-600">U+{character.unicode.toString(16).toUpperCase().padStart(4, '0')}</span>
             )}
         </div>
       )}

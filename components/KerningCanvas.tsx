@@ -4,6 +4,7 @@ import { Point, FontMetrics, AppSettings, Character, GlyphData } from '../types'
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths, getAccurateGlyphBBox, getGlyphSubBBoxes } from '../services/glyphRenderService';
 import { useKerningCanvas } from '../hooks/useKerningCanvas';
+import { accentFor } from '../canvasConstants';
 
 interface KerningCanvasProps {
     width: number;
@@ -97,7 +98,7 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
 
         const referenceGrey = theme === 'dark' ? '#525252' : '#A3A3A3';
         const glyphColor = theme === 'dark' ? '#E5E5E5' : '#262626';
-        const rightColor = isDragging ? (theme === 'dark' ? '#A3A3A3' : '#737373') : glyphColor;
+        const rightColor = isDragging ? accentFor(theme) : glyphColor;
 
         renderPaths(ctx, leftGlyph.paths, { strokeThickness, color: referenceGrey });
 

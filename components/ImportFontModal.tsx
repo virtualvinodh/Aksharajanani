@@ -97,7 +97,7 @@ const ImportFontModal: React.FC<ImportFontModalProps> = ({ isOpen, onClose, onIm
               id="editMode"
               checked={isEditMode}
               onChange={(e) => setIsEditMode(e.target.checked)}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-4 w-4 text-indigo-600 focus:ring-accent border-gray-300 rounded"
             />
             <label htmlFor="editMode" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
               Edit Mode (Experimental)

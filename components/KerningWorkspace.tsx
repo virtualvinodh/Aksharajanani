@@ -49,7 +49,7 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
                         data-tour="tab-suggestions"
                         className={`flex-shrink-0 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors ${
                             activeTab === 'recommended'
-                                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                                ? 'border-accent text-accent'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                         }`}
                     >
@@ -60,7 +60,7 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
                         data-tour="tab-spaced"
                         className={`flex-shrink-0 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors ${
                             activeTab === 'spaced'
-                                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                                ? 'border-accent text-accent'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                         }`}
                     >
@@ -71,7 +71,7 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
                         data-tour="tab-all"
                         className={`flex-shrink-0 py-3 px-3 sm:px-4 text-sm font-medium border-b-2 transition-colors ${
                             activeTab === 'all'
-                                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                                ? 'border-accent text-accent'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                         }`}
                     >

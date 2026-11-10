@@ -172,7 +172,7 @@ const EditorPanel: React.FC<{
                             />
                     </div>
                     {showHint && (
-                        <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
                             {t('namingRestrictionHint')}
                         </p>
                     )}

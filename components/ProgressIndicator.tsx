@@ -19,7 +19,7 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ completed, total,
     <div className="px-4 py-2 flex items-center gap-3">
       <div className="flex-grow bg-gray-300 dark:bg-gray-700 rounded-full h-2 overflow-hidden" role="presentation">
         <div
-          className={`${isComplete ? 'bg-green-500' : 'bg-indigo-600'} h-2 rounded-full transition-all duration-500`}
+          className={`bg-accent h-2 rounded-full transition-all duration-500`}
           style={{ width: `${percentage}%` }}
           role="progressbar"
           aria-valuenow={percentage}

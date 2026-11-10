@@ -21,12 +21,11 @@ interface UseAppActionsProps {
     allScripts: ScriptConfig[];
     hasUnsavedRules: boolean;
     setIsAnimatingExport: React.Dispatch<React.SetStateAction<boolean>>;
-    downloadTriggerRef: React.MutableRefObject<(() => void) | null>;
 }
 
 export const useAppActions = ({ 
     projectDataToRestore, onBackToSelection, allScripts, hasUnsavedRules, 
-    setIsAnimatingExport, downloadTriggerRef
+    setIsAnimatingExport
 }: UseAppActionsProps) => {
     
     const { t } = useLocale();
@@ -150,7 +149,7 @@ export const useAppActions = ({
         startExportProcess, handleSaveProject, handleSaveTemplate, handleTestClick, handleCreatorClick, downloadFontBlob,
         getCachedOrGeneratedFont
     } = useExportActions({
-        getProjectState, projectId, projectName, setIsAnimatingExport, downloadTriggerRef
+        getProjectState, projectId, projectName, setIsAnimatingExport
     });
 
     // --- Coordinator Logic (Navigation, Shortcuts) ---

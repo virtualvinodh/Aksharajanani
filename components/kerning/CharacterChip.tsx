@@ -15,7 +15,7 @@ const CharacterChip: React.FC<CharacterChipProps> = ({ char, isSelected, onToggl
                 type="checkbox"
                 checked={isSelected}
                 onChange={(e) => onToggle(char.unicode, e.target.checked)}
-                className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 focus:ring-indigo-500 accent-indigo-500"
+                className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 focus:ring-accent accent-indigo-500"
             />
             <span style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
                 {char.label || char.name}

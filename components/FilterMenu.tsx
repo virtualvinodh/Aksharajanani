@@ -67,7 +67,7 @@ export const FilterMenu: React.FC = () => {
                             placeholder="Filter by name..." 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full p-2 text-sm border rounded bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            className="w-full p-2 text-sm border rounded bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-accent focus:outline-none"
                         />
                     </div>
                     <button onClick={() => handleFilterChange('none')} className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${filterMode === 'none' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-gray-700 dark:text-gray-300'}`}>

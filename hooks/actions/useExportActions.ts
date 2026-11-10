@@ -21,11 +21,10 @@ interface UseExportActionsProps {
     projectId: number | undefined;
     projectName: string;
     setIsAnimatingExport: React.Dispatch<React.SetStateAction<boolean>>;
-    downloadTriggerRef: React.MutableRefObject<(() => void) | null>;
 }
 
 export const useExportActions = ({
-    getProjectState, projectId, projectName, setIsAnimatingExport, downloadTriggerRef,
+    getProjectState, projectId, projectName, setIsAnimatingExport,
 }: UseExportActionsProps) => {
     
     const { t } = useLocale();
@@ -195,7 +194,7 @@ export const useExportActions = ({
         return { blob: fontBlob, feaError: feaError };
     }, [getProjectState, projectId, settings, metrics, characterSets, glyphDataMap, t, fontRules, kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, allCharsByUnicode, positioningRules, markAttachmentRules, isFeaEditMode, manualFeaCode, layout.showNotification, isEditMode, baseFontBinary]);
 
-    const performExportAfterAnimation = useCallback(async () => {
+    const performExport = useCallback(async () => {
         setExportingType('export');
         layout.showNotification(t('exportingNotice'), 'info');
         setFeaErrorState(null);
@@ -248,15 +247,17 @@ export const useExportActions = ({
     }, [drawingProgress, positioningProgress, kerningProgress, settings, layout, t]);
 
     const startExportProcess = useCallback(() => {
-        const triggerAnimation = () => {
-            setTimeout(() => {
-                downloadTriggerRef.current = performExportAfterAnimation;
-                setIsAnimatingExport(true);
-            }, 1000);
-        };
-
-        checkAndExecute(triggerAnimation);
-    }, [checkAndExecute, downloadTriggerRef, performExportAfterAnimation, setIsAnimatingExport]);
+        checkAndExecute(() => {
+            // Start building right away. The letters animation is progress feedback for
+            // slow builds only: it appears if the font is not ready within 300ms (a cached
+            // font exports instantly) and never holds up the download.
+            const showAnimation = window.setTimeout(() => setIsAnimatingExport(true), 300);
+            void performExport().finally(() => {
+                window.clearTimeout(showAnimation);
+                setIsAnimatingExport(false);
+            });
+        });
+    }, [checkAndExecute, performExport, setIsAnimatingExport]);
 
     const handleTestClick = useCallback(async () => {
         setExportingType('test');
@@ -301,7 +302,7 @@ export const useExportActions = ({
         testPageFont,
         creatorFont, // Exposed
         startExportProcess,
-        performExportAfterAnimation,
+        performExport,
         handleSaveProject,
         handleSaveTemplate,
         handleTestClick,

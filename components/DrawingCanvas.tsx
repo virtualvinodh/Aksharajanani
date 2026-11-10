@@ -8,6 +8,7 @@ import { VEC } from '../utils/vectorUtils';
 import { renderPaths } from '../services/glyphRenderService';
 import { useDrawingCanvas } from '../hooks/useDrawingCanvas';
 import type { Handle, DraggedPointInfo } from '../hooks/useDrawingCanvas';
+import { accentFor } from '../canvasConstants';
 
 
 interface DrawingCanvasProps {
@@ -173,12 +174,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
   const drawSelectionUI = useCallback((ctx: CanvasRenderingContext2D) => {
     if (marqueeBox) {
-        ctx.strokeStyle = '#737373'; ctx.lineWidth = 1 / zoom; ctx.setLineDash([4 / zoom, 4 / zoom]);
+        ctx.strokeStyle = accentFor(theme); ctx.lineWidth = 1 / zoom; ctx.setLineDash([4 / zoom, 4 / zoom]);
         ctx.strokeRect(marqueeBox.start.x, marqueeBox.start.y, marqueeBox.end.x - marqueeBox.start.x, marqueeBox.end.y - marqueeBox.start.y);
         ctx.setLineDash([]);
     }
     if (selectionBox) {
-        ctx.strokeStyle = '#737373'; 
+        ctx.strokeStyle = accentFor(theme); 
         ctx.lineWidth = 1 / zoom; 
         ctx.setLineDash([]);
         if (isImageSelected && imageTransform) {
@@ -199,7 +200,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
             Object.values(handles).forEach((handle: Handle & Point) => {
                 if (handle.type === 'rotate') {
-                    ctx.save(); ctx.strokeStyle = '#737373'; ctx.lineWidth = 1.5 / zoom;
+                    ctx.save(); ctx.strokeStyle = accentFor(theme); ctx.lineWidth = 1.5 / zoom;
                     const radius = (HANDLE_SIZE / 2 + 10) / zoom;
                     ctx.beginPath(); ctx.arc(handle.x, handle.y, radius, 0.25 * Math.PI, 1.9 * Math.PI); ctx.stroke();
                     const arrowAngle = 1.9 * Math.PI; const arrowSize = 6 / zoom;
@@ -210,7 +211,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                     ctx.lineTo(arrowX - arrowSize * Math.cos(arrowAngle + Math.PI / 6), arrowY - arrowSize * Math.sin(arrowAngle + Math.PI / 6));
                     ctx.stroke(); ctx.restore();
                 } else if (handle.type === 'move') {
-                    ctx.fillStyle = '#737373';
+                    ctx.fillStyle = accentFor(theme);
                     ctx.strokeStyle = theme === 'dark' ? '#171717' : '#FFFFFF';
                     ctx.lineWidth = 2 / zoom;
                     const radius = scaledHandleSize * 0.7;
@@ -219,7 +220,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                     ctx.fill();
                     ctx.stroke();
                 } else {
-                    ctx.fillStyle = '#737373';
+                    ctx.fillStyle = accentFor(theme);
                     ctx.strokeStyle = theme === 'dark' ? '#171717' : '#FFFFFF';
                     ctx.lineWidth = 1.5 / zoom;
                     ctx.fillRect(handle.x - scaledHandleSize / 2, handle.y - scaledHandleSize / 2, scaledHandleSize, scaledHandleSize);
@@ -353,7 +354,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
         if (!isNonSpacing) {
             const isLsbActive = hoveredMetric === 'lsb' || draggingMetric === 'lsb';
-            ctx.strokeStyle = isLsbActive ? (theme === 'dark' ? '#E5E5E5' : '#262626') : (theme === 'dark' ? 'rgba(212, 212, 212, 0.5)' : 'rgba(115, 115, 115, 0.6)');
+            ctx.strokeStyle = isLsbActive ? accentFor(theme) : (theme === 'dark' ? 'rgba(212, 212, 212, 0.5)' : 'rgba(115, 115, 115, 0.6)');
             ctx.lineWidth = (isLsbActive ? 4 : 2) / zoom;
             ctx.setLineDash(isLsbActive ? [] : [8 / zoom, 6 / zoom]);
             ctx.beginPath(); 
@@ -361,7 +362,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             ctx.stroke();
 
             const isRsbActive = hoveredMetric === 'rsb' || draggingMetric === 'rsb';
-            ctx.strokeStyle = isRsbActive ? (theme === 'dark' ? '#E5E5E5' : '#262626') : (theme === 'dark' ? 'rgba(212, 212, 212, 0.5)' : 'rgba(115, 115, 115, 0.6)');
+            ctx.strokeStyle = isRsbActive ? accentFor(theme) : (theme === 'dark' ? 'rgba(212, 212, 212, 0.5)' : 'rgba(115, 115, 115, 0.6)');
             ctx.lineWidth = (isRsbActive ? 4 : 2) / zoom;
             ctx.setLineDash(isRsbActive ? [] : [8 / zoom, 6 / zoom]);
             ctx.beginPath(); 
@@ -380,7 +381,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 ctx.font = 'bold 14px sans-serif';
                 const textWidth = ctx.measureText(text).width + 16;
                 ctx.fillStyle = theme === 'dark' ? '#262626' : '#ffffff';
-                ctx.strokeStyle = '#737373';
+                ctx.strokeStyle = accentFor(theme);
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.roundRect(screenX - textWidth/2, screenY - 20, textWidth, 30, 6);
@@ -438,7 +439,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }
 
     const mainColor = theme === 'dark' ? '#E5E5E5' : '#262626';
-    const highlightColor = theme === 'dark' ? '#A3A3A3' : '#737373'; 
+    const highlightColor = accentFor(theme); // selected / hovered strokes
 
     const hoveredPaths: Path[] = [];
     const selectedNotHoveredPaths: Path[] = [];

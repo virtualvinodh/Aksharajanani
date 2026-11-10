@@ -201,7 +201,7 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
 
   const buttonClass = "p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors flex-shrink-0";
   const activeButtonClass = "p-1.5 rounded-md bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-500 transition-colors flex-shrink-0";
-  const inputClass = "w-12 p-1 text-xs border rounded bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-indigo-500 focus:outline-none";
+  const inputClass = "w-12 p-1 text-xs border rounded bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-accent focus:outline-none";
 
   return (
     <div

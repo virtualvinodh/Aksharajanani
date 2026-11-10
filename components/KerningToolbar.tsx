@@ -62,7 +62,7 @@ const KerningToolbar: React.FC<KerningToolbarProps> = ({
 
             {/* Kerning/Spacing Input */}
             <div className="flex flex-col items-center gap-0.5">
-                <label className="text-[9px] font-black text-gray-400 uppercase leading-none">Kern</label>
+                <label className="text-[11px] font-black text-gray-400 uppercase leading-none">Kern</label>
                 <div className="relative">
                     <input
                         type="text"
@@ -72,7 +72,7 @@ const KerningToolbar: React.FC<KerningToolbarProps> = ({
                         onBlur={() => onKernFocus(false)}
                         onMouseEnter={() => onKernHover(true)}
                         onMouseLeave={() => onKernHover(false)}
-                        className="w-12 p-1.5 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-12 p-1.5 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 font-mono text-center text-xs focus:ring-2 focus:ring-accent focus:outline-none"
                     />
                     {isKernDirty && (
                         <span className="absolute -top-1 -right-1 flex h-2 w-2">
@@ -85,7 +85,7 @@ const KerningToolbar: React.FC<KerningToolbarProps> = ({
 
             {/* X-Distance Input */}
             <div className="flex flex-col items-center gap-0.5">
-                <label className="text-[9px] font-black text-gray-400 uppercase leading-none">X-Dist</label>
+                <label className="text-[11px] font-black text-gray-400 uppercase leading-none">X-Dist</label>
                 <input
                     ref={xDistInputRef}
                     type="text"

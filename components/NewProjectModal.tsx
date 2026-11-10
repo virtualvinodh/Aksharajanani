@@ -67,7 +67,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose, onCo
                 type="text" 
                 value={projectName} 
                 onChange={(e) => setProjectName(e.target.value)} 
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
                 required
             />
         </div>
@@ -80,7 +80,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose, onCo
                 type="text" 
                 value={fontFamily} 
                 onChange={(e) => setFontFamily(e.target.value)} 
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
                 required
             />
         </div>
@@ -95,7 +95,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose, onCo
                     type="number" 
                     value={upm} 
                     onChange={(e) => setUpm(parseInt(e.target.value))} 
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
                     required
                 />
             </div>
@@ -108,7 +108,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose, onCo
                     type="number" 
                     value={ascender} 
                     onChange={(e) => setAscender(parseInt(e.target.value))} 
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
                     required
                 />
             </div>
@@ -121,7 +121,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose, onCo
                     type="number" 
                     value={descender} 
                     onChange={(e) => setDescender(parseInt(e.target.value))} 
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
                     required
                 />
             </div>
@@ -133,7 +133,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose, onCo
                     type="checkbox" 
                     checked={includeLatin} 
                     onChange={(e) => setIncludeLatin(e.target.checked)} 
-                    className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600"
+                    className="h-4 w-4 rounded text-indigo-600 focus:ring-accent border-gray-300 dark:border-gray-600"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">{t('includeLatinLetters')}</span>
             </label>

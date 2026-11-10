@@ -74,7 +74,8 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
   const [isDonateNoticeVisible, setIsDonateNoticeVisible] = useState(false);
   const [isAnimatingExport, setIsAnimatingExport] = useState(false);
-  const downloadTriggerRef = useRef<(() => void) | null>(null);
+  // The export animation is progress feedback only; the export itself runs independently.
+  const handleExportAnimationDone = useCallback(() => setIsAnimatingExport(false), []);
 
   // State for mobile editor animation
   const [editorClosing, setEditorClosing] = useState(false);
@@ -124,7 +125,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   
   const appActions = useAppActions({ 
       projectDataToRestore, onBackToSelection, allScripts, hasUnsavedRules,
-      setIsAnimatingExport, downloadTriggerRef
+      setIsAnimatingExport
   });
   const { 
       recommendedKerning, 
@@ -578,13 +579,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       {isAnimatingExport && settings && (
         <ExportAnimation
           isOpen={isAnimatingExport}
-          onComplete={() => {
-            setIsAnimatingExport(false);
-            if (downloadTriggerRef.current) {
-              downloadTriggerRef.current();
-              downloadTriggerRef.current = null;
-            }
-          }}
+          onComplete={handleExportAnimationDone}
           glyphDataMap={glyphDataMap}
           settings={settings}
           glyphVersion={glyphVersion}

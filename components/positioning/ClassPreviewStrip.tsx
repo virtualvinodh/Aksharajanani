@@ -383,7 +383,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                             {isLinked ? <LinkIcon className="w-5 h-5" /> : <BrokenLinkIcon className="w-5 h-5" />}
                         </button>
                         
-                        <span className={`text-[10px] font-bold uppercase tracking-tight leading-tight ${isLinked ? 'text-indigo-500' : 'text-orange-600'} ${collapsed ? 'text-left flex gap-2 items-center' : 'text-center'}`}>
+                        <span className={`text-[11px] font-bold uppercase tracking-tight leading-tight ${isLinked ? 'text-indigo-500' : 'text-orange-600'} ${collapsed ? 'text-left flex gap-2 items-center' : 'text-center'}`}>
                             {isLinked ? 'Synced' : 'Override'}
                             {collapsed && <span className="text-gray-300 dark:text-gray-600">•</span>}
                             {collapsed && <span className="text-gray-500 dark:text-gray-400">{activeClass?.name || t('group')}</span>}

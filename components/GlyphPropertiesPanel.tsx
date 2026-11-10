@@ -118,7 +118,7 @@ const ComponentListEditor: React.FC<{
 
     return (
         <div className="space-y-3">
-            {label && <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</label>}
+            {label && <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">{label}</label>}
             <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded bg-white dark:bg-gray-900 dark:border-gray-600 items-center">
                     {components.map((comp, idx) => (
                     <span 
@@ -204,7 +204,7 @@ const ComponentListEditor: React.FC<{
                                         <div className="flex gap-2 items-center">
                                             <div className="flex-1 flex gap-1 items-end">
                                                 <div className="flex-1">
-                                                    <label className="block text-[9px] text-gray-500 uppercase">Scale X</label>
+                                                    <label className="block text-[11px] text-gray-500 uppercase">Scale X</label>
                                                     <input 
                                                         type="text" 
                                                         value={sx} 
@@ -220,7 +220,7 @@ const ComponentListEditor: React.FC<{
                                                     {isLinked ? <Link className="w-3 h-3" /> : <Unlink className="w-3 h-3" />}
                                                 </button>
                                                 <div className="flex-1">
-                                                    <label className="block text-[9px] text-gray-500 uppercase">Scale Y</label>
+                                                    <label className="block text-[11px] text-gray-500 uppercase">Scale Y</label>
                                                     <input 
                                                         type="text" 
                                                         value={sy} 
@@ -230,7 +230,7 @@ const ComponentListEditor: React.FC<{
                                                 </div>
                                             </div>
                                             <div className="w-16">
-                                                <label className="block text-[9px] text-gray-500 uppercase">{t('rotateShort')}</label>
+                                                <label className="block text-[11px] text-gray-500 uppercase">{t('rotateShort')}</label>
                                                 <input 
                                                     type="text" 
                                                     value={tr.rotation ?? 0} 
@@ -241,7 +241,7 @@ const ComponentListEditor: React.FC<{
                                         </div>
                                         <div className="flex gap-2 items-center">
                                             <div className="flex-1">
-                                                <label className="block text-[9px] text-gray-500 uppercase">{t('xLabel')}</label>
+                                                <label className="block text-[11px] text-gray-500 uppercase">{t('xLabel')}</label>
                                                 <input 
                                                     type="text" 
                                                     value={tr.x} 
@@ -250,7 +250,7 @@ const ComponentListEditor: React.FC<{
                                                 />
                                             </div>
                                             <div className="flex-1">
-                                                <label className="block text-[9px] text-gray-500 uppercase">{t('yLabel')}</label>
+                                                <label className="block text-[11px] text-gray-500 uppercase">{t('yLabel')}</label>
                                                 <input 
                                                     type="text" 
                                                     value={tr.y} 
@@ -261,13 +261,13 @@ const ComponentListEditor: React.FC<{
                                         </div>
                                         {index > 0 && (
                                             <div>
-                                                <label className="block text-[9px] text-gray-500 uppercase mb-1">{t('modeLabel')}</label>
+                                                <label className="block text-[11px] text-gray-500 uppercase mb-1">{t('modeLabel')}</label>
                                                 <div className="flex bg-gray-200 dark:bg-gray-600 rounded p-0.5">
                                                     {(['relative', 'absolute', 'touching'] as const).map(m => (
                                                         <button
                                                             key={m}
                                                             onClick={() => handleTransformChange(index, 'mode', m)}
-                                                            className={`flex-1 py-0.5 rounded text-[10px] capitalize ${tr.mode === m ? 'bg-white dark:bg-gray-500 shadow text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+                                                            className={`flex-1 py-0.5 rounded text-[11px] capitalize ${tr.mode === m ? 'bg-white dark:bg-gray-500 shadow text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
                                                         >
                                                             {m.slice(0, 3)}
                                                         </button>
@@ -555,7 +555,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                         placeholder={String(metrics.defaultLSB)}
                         value={lsb ?? ''}
                         onChange={(e) => setLsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
-                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none guide-font-input"
+                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-accent focus:outline-none guide-font-input"
                         style={{ 
                             fontFamily: 'var(--guide-font-family), sans-serif',
                             fontFeatureSettings: 'var(--guide-font-feature-settings)'
@@ -571,7 +571,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                         placeholder={String(metrics.defaultRSB)}
                         value={rsb ?? ''}
                         onChange={(e) => setRsb(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
-                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none guide-font-input"
+                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-accent focus:outline-none guide-font-input"
                         style={{ 
                             fontFamily: 'var(--guide-font-family), sans-serif',
                             fontFeatureSettings: 'var(--guide-font-feature-settings)'
@@ -592,7 +592,7 @@ const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({
                         placeholder={character?.name}
                         value={label || ''}
                         onChange={(e) => setLabel && setLabel(e.target.value === '' ? undefined : e.target.value)}
-                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none guide-font-input"
+                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-accent focus:outline-none guide-font-input"
                         style={{ 
                             fontFamily: 'var(--guide-font-family), sans-serif',
                             fontFeatureSettings: 'var(--guide-font-feature-settings)'

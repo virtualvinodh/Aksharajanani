@@ -65,7 +65,7 @@ const GroupCard: React.FC<{
 
             {(applies && applies.length > 0) && (
                 <div className="mt-2 pt-2 border-t dark:border-gray-700">
-                    <span className="text-[10px] uppercase font-bold text-gray-500">{t('appliesTo')}</span>
+                    <span className="text-[11px] uppercase font-bold text-gray-500">{t('appliesTo')}</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                         {applies.slice(0, 5).map((m, i) => (
                             <span key={i} className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800 font-mono" style={fontStyle}>{m}</span>
@@ -77,7 +77,7 @@ const GroupCard: React.FC<{
 
             {(exceptions && exceptions.length > 0) && (
                 <div className="mt-2 pt-2 border-t dark:border-gray-700">
-                    <span className="text-[10px] uppercase font-bold text-gray-500">{t('exceptions')}</span>
+                    <span className="text-[11px] uppercase font-bold text-gray-500">{t('exceptions')}</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                         {exceptions.slice(0, 5).map((m, i) => (
                             <span key={i} className="text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-800 font-mono" style={fontStyle}>{m}</span>
@@ -89,7 +89,7 @@ const GroupCard: React.FC<{
 
             {(exceptPairs && exceptPairs.length > 0) && (
                 <div className="mt-2 pt-2 border-t dark:border-gray-700">
-                    <span className="text-[10px] uppercase font-bold text-gray-500">Unlinked Pairs</span>
+                    <span className="text-[11px] uppercase font-bold text-gray-500">Unlinked Pairs</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                         {exceptPairs.slice(0, 5).map((m, i) => (
                             <span key={i} className="text-xs bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-300 px-1.5 py-0.5 rounded border border-orange-100 dark:border-orange-800 font-mono" style={fontStyle}>{m}</span>
@@ -216,7 +216,7 @@ const EditorPanel: React.FC<{
                              />
                         </div>
                         {showHint && (
-                            <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium animate-fade-in-up">
                                 {t('namingRestrictionHint')}
                             </p>
                         )}

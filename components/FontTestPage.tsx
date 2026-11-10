@@ -155,7 +155,7 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
               data-tour="test-page-input"
               value={testText}
               onChange={(e) => onTestTextChange(e.target.value)}
-              className="w-full min-h-[160px] bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-4 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500 resize-y"
+              className="w-full min-h-[160px] bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-4 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-accent focus:border-accent resize-y"
               placeholder="Type here..."
               rows={6}
               style={{

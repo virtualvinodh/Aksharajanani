@@ -81,7 +81,7 @@ const ScriptVariantModal: React.FC<ScriptVariantModalProps> = ({ isOpen, onClose
                     value={variant.name}
                     checked={selections.get(group.optionKey) === variant.name}
                     onChange={() => handleSelectionChange(group.optionKey, variant.name)}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-indigo-500"
+                    className="h-4 w-4 text-indigo-600 focus:ring-accent border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-indigo-500"
                   />
                   <span
                     className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100"

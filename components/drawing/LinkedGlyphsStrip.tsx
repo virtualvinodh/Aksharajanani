@@ -276,7 +276,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                     </span>
 
                     {/* Text Label - Re-aligns when collapsed */}
-                    <span className={`text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight ${collapsed ? 'text-left flex gap-2 items-center' : 'text-center'}`}>
+                    <span className={`text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight ${collapsed ? 'text-left flex gap-2 items-center' : 'text-center'}`}>
                         {title}
                         {collapsed && <span className="text-gray-300 dark:text-gray-600">•</span>}
                         <span className="text-indigo-600 dark:text-indigo-400 text-xs block sm:inline">{items.length} {collapsed ? t('items') : ''}</span>
@@ -327,7 +327,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                                 <span className="font-bold text-indigo-600 dark:text-indigo-400">
                                     +{remainingItemsCount}
                                 </span>
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400">
                                     {t('more')}
                                 </span>
                             </div>

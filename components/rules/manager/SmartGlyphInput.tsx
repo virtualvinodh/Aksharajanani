@@ -86,7 +86,7 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
                 autoFocus={autoFocus}
                 onKeyDown={onKeyDown}
                 placeholder={placeholder}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow guide-font-input"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-accent focus:outline-none transition-shadow guide-font-input"
                 style={{ 
                     fontFamily: 'var(--guide-font-family), monospace',
                     fontFeatureSettings: 'var(--guide-font-feature-settings)'
@@ -96,7 +96,7 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
             {/* Type Indicator Badge inside input */}
             {value && (value.startsWith('$') || value.startsWith('@')) && (
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <span className="text-[10px] uppercase font-bold text-purple-500 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/40 rounded">
+                    <span className="text-[11px] uppercase font-bold text-purple-500 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/40 rounded">
                         {t('groupLabel')}
                     </span>
                 </div>
@@ -126,7 +126,7 @@ const SmartGlyphInput: React.FC<SmartGlyphInputProps> = ({
                             >
                                 {opt.label}
                             </span>
-                            <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${getTypeColor(opt.type)}`}>
+                            <span className={`text-[11px] uppercase font-bold px-1.5 py-0.5 rounded ${getTypeColor(opt.type)}`}>
                                 {opt.type}
                             </span>
                         </li>

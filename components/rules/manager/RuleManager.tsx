@@ -62,7 +62,7 @@ const RuleCard: React.FC<{
             </div>
         </div>
         
-        <div className="flex flex-wrap gap-2 text-[10px] uppercase font-bold tracking-wider">
+        <div className="flex flex-wrap gap-2 text-[11px] uppercase font-bold tracking-wider">
             {tags.gpos && <span className="text-teal-600 bg-teal-50 px-2 py-1 rounded border border-teal-100 dark:bg-teal-900/30 dark:border-teal-800 dark:text-teal-400">GPOS: {tags.gpos}</span>}
             {tags.gsub && <span className="text-purple-600 bg-purple-50 px-2 py-1 rounded border border-purple-100 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-400">GSUB: {tags.gsub}</span>}
             {tags.movement && <span className="text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400">{tags.movement}</span>}
@@ -106,7 +106,7 @@ const ManualRuleCard: React.FC<{
             </div>
         )}
         {isVirtual && (
-            <span className="text-[10px] text-indigo-400 italic">Expanded</span>
+            <span className="text-[11px] text-indigo-400 italic">Expanded</span>
         )}
     </div>
 );
@@ -248,7 +248,7 @@ const RuleEditor: React.FC<{
             {/* Accordion for Ligature Overrides */}
             <details className="border-t dark:border-gray-700 pt-4 mb-4 group" open={editingOverrideIndex !== null || ligOverrides.length > 0}>
                  <summary className="text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-2 mb-2 select-none">
-                     <span>▶</span> {t('ligatureNamingOverrides')} {ligOverrides.length > 0 && <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-[10px]">{ligOverrides.length}</span>}
+                     <span>▶</span> {t('ligatureNamingOverrides')} {ligOverrides.length > 0 && <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-[11px]">{ligOverrides.length}</span>}
                  </summary>
                  <div className="pl-4 space-y-3 pt-2">
                      <p className="text-xs text-gray-400 mb-2">Map specific Base+Mark pairs to a named ligature or group. Supports groups (e.g. $cons replaced_by $ligs).</p>
@@ -273,17 +273,17 @@ const RuleEditor: React.FC<{
                      
                      <div className="flex gap-2 items-end pt-2 border-t border-dashed dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-b-lg">
                          <div className="flex-1">
-                             <label className="text-[10px] uppercase text-gray-400 mb-1 block">{t('baseLabel')}</label>
+                             <label className="text-[11px] uppercase text-gray-400 mb-1 block">{t('baseLabel')}</label>
                              <SmartGlyphInput value={newOverride.base} onChange={v => setNewOverride({...newOverride, base: v})} characterSets={characterSets} groups={groups} placeholder="Base or $group" />
                          </div>
                          <span className="pb-2 text-gray-400 font-bold">+</span>
                          <div className="flex-1">
-                             <label className="text-[10px] uppercase text-gray-400 mb-1 block">{t('markLabel')}</label>
+                             <label className="text-[11px] uppercase text-gray-400 mb-1 block">{t('markLabel')}</label>
                              <SmartGlyphInput value={newOverride.mark} onChange={v => setNewOverride({...newOverride, mark: v})} characterSets={characterSets} groups={groups} placeholder="Mark or $group" />
                          </div>
                          <span className="pb-2 text-gray-400 font-bold">→</span>
                          <div className="flex-1">
-                             <label className="text-[10px] uppercase text-gray-400 mb-1 block">{t('ligatureName')}</label>
+                             <label className="text-[11px] uppercase text-gray-400 mb-1 block">{t('ligatureName')}</label>
                              <SmartGlyphInput value={newOverride.lig} onChange={v => setNewOverride({...newOverride, lig: v})} characterSets={characterSets} groups={groups} placeholder="Result or $group" />
                          </div>
                          <div className="flex gap-1">

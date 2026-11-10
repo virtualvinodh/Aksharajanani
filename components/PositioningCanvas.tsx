@@ -4,6 +4,7 @@ import { Point, Path, FontMetrics, AppSettings, Character } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderService';
 import { usePositioningCanvas } from '../hooks/usePositioningCanvas';
+import { accentFor } from '../canvasConstants';
 
 interface PositioningCanvasProps {
     width: number;
@@ -164,7 +165,7 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
         });
 
         // Render Mark (Interactive)
-        const markColor = isDragging ? (theme === 'dark' ? '#A3A3A3' : '#737373') : (theme === 'dark' ? '#E5E5E5' : '#262626');
+        const markColor = isDragging ? accentFor(theme) : (theme === 'dark' ? '#E5E5E5' : '#262626');
         renderPaths(ctx, markPaths, { 
             strokeThickness: settings.strokeThickness, 
             contrast: settings.contrast, 

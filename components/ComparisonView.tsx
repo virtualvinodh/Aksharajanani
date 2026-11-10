@@ -336,7 +336,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = () => {
                 checked={isChecked}
                 disabled={isDisabled}
                 onChange={() => !isDisabled && handleToggleCategory(categorySet, shouldDeselect)}
-                className={`h-4 w-4 rounded border-gray-400 dark:border-gray-500 focus:ring-indigo-500 accent-indigo-500 ${isDisabled ? 'bg-gray-200' : 'bg-gray-300 dark:bg-gray-600'}`}
+                className={`h-4 w-4 rounded border-gray-400 dark:border-gray-500 focus:ring-accent accent-indigo-500 ${isDisabled ? 'bg-gray-200' : 'bg-gray-300 dark:bg-gray-600'}`}
             />
             <span className={`font-semibold ${isChip ? 'text-sm' : ''}`}>{t(categorySet.nameKey)}</span>
         </label>
@@ -402,7 +402,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = () => {
                         checked={isFolded}
                         onChange={() => setIsFolded(prev => !prev)}
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent/30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-accent"></div>
                     </div>
                   </label>
                 </div>
@@ -424,7 +424,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = () => {
                                     <label key={char.unicode} className={`flex items-center gap-3 p-2 rounded-md text-sm ${canRender ? 'hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer' : 'opacity-40 cursor-not-allowed grayscale'}`}>
                                         <input
                                             type="checkbox"
-                                            className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 accent-indigo-500"
+                                            className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 dark:text-indigo-500 focus:ring-accent accent-indigo-500"
                                             checked={isCharacterSelected(char)}
                                             onChange={(e) => canRender && handleToggleCharacter(char, e.target.checked)}
                                             disabled={!canRender}
@@ -467,7 +467,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = () => {
                             <span>{t('foldLines')}</span>
                             <div className="relative inline-flex items-center">
                                 <input type="checkbox" className="sr-only peer" id="wrap-lines-toggle-mobile" checked={isFolded} onChange={() => setIsFolded(p => !p)} />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent/30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-accent"></div>
                             </div>
                         </label>
                     </div>
@@ -504,7 +504,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = () => {
                                         checked={isCharacterSelected(char)}
                                         onChange={(e) => canRender && handleToggleCharacter(char, e.target.checked)}
                                         disabled={!canRender}
-                                        className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 focus:ring-indigo-500 accent-indigo-500"
+                                        className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 focus:ring-accent accent-indigo-500"
                                     />
                                     <span className="text-sm" style={{ fontFamily: 'var(--guide-font-family)', fontFeatureSettings: 'var(--guide-font-feature-settings)' }}>
                                         {char.name}

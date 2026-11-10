@@ -66,7 +66,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({ label, options, val
         onChange={handleInputChange}
         onFocus={() => !disabled && setIsOpen(true)}
         placeholder={placeholder || t('searchChar')}
-        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-accent focus:border-accent disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
         autoComplete="off"
         disabled={disabled}
       />

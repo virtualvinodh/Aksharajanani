@@ -44,7 +44,7 @@ const CharacterSelectionPanel: React.FC<CharacterSelectionPanelProps> = ({ title
                     <label key={char.unicode} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer text-sm">
                         <input
                             type="checkbox"
-                            className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 focus:ring-indigo-500 accent-indigo-500"
+                            className="h-4 w-4 rounded bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 text-indigo-600 focus:ring-accent accent-indigo-500"
                             checked={selectedChars.has(char.unicode)}
                             onChange={(e) => onSelectionChange(char.unicode, e.target.checked)}
                         />
