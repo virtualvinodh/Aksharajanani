@@ -4,6 +4,8 @@ Findings from the full code and functionality review (November 2026) that are **
 
 Each issue has a stable ID, such as `E1`, so we can work through them one at a time. Tick the box when an issue is fixed and note the commit next to it.
 
+Issues are split into **Functional** (a user can see or hit them) and **Technical** (code health only: tests, lint, types, build, dependencies, dead code, speed, security hardening). IDs keep their original area letter, so a technical item such as `K11` is still `K11`.
+
 **Legend**
 - **Priority:** ⚠ = fix next (users hit it quickly, or it damages the font or user data); otherwise normal.
 - **Confidence:** *confirmed* = reproduced by a script or in the browser, or traced end to end in the code; *likely* = clear from the code but not executed.
@@ -12,6 +14,10 @@ Each issue has a stable ID, such as `E1`, so we can work through them one at a t
 **Already fixed on `claude`:** production export (minified worker), build missing data/locales, Devanagari crash, file-load project-ID clash, edits lost on close, rules edits lost, composite/linked glyphs missing from export, canvas-vs-font units for bearings and kerning. Uncaught export errors (spinner stuck) were fixed along with these.
 
 ---
+
+# Functional issues
+
+A user can see or hit these. All ⚠ items are here.
 
 ## E: Font export and import
 
@@ -74,15 +80,6 @@ Each issue has a stable ID, such as `E1`, so we can work through them one at a t
   - **Where:** `feaService.ts` ~318, ~899, ~946.
   - **Problem:** there's no `kern` feature and no `languagesystem DFLT dflt;`. Latin projects may lose kerning in apps that only apply `kern`, and Latin digits and punctuation in Indic fonts get no positioning.
   - **Fix:** emit pairs in `kern` for non-Indic scripts, and add DFLT.
-
-- [ ] **E11 Remote code still unpinned** (confirmed)
-  - **Where:** `pythonFontService.ts` 13, 251, 264; `index.html` 12; the inline workers in `hooks/actions/useGlyphActions.ts` ~39 and `services/autoKerningService.ts` ~6.
-  - **Problem:**
-    - `micropip.install('fontFeatures')` has no version or hash.
-    - `index.html` loads Pyodide 0.25.0 on the main thread, but nothing uses it there (the worker uses 0.25.1).
-    - The cascade and auto-kern workers load paper.js 0.12.17 from cdnjs, while the app bundles 0.12.18.
-    - The `pyodide` and `unicode-name` npm dependencies are unused.
-  - **Fix:** pin `fontFeatures==x.y` with a hash, remove the `index.html` script and the unused dependencies, and bundle paper.js into those workers (as was done for the font worker).
 
 ---
 
@@ -219,16 +216,6 @@ Each issue has a stable ID, such as `E1`, so we can work through them one at a t
   - **Problem:** `center` falls through to topLeft.
   - **Fix:** add the case, and add it to the `AttachmentPoint` type.
 
-- [ ] **K11 Positioning heuristics are dead code with inverted precedence** (confirmed)
-  - **Where:** `positioningHeuristicsService.ts` 24–54, 147–180.
-  - **Problem:** `getCombiningClass` returns strings, so the numeric checks never match, and the fetched JSON shape is parsed wrongly. The only effect is a wasted CDN fetch (unpinned `@main`) on load. If these tiers were fixed, they would override explicit project rules.
-  - **Fix:** remove them, or fix the parsing and check project rules first.
-
-- [ ] **K12 Auto-kern discovery is slow on large glyph sets** (likely)
-  - **Where:** `services/autoKerningService.ts` 319–356.
-  - **Problem:** `solvePair` recomputes paper.js zones for both glyphs of every one of the n² pairs.
-  - **Fix:** cache zones per unicode from step 1.
-
 - [ ] **K13 Propagation count and Undo are wrong when re-editing** (confirmed)
   - **Where:** `usePositioningActions.ts` 141; `components/UnifiedEditorModal.tsx` 179.
   - **Problem:** `newSize - oldSize - 1` gives -1 or 0 when the siblings already exist, so no toast or Undo appears.
@@ -286,11 +273,6 @@ Each issue has a stable ID, such as `E1`, so we can work through them one at a t
   - **Problem:** a double Ctrl+S on a new project calls `addProject` twice. "Save & change" and "Save & load" don't await the save, so a failed save (e.g. QuotaExceeded) is reported after the work is already gone.
   - **Fix:** serialize saves through an in-flight promise, await them, and abort navigation on failure.
 
-- [ ] **P8 Crafted rules/positioning file can pollute `Object.prototype`** (confirmed)
-  - **Where:** `useProjectLoad.ts` ~252–257.
-  - **Problem:** `gsub: "__proto__"` sets `Object.prototype.liga = {}`, which corrupts state app-wide or crashes it. No XSS.
-  - **Fix:** reject `__proto__`/`constructor`/`prototype` keys, or use `Object.create(null)`/Maps. Schema-validate imported files.
-
 - [ ] **P9 Guide font changed in Settings isn't saved** (confirmed)
   - **Where:** `useProjectPersistence.ts` (`getProjectState` uses `script.guideFont`); `components/SettingsPage.tsx` 60.
   - **Fix:** save `guideFont` from ProjectContext, and add it to the dirty deps.
@@ -314,11 +296,6 @@ Each issue has a stable ID, such as `E1`, so we can work through them one at a t
   - **Where:** `handleDeleteGlyph` and the bulk operations in `useGlyphActions.ts` / `useBatchOperations.ts`.
   - **Problem:** they restore whole-map snapshots.
   - **Fix:** undo only the affected entries.
-
-- [ ] **P14 Guide-font name/URL interpolated into `<style>`** (confirmed; low)
-  - **Where:** `App.tsx` ~287; `ScriptSelection.tsx` ~215.
-  - **Problem:** this allows CSS injection or external loads from project or script files. Scripts can't run.
-  - **Fix:** validate or escape the values, or use the `FontFace` API.
 
 ---
 
@@ -391,6 +368,7 @@ Each issue has a stable ID, such as `E1`, so we can work through them one at a t
 - ~~**U1 No way to switch between Simple and Advanced mode**~~: withdrawn. The modes were dropped on purpose in favour of progressive disclosure. The leftover code is listed under T4.
 
 - [ ] **U2 Raw i18n keys shown to users** (confirmed)
+  - **Status:** partly fixed in `01969c4`: `scriptHebrew`, `scriptTutorial`, `archaicLetters` and the "s" script icons. The other set names listed below are still raw.
   - **Problem:**
     - `scriptHebrew` and `scriptTutorial` are missing from `en.json` (home-screen tiles).
     - Missing set `nameKey`s: `archaicLetters` (Tamil), `basicCyrillic`, `specialCyrillic`, `consonantsTemplate` (Kannada/Telugu), `ottu`, `LatinIndicLetters`, `mini_marks`, `letters`, `others`.
@@ -426,36 +404,54 @@ Each issue has a stable ID, such as `E1`, so we can work through them one at a t
 ## S: Script data
 
 - [ ] **S1 Sinhala: 120 `akhn` ligature outputs aren't defined as glyphs** (e.g. `ක්‍රි`, `ක්‍ර්`), plus 120 group members. Those rules are silently skipped at export.
+
 - [ ] **S2 Kannada:**
   - the `symbols` set has glyphs named `"0"`–`"9"` (resolving to ASCII and duplicating `characters_basic`) and Telugu fraction signs U+0C77–0C7F;
   - the `ಢಾ` composite uses Telugu `ా` (U+0C3E);
   - groups `$ottuR`/`$ottuAi` are undefined, as are PUA glyphs U+E02D, U+E02F–E032 and U+E039;
   - the `ಕ್ಷೀ` ligature output is undefined.
+
 - [ ] **S3 Devanagari:** the `ई` composite references an undefined U+1CE0 (a Vedic tone mark).
+
 - [ ] **S4 Tamil:** `liga: ["ன","ூா"]` has a two-character component (typo).
+
 - [ ] **S5 Telugu:** `ళు` and `ళూ` are in the `consLeft` group but are undefined.
+
 - [ ] **S6 Missing or broken files:**
   - `data/rule_german.json` is 0 bytes and misnamed;
   - `rules_hebrew`, `rules_german`, `positioning_latin` (Latin logs a JSON parse error), `sample_lao` and `sample_tutorial` don't exist;
   - the tutorial's curated `sampleText` from `scripts.json` is thrown away when the `.txt` fetch returns HTML (`useProjectLoad.ts` ~305).
+
 - [ ] **S7 Guide fonts:** the Noto Greek/Cyrillic URLs return 404/403 on every landing load (`scripts.json` ~773, ~817). Gurmukhi's guide font is Noto Sans Devanagari. The jsDelivr `gh/` URLs have no `@ref`, so they track the default branch.
-- [ ] **S8 `data/characters_custom.json` isn't referenced by any script.**
 
 ---
 
-## T: Tooling and housekeeping
+# Technical issues
 
-- [ ] **T1 Tests:**
-  - `vitest` is in `dependencies` (move it to `devDependencies`);
-  - there's no `test` script, though TESTING.md documents `npm run test`;
-  - `utils/vectorUtils.test.ts` fails on `-0` vs `+0`;
-  - `contexts/RulesContext.test.ts` tests a copy of the reducer, not the real one.
-- [ ] **T2 Lint fails with 340 errors** (mostly unused vars and prefer-const). `eslint-plugin-react-hooks` is installed but not enabled. `globals` is imported by the config but not declared.
-- [ ] **T3 `tsc --noEmit` reports 43 errors, and there's no typecheck step or CI.** Notable ones:
-  - `components/DrawingModal.tsx:16` imports a nonexistent `useSliceTool`;
-  - the PositioningEditorPage/Workspace import paths are wrong;
-  - the `importFont` modal key is missing from the type;
-  - `openPalette` is missing from `LayoutContextType`.
+Code health only; no direct effect on what users see. (K12 is felt only as waiting; P8 and P14 matter only if people share project files.)
+
+## Dependencies
+
+- [ ] **E11 Remote code still unpinned** (confirmed)
+  - **Where:** `pythonFontService.ts` 13, 251, 264; `index.html` 12; the inline workers in `hooks/actions/useGlyphActions.ts` ~39 and `services/autoKerningService.ts` ~6.
+  - **Problem:**
+    - `micropip.install('fontFeatures')` has no version or hash.
+    - `index.html` loads Pyodide 0.25.0 on the main thread, but nothing uses it there (the worker uses 0.25.1).
+    - The cascade and auto-kern workers load paper.js 0.12.17 from cdnjs, while the app bundles 0.12.18.
+    - The `pyodide` and `unicode-name` npm dependencies are unused.
+  - **Fix:** pin `fontFeatures==x.y` with a hash, remove the `index.html` script and the unused dependencies, and bundle paper.js into those workers (as was done for the font worker).
+
+---
+
+## Dead code
+
+- [ ] **K11 Positioning heuristics are dead code with inverted precedence** (confirmed)
+  - **Where:** `positioningHeuristicsService.ts` 24–54, 147–180.
+  - **Problem:** `getCombiningClass` returns strings, so the numeric checks never match, and the fetched JSON shape is parsed wrongly. The only effect is a wasted CDN fetch (unpinned `@main`) on load. If these tiers were fixed, they would override explicit project rules.
+  - **Fix:** remove them, or fix the parsing and check project rules first.
+
+- [ ] **S8 `data/characters_custom.json` isn't referenced by any script.**
+
 - [ ] **T4 Dead code:**
   - the stale root `DrawingModal.tsx` (21 of the tsc errors) and root `LayoutContext.tsx`;
   - the unused `contexts/EditorContext.tsx` and `workers/cascadeWorker.ts` (incompatible protocol);
@@ -467,10 +463,55 @@ Each issue has a stable ID, such as `E1`, so we can work through them one at a t
     - the `advancedMode`/`simpleMode` locale keys are unused;
     - `data/test_cases.json` still has 66 "ADVANCED:" QA cases;
     - `settings.editorMode` is still read, only to choose between the "Kerning" and "Spacing" labels (`AppHeader`, `KerningWorkspace`, `KerningEditorHeader`, `IncompleteFontWarningModal`). Built-in scripts default to `simple` and custom scripts to `advanced`. Consider replacing it with `preferKerningTerm` alone.
+
+---
+
+## Speed
+
+- [ ] **K12 Auto-kern discovery is slow on large glyph sets** (likely)
+  - **Where:** `services/autoKerningService.ts` 319–356.
+  - **Problem:** `solvePair` recomputes paper.js zones for both glyphs of every one of the n² pairs.
+  - **Fix:** cache zones per unicode from step 1.
+
+---
+
+## Security hardening
+
+- [ ] **P8 Crafted rules/positioning file can pollute `Object.prototype`** (confirmed)
+  - **Where:** `useProjectLoad.ts` ~252–257.
+  - **Problem:** `gsub: "__proto__"` sets `Object.prototype.liga = {}`, which corrupts state app-wide or crashes it. No XSS.
+  - **Fix:** reject `__proto__`/`constructor`/`prototype` keys, or use `Object.create(null)`/Maps. Schema-validate imported files.
+
+- [ ] **P14 Guide-font name/URL interpolated into `<style>`** (confirmed; low)
+  - **Where:** `App.tsx` ~287; `ScriptSelection.tsx` ~215.
+  - **Problem:** this allows CSS injection or external loads from project or script files. Scripts can't run.
+  - **Fix:** validate or escape the values, or use the `FontFace` API.
+
+---
+
+## Tooling: tests, lint, types, build
+
+- [ ] **T1 Tests:**
+  - `vitest` is in `dependencies` (move it to `devDependencies`);
+  - there's no `test` script, though TESTING.md documents `npm run test`;
+  - `utils/vectorUtils.test.ts` fails on `-0` vs `+0`;
+  - `contexts/RulesContext.test.ts` tests a copy of the reducer, not the real one.
+
+- [ ] **T2 Lint fails with 340 errors** (mostly unused vars and prefer-const). `eslint-plugin-react-hooks` is installed but not enabled. `globals` is imported by the config but not declared.
+
+- [ ] **T3 `tsc --noEmit` reports 43 errors, and there's no typecheck step or CI.** Notable ones:
+  - `components/DrawingModal.tsx:16` imports a nonexistent `useSliceTool`;
+  - the PositioningEditorPage/Workspace import paths are wrong;
+  - the `importFont` modal key is missing from the type;
+  - `openPalette` is missing from `LayoutContextType`.
+
 - [ ] **T5 One-off scripts in the repo root:** `gen_chars.cjs`, `test_unicode*.cjs` and `patch_locales.cjs` (already applied). `generate_malayalam_traditional_v2.cjs` overwrites hand-edited data. `check_translations.js` fails in ESM. `data/add_liga.js` and `data/remove_gsub.js` are broken. `scripts/fetchIndicCategories.ts` mixes UCD 16 and 17.
+
 - [ ] **T6 Build:**
   - the main chunk is 1.9 MB (code-split it);
   - a stray `[file:line]` Tailwind class causes a build warning;
   - the `/vite.svg` favicon returns 404.
+
 - [ ] **T7 `npm audit` reports 27 vulnerabilities** (1 critical, 11 high), not yet assessed. Many may be in dev-only packages.
+
 - [ ] **T8 No version pin for npm** (`packageManager`/`engines`), so lockfile flags change between npm versions.
