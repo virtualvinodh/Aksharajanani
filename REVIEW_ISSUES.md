@@ -388,9 +388,7 @@ Each issue has a stable ID, such as `E1`, so we can work through them one at a t
 
 ## U: UX, text and i18n
 
-- [ ] **U1 ⚠ No way to switch between Simple and Advanced mode** (confirmed in the browser)
-  - **Where:** `hooks/useAppActions.ts` 175 (`handleEditorModeChange` is passed down but never called).
-  - **Problem:** the `advancedMode`/`simpleMode` keys are unused, Settings has no toggle, and the "ADVANCED:" QA cases can't be reached.
+- ~~**U1 No way to switch between Simple and Advanced mode**~~: withdrawn. The modes were dropped on purpose in favour of progressive disclosure. The leftover code is listed under T4.
 
 - [ ] **U2 Raw i18n keys shown to users** (confirmed)
   - **Problem:**
@@ -463,7 +461,12 @@ Each issue has a stable ID, such as `E1`, so we can work through them one at a t
   - the unused `contexts/EditorContext.tsx` and `workers/cascadeWorker.ts` (incompatible protocol);
   - duplicate `ProjectContext` fields that are never set (`GlyphTile` reads `metrics` from it and gets null);
   - the `GEMINI_API_KEY` define in `vite.config.ts`;
-  - the "characterss" typo in `metadata.json`.
+  - the "characterss" typo in `metadata.json`;
+  - leftovers from the removed Simple/Advanced modes (replaced by progressive disclosure):
+    - `handleEditorModeChange` (`hooks/useAppActions.ts` 175) is still passed through `App` → `AppHeader`/`UnifiedEditorModal`/`DrawingModal`, but nothing calls it;
+    - the `advancedMode`/`simpleMode` locale keys are unused;
+    - `data/test_cases.json` still has 66 "ADVANCED:" QA cases;
+    - `settings.editorMode` is still read, only to choose between the "Kerning" and "Spacing" labels (`AppHeader`, `KerningWorkspace`, `KerningEditorHeader`, `IncompleteFontWarningModal`). Built-in scripts default to `simple` and custom scripts to `advanced`. Consider replacing it with `preferKerningTerm` alone.
 - [ ] **T5 One-off scripts in the repo root:** `gen_chars.cjs`, `test_unicode*.cjs` and `patch_locales.cjs` (already applied). `generate_malayalam_traditional_v2.cjs` overwrites hand-edited data. `check_translations.js` fails in ESM. `data/add_liga.js` and `data/remove_gsub.js` are broken. `scripts/fetchIndicCategories.ts` mixes UCD 16 and 17.
 - [ ] **T6 Build:**
   - the main chunk is 1.9 MB (code-split it);
