@@ -25,7 +25,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
     const [text, setText] = useState(saved?.text ?? 'Type your text here...');
     const [fontSize, setFontSize] = useState(saved?.fontSize ?? 60);
     const [textColor, setTextColor] = useState(saved?.textColor ?? '#ffffff');
-    const [bgColor, setBgColor] = useState(saved?.bgColor ?? '#4f46e5'); // Indigo-600 default
+    const [bgColor, setBgColor] = useState(saved?.bgColor ?? '#404040'); // neutral-700 default (monochrome theme)
     const [bgImageData, setBgImageData] = useState<string | null>(saved?.bgImageData ?? null);
     const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
     const [overlayOpacity, setOverlayOpacity] = useState(saved?.overlayOpacity ?? 0.3);
@@ -423,7 +423,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
                         <DownloadIcon />
                     </button>
                     {navigator.share && (
-                        <button onClick={handleShare} className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-full hover:bg-gray-300 shadow-md">
+                        <button onClick={handleShare} className="p-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white rounded-full hover:bg-gray-100 shadow-md">
                             <ShareIcon />
                         </button>
                     )}

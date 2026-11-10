@@ -181,7 +181,7 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                                     </div>
                                 )}
                                 <div className="flex gap-2">
-                                    <button onClick={() => handleToggleExpand(key)} title={t('edit')} className={`p-2 rounded-full transition-colors ${isContentEditing ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>
+                                    <button onClick={() => handleToggleExpand(key)} title={t('edit')} className={`p-2 rounded-full transition-colors ${isContentEditing ? 'bg-indigo-600 text-white' : 'bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'}`}>
                                         <EditIcon />
                                     </button>
                                     <button onClick={() => onDeleteLookup(key)} title={t('delete')} className="p-2 text-white bg-red-600 rounded-full hover:bg-red-700">

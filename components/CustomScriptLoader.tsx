@@ -109,7 +109,7 @@ const CustomScriptLoader: React.FC<CustomScriptLoaderProps> = ({ onBack, onSelec
     return (
         <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col">
             <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 flex justify-between items-center shadow-md w-full flex-shrink-0">
-                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600">
                     <BackIcon />
                     <span className="hidden sm:inline">{t('back')}</span>
                 </button>

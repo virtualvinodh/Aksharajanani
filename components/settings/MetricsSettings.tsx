@@ -18,12 +18,12 @@ const MetricsVisualizer: React.FC<{ metrics: FontMetrics }> = ({ metrics }) => {
         ctx.clearRect(0, 0, width, height);
         
         // --- Colors ---
-        const bgColor = theme === 'dark' ? '#1F2937' : '#F3F4F6';
-        const guideColor = theme === 'dark' ? '#6B7280' : '#9CA3AF';
+        const bgColor = theme === 'dark' ? '#262626' : '#F5F5F5';
+        const guideColor = theme === 'dark' ? '#737373' : '#A3A3A3';
         const ascenderColor = theme === 'dark' ? '#60A5FA' : '#3B82F6';
         const descenderColor = theme === 'dark' ? '#F87171' : '#EF4444';
         const baselineColor = theme === 'dark' ? '#A78BFA' : '#8B5CF6';
-        const sampleTextColor = theme === 'dark' ? '#F9FAFB' : '#111827';
+        const sampleTextColor = theme === 'dark' ? '#FAFAFA' : '#171717';
         
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, width, height);

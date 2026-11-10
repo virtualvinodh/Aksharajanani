@@ -403,7 +403,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
 
               <main ref={mainContainerRef} className="flex-1 flex overflow-hidden relative">
                 <div 
-                    className="flex-shrink-0 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50 transition-all duration-300"
+                    className="flex-shrink-0 flex flex-col overflow-hidden bg-white dark:bg-gray-900/50 transition-all duration-300"
                     style={{ 
                       width: isLargeScreen && panelLayout === 'split' && workspace === 'drawing' ? `${gridPanelWidth}px` : (panelLayout === 'grid' || !isLargeScreen || workspace !== 'drawing' ? '100%' : '0px'),
                       display: isLargeScreen && panelLayout === 'editor' && workspace === 'drawing' ? 'none' : 'flex'
@@ -484,10 +484,10 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                                 className="absolute top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2 p-1 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
                                 style={{ left: `${gridPanelWidth}px`, transform: 'translateX(-50%)' }}
                             >
-                                <button onClick={() => setPanelLayout('grid')} title="Maximize editor" className="p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 rounded-full transition-colors">
+                                <button onClick={() => setPanelLayout('grid')} title="Maximize grid" className="p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 rounded-full transition-colors">
                                     <RightArrowIcon className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => setPanelLayout('editor')} title="Maximize grid" className="p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 rounded-full transition-colors">
+                                <button onClick={() => setPanelLayout('editor')} title="Maximize editor" className="p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 rounded-full transition-colors">
                                     <LeftArrowIcon className="w-4 h-4" />
                                 </button>
                             </div>
@@ -516,7 +516,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 )}
               </main>
               
-              <Footer hideOnMobile={true} />
+              <Footer hideOnMobile={true} hideOnShortScreens={true} />
            </>
        )}
        

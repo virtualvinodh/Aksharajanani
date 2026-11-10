@@ -51,11 +51,11 @@ export const FilterMenu: React.FC = () => {
         <div className="relative" ref={menuRef}>
             <button
                 onClick={() => setIsOpen(p => !p)}
-                className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${isFilteredOrSearched ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${isFilteredOrSearched ? 'bg-indigo-600 text-white' : 'bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                 title={t('filter')}
             >
                 <FilterIcon />
-                <span className="hidden md:inline">{t('filter')}</span>
+                <span className="hidden md:inline xl:hidden min-[1800px]:inline">{t('filter')}</span>
             </button>
             
             {isOpen && (

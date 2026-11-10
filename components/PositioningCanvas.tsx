@@ -91,7 +91,7 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
         const guideWidth = 20000;
         const guideStart = -10000;
         
-        ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
+        ctx.strokeStyle = theme === 'dark' ? '#A3A3A3' : '#737373';
         // Enforce baseline density for mobile
         ctx.lineWidth = Math.max(1.8, 2.2 / zoom); 
         
@@ -152,19 +152,19 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
                 ctx.restore();
             };
 
-            const cyan = '#06b6d4';
+            const cyan = '#737373';
             drawCrosshairs(basePaths, cyan);
             drawCrosshairs(markPaths, cyan);
         }
 
         // Render Base (Background)
         renderPaths(ctx, basePaths, { 
-            color: theme === 'dark' ? '#4A5568' : '#A0AEC0', 
+            color: theme === 'dark' ? '#525252' : '#A3A3A3', 
             strokeThickness: settings.strokeThickness 
         });
 
         // Render Mark (Interactive)
-        const markColor = isDragging ? (theme === 'dark' ? '#A78BFA' : '#8B5CF6') : (theme === 'dark' ? '#E2E8F0' : '#1F2937');
+        const markColor = isDragging ? (theme === 'dark' ? '#A3A3A3' : '#737373') : (theme === 'dark' ? '#E5E5E5' : '#262626');
         renderPaths(ctx, markPaths, { 
             strokeThickness: settings.strokeThickness, 
             contrast: settings.contrast, 

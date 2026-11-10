@@ -151,7 +151,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
     renderPaths(ctx, glyphData.paths, {
         strokeThickness: settings.strokeThickness,
         contrast: settings.contrast,
-        color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
+        color: theme === 'dark' ? '#E5E5E5' : '#262626'
     });
     ctx.restore();
   }, [glyphData, settings, theme, isDrawn, character, metrics]);

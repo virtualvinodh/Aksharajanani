@@ -82,7 +82,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
       <div className="flex-1 flex justify-start">
           <button
           onClick={onBackClick}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+          className="flex items-center gap-2 px-4 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
           >
           <BackIcon />
           <span className="hidden sm:inline">{t('back')}</span>
@@ -132,7 +132,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               id="glyph-properties-button"
               onClick={() => setIsPropertiesPanelOpen(p => !p)}
               title={t('glyphProperties')}
-              className="hidden sm:flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+              className="hidden sm:flex items-center gap-2 justify-center p-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
           >
               <PropertiesIcon />
               <span className="hidden xl:inline">{t('glyphProperties')}</span>
@@ -167,7 +167,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               <button
                   onClick={() => onRefresh?.()}
                   title={t('refresh')}
-                  className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                  className="flex items-center gap-2 justify-center p-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
               >
                   <RefreshIcon />
                   <span className="hidden xl:inline">{t('refresh')}</span>
@@ -179,7 +179,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               <button
                   onClick={onClear}
                   title={t('clear')}
-                  className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-orange-600 dark:text-orange-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                  className="flex items-center gap-2 justify-center p-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-orange-600 dark:text-orange-400 font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
               >
                   <BroomIcon />
                   <span className="hidden xl:inline">{t('clear')}</span>
@@ -191,7 +191,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
               onClick={onDeleteClick}
               disabled={script?.isImportedFont}
               title={script?.isImportedFont ? "Deletion disabled for imported fonts" : t('deleteGlyph')}
-              className="hidden sm:flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="hidden sm:flex items-center gap-2 justify-center p-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
           >
               <TrashIcon />
               <span className="hidden xl:inline">{t('deleteGlyph')}</span>
@@ -213,7 +213,7 @@ const DrawingModalHeader: React.FC<DrawingModalHeaderProps> = ({
           <div className="relative sm:hidden" ref={moreMenuRef}>
               <button
                   onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                  className="flex items-center gap-2 justify-center p-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                  className="flex items-center gap-2 justify-center p-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
                   title={t('more')}
               >
                   <MoreIcon />

@@ -103,7 +103,7 @@ const MiniGlyphCanvas: React.FC<{
             ctx.scale(scale, scale);
             renderPaths(ctx, glyphData!.paths, {
                 strokeThickness,
-                color: theme === 'dark' ? '#E2E8F0' : '#374151'
+                color: theme === 'dark' ? '#E5E5E5' : '#374151'
             });
             ctx.restore();
         }

@@ -44,6 +44,7 @@
     {
       "id": "tamil",
       "nameKey": "scriptTamil",
+      "region": "southAsia",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -86,6 +87,7 @@
     {
       "id": "malayalam",
       "nameKey": "scriptMalayalam",
+      "region": "southAsia",
       "support": "full",
       "kerning": "true",
       "metrics": {
@@ -129,6 +131,7 @@
     {
       "id": "malayalam_traditional",
       "nameKey": "scriptMalayalamTraditional",
+      "region": "southAsia",
       "support": "full",
       "kerning": "true",
       "metrics": {
@@ -172,6 +175,7 @@
     {
       "id": "telugu",
       "nameKey": "scriptTelugu",
+      "region": "southAsia",
       "support": "full",
       "kerning": "true",
       "metrics": {
@@ -215,6 +219,7 @@
         {
       "id": "kannada",
       "nameKey": "scriptKannada",
+      "region": "southAsia",
       "support": "full",
       "kerning": "true",
       "metrics": {
@@ -259,6 +264,8 @@
     {
       "id": "devanagari",
       "nameKey": "scriptDevanagari",
+      "region": "southAsia",
+      "languagesKey": "langsDevanagari",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -295,6 +302,8 @@
  {
       "id": "gurmukhi",
       "nameKey": "scriptGurmukhi",
+      "region": "southAsia",
+      "languagesKey": "langsGurmukhi",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -331,6 +340,7 @@
     {
       "id": "sinhala",
       "nameKey": "scriptSinhala",
+      "region": "southAsia",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -373,6 +383,7 @@
   {
       "id": "thai",
       "nameKey": "scriptThai",
+      "region": "southeastAsia",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -418,6 +429,7 @@
 {
       "id": "lao",
       "nameKey": "scriptLao",
+      "region": "southeastAsia",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -462,6 +474,7 @@
    {
       "id": "hebrew",
       "nameKey": "scriptHebrew",
+      "region": "middleEast",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -506,6 +519,7 @@
         {
       "id": "latin",
       "nameKey": "scriptEnglish",
+      "region": "europe",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -545,6 +559,7 @@
     {
       "id": "spanish",
       "nameKey": "scriptSpanish",
+      "region": "europe",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -584,6 +599,7 @@
     {
       "id": "latin_indic",
       "nameKey": "scriptLatinIndic",
+      "region": "southAsia",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -624,6 +640,7 @@
     {
       "id": "french",
       "nameKey": "scriptFrench",
+      "region": "europe",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -663,6 +680,7 @@
     {
       "id": "portuguese",
       "nameKey": "scriptPortugese",
+      "region": "europe",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -702,6 +720,7 @@
     {
       "id": "german",
       "nameKey": "scriptGerman",
+      "region": "europe",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -741,6 +760,7 @@
     {
       "id": "greek",
       "nameKey": "scriptGreek",
+      "region": "europe",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,
@@ -785,6 +805,8 @@
     {
       "id": "cyrillic",
       "nameKey": "scriptCyrillic",
+      "region": "europe",
+      "languagesKey": "langsCyrillic",
       "support": "full",
       "metrics": {
         "unitsPerEm": 1000,

@@ -7,6 +7,7 @@ import ContextualToolbar from '../ContextualToolbar';
 import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, TransformState, ComponentTransform, MarkAttachmentRules, KerningMap, MarkPositioningMap } from '../../types';
 import { DRAWING_CANVAS_SIZE } from '../../constants';
 import { getAccurateGlyphBBox } from '../../services/glyphRenderService';
+import { isShortViewport } from '../../hooks/useMediaQuery';
 
 interface DrawingEditorWorkspaceProps {
     character: Character;
@@ -74,8 +75,8 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     
     // New States for collapsible strips
-    const [isSourcesCollapsed, setIsSourcesCollapsed] = useState(!props.isLargeScreen);
-    const [isDependentsCollapsed, setIsDependentsCollapsed] = useState(!props.isLargeScreen);
+    const [isSourcesCollapsed, setIsSourcesCollapsed] = useState(() => !props.isLargeScreen || isShortViewport());
+    const [isDependentsCollapsed, setIsDependentsCollapsed] = useState(() => !props.isLargeScreen || isShortViewport());
 
     useEffect(() => {
         if (canvasContainerRef.current) {
@@ -111,7 +112,7 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
         props.setViewOffset(newOffset);
     };
 
-    const mainContentClasses = `flex-grow flex flex-col items-center bg-gray-100 dark:bg-gray-950/20 overflow-hidden relative h-full`;
+    const mainContentClasses = `flex-grow flex flex-col items-center bg-white dark:bg-gray-950/20 overflow-hidden relative h-full`;
 
     return (
         <main className={mainContentClasses}>
@@ -120,7 +121,7 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
                     <div className="relative w-full h-full flex items-center justify-center">
                         <div className="relative h-[92%] max-h-full aspect-square flex items-center justify-center max-w-full group">
                             {props.isLargeScreen && (
-                                <div className="absolute right-full mr-6 top-6 z-30">
+                                <div className="absolute right-full mr-6 top-0 bottom-0 z-30">
                                     <DrawingToolbar
                                         character={props.character} currentTool={props.currentTool} setCurrentTool={props.setCurrentTool} 
                                         settings={props.settings} isLargeScreen={true}
@@ -136,7 +137,7 @@ const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) =>
 
                             <div 
                                 ref={canvasContainerRef}
-                                className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 w-full h-full"
+                                className="rounded-xl overflow-hidden shadow-md relative flex items-center justify-center bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 w-full h-full"
                             >
                                 {activeSelectionBBox && (
                                     <ContextualToolbar 

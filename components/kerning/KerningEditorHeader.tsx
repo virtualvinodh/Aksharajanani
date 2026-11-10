@@ -136,7 +136,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                 <button 
                     onClick={props.onClose} 
                     data-tour="header-back"
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 active:scale-95"
+                    className="flex items-center gap-2 px-4 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200 active:scale-95"
                 >
                     <BackIcon />
                     <span className="hidden sm:inline">{t('back')}</span>
@@ -195,7 +195,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                     onClick={props.onRemove} 
                     title={t('reset')} 
                     disabled={!props.isKerned}
-                    className="hidden sm:flex items-center gap-2 px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-yellow-400 transition-all active:scale-95 shadow-sm"
+                    className="hidden sm:flex items-center gap-2 px-3 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 text-gray-800 dark:bg-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg disabled:opacity-50 transition-all active:scale-95 shadow-sm"
                 >
                     <UndoIcon />
                     <span className="hidden xl:inline font-semibold">{t('reset')}</span>
@@ -205,7 +205,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                 {props.showPropertiesButton && (
                     <button 
                         onClick={() => setIsPropertiesPanelOpen(prev => !prev)}
-                        className={`p-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ${isPropertiesPanelOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                        className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors ${isPropertiesPanelOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                         title={t('glyphProperties')}
                     >
                         <PropertiesIcon />
@@ -216,7 +216,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
                 <div ref={moreMenuRef} className="relative">
                     <button
                         onClick={() => setIsMoreMenuOpen(prev => !prev)}
-                        className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                        className="p-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"
                         title={t('more')}
                     >
                         <MoreIcon />

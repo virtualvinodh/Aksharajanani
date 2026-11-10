@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useLocale } from '../../contexts/LocaleContext';
 import { Character, GlyphData, AppSettings, CharacterSet, MarkAttachmentRules, Path, KerningMap, MarkPositioningMap, UnifiedRenderContext } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useMediaQuery, isShortViewport } from '../../hooks/useMediaQuery';
 import { renderPaths, getAccurateGlyphBBox, getUnifiedPaths } from '../../services/glyphRenderService';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 import { LeftArrowIcon, RightArrowIcon, LinkIcon, BrokenLinkIcon, FoldIcon, CloseIcon, ChevronUpIcon, ChevronDownIcon } from '../../constants';
@@ -113,7 +113,7 @@ const GlyphThumbnail: React.FC<{
         
         renderPaths(ctx, displayData!.paths, {
             strokeThickness,
-            color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
+            color: theme === 'dark' ? '#E5E5E5' : '#262626'
         });
         ctx.restore();
     }, [displayData, strokeThickness, theme, size, character, isAvailable, isDrawn]);
@@ -156,7 +156,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
     const isMobile = useMediaQuery('(max-width: 1023px)');
     const { visibility, handleScroll, scrollRef } = useHorizontalScroll([items]);
     const [isExpanded, setIsExpanded] = useState(false); // Fullscreen
-    const [internalCollapsed, setInternalCollapsed] = useState(isMobile); // Minimize
+    const [internalCollapsed, setInternalCollapsed] = useState(() => isMobile || isShortViewport()); // Minimize
 
     const collapsed = propCollapsed !== undefined ? propCollapsed : internalCollapsed;
     const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(p => !p));
@@ -253,7 +253,7 @@ const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({
                     <CloseIcon className="w-8 h-8" />
                 </button>
             </div>
-            <div className="flex-grow overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900/50">
+            <div className="flex-grow overflow-y-auto p-4 bg-white dark:bg-gray-900/50">
                  <div className="flex flex-wrap justify-center gap-4">
                     {items.map(char => renderThumb(char, 100))}
                  </div>

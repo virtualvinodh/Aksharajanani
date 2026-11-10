@@ -96,7 +96,7 @@ const DrawingWorkspaceDialogs: React.FC<DrawingWorkspaceDialogsProps> = (props) 
         
         // 1. Draw Origin Marker (at glyph center)
         ctx.save();
-        ctx.strokeStyle = theme === 'dark' ? '#555' : '#e5e7eb';
+        ctx.strokeStyle = theme === 'dark' ? '#555' : '#E5E5E5';
         ctx.lineWidth = 2 / scale;
         ctx.beginPath();
         const markLen = Math.max(bbox.width, bbox.height) / 4;
@@ -118,7 +118,7 @@ const DrawingWorkspaceDialogs: React.FC<DrawingWorkspaceDialogsProps> = (props) 
         // 3. Active (Transformed)
         renderPaths(ctx, transformedPaths, { 
             strokeThickness: thickness, 
-            color: theme === 'dark' ? '#818CF8' : '#4f46e5' 
+            color: theme === 'dark' ? '#A3A3A3' : '#404040' 
         });
 
         ctx.restore();

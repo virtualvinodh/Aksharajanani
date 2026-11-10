@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useLocale } from '../contexts/LocaleContext';
+import { useFitColumns } from '../hooks/useFitColumns';
 import { ZoomInIcon, ZoomOutIcon } from '../constants';
 
 interface KerningToolbarProps {
@@ -32,6 +33,8 @@ const KerningToolbar: React.FC<KerningToolbarProps> = ({
 }) => {
     const { t } = useLocale();
     const isVertical = orientation === 'vertical';
+    // Side toolbar: wrap into extra columns rather than run past the canvas on short screens.
+    const sideToolbarRef = useFitColumns<HTMLDivElement>(1, 2, isVertical);
 
     const ActionButton: React.FC<{ onClick: () => void, title: string, children: React.ReactNode }> = ({ onClick, title, children }) => (
         <button
@@ -44,9 +47,9 @@ const KerningToolbar: React.FC<KerningToolbarProps> = ({
     );
 
     return (
-        <div className={`flex ${isVertical ? 'flex-col' : 'flex-row flex-wrap justify-center'} gap-3 p-2 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg items-center max-w-[95vw]`}>
+        <div ref={sideToolbarRef} className={`${isVertical ? 'grid justify-items-center content-start max-h-full w-max' : 'flex flex-row flex-wrap justify-center'} gap-3 p-2 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg items-center max-w-[95vw]`}>
             {/* Zoom Controls */}
-            <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2`}>
+            <div className={isVertical ? 'contents' : 'flex flex-row gap-2'}>
                 <ActionButton onClick={() => onZoom(1.25)} title={t('zoomIn')}>
                     <ZoomInIcon />
                 </ActionButton>
@@ -55,7 +58,7 @@ const KerningToolbar: React.FC<KerningToolbarProps> = ({
                 </ActionButton>
             </div>
 
-            <div className={`${isVertical ? 'h-px w-full my-0.5' : 'hidden sm:block w-px h-8 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+            <div className={`${isVertical ? 'h-px w-full my-0.5 col-span-full' : 'hidden sm:block w-px h-8 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
             {/* Kerning/Spacing Input */}
             <div className="flex flex-col items-center gap-0.5">

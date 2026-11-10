@@ -371,7 +371,7 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                 isGridView={viewMode === 'base' || viewMode === 'mark'}
             />
 
-            <div className="flex-grow overflow-hidden bg-gray-50 dark:bg-gray-900/50 flex flex-col">
+            <div className="flex-grow overflow-hidden bg-white dark:bg-gray-900/50 flex flex-col">
                 {showIncompleteBanner && (
                     <div className="flex-shrink-0 m-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">
                         {t('positioningShowOnlyComplete')}

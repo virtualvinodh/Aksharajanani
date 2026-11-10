@@ -158,7 +158,7 @@ const PositioningRulesModal: React.FC<PositioningRulesModalProps> = ({ isOpen, o
             <header className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-4 flex justify-between items-center shadow-md w-full flex-shrink-0 z-30 border-b dark:border-gray-700">
                 <button
                     onClick={handleCloseRequest}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                    className="flex items-center gap-2 px-4 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
                 >
                     <BackIcon />
                     <span className="hidden sm:inline">{t('cancel')}</span>
@@ -186,7 +186,7 @@ const PositioningRulesModal: React.FC<PositioningRulesModalProps> = ({ isOpen, o
             </header>
 
             {/* Main Content - No Padding on Container to let Tabs stretch full width */}
-            <main className="flex-grow overflow-hidden bg-gray-50 dark:bg-gray-900/50">
+            <main className="flex-grow overflow-hidden bg-white dark:bg-gray-900/50">
                 <PositioningRulesManager
                     positioningRules={localPosRules} setPositioningRules={setLocalPosRules}
                     markAttachmentRules={localMarkAttach} setMarkAttachmentRules={setLocalMarkAttach}

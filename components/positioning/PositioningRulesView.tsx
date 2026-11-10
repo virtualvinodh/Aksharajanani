@@ -116,7 +116,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                         <button
                             onClick={() => handleResetPage(pagedRulePairs)}
                             disabled={pagedRulePairs.length - unpositionedOnPageCount === 0}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <RefreshIcon className="h-4 w-4" />
                             <span>{t('resetPage')}</span>
@@ -214,7 +214,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                     <button
                         onClick={() => setRulePage(p => Math.max(1, p - 1))}
                         disabled={rulePage === 1}
-                        className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 disabled:opacity-50 hover:bg-gray-300 dark:hover:bg-gray-600"
+                        className="p-2 rounded-full bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-600"
                     >
                         <LeftArrowIcon />
                     </button>
@@ -224,7 +224,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
                     <button
                         onClick={() => setRulePage(p => Math.min(ruleTotalPages, p + 1))}
                         disabled={rulePage === ruleTotalPages}
-                        className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 disabled:opacity-50 hover:bg-gray-300 dark:hover:bg-gray-600"
+                        className="p-2 rounded-full bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-600"
                     >
                         <RightArrowIcon />
                     </button>

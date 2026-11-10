@@ -193,7 +193,7 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
         <button
           onClick={onClose}
           data-tour="test-page-close"
-          className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
         >
           <BackIcon />
           <span className="hidden sm:inline">{t('back')}</span>
@@ -205,7 +205,7 @@ const FontTestPage: React.FC<FontTestPageProps> = ({
              <button 
                 onClick={handleReset}
                 title="Reset to Default"
-                className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+                className="flex items-center gap-2 px-3 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm"
             >
                 <UndoIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">{t('reset')}</span>

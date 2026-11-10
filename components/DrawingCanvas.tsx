@@ -173,12 +173,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
   const drawSelectionUI = useCallback((ctx: CanvasRenderingContext2D) => {
     if (marqueeBox) {
-        ctx.strokeStyle = '#6366F1'; ctx.lineWidth = 1 / zoom; ctx.setLineDash([4 / zoom, 4 / zoom]);
+        ctx.strokeStyle = '#737373'; ctx.lineWidth = 1 / zoom; ctx.setLineDash([4 / zoom, 4 / zoom]);
         ctx.strokeRect(marqueeBox.start.x, marqueeBox.start.y, marqueeBox.end.x - marqueeBox.start.x, marqueeBox.end.y - marqueeBox.start.y);
         ctx.setLineDash([]);
     }
     if (selectionBox) {
-        ctx.strokeStyle = '#6366F1'; 
+        ctx.strokeStyle = '#737373'; 
         ctx.lineWidth = 1 / zoom; 
         ctx.setLineDash([]);
         if (isImageSelected && imageTransform) {
@@ -199,7 +199,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
             Object.values(handles).forEach((handle: Handle & Point) => {
                 if (handle.type === 'rotate') {
-                    ctx.save(); ctx.strokeStyle = '#6366F1'; ctx.lineWidth = 1.5 / zoom;
+                    ctx.save(); ctx.strokeStyle = '#737373'; ctx.lineWidth = 1.5 / zoom;
                     const radius = (HANDLE_SIZE / 2 + 10) / zoom;
                     ctx.beginPath(); ctx.arc(handle.x, handle.y, radius, 0.25 * Math.PI, 1.9 * Math.PI); ctx.stroke();
                     const arrowAngle = 1.9 * Math.PI; const arrowSize = 6 / zoom;
@@ -210,8 +210,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                     ctx.lineTo(arrowX - arrowSize * Math.cos(arrowAngle + Math.PI / 6), arrowY - arrowSize * Math.sin(arrowAngle + Math.PI / 6));
                     ctx.stroke(); ctx.restore();
                 } else if (handle.type === 'move') {
-                    ctx.fillStyle = '#6366F1';
-                    ctx.strokeStyle = theme === 'dark' ? '#111827' : '#FFFFFF';
+                    ctx.fillStyle = '#737373';
+                    ctx.strokeStyle = theme === 'dark' ? '#171717' : '#FFFFFF';
                     ctx.lineWidth = 2 / zoom;
                     const radius = scaledHandleSize * 0.7;
                     ctx.beginPath();
@@ -219,8 +219,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                     ctx.fill();
                     ctx.stroke();
                 } else {
-                    ctx.fillStyle = '#6366F1';
-                    ctx.strokeStyle = theme === 'dark' ? '#111827' : '#FFFFFF';
+                    ctx.fillStyle = '#737373';
+                    ctx.strokeStyle = theme === 'dark' ? '#171717' : '#FFFFFF';
                     ctx.lineWidth = 1.5 / zoom;
                     ctx.fillRect(handle.x - scaledHandleSize / 2, handle.y - scaledHandleSize / 2, scaledHandleSize, scaledHandleSize);
                     ctx.strokeRect(handle.x - scaledHandleSize / 2, handle.y - scaledHandleSize / 2, scaledHandleSize, scaledHandleSize);
@@ -292,7 +292,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const guideWidth = 20000; 
     const guideStart = -10000;
     
-    ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
+    ctx.strokeStyle = theme === 'dark' ? '#A3A3A3' : '#737373';
     // Ensure visibility on high-DPI and when zoomed out
     ctx.lineWidth = Math.max(1.8, 2.2 / zoom); 
     
@@ -312,7 +312,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
     // Additional Script-Specific Guides
     if (metrics.superTopLineY || metrics.subBaseLineY) {
-        ctx.strokeStyle = theme === 'dark' ? '#A5B4FC' : '#818CF8'; 
+        ctx.strokeStyle = theme === 'dark' ? '#D4D4D4' : '#A3A3A3'; 
         ctx.setLineDash([10 / zoom, 8 / zoom]);
         ctx.lineWidth = Math.max(1.2, 1.5 / zoom);
         if (metrics.superTopLineY) {
@@ -353,7 +353,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
         if (!isNonSpacing) {
             const isLsbActive = hoveredMetric === 'lsb' || draggingMetric === 'lsb';
-            ctx.strokeStyle = isLsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.5)' : 'rgba(217, 119, 6, 0.6)');
+            ctx.strokeStyle = isLsbActive ? (theme === 'dark' ? '#E5E5E5' : '#262626') : (theme === 'dark' ? 'rgba(212, 212, 212, 0.5)' : 'rgba(115, 115, 115, 0.6)');
             ctx.lineWidth = (isLsbActive ? 4 : 2) / zoom;
             ctx.setLineDash(isLsbActive ? [] : [8 / zoom, 6 / zoom]);
             ctx.beginPath(); 
@@ -361,7 +361,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             ctx.stroke();
 
             const isRsbActive = hoveredMetric === 'rsb' || draggingMetric === 'rsb';
-            ctx.strokeStyle = isRsbActive ? '#10b981' : (theme === 'dark' ? 'rgba(250, 204, 21, 0.5)' : 'rgba(217, 119, 6, 0.6)');
+            ctx.strokeStyle = isRsbActive ? (theme === 'dark' ? '#E5E5E5' : '#262626') : (theme === 'dark' ? 'rgba(212, 212, 212, 0.5)' : 'rgba(115, 115, 115, 0.6)');
             ctx.lineWidth = (isRsbActive ? 4 : 2) / zoom;
             ctx.setLineDash(isRsbActive ? [] : [8 / zoom, 6 / zoom]);
             ctx.beginPath(); 
@@ -379,14 +379,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 const text = `${label}: ${Math.round(activeVal)}`;
                 ctx.font = 'bold 14px sans-serif';
                 const textWidth = ctx.measureText(text).width + 16;
-                ctx.fillStyle = theme === 'dark' ? '#1f2937' : '#ffffff';
-                ctx.strokeStyle = '#6366f1';
+                ctx.fillStyle = theme === 'dark' ? '#262626' : '#ffffff';
+                ctx.strokeStyle = '#737373';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.roundRect(screenX - textWidth/2, screenY - 20, textWidth, 30, 6);
                 ctx.fill();
                 ctx.stroke();
-                ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#111827';
+                ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#171717';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(text, screenX, screenY - 5);
@@ -396,13 +396,13 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }
 
     if (backgroundPaths) {
-      renderPaths(ctx, backgroundPaths, { color: backgroundPathsColor || (theme === 'dark' ? '#4A5568' : '#A0AEC0'), strokeThickness: settings.strokeThickness });
+      renderPaths(ctx, backgroundPaths, { color: backgroundPathsColor || (theme === 'dark' ? '#525252' : '#A3A3A3'), strokeThickness: settings.strokeThickness });
     }
 
     // --- Visual Bounding Box Overlay ---
     if (settings.showBoundingBox && glyphBBox) {
         ctx.save();
-        const cyan = '#06b6d4'; // Cyan-500
+        const cyan = '#737373'; // was cyan; neutral grey in the monochrome theme
         ctx.strokeStyle = cyan;
         ctx.lineWidth = 1 / zoom;
         
@@ -437,8 +437,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.restore();
     }
 
-    const mainColor = theme === 'dark' ? '#E2E8F0' : '#1F2937';
-    const highlightColor = theme === 'dark' ? '#A78BFA' : '#8B5CF6'; 
+    const mainColor = theme === 'dark' ? '#E5E5E5' : '#262626';
+    const highlightColor = theme === 'dark' ? '#A3A3A3' : '#737373'; 
 
     const hoveredPaths: Path[] = [];
     const selectedNotHoveredPaths: Path[] = [];
@@ -500,7 +500,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
     if (previewPath) {
         if (tool === 'slice') renderPaths(ctx, [previewPath], { color: '#EF4444', strokeThickness: 2 / zoom, lineDash: [4 / zoom, 4 / zoom] });
-        else renderPaths(ctx, [previewPath], { color: theme === 'dark' ? '#6366F1' : '#818CF8', strokeThickness: settings.strokeThickness, contrast: settings.contrast, lineDash: [5, 5] });
+        else renderPaths(ctx, [previewPath], { color: theme === 'dark' ? '#737373' : '#A3A3A3', strokeThickness: settings.strokeThickness, contrast: settings.contrast, lineDash: [5, 5] });
     }
     
     if (tool === 'select') drawSelectionUI(ctx);

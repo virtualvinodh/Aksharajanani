@@ -22,7 +22,7 @@ const LanguageSelector: React.FC = () => {
         onChange={handleLocaleChange}
         title={t('changeLanguage')}
         aria-label={t('changeLanguage')}
-        className="w-full pl-10 pr-8 py-2 text-sm font-semibold text-gray-800 dark:text-white bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer group-hover:bg-gray-300 dark:group-hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-indigo-500 transition-colors"
+        className="w-full pl-10 pr-8 py-2 text-sm font-semibold text-gray-800 dark:text-white bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer group-hover:bg-gray-300 dark:group-hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-indigo-500 transition-colors"
       >
         {availableLocales.map(loc => (
           <option key={loc.code} value={loc.code} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold">

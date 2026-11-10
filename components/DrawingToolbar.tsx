@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Tool, AppSettings, Path, Character, TransformState } from '../types';
 import { EditIcon, PenIcon, EraserIcon, LineIcon, CircleIcon, DotIcon, UndoIcon, RedoIcon, CurveIcon, SelectIcon, ZoomInIcon, ZoomOutIcon, PanIcon, ImageIcon, CutIcon, CopyIcon, PasteIcon, EllipseIcon, CalligraphyIcon, GroupIcon, UngroupIcon, SliceIcon } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
+import { useFitColumns } from '../hooks/useFitColumns';
 
 interface DrawingToolbarProps {
   character: Character;
@@ -78,6 +79,8 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     const [isAnglePickerOpen, setIsAnglePickerOpen] = useState(false);
     const calligraphyToolButtonRef = useRef<HTMLDivElement>(null);
     const isLocked = !!character.link;
+    // Side toolbar: widen to more columns instead of running past the canvas on short screens.
+    const sideToolbarRef = useFitColumns<HTMLDivElement>(2, 5, isLargeScreen);
 
     useEffect(() => {
         if (currentTool !== 'calligraphy') {
@@ -153,7 +156,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
             <ToolButton tool="ellipse" currentTool={currentTool} label={t('ellipse')} onClick={setCurrentTool} disabled={isLocked}><EllipseIcon /></ToolButton>
             <ToolButton tool="dot" currentTool={currentTool} label={t('dot')} onClick={setCurrentTool} disabled={isLocked}><DotIcon /></ToolButton>
             
-            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
+            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-full' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ToolButton tool="eraser" currentTool={currentTool} label={t('eraser')} onClick={setCurrentTool} disabled={isLocked} dataTour="tool-eraser"><EraserIcon /></ToolButton>
             <ToolButton tool="slice" currentTool={currentTool} label={t('slice')} onClick={setCurrentTool} disabled={isLocked} dataTour="tool-slice"><SliceIcon /></ToolButton>
         </>
@@ -163,16 +166,16 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
         <>
             <ActionButton onClick={onUndo} title={t('undo')} disabled={!canUndo} dataTour="action-undo"><UndoIcon /></ActionButton>
             <ActionButton onClick={onRedo} title={t('redo')} disabled={!canRedo} dataTour="action-redo"><RedoIcon /></ActionButton>
-            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
+            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-full' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ActionButton onClick={onCut} title={t('cut')} disabled={selectedPathIds.size === 0 || isLocked} dataTour="action-cut"><CutIcon /></ActionButton>
             <ActionButton onClick={onCopy} title={t('copy')} disabled={isLocked} dataTour="action-copy"><CopyIcon /></ActionButton>
             <ActionButton onClick={onPaste} title={t('paste')} disabled={!clipboard || isLocked} dataTour="action-paste"><PasteIcon /></ActionButton>
             <ActionButton onClick={onGroup} title={t('group')} disabled={!canGroup || isLocked} dataTour="action-group"><GroupIcon /></ActionButton>
             <ActionButton onClick={onUngroup} title={t('ungroup')} disabled={!canUngroup || isLocked} dataTour="action-ungroup"><UngroupIcon /></ActionButton>
-            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
+            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-full' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ActionButton onClick={() => onZoom(1.25)} title={t('zoomIn')}><ZoomInIcon /></ActionButton>
             <ActionButton onClick={() => onZoom(0.8)} title={t('zoomOut')}><ZoomOutIcon /></ActionButton>
-            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-2' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
+            <div className={`${isLargeScreen ? 'h-px w-full my-1.5 col-span-full' : 'hidden sm:block w-px h-6 mx-1'} bg-gray-300 dark:bg-gray-600`}></div>
             <ActionButton onClick={onImageImportClick} title={t('importGuide')}><ImageIcon/></ActionButton>
             <ActionButton onClick={onSvgImportClick} title={t('importSvg')} disabled={isLocked}>
                 <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -184,11 +187,11 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
 
     if(isLargeScreen) {
         return (
-            <div data-tour="main-toolbar" className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md p-2 rounded-2xl grid grid-cols-2 gap-1.5 justify-items-center content-start shadow-2xl border border-gray-200 dark:border-gray-700 max-h-full overflow-y-auto no-scrollbar w-24">
+            <div ref={sideToolbarRef} data-tour="main-toolbar" className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md p-2 rounded-2xl grid grid-cols-2 gap-1.5 justify-items-center content-start shadow-2xl border border-gray-200 dark:border-gray-700 max-h-full w-max">
                  {commonTools}
-                 <div className="h-px w-full my-1 col-span-2 bg-gray-300 dark:bg-gray-600"></div>
+                 <div className="h-px w-full my-1 col-span-full bg-gray-300 dark:bg-gray-600"></div>
                  {drawingTools}
-                 <div className="h-px w-full my-1 col-span-2 bg-gray-300 dark:bg-gray-600"></div>
+                 <div className="h-px w-full my-1 col-span-full bg-gray-300 dark:bg-gray-600"></div>
                  {actionTools}
             </div>
         );

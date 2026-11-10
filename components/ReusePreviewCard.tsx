@@ -58,7 +58,7 @@ const ReusePreviewCard: React.FC<ReusePreviewCardProps> = ({
     ctx.scale(scale, scale);
     renderPaths(ctx, pathsToDraw, {
         strokeThickness,
-        color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
+        color: theme === 'dark' ? '#E5E5E5' : '#262626'
     });
     ctx.restore();
   }, [ligatureGlyph, strokeThickness, theme]);

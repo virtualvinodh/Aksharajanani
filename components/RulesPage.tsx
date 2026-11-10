@@ -398,7 +398,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                                   )}
                               </div>
                           ))}
-                          <button onClick={() => setIsAddFeatureModalOpen(true)} title="Add new feature" className="ml-2 h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"><AddIcon /></button>
+                          <button onClick={() => setIsAddFeatureModalOpen(true)} title="Add new feature" className="ml-2 h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-full bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"><AddIcon /></button>
                         </nav>
                     </div>
                     {!areAllGlyphsDrawn && <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">{t('rulesShowOnlyComplete')}</div>}
@@ -598,7 +598,7 @@ const RulesPage = forwardRef<({ saveChanges: () => void }), RulesPageProps>(({
                 <div className="flex justify-end items-center mb-2 gap-2">
                     <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mr-auto">{t('workspaceFeaCode')}</h3>
                     {isFeaOnlyMode ? ( isFeaCodeLocked && <button onClick={() => setIsFeaCodeLocked(false)} title={t('edit')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"><EditIcon /><span>{t('edit')}</span></button>
-                    ) : ( isFeaEditMode ? <button onClick={() => setIsRevertConfirmOpen(true)} title={t('revertToGuiTooltip')} className="px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700">{t('revertToGui')}</button>
+                    ) : ( isFeaEditMode ? <button onClick={() => setIsRevertConfirmOpen(true)} title={t('revertToGuiTooltip')} className="px-4 py-2 bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 font-semibold rounded-lg">{t('revertToGui')}</button>
                         : <button onClick={handleEnterEditMode} title={t('editFeaManuallyTooltip')} className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">{t('editFeaManually')}</button>)}
                 </div>
                 <textarea readOnly={isFeaOnlyMode ? isFeaCodeLocked : !isFeaEditMode} value={isFeaEditMode ? manualFeaCode ?? '' : generatedFeaCode} onChange={(e) => onManualFeaCodeChange(e.target.value)}

@@ -72,7 +72,7 @@ const PairCard: React.FC<PairCardProps> = ({ pair, onClick, isRecommended, showR
         ctx.beginPath(); ctx.moveTo(0, metrics.baseLineY); ctx.lineTo(guideWidth, metrics.baseLineY); ctx.stroke();
         ctx.setLineDash([]);
         
-        const glyphColor = theme === 'dark' ? '#E2E8F0' : '#1F2937';
+        const glyphColor = theme === 'dark' ? '#E5E5E5' : '#262626';
         
         // Draw left glyph
         ctx.save();

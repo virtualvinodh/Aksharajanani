@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
+import { useFitColumns } from '../hooks/useFitColumns';
 import { PasteIcon, PanIcon, ZoomInIcon, ZoomOutIcon, SelectIcon } from '../constants';
 
 interface PositioningToolbarProps {
@@ -96,14 +97,16 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({
 }) => {
   const { t } = useLocale();
   const isVertical = orientation === 'vertical';
+  // Side toolbar: wrap into extra columns rather than run past the canvas on short screens.
+  const sideToolbarRef = useFitColumns<HTMLDivElement>(1, 3, isVertical);
 
   return (
-    <div className={`flex ${isVertical ? 'flex-col' : 'flex-row flex-wrap justify-center'} gap-2 p-1.5 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg items-center max-w-[95vw]`}>
+    <div ref={sideToolbarRef} className={`${isVertical ? 'grid justify-items-center content-start max-h-full w-max' : 'flex flex-row flex-wrap justify-center'} gap-2 p-1.5 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg items-center max-w-[95vw]`}>
       <ActionButton onClick={onReuseClick} title={t('copyPositionFrom')} disabled={reuseDisabled}>
         <PasteIcon />
       </ActionButton>
       
-      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+      <div className={`${isVertical ? 'h-px w-full my-0.5 col-span-full' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
       <ToolButton
         isActive={pageTool === 'select'}
@@ -121,7 +124,7 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({
         <PanIcon />
       </ToolButton>
 
-      <div className={`${isVertical ? 'h-px w-full my-0.5' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+      <div className={`${isVertical ? 'h-px w-full my-0.5 col-span-full' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
       <ActionButton onClick={() => onZoom(1.25)} title={t('zoomIn')}>
         <ZoomInIcon />
@@ -130,9 +133,9 @@ const PositioningToolbar: React.FC<PositioningToolbarProps> = ({
         <ZoomOutIcon />
       </ActionButton>
 
-      <div className={`${isVertical ? 'h-px w-full my-1' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
+      <div className={`${isVertical ? 'h-px w-full my-1 col-span-full' : 'hidden sm:block w-px h-6 mx-0.5'} bg-gray-300 dark:bg-gray-600`}></div>
 
-      <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} gap-2`}>
+      <div className={isVertical ? 'contents' : 'flex flex-row gap-2'}>
           <CoordinateInput axis="x" value={manualX} onChange={v => onManualChange('x', v)} onCommit={(val) => onManualCommit(val, undefined)} onFocus={setIsInputFocused} disabled={!canEdit} />
           <CoordinateInput axis="y" value={manualY} onChange={v => onManualChange('y', v)} onCommit={(val) => onManualCommit(undefined, val)} onFocus={setIsInputFocused} disabled={!canEdit} />
       </div>

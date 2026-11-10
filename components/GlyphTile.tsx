@@ -82,7 +82,7 @@ const GlyphTile: React.FC<GlyphTileProps> = ({
     
     renderPaths(ctx, resolvedGlyphData.paths, {
         strokeThickness,
-        color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
+        color: theme === 'dark' ? '#E5E5E5' : '#262626'
     });
     
     ctx.restore();

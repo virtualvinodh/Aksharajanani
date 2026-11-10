@@ -129,7 +129,7 @@ const DrawingBatchToolbar: React.FC<DrawingBatchToolbarProps> = (props) => {
                 <div className="pl-4 sm:border-l border-gray-200 dark:border-gray-700 flex-shrink-0">
                     <button 
                         onClick={props.onClose} 
-                        className="p-2.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                        className="p-2.5 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-600 transition-all"
                         title={t('exitSelectionMode')}
                     >
                         <CloseIcon className="w-5 h-5" />

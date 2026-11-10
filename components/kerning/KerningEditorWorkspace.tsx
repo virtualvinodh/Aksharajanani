@@ -40,7 +40,7 @@ const KerningEditorWorkspace: React.FC<KerningEditorWorkspaceProps> = ({
     sourceGlyphs, onSelectCharacter, glyphDataMap, settings, allCharsByName
 }) => {
     return (
-        <main className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative min-h-0 h-full w-full">
+        <main className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-950/20 relative min-h-0 h-full w-full">
             <div className="flex-1 flex flex-col items-center w-full h-full overflow-hidden relative min-h-0">
                 {/* Centering container */}
                 <div 
@@ -54,7 +54,7 @@ const KerningEditorWorkspace: React.FC<KerningEditorWorkspaceProps> = ({
                     */}
                     <div className="relative flex items-center justify-center">
                         {isLargeScreen && (
-                            <div className="absolute right-full mr-6 top-6 z-30">
+                            <div className="absolute right-full mr-6 top-0 bottom-0 z-30">
                                 <KerningToolbar 
                                     orientation="vertical"
                                     onZoom={onZoom}

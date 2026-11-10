@@ -206,7 +206,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
                     </div>
                 )}
                 
-                <main className="flex-1 flex flex-col overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
+                <main className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-gray-900/50">
                     {mode === 'recommended' && hasHiddenRecommended && !isFiltered && (
                         <div className="flex-shrink-0 m-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm text-blue-700 dark:text-blue-300">
                             {t('kerningShowOnlyComplete')}
@@ -223,7 +223,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
                     <div className="p-4 border-b dark:border-gray-700 flex items-center gap-4 flex-wrap bg-white dark:bg-gray-800">
                         <button onClick={handleAutoKern} disabled={isAutoKerning} data-tour="auto-kern-btn" className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors"><SparklesIcon /> {t('autoKern')}</button>
                         
-                        <button onClick={handleDiscoverKerning} disabled={isAutoKerning} data-tour="detect-pairs-btn" className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors" title="Scan all characters for geometric collisions">
+                        <button onClick={handleDiscoverKerning} disabled={isAutoKerning} data-tour="detect-pairs-btn" className="inline-flex items-center gap-2 px-4 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors" title="Scan all characters for geometric collisions">
                              <SearchIcon className="w-4 h-4" />
                              <span>Detect new pairs</span>
                         </button>
@@ -234,7 +234,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
                                 Accept Suggestions ({unreviewedCount})
                             </button>
                         )}
-                        <button onClick={() => setIsResetVisibleConfirmOpen(true)} disabled={kerningMap.size === 0 && suggestedKerningMap.size === 0} className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 disabled:opacity-50 transition-colors"><UndoIcon /> {t('resetVisible')}</button>
+                        <button onClick={() => setIsResetVisibleConfirmOpen(true)} disabled={kerningMap.size === 0 && suggestedKerningMap.size === 0} className="inline-flex items-center gap-2 px-4 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 text-gray-800 dark:bg-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 font-semibold rounded-lg disabled:opacity-50 transition-colors"><UndoIcon /> {t('resetVisible')}</button>
                     </div>
 
                     <div className="flex-grow">

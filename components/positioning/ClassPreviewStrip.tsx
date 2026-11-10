@@ -193,12 +193,12 @@ const SiblingThumbnail: React.FC<{
         ctx.translate(-contentCenterX, -contentCenterY);
 
         // 1. Draw Base (Fixed)
-        renderPaths(ctx, baseGlyph.paths, { strokeThickness, color: theme === 'dark' ? '#64748B' : '#94A3B8' }); 
+        renderPaths(ctx, baseGlyph.paths, { strokeThickness, color: theme === 'dark' ? '#737373' : '#A3A3A3' }); 
 
         // 2. Draw Mark (Relative)
         ctx.save();
         ctx.translate(finalOffset.x, finalOffset.y);
-        renderPaths(ctx, markGlyph.paths, { strokeThickness, color: theme === 'dark' ? '#818CF8' : '#4F46E5' }); 
+        renderPaths(ctx, markGlyph.paths, { strokeThickness, color: theme === 'dark' ? '#A3A3A3' : '#404040' }); 
         ctx.restore();
 
         ctx.restore();
@@ -325,7 +325,7 @@ const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({
                     <CloseIcon className="w-8 h-8" />
                 </button>
             </div>
-            <div className="flex-grow overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900/50">
+            <div className="flex-grow overflow-y-auto p-4 bg-white dark:bg-gray-900/50">
                  <div className="flex flex-wrap justify-center gap-4">
                     {siblings.map((pair) => renderThumb(pair, 140))}
                  </div>

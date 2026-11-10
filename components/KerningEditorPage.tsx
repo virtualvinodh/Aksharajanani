@@ -291,7 +291,7 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
                 allCharsByName={props.allCharsByName}
             >
                 <div 
-                    className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800"
+                    className="rounded-xl overflow-hidden shadow-md relative flex items-center justify-center bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700"
                     style={{ 
                         width: session.canvasDisplaySize.width || '80vw', 
                         height: session.canvasDisplaySize.height || '60vh'

@@ -1,5 +1,123 @@
 @import "tailwindcss";
 
+/* `dark:` utilities follow the app's own Light/Dark setting (ThemeContext puts a
+   `.dark` class on <html>; it defaults to the OS preference). Without this,
+   Tailwind v4 follows only the OS setting and the in-app switch half-works. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Monochrome theme (matching the author's other apps, e.g. aksharamukha.com).
+ *
+ * Components use stock Tailwind colour classes (gray-*, indigo-*, green-*, ...).
+ * Rather than rewrite thousands of class names, the colour scales themselves are
+ * redefined here:
+ *   - gray   -> true neutral grey (Tailwind's gray has a blue tint)
+ *   - indigo (the old brand colour) and every decorative hue -> the same neutral
+ *     scale, shifted one step darker in the middle so filled "primary" buttons
+ *     read as charcoal with white text, and light tints stay visible.
+ *   - red stays (delete / errors); yellow and amber stay (warnings, unsaved dots).
+ * To bring a hue back, delete its block below.
+ */
+@theme {
+  --color-gray-50: var(--color-neutral-50);
+  --color-gray-100: var(--color-neutral-100);
+  --color-gray-200: var(--color-neutral-200);
+  --color-gray-300: var(--color-neutral-300);
+  --color-gray-400: var(--color-neutral-400);
+  --color-gray-500: var(--color-neutral-500);
+  --color-gray-600: var(--color-neutral-600);
+  --color-gray-700: var(--color-neutral-700);
+  --color-gray-800: var(--color-neutral-800);
+  --color-gray-900: var(--color-neutral-900);
+  --color-gray-950: var(--color-neutral-950);
+
+  /* brand (indigo) */
+  --color-indigo-50: var(--color-neutral-100);
+  --color-indigo-100: var(--color-neutral-200);
+  --color-indigo-200: var(--color-neutral-300);
+  --color-indigo-300: var(--color-neutral-400);
+  --color-indigo-400: var(--color-neutral-400);
+  --color-indigo-500: var(--color-neutral-600);
+  --color-indigo-600: var(--color-neutral-700);
+  --color-indigo-700: var(--color-neutral-800);
+  --color-indigo-800: var(--color-neutral-800);
+  --color-indigo-900: var(--color-neutral-900);
+  --color-indigo-950: var(--color-neutral-950);
+
+  /* decorative hues: same mapping as the brand colour */
+  --color-violet-50: var(--color-neutral-100);  --color-purple-50: var(--color-neutral-100);
+  --color-violet-100: var(--color-neutral-200); --color-purple-100: var(--color-neutral-200);
+  --color-violet-200: var(--color-neutral-300); --color-purple-200: var(--color-neutral-300);
+  --color-violet-300: var(--color-neutral-400); --color-purple-300: var(--color-neutral-400);
+  --color-violet-400: var(--color-neutral-400); --color-purple-400: var(--color-neutral-400);
+  --color-violet-500: var(--color-neutral-600); --color-purple-500: var(--color-neutral-600);
+  --color-violet-600: var(--color-neutral-700); --color-purple-600: var(--color-neutral-700);
+  --color-violet-700: var(--color-neutral-800); --color-purple-700: var(--color-neutral-800);
+  --color-violet-800: var(--color-neutral-800); --color-purple-800: var(--color-neutral-800);
+  --color-violet-900: var(--color-neutral-900); --color-purple-900: var(--color-neutral-900);
+  --color-violet-950: var(--color-neutral-950); --color-purple-950: var(--color-neutral-950);
+
+  --color-blue-50: var(--color-neutral-100);  --color-sky-50: var(--color-neutral-100);  --color-cyan-50: var(--color-neutral-100);
+  --color-blue-100: var(--color-neutral-200); --color-sky-100: var(--color-neutral-200); --color-cyan-100: var(--color-neutral-200);
+  --color-blue-200: var(--color-neutral-300); --color-sky-200: var(--color-neutral-300); --color-cyan-200: var(--color-neutral-300);
+  --color-blue-300: var(--color-neutral-400); --color-sky-300: var(--color-neutral-400); --color-cyan-300: var(--color-neutral-400);
+  --color-blue-400: var(--color-neutral-400); --color-sky-400: var(--color-neutral-400); --color-cyan-400: var(--color-neutral-400);
+  --color-blue-500: var(--color-neutral-600); --color-sky-500: var(--color-neutral-600); --color-cyan-500: var(--color-neutral-600);
+  --color-blue-600: var(--color-neutral-700); --color-sky-600: var(--color-neutral-700); --color-cyan-600: var(--color-neutral-700);
+  --color-blue-700: var(--color-neutral-800); --color-sky-700: var(--color-neutral-800); --color-cyan-700: var(--color-neutral-800);
+  --color-blue-800: var(--color-neutral-800); --color-sky-800: var(--color-neutral-800); --color-cyan-800: var(--color-neutral-800);
+  --color-blue-900: var(--color-neutral-900); --color-sky-900: var(--color-neutral-900); --color-cyan-900: var(--color-neutral-900);
+  --color-blue-950: var(--color-neutral-950); --color-sky-950: var(--color-neutral-950); --color-cyan-950: var(--color-neutral-950);
+
+  --color-teal-50: var(--color-neutral-100);  --color-green-50: var(--color-neutral-100);  --color-emerald-50: var(--color-neutral-100);  --color-orange-50: var(--color-neutral-100);
+  --color-teal-100: var(--color-neutral-200); --color-green-100: var(--color-neutral-200); --color-emerald-100: var(--color-neutral-200); --color-orange-100: var(--color-neutral-200);
+  --color-teal-200: var(--color-neutral-300); --color-green-200: var(--color-neutral-300); --color-emerald-200: var(--color-neutral-300); --color-orange-200: var(--color-neutral-300);
+  --color-teal-300: var(--color-neutral-400); --color-green-300: var(--color-neutral-400); --color-emerald-300: var(--color-neutral-400); --color-orange-300: var(--color-neutral-400);
+  --color-teal-400: var(--color-neutral-400); --color-green-400: var(--color-neutral-400); --color-emerald-400: var(--color-neutral-400); --color-orange-400: var(--color-neutral-400);
+  --color-teal-500: var(--color-neutral-600); --color-green-500: var(--color-neutral-600); --color-emerald-500: var(--color-neutral-600); --color-orange-500: var(--color-neutral-600);
+  --color-teal-600: var(--color-neutral-700); --color-green-600: var(--color-neutral-700); --color-emerald-600: var(--color-neutral-700); --color-orange-600: var(--color-neutral-700);
+  --color-teal-700: var(--color-neutral-800); --color-green-700: var(--color-neutral-800); --color-emerald-700: var(--color-neutral-800); --color-orange-700: var(--color-neutral-800);
+  --color-teal-800: var(--color-neutral-800); --color-green-800: var(--color-neutral-800); --color-emerald-800: var(--color-neutral-800); --color-orange-800: var(--color-neutral-800);
+  --color-teal-900: var(--color-neutral-900); --color-green-900: var(--color-neutral-900); --color-emerald-900: var(--color-neutral-900); --color-orange-900: var(--color-neutral-900);
+  --color-teal-950: var(--color-neutral-950); --color-green-950: var(--color-neutral-950); --color-emerald-950: var(--color-neutral-950); --color-orange-950: var(--color-neutral-950);
+}
+
+/* Deeper dark mode: near-black page, one panel shade, and buttons/inputs one step up.
+   (Only the dark end of the grey scale changes; text greys stay as they are.) */
+.dark {
+  --color-gray-950: #000000;
+  --color-gray-900: var(--color-neutral-950);
+  --color-gray-800: var(--color-neutral-900);
+  --color-gray-700: var(--color-neutral-800);
+}
+
+/* Tailwind v4 gives a bare `border` the text colour (v3 used gray-200), which drew
+   stark black lines wherever a light-mode border colour was left out. Restore the
+   v3 default, and a matching dark one. */
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+  .dark *, .dark ::after, .dark ::before, .dark ::backdrop, .dark ::file-selector-button {
+    border-color: var(--color-gray-700, currentColor);
+  }
+}
+
+/* In dark mode a charcoal "primary" button would match the grey secondary buttons
+   (gray-700), so filled primary shades step up to a lighter grey there. */
+.dark {
+  --color-indigo-600: var(--color-neutral-500); --color-indigo-700: var(--color-neutral-600);
+  --color-violet-600: var(--color-neutral-500); --color-violet-700: var(--color-neutral-600);
+  --color-purple-600: var(--color-neutral-500); --color-purple-700: var(--color-neutral-600);
+  --color-blue-600: var(--color-neutral-500); --color-blue-700: var(--color-neutral-600);
+  --color-sky-600: var(--color-neutral-500); --color-sky-700: var(--color-neutral-600);
+  --color-cyan-600: var(--color-neutral-500); --color-cyan-700: var(--color-neutral-600);
+  --color-teal-600: var(--color-neutral-500); --color-teal-700: var(--color-neutral-600);
+  --color-green-600: var(--color-neutral-500); --color-green-700: var(--color-neutral-600);
+  --color-emerald-600: var(--color-neutral-500); --color-emerald-700: var(--color-neutral-600);
+  --color-orange-600: var(--color-neutral-500); --color-orange-700: var(--color-neutral-600);
+}
+
 .logo-emboss {
   /* Sharper shadow, stronger highlight for light mode */
   text-shadow: 1px 1px 2px rgba(0,0,0,0.25), -1px -1px 2px rgba(255,255,255,0.9);
@@ -33,7 +151,7 @@
 .script-card-char {
   font-size: 2.5rem;
   line-height: 1;
-  color: #4f46e5; /* Tailwind indigo-600 */
+  color: #404040; /* neutral-700 (monochrome theme) */
   margin-bottom: 0;
 }
 @media (min-width: 640px) {
@@ -43,7 +161,7 @@
   }
 }
 .dark .script-card-char {
-  color: #818cf8; /* Tailwind indigo-400 */
+  color: #a3a3a3; /* neutral-400 (monochrome theme) */
 }
 /* Modal Hero Animation */
 .animate-modal-enter {
@@ -153,16 +271,16 @@
 .resizer {
     flex-shrink: 0;
     width: 6px;
-    background: #e5e7eb; /* gray-200 */
+    background: #e5e5e5; /* neutral-200 */
     cursor: col-resize;
     transition: background-color 0.2s;
     z-index: 25;
 }
 .dark .resizer {
-    background: #374151; /* gray-700 */
+    background: #404040; /* neutral-700 */
 }
 .resizer:hover, .resizer:active {
-    background: #6366f1; /* indigo-500 */
+    background: #737373; /* neutral-500 (monochrome theme) */
 }
 /* Shake Animation */
 @keyframes shake {

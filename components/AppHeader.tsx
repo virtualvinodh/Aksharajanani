@@ -9,6 +9,7 @@ import { SaveIcon, ExportIcon, SettingsIcon, CompareIcon, AboutIcon, TestIcon, E
 import CommandPalette from './CommandPalette';
 import { ExportingType } from '../hooks/actions/useExportActions';
 import { FilterMenu } from './FilterMenu';
+import ThemeSwitch from './ThemeSwitch';
 
 interface Progress {
     completed: number;
@@ -76,7 +77,7 @@ const WorkspaceTab: React.FC<{
         onClick={() => onWorkspaceChange(workspaceId)}
         title={label}
         data-tour={dataTour}
-        className={`flex-shrink-0 flex items-center gap-2 py-3 px-4 text-sm font-medium border-b-2 transition-colors relative ${
+        className={`flex-shrink-0 flex items-center gap-2 py-3 lg:py-2 px-4 text-sm font-medium border-b-2 transition-colors relative ${
           isActive
             ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
             : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
@@ -169,23 +170,24 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
     return (
         <>
-        <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-2 sm:p-4 flex flex-col shadow-md w-full flex-shrink-0 z-50 gap-2 sm:gap-4">
+        <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-2 sm:p-4 lg:py-2 flex flex-col shadow-md w-full flex-shrink-0 z-50 gap-2 sm:gap-4 lg:gap-1">
             
-            <div className="w-full flex flex-wrap items-center justify-between md:justify-center gap-y-2 md:gap-x-8 md:gap-y-4">
+            {/* From xl up the project row joins the top row ([logo | project | actions]) so the header takes two rows instead of three. */}
+            <div className="w-full flex flex-wrap items-center justify-between md:justify-center gap-y-2 md:gap-x-8 md:gap-y-4 lg:gap-y-1 xl:gap-x-6">
                 <div className="order-1 flex flex-1 md:flex-none items-center justify-center md:justify-center gap-3">
-                    <button onClick={onChangeScriptClick} title={t('changeScript')} className="flex items-center justify-center gap-2 sm:gap-3 group">
+                    <button onClick={onChangeScriptClick} title={t('changeScript')} aria-label={t('appTitle')} className="flex items-center justify-center gap-2 sm:gap-3 group">
                         <div className="w-10 h-10 rounded-full border-2 border-indigo-500 dark:border-indigo-400 flex items-center justify-center flex-shrink-0 group-hover:bg-gray-100 dark:group-hover:bg-gray-700 transition-colors">
                             <span className="logo-emboss text-3xl text-indigo-600 dark:text-indigo-400" style={{ fontFamily: 'Purnavarman_1' }} aria-hidden="true">ꦄ</span>
                         </div>
-                        <h1 className="hidden sm:block text-2xl font-bold text-gray-700 dark:text-gray-200 whitespace-nowrap group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{t('appTitle')}</h1>
+                        <h1 className="hidden sm:block xl:hidden 2xl:block text-2xl font-bold text-gray-700 dark:text-gray-200 whitespace-nowrap group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{t('appTitle')}</h1>
                     </button>
                     <div className="hidden md:block h-8 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
                 </div>
 
-                <div className="order-2 flex items-center justify-end md:justify-center gap-3 sm:gap-2 flex-shrink-0">
+                <div className="order-2 xl:order-3 flex items-center justify-end md:justify-center gap-3 sm:gap-2 flex-shrink-0">
                     <div className="md:hidden h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div>
                      {!settings.isAutosaveEnabled && (
-                        <button onClick={onSaveToDB} title={t('save')} className="relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
+                        <button onClick={onSaveToDB} title={t('save')} className="relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
                             <SaveIcon />
                             <span className="hidden md:inline">{t('save')}</span>
                             {hasUnsavedChanges && <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white dark:ring-gray-800" title={t('unsavedChangesIndicator')}></span>}
@@ -202,21 +204,23 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                         disabled={isAnyExporting} 
                         data-tour="header-creator"
                         title={t('creatorStudio')} 
-                        className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base disabled:bg-purple-400 disabled:cursor-wait"
+                        className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-wait"
                     >
                         {exportingType === 'create' ? <SpinnerIcon /> : <CreatorIcon />}
                         <span className="hidden md:inline">{t('create')}</span>
                     </button>
                     
-                    <button onClick={onTestClick} disabled={isAnyExporting} data-tour="header-test" title={t('testFont')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-wait">
+                    <button onClick={onTestClick} disabled={isAnyExporting} data-tour="header-test" title={t('testFont')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-wait">
                         {exportingType === 'test' ? <SpinnerIcon /> : <TestIcon />}
                         <span className="hidden md:inline">{t('testFont')}</span>
                     </button>
                     
-                    <button onClick={onSettingsClick} data-tour="header-settings" title={t('settings')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><SettingsIcon /><span className="hidden md:inline">{t('settings')}</span></button>
+                    <button onClick={onSettingsClick} data-tour="header-settings" title={t('settings')} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"><SettingsIcon /><span className="hidden md:inline">{t('settings')}</span></button>
                     
+                    <ThemeSwitch className="hidden md:inline-flex" />
+
                     <div className="relative" ref={moreMenuRef}>
-                        <button onClick={() => setIsMoreMenuOpen(prev => !prev)} className="p-2 sm:p-2.5 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"><MoreIcon /></button>
+                        <button onClick={() => setIsMoreMenuOpen(prev => !prev)} className="p-2 sm:p-2.5 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"><MoreIcon /></button>
                         {isMoreMenuOpen && (
                             <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-30 max-h-[80vh] overflow-y-auto">
                                 <button onClick={() => { onSaveProject(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CodeBracketsIcon /> {t('exportJson')}</button>
@@ -251,7 +255,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     </div>
                 </div>
 
-                <div className="order-3 w-full flex items-center justify-center p-1 border-t border-gray-200 dark:border-gray-700 relative">
+                <div className="order-3 xl:order-2 w-full xl:w-auto flex items-center justify-center p-1 xl:p-0 border-t xl:border-t-0 border-gray-200 dark:border-gray-700 relative">
                     <div className="flex items-center justify-center gap-2 sm:gap-4">
                         <div className="text-center flex-grow md:flex-grow-0" data-tour="header-title">
                              {isEditingFontName ? (
@@ -270,10 +274,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                             <button
                                 onClick={() => setIsPaletteOpen(true)}
                                 title={t('commandPalette')}
-                                className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
+                                className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
                             >
                                 <SearchIcon className="w-5 h-5" />
-                                <span className="hidden md:inline">Command</span>
+                                <span className="hidden md:inline xl:hidden min-[1800px]:inline">Command</span>
                             </button>
                             
                             <FilterMenu />
@@ -282,20 +286,20 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                 onClick={onCompareClick}
                                 title={t('compare')}
                                 data-tour="header-compare"
-                                className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
+                                className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
                             >
                                 <CompareIcon className="w-5 h-5" />
-                                <span className="hidden sm:inline">{t('compare')}</span>
+                                <span className="hidden sm:inline xl:hidden min-[1800px]:inline">{t('compare')}</span>
                             </button>
 
                              {activeWorkspace === 'drawing' && (
                                  <button
                                      onClick={toggleSelectionMode}
-                                     className={`flex items-center gap-1 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${isMetricsSelectionMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                     className={`flex items-center gap-1 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-colors ${isMetricsSelectionMode ? 'bg-indigo-600 text-white' : 'bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                                      title={t('toggleBatchSelection')}
                                  >
                                      <BatchIcon className="w-5 h-5" />
-                                     <span className="hidden sm:inline">{t('select')}</span>
+                                     <span className="hidden sm:inline xl:hidden min-[1800px]:inline">{t('select')}</span>
                                  </button>
                              )}
                             </>

@@ -337,8 +337,8 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
                  <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
                     <div className="flex items-center justify-center gap-4 flex-wrap">
                         <span className="font-semibold text-gray-600 dark:text-gray-400">{t('addNewRule')}:</span>
-                        <button onClick={() => onAddRule('simple')} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">{t('addNewSimpleDistRule')}</button>
-                        <button onClick={() => onAddRule('contextual')} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">{t('addNewContextualDistRule')}</button>
+                        <button onClick={() => onAddRule('simple')} className="px-4 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600">{t('addNewSimpleDistRule')}</button>
+                        <button onClick={() => onAddRule('contextual')} className="px-4 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600">{t('addNewContextualDistRule')}</button>
                     </div>
                 </div>
             )}

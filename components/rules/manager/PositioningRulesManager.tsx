@@ -61,7 +61,7 @@ const PositioningRulesManager: React.FC<PositioningRulesManagerProps> = (props) 
             </div>
 
             {/* Content Area */}
-            <div className="flex-grow p-4 sm:p-6 overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
+            <div className="flex-grow p-4 sm:p-6 overflow-y-auto bg-white dark:bg-gray-900/50">
                 <div className="max-w-6xl mx-auto">
                     {activeTab === 'groups' && (
                         <GroupManager 

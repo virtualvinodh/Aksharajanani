@@ -308,9 +308,16 @@ export interface GuideFont {
   stylisticSet: string;
 }
 
+/** Landing-page group a built-in script is listed under (plain region names, no script jargon). */
+export type ScriptRegion = 'southAsia' | 'southeastAsia' | 'middleEast' | 'europe';
+
 export interface ScriptConfig {
   id:string;
   nameKey: string;
+  /** Landing-page group. Scripts without one are listed under "Other". */
+  region?: ScriptRegion;
+  /** Locale key for the languages people know this script by (e.g. "Hindi, Marathi, Nepali" for Devanagari); shown as the tile's main label. */
+  languagesKey?: string;
   charactersPath: string;
   rulesPath: string;
   rulesFeaPath?: string;
@@ -339,6 +346,8 @@ export interface ScriptsFile {
 }
 
 export type Theme = 'light' | 'dark';
+/** What the user picked: a fixed theme, or 'auto' to follow the operating system. */
+export type ThemePreference = Theme | 'auto';
 
 export type Locale = 'en' | 'ta' | 'de' | 'es' | 'fr' | 'hi' | 'kn' | 'ml' | 'si' | 'te';
 

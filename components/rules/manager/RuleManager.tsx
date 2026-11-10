@@ -291,7 +291,7 @@ const RuleEditor: React.FC<{
                                 {editingOverrideIndex !== null ? <SaveIcon className="w-5 h-5"/> : <AddIcon className="w-5 h-5"/>}
                             </button>
                             {editingOverrideIndex !== null && (
-                                <button onClick={handleCancelOverride} className="px-2 py-2 bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" title="Cancel">
+                                <button onClick={handleCancelOverride} className="px-2 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors" title="Cancel">
                                     <CloseIcon className="w-4 h-4"/>
                                 </button>
                             )}

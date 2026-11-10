@@ -88,16 +88,16 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
         ctx.translate(-750, -500); // Shift so logical (750, 500) is the pivot
 
         // Guides
-        ctx.strokeStyle = theme === 'dark' ? '#818CF8' : '#6366F1';
+        ctx.strokeStyle = theme === 'dark' ? '#A3A3A3' : '#737373';
         ctx.lineWidth = Math.max(2.0, 2.5 / zoom); 
         // Use safe division just in case, though guard clause above handles most cases
         ctx.setLineDash([12 / zoom, 8 / zoom]);
         ctx.beginPath(); ctx.moveTo(-500, metrics.topLineY); ctx.lineTo(2000, metrics.topLineY); ctx.stroke();
         ctx.beginPath(); ctx.setLineDash([]); ctx.moveTo(-500, metrics.baseLineY); ctx.lineTo(2000, metrics.baseLineY); ctx.stroke();
 
-        const referenceGrey = theme === 'dark' ? '#4B5563' : '#94A3B8';
-        const glyphColor = theme === 'dark' ? '#E2E8F0' : '#1F2937';
-        const rightColor = isDragging ? (theme === 'dark' ? '#A78BFA' : '#8B5CF6') : glyphColor;
+        const referenceGrey = theme === 'dark' ? '#525252' : '#A3A3A3';
+        const glyphColor = theme === 'dark' ? '#E5E5E5' : '#262626';
+        const rightColor = isDragging ? (theme === 'dark' ? '#A3A3A3' : '#737373') : glyphColor;
 
         renderPaths(ctx, leftGlyph.paths, { strokeThickness, color: referenceGrey });
 

@@ -148,7 +148,7 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
 
     renderPaths(ctx, pathsToDraw, {
         strokeThickness,
-        color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
+        color: theme === 'dark' ? '#E5E5E5' : '#262626'
     });
     ctx.restore();
   }, [baseChar, markChar, ligature, glyphDataMap, strokeThickness, theme, isPositioned, markAttachmentRules, markPositioningMap, metrics, characterSets, glyphVersion, groups, movementConstraint]);

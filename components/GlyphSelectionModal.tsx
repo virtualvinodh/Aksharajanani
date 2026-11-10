@@ -174,7 +174,7 @@ const GlyphSelectionModal: React.FC<GlyphSelectionModalProps> = ({ isOpen, onClo
                 autoFocus
             />
         </div>
-        <div className="flex-grow overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900/50">
+        <div className="flex-grow overflow-y-auto p-4 bg-white dark:bg-gray-900/50">
              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-4">
               {currentCharacters.length > 0 ? currentCharacters.map(char => (
                 <CharacterCard

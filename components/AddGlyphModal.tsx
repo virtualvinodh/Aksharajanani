@@ -142,8 +142,8 @@ const AddGlyphModal: React.FC<AddGlyphModalProps> = ({ isOpen, onClose, onAdd, o
       <form id={formId} onSubmit={handleSubmit}>
         <div className="mb-4">
           <div className="flex rounded-md shadow-sm">
-            <button type="button" onClick={() => setInputType('char')} className={`px-4 py-2 text-sm font-medium rounded-l-md transition-colors ${inputType === 'char' ? 'bg-indigo-600 text-white z-10 border border-indigo-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'}`}>{t('addByCharacter')}</button>
-            <button type="button" onClick={() => setInputType('codepoint')} className={`-ml-px px-4 py-2 text-sm font-medium rounded-r-md transition-colors ${inputType === 'codepoint' ? 'bg-indigo-600 text-white z-10 border border-indigo-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'}`}>{t('addByCodepoint')}</button>
+            <button type="button" onClick={() => setInputType('char')} className={`px-4 py-2 text-sm font-medium rounded-l-md transition-colors ${inputType === 'char' ? 'bg-indigo-600 text-white z-10 border border-indigo-600' : 'bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'}`}>{t('addByCharacter')}</button>
+            <button type="button" onClick={() => setInputType('codepoint')} className={`-ml-px px-4 py-2 text-sm font-medium rounded-r-md transition-colors ${inputType === 'codepoint' ? 'bg-indigo-600 text-white z-10 border border-indigo-600' : 'bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'}`}>{t('addByCodepoint')}</button>
           </div>
         </div>
         

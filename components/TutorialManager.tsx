@@ -122,9 +122,9 @@ const TutorialManager: React.FC = () => {
                 spotlightPadding={4}
                 styles={{
                     options: {
-                        arrowColor: theme === 'dark' ? '#1f2937' : '#fff',
+                        arrowColor: theme === 'dark' ? '#262626' : '#fff',
                         zIndex: 10000,
-                        primaryColor: '#4f46e5' 
+                        primaryColor: '#404040' 
                     },
                     overlay: {
                         backgroundColor: 'rgba(0, 0, 0, 0.6)'

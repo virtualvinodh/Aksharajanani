@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ScriptConfig, CharacterSet, CharacterDefinition, ProjectData, Character, GlyphData } from '../types';
+import { ScriptConfig, ScriptRegion, CharacterSet, CharacterDefinition, ProjectData, Character, GlyphData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { AboutIcon, HelpIcon, LoadIcon, SwitchScriptIcon, SpinnerIcon, TrashIcon, DRAWING_CANVAS_SIZE, AddIcon, ImportIcon, CodeBracketsIcon } from '../constants';
 import LanguageSelector from './LanguageSelector';
+import ThemeSwitch from './ThemeSwitch';
 import Footer from './Footer';
 import { useLayout } from '../contexts/LayoutContext';
 // import ScriptCreator from './ScriptCreator'; // Deprecated for Phase 4 removal
@@ -45,8 +46,27 @@ const representativeChars: { [key: string]: string } = {
     hebrew: 'א',
     thai: 'ก',
     lao: 'ກ',
-    punjabi: 'ਕ',    
+    gurmukhi: 'ਕ',
+    latin_indic: 'ā',
 };
+
+// Landing-page groups, in display order. Labels are plain region names: the
+// people using this app do not know script-family terms.
+const REGION_GROUPS: { region: ScriptRegion | 'other'; labelKey: string }[] = [
+    { region: 'southAsia', labelKey: 'regionSouthAsia' },
+    { region: 'southeastAsia', labelKey: 'regionSoutheastAsia' },
+    { region: 'middleEast', labelKey: 'regionMiddleEast' },
+    { region: 'europe', labelKey: 'regionEurope' },
+    { region: 'other', labelKey: 'regionOther' },
+];
+
+const TUTORIAL_SCRIPT_ID = 'tutorial';
+
+// On large screens the tile area is 4 columns wide; a group spans as many columns as it
+// has tiles (up to 4), so small groups sit side by side instead of each taking a row.
+// Literal class names so Tailwind can see them.
+const GROUP_SPAN_CLASSES = ['', 'lg:col-span-1', 'lg:col-span-2', 'lg:col-span-3', 'lg:col-span-4'];
+const GROUP_COLS_CLASSES = ['', 'lg:grid-cols-1', 'lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4'];
 
 const RecentProjectPreview: React.FC<{ project: ProjectData }> = ({ project }) => {
     const { theme } = useTheme();
@@ -134,7 +154,7 @@ const RecentProjectPreview: React.FC<{ project: ProjectData }> = ({ project }) =
                 ctx.scale(scale, scale);
                 renderPaths(ctx, glyphData!.paths, {
                     strokeThickness: project.settings.strokeThickness,
-                    color: theme === 'dark' ? '#E2E8F0' : '#1F2937'
+                    color: theme === 'dark' ? '#E5E5E5' : '#262626'
                 });
                 ctx.restore();
             }
@@ -174,6 +194,16 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
     
     const [isBlockSelectorOpen, setIsBlockSelectorOpen] = useState(false);
     const customScriptTemplate = useMemo(() => scripts.find(s => s.id === 'latin'), [scripts]);
+
+    // The tutorial gets its own banner; every other script is listed under its region,
+    // keeping the order from scripts.json within each group. Empty groups are skipped.
+    const tutorialScript = useMemo(() => scripts.find(s => s.id === TUTORIAL_SCRIPT_ID), [scripts]);
+    const scriptGroups = useMemo(() => {
+        const listed = scripts.filter(s => s.id !== TUTORIAL_SCRIPT_ID);
+        return REGION_GROUPS
+            .map(g => ({ ...g, scripts: listed.filter(s => (s.region ?? 'other') === g.region) }))
+            .filter(g => g.scripts.length > 0);
+    }, [scripts]);
 
     const [longPressedProjectId, setLongPressedProjectId] = useState<number | null>(null);
     const longPressTimeout = useRef<number | null>(null);
@@ -667,14 +697,15 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
             
             <header className="absolute top-0 right-0 p-4 z-10">
                 <div className="flex items-center gap-3">
-                     <button onClick={onShowHelp} title={t('help')} className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                     <button onClick={onShowHelp} title={t('help')} className="flex items-center gap-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-lg transition-colors">
                           <HelpIcon />
                           <span className="hidden sm:inline">{t('help')}</span>
                      </button>
-                     <button onClick={onShowAbout} title={t('about')} className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                     <button onClick={onShowAbout} title={t('about')} className="flex items-center gap-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-lg transition-colors">
                           <AboutIcon />
                           <span className="hidden sm:inline">{t('about')}</span>
                      </button>
+                     <ThemeSwitch />
                      <LanguageSelector />
                 </div>
             </header>
@@ -755,8 +786,44 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
 
                 {/* Primary Action Zone */}
                 <div className="w-full max-w-5xl mb-12">
+                    {tutorialScript && (
+                        <div className="mb-6 flex flex-col sm:flex-row items-center justify-center gap-3 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-3 text-center">
+                            <p className="text-sm sm:text-base text-indigo-900 dark:text-indigo-100">{t('tutorialBannerText')}</p>
+                            <button
+                                type="button"
+                                onClick={() => handleScriptSelection(tutorialScript)}
+                                className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
+                            >
+                                {t('tutorialBannerButton')}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Secondary ways to start: kept out of the script grid so they don't compete with it. */}
+                    <p className="sm:hidden mb-2 text-center text-sm font-medium text-gray-500 dark:text-gray-400">{t('otherWaysToStart')}:</p>
+                    <div className="mb-10 flex flex-nowrap sm:flex-wrap items-center sm:justify-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                        <span className="hidden sm:inline text-sm font-medium text-gray-500 dark:text-gray-400 mr-1">{t('otherWaysToStart')}:</span>
+                        {[
+                            { label: t('loadproject'), icon: <LoadIcon className="w-4 h-4" />, onClick: handleLoadProjectClick },
+                            { label: t('importFont') || 'Import Font', icon: <ImportIcon className="w-4 h-4" />, onClick: () => layout.openModal('importFont') },
+                            { label: t('createScript'), icon: <AddIcon className="w-4 h-4" />, onClick: () => setIsNewProjectModalOpen(true) },
+                            { label: t('createFromBlocks'), icon: <SwitchScriptIcon className="w-4 h-4" />, onClick: () => setIsBlockSelectorOpen(true) },
+                            { label: t('createCustomProject'), icon: <CodeBracketsIcon className="w-4 h-4" />, onClick: () => setIsUploadingScript(true) },
+                        ].map(action => (
+                            <button
+                                key={action.label}
+                                type="button"
+                                onClick={action.onClick}
+                                className="flex-shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                            >
+                                {action.icon}
+                                {action.label}
+                            </button>
+                        ))}
+                    </div>
+
                     <h2 className="text-2xl font-semibold text-center mb-2 text-indigo-600 dark:text-indigo-400">{t('selectScriptTitle')}</h2>
-                    <div className="flex justify-center items-center mb-8">
+                    <div className="flex justify-center items-center mb-6">
                         <label htmlFor="include-latin-toggle" className="flex items-center gap-3 cursor-pointer">
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                 {t('includeLatinLetters')}
@@ -773,94 +840,50 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                             </div>
                         </label>
                     </div>
-                    <div className="grid grid-cols-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4">
-                        {scripts.map(script => (
-                            <button 
-                                key={script.id} 
-                                onClick={() => handleScriptSelection(script)}
-                                type="button"
-                                className="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-4 flex flex-col items-center justify-between text-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 aspect-square"
-                            >
-                                <div
-                                  className="script-card-char group-hover:scale-110 transition-transform duration-200 flex-grow flex items-center justify-center"
-                                  aria-hidden="true"
-                                  style={{
-                                    fontFamily: script.guideFont?.fontName ? `'${script.guideFont.fontName}', 'Noto Sans'` : "'Noto Sans'",
-                                    fontFeatureSettings: script.guideFont?.stylisticSet || 'normal'
-                                  }}
-                                >
-                                    {representativeChars[script.id] || script.nameKey[0]}
-                                </div>
-                                <div className="mt-2">
-                                    <h3 className="text-xs sm:text-lg font-bold text-gray-900 dark:text-white">{t(script.nameKey)}</h3>
-                                    {script.support === 'partial' && (
-                                        <p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 mt-1">{t('partialSupport')}</p>
-                                    )}
-                                </div>
-                            </button>
-                        ))}
-                        <button
-                            key="custom-blocks"
-                            onClick={() => setIsBlockSelectorOpen(true)}
-                            type="button"
-                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 aspect-square"
-                        >
-                            <div className="script-card-char group-hover:scale-110 transition-transform duration-200 flex-grow flex items-center justify-center" aria-hidden="true">
-                                <SwitchScriptIcon />
+
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-x-3">
+                    {scriptGroups.map(group => {
+                        const span = Math.min(4, group.scripts.length);
+                        return (
+                        <section key={group.region} className={`mb-6 ${GROUP_SPAN_CLASSES[span]}`} aria-labelledby={`script-group-${group.region}`}>
+                            <h3 id={`script-group-${group.region}`} className="text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 sm:mb-3">
+                                {t(group.labelKey)}
+                            </h3>
+                            {/* Compact row tiles (letter + name) so short groups don't each eat a full row of big squares. */}
+                            <div className={`grid grid-cols-2 sm:grid-cols-3 ${GROUP_COLS_CLASSES[span]} gap-2 sm:gap-3`}>
+                                {group.scripts.map(script => (
+                                    <button
+                                        key={script.id}
+                                        onClick={() => handleScriptSelection(script)}
+                                        type="button"
+                                        className="flex items-center gap-3 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 sm:px-3 py-2 sm:py-2.5 min-h-14 sm:min-h-[4.5rem] hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500"
+                                    >
+                                        <div
+                                          className="w-9 sm:w-12 flex-shrink-0 text-center text-2xl sm:text-4xl leading-none text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-200"
+                                          aria-hidden="true"
+                                          style={{
+                                            fontFamily: script.guideFont?.fontName ? `'${script.guideFont.fontName}', 'Noto Sans'` : "'Noto Sans'",
+                                            fontFeatureSettings: script.guideFont?.stylisticSet || 'normal'
+                                          }}
+                                        >
+                                            {representativeChars[script.id] || t(script.nameKey).charAt(0)}
+                                        </div>
+                                        <div className="min-w-0">
+                                            {/* Main label: the languages people know; the script name is secondary. */}
+                                            <h4 className="text-sm sm:text-base font-bold leading-snug text-gray-900 dark:text-white">{t(script.languagesKey || script.nameKey)}</h4>
+                                            {script.languagesKey && (
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{t(script.nameKey)}</p>
+                                            )}
+                                            {script.support === 'partial' && (
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('partialSupport')}</p>
+                                            )}
+                                        </div>
+                                    </button>
+                                ))}
                             </div>
-                            <div className="mt-2">
-                                <h3 className="text-xs sm:text-lg font-bold">{t('createFromBlocks')}</h3>
-                            </div>
-                        </button>
-                        {/* New Empty Project Button */}
-                        <button
-                            onClick={() => setIsNewProjectModalOpen(true)}
-                            type="button"
-                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-indigo-600 dark:text-indigo-400 aspect-square"
-                        >
-                             <div className="script-card-char group-hover:scale-110 transition-transform duration-200 flex-grow flex items-center justify-center" aria-hidden="true">
-                                <AddIcon className="w-12 h-12" />
-                            </div>
-                            <div className="mt-2">
-                                <h3 className="text-xs sm:text-lg font-bold">{t('createScript')}</h3>
-                            </div>
-                        </button>
-                        <button
-                            onClick={() => layout.openModal('importFont')}
-                            type="button"
-                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 aspect-square"
-                        >
-                             <div className="script-card-char group-hover:scale-110 transition-transform duration-200 flex-grow flex items-center justify-center" aria-hidden="true">
-                                <ImportIcon className="w-12 h-12" />
-                            </div>
-                            <div className="mt-2">
-                                <h3 className="text-xs sm:text-lg font-bold">{t('importFont') || 'Import Font'}</h3>
-                            </div>
-                        </button>
-                        <button
-                            onClick={handleLoadProjectClick}
-                            type="button"
-                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 aspect-square"
-                        >
-                             <div className="script-card-char group-hover:scale-110 transition-transform duration-200 flex-grow flex items-center justify-center" aria-hidden="true">
-                                <LoadIcon className="w-12 h-12" />
-                            </div>
-                            <div className="mt-2">
-                                <h3 className="text-xs sm:text-lg font-bold">{t('loadproject')}</h3>
-                            </div>
-                        </button>
-                        <button
-                            onClick={() => setIsUploadingScript(true)}
-                            type="button"
-                            className="relative bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 flex flex-col items-center justify-center text-center hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-500 cursor-pointer transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus-within:ring-offset-gray-900 focus:ring-indigo-500 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 aspect-square"
-                        >
-                             <div className="script-card-char group-hover:scale-110 transition-transform duration-200 flex-grow flex items-center justify-center" aria-hidden="true">
-                                <CodeBracketsIcon className="w-12 h-12" />
-                            </div>
-                            <div className="mt-2">
-                                <h3 className="text-xs sm:text-lg font-bold">{t('createCustomProject')}</h3>
-                            </div>
-                        </button>                        
+                        </section>
+                        );
+                    })}
                     </div>
                 </div>
             </main>

@@ -89,7 +89,7 @@ const PositioningHeader: React.FC<PositioningHeaderProps> = ({
                     {/* FIX: Simplified header actions by using a single button to open the global Positioning Rules Manager modal. */}
                     <button 
                         onClick={() => openModal('positioningRulesManager')} 
-                        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-xs sm:text-sm"
+                        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-xs sm:text-sm"
                     >
                         <RulesIcon className="w-4 h-4 flex-shrink-0" />
                         <span className="whitespace-nowrap">{t('manageRules')}</span>

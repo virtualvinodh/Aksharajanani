@@ -182,7 +182,7 @@ const PositioningGridView: React.FC<PositioningGridViewProps> = ({
                 <button
                     onClick={() => setIsResetConfirmOpen(true)}
                     disabled={!hasManuallyPositioned}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 text-gray-800 dark:bg-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 font-semibold rounded-md transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                     <UndoIcon />
                     {t('resetPositions')}

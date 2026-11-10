@@ -7,6 +7,7 @@ import LinkedGlyphsStrip from '../drawing/LinkedGlyphsStrip';
 import { Character, GlyphData, Path, Point, FontMetrics, MarkAttachmentRules, PositioningRules, CharacterSet, AttachmentClass, MarkPositioningMap } from '../../types';
 import { DRAWING_CANVAS_SIZE } from '../../constants';
 import { useLayout } from '../../contexts/LayoutContext';
+import { isShortViewport } from '../../hooks/useMediaQuery';
 
 interface PositioningEditorWorkspaceProps {
     markPaths: Path[];
@@ -78,7 +79,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     sourceGlyphs, onSelectCharacter, allCharsByName, markPositioningMap
 }) => {
     const [activeTab, setActiveTab] = useState<'class' | 'sources'>('class');
-    const [isClassStripCollapsed, setIsClassStripCollapsed] = useState(!isLargeScreen);
+    const [isClassStripCollapsed, setIsClassStripCollapsed] = useState(() => !isLargeScreen || isShortViewport());
     const { showNotification } = useLayout();
 
     // Automatically switch tabs based on class availability
@@ -97,13 +98,13 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     }, [lockedMessage, showNotification]);
 
     return (
-        <main className="flex-grow flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-950/20 relative min-h-0">
+        <main className="flex-grow flex flex-col overflow-hidden bg-white dark:bg-gray-950/20 relative min-h-0">
             <div className="flex-1 flex flex-col items-center justify-center w-full h-full overflow-hidden relative">
                 <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center overflow-hidden relative">
                     <div className="relative w-full h-full flex items-center justify-center">
                         <div className="relative h-[92%] max-h-full aspect-square flex items-center justify-center max-w-full">
                             {isLargeScreen && !isStripExpanded && (
-                                <div className="absolute right-full mr-6 top-6 z-30">
+                                <div className="absolute right-full mr-6 top-0 bottom-0 z-30">
                                     <PositioningToolbar 
                                         orientation="vertical"
                                         onReuseClick={onReuseClick} 
@@ -122,7 +123,7 @@ const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
                             )}
 
                             <div 
-                                className="rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center bg-white dark:bg-gray-900 border-4 border-white dark:border-gray-800 w-full h-full"
+                                className="rounded-xl overflow-hidden shadow-md relative flex items-center justify-center bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 w-full h-full"
                             >
                                 <PositioningCanvas
                                     width={DRAWING_CANVAS_SIZE} 

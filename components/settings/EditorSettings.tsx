@@ -2,7 +2,7 @@
 import React from 'react';
 import { AppSettings, GuideFont } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { useTheme } from '../../contexts/ThemeContext';
+import ThemeSwitch from '../ThemeSwitch';
 import LanguageSelector from '../LanguageSelector';
 import { EyeOffIcon, SparklesIcon } from '../../constants';
 
@@ -15,7 +15,6 @@ interface EditorSettingsProps {
 
 const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsChange, guideFont, onGuideFontChange }) => {
     const { t } = useLocale();
-    const { theme, setTheme } = useTheme();
     
     const handleToggleChange = (key: keyof AppSettings) => (e: React.ChangeEvent<HTMLInputElement>) => {
         onSettingsChange(prev => ({ ...prev, [key]: e.target.checked }));
@@ -47,28 +46,7 @@ const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsCha
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             {t('theme')}
                         </label>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setTheme('light')}
-                                className={`px-3 py-1.5 rounded-md font-medium text-sm border-2 transition-colors ${
-                                    theme === 'light' 
-                                    ? 'bg-indigo-600 text-white border-indigo-600' 
-                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
-                                }`}
-                            >
-                                {t('themeLight')}
-                            </button>
-                            <button
-                                onClick={() => setTheme('dark')}
-                                className={`px-3 py-1.5 rounded-md font-medium text-sm border-2 transition-colors ${
-                                    theme === 'dark' 
-                                    ? 'bg-indigo-500 text-white border-indigo-500' 
-                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
-                                }`}
-                            >
-                                {t('themeDark')}
-                            </button>
-                        </div>
+                        <ThemeSwitch />
                     </div>
 
                     <div className="max-w-md pt-2">

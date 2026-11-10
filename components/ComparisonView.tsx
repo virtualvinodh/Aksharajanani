@@ -96,9 +96,9 @@ const ComparisonView: React.FC<ComparisonViewProps> = () => {
       const SUPER_TOP_LINE_Y = metrics.superTopLineY ? metrics.superTopLineY * scale : null;
       const SUB_BASE_LINE_Y = metrics.subBaseLineY ? metrics.subBaseLineY * scale : null;
       
-      const guideColor = theme === 'dark' ? '#4A5568' : '#D1D5DB';
-      const textColor = theme === 'dark' ? '#9CA3AF' : '#4B5563';
-      const glyphColor = theme === 'dark' ? '#E2E8F0' : '#1F2937';
+      const guideColor = theme === 'dark' ? '#525252' : '#D4D4D4';
+      const textColor = theme === 'dark' ? '#A3A3A3' : '#525252';
+      const glyphColor = theme === 'dark' ? '#E5E5E5' : '#262626';
       const guideFontFamily = getComputedStyle(document.documentElement).getPropertyValue('--guide-font-family').trim() || 'sans-serif';
       
       const renderCtx: UnifiedRenderContext = {
@@ -355,7 +355,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = () => {
       <header className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 flex justify-between items-center shadow-md w-full flex-shrink-0 z-20">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+          className="flex items-center gap-2 px-4 py-2 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
         >
           <BackIcon />
           <span className="hidden sm:inline">{t('back')}</span>
@@ -382,7 +382,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = () => {
                     </button>
                     <button
                       onClick={handleClear}
-                      className="w-full text-center px-3 py-1.5 text-sm bg-gray-200 text-gray-700 font-semibold rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center gap-1"
+                      className="w-full text-center px-3 py-1.5 text-sm bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 text-gray-700 font-semibold rounded-md hover:bg-gray-100 transition-colors flex items-center justify-center gap-1"
                     >
                       <ClearIcon className="w-4 h-4"/>
                       {t('clear')}
@@ -454,7 +454,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = () => {
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                         <div className="flex items-center gap-2">
                             <button onClick={handleSelectAll} className="px-3 py-1.5 text-xs bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 transition-colors">{t('selectAll')}</button>
-                            <button onClick={handleClear} className="px-3 py-1.5 text-xs bg-gray-200 text-gray-700 font-semibold rounded-md hover:bg-gray-300 transition-colors flex items-center gap-1">
+                            <button onClick={handleClear} className="px-3 py-1.5 text-xs bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 text-gray-700 font-semibold rounded-md hover:bg-gray-100 transition-colors flex items-center gap-1">
                                 <ClearIcon className="w-3 h-3"/>
                                 {t('clear')}
                             </button>

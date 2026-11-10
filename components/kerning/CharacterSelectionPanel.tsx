@@ -26,7 +26,7 @@ const CharacterSelectionPanel: React.FC<CharacterSelectionPanelProps> = ({ title
     }, [characters, searchTerm]);
 
     return (
-        <div className="bg-gray-100 dark:bg-gray-800 p-4 flex flex-col h-full border-r dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 p-4 flex flex-col h-full border-r border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t(title)}</h3>
             <div className="flex items-center gap-2 mb-2">
                 <button onClick={onSelectAll} className="w-full text-center px-3 py-1.5 text-xs bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 transition-colors">{t('selectAll')}</button>
