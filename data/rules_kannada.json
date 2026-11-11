@@ -3,7 +3,7 @@
   "groups": {
     "virama": [ "್"],
     "vsuuu": [ "ು", "ೂ"],
-    "ottuG": ["$ottu", "$ottuAi"]
+    "ottuG": ["$ottu"]
   },
   "lookups": {
     "lookup_a": {

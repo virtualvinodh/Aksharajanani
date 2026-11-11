@@ -497,10 +497,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Where:** `LocaleContext.tsx` (`t` has empty deps), e.g. `SmartGlyphInput` options.
   - **Fixed:** `t` now changes identity when the language (or loaded translations) changes, so memoized lists rebuild after a switch; it stays stable otherwise. Only four effects depend on `t` (test-page font reload, command-palette index, comparison redraw, Save As default name); re-running them once on a switch is harmless. Not checked in the browser.
 
-- [ ] **U13 ⚠ The tutorial can't get past "Click the 'A' card"** (likely; seen in headless Chromium on both the current and the previous build)
+- [x] **U13 ⚠ The tutorial can't get past "Click the 'A' card"** (not a bug: headless-only)
   - **Where:** `components/tutorial/useTutorialSteps.ts` step 1 (`spotlightClicks: true`); react-joyride's overlay.
   - **Problem:** the overlay stays on top of the highlighted card even while the pointer is over it, so the click lands on the overlay: the tour closes and the editor doesn't open.
   - **Check:** try it in a normal browser (Start tutorial → Next → click A). If it works there, it's a headless-only artefact.
+  - **Checked by the author in a real browser:** the tutorial gets past "Click the 'A' card". The blocked click only happens in headless Chromium.
 
 ---
 
@@ -514,7 +515,7 @@ A user can see or hit these. All ⚠ items are here.
   - the `ಢಾ` composite uses Telugu `ా` (U+0C3E);
   - groups `$ottuR`/`$ottuAi` are undefined, as are PUA glyphs U+E02D, U+E02F–E032 and U+E039;
   - the `ಕ್ಷೀ` ligature output is undefined.
-  - **Partly fixed:** digits renamed to Kannada `೦`–`೯` (they export at U+0CE6–U+0CEF; checked), and `ಢಾ` now uses the Kannada `ಾ` (U+0CBE). Still open (for later): the Telugu fraction signs U+0C77–0C7F in `symbols`, the undefined `$ottuAi`, and the undefined akhn/psts outputs (`ಕ್ಷೀ`, `ಕ್ಷೇ`, `ಕ್ಷೊ`, `ಕ್ಷೋ`, U+E02B, U+E02C, U+E02F–E032).
+  - **Partly fixed:** digits renamed to Kannada `೦`–`೯` (they export at U+0CE6–U+0CEF; checked), and `ಢಾ` now uses the Kannada `ಾ` (U+0CBE). Also removed the Telugu fraction signs U+0C77–0C7F from the Kannada `symbols` set, and the undefined `$ottuAi` from the `ottuG` group (now `["$ottu"]`); the Kannada export is unchanged apart from the `head` timestamp. Still open (for later): the undefined akhn/psts outputs (`ಕ್ಷೀ`, `ಕ್ಷೇ`, `ಕ್ಷೊ`, `ಕ್ಷೋ`, U+E02B, U+E02C, U+E02F–E032).
 
 - [x] **S3 Devanagari:** the `ई` composite references an undefined U+1CE0 (a Vedic tone mark).
   - **Fixed:** U+1CE0 (`᳠`) added to the Devanagari combining signs as a visible zero-width mark (hidden glyphs can't be drawn), so the `ई` composite (`इ` + `᳠`) works. Checked: with इ and ᳠ drawn, the exported font contains ई.
