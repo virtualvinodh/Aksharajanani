@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
+import { useLayout } from '../../contexts/LayoutContext';
 import { AddIcon, EditIcon, SaveIcon, TrashIcon } from '../../constants';
 import RuleEditor, { RuleType } from '../RuleEditor';
 import ExistingRuleDisplay from './ExistingRuleDisplay';
@@ -30,12 +31,14 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
     glyphDataMap, strokeThickness, groups, glyphVersion
 }) => {
     const { t } = useLocale();
+    const { showNotification } = useLayout();
     
     const [editingNameKey, setEditingNameKey] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
     const [inputValue, setInputValue] = useState('');
 
-    const [addingRuleType, setAddingRuleType] = useState<RuleType | null>(null);
+    // Which lookup the new-rule form belongs to, so it opens in that lookup only.
+    const [addingRule, setAddingRule] = useState<{ lookupKey: string, type: RuleType } | null>(null);
     const [editingRule, setEditingRule] = useState<{ lookupKey: string, key: string, type: RuleType } | null>(null);
     
     const handleAddClick = () => {
@@ -70,12 +73,12 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
     const handleToggleExpand = (key: string) => {
         onToggleLookup(key);
         // Reset local editors when a tile is toggled
-        setAddingRuleType(null);
+        setAddingRule(null);
         setEditingRule(null);
     };
     
     const renderRuleSection = (lookupKey: string, title: string, rules: { [key: string]: any }, ruleType: RuleType) => {
-        const isAddingThisType = addingRuleType === ruleType && !editingRule;
+        const isAddingThisType = addingRule?.lookupKey === lookupKey && addingRule.type === ruleType && !editingRule;
         const isEditingThisType = editingRule?.lookupKey === lookupKey && editingRule?.type === ruleType;
         const hasExistingRules = Object.keys(rules).length > 0;
     
@@ -89,14 +92,14 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                 {isAddingThisType && (
                     <RuleEditor
                         isNew={true}
-                        ruleType={addingRuleType!} 
-                        onSave={(newRule, type) => { onSaveRule(lookupKey, newRule, type, 'lookup'); setAddingRuleType(null); }}
-                        onCancel={() => setAddingRuleType(null)}
+                        ruleType={addingRule!.type} 
+                        onSave={(newRule, type) => { onSaveRule(lookupKey, newRule, type, 'lookup'); setAddingRule(null); }}
+                        onCancel={() => setAddingRule(null)}
                         allCharacterSets={allCharacterSets}
                         allCharsByName={allCharsByName}
                         glyphDataMap={glyphDataMap}
                         strokeThickness={strokeThickness}
-                        showNotification={() => {}}
+                        showNotification={showNotification}
                         mode="editing"
                         groups={groups}
                         glyphVersion={glyphVersion}
@@ -116,7 +119,7 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                             allCharsByName={allCharsByName}
                             glyphDataMap={glyphDataMap}
                             strokeThickness={strokeThickness}
-                            showNotification={() => {}}
+                            showNotification={showNotification}
                             mode="editing"
                             groups={groups}
                             glyphVersion={glyphVersion}
@@ -204,14 +207,14 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                                     {renderRuleSection(key, t('multipleSubstitutionRules'), lookupData.multi || {}, 'multiple')}
                                     {renderRuleSection(key, t('contextualRules'), lookupData.context || {}, 'contextual')}
                                     {renderRuleSection(key, t('ligatureRules'), lookupData.liga || {}, 'ligature')}
-                                     {!addingRuleType && !editingRule && (
+                                     {addingRule?.lookupKey !== key && !editingRule && (
                                         <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
                                             <div className="flex items-center justify-center gap-2 flex-wrap">
                                                 <span className="font-semibold text-gray-600 dark:text-gray-400">{t('addNewRule')}:</span>
-                                                <button onClick={() => setAddingRuleType('single')} className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewSingleRule')}</button>
-                                                <button onClick={() => setAddingRuleType('ligature')} className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewLigatureRule')}</button>
-                                                <button onClick={() => setAddingRuleType('contextual')} className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewContextualRule')}</button>
-                                                <button onClick={() => setAddingRuleType('multiple')} className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewMultipleRule')}</button>
+                                                <button onClick={() => setAddingRule({ lookupKey: key, type: 'single' })} className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewSingleRule')}</button>
+                                                <button onClick={() => setAddingRule({ lookupKey: key, type: 'ligature' })} className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewLigatureRule')}</button>
+                                                <button onClick={() => setAddingRule({ lookupKey: key, type: 'contextual' })} className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewContextualRule')}</button>
+                                                <button onClick={() => setAddingRule({ lookupKey: key, type: 'multiple' })} className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded-md">{t('addNewMultipleRule')}</button>
                                             </div>
                                         </div>
                                     )}

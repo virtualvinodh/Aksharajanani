@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import AppContainer from './components/AppContainer';
 import AppProviders from './components/AppProviders';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -13,7 +14,9 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <AppProviders>
-      <AppContainer />
+      <ErrorBoundary>
+        <AppContainer />
+      </ErrorBoundary>
     </AppProviders>
   </React.StrictMode>
 );

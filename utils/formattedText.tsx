@@ -20,7 +20,7 @@ const INLINE_PATTERN = /`([^`]+)`|\*\*([\s\S]+?)\*\*|\*(?=[^\s*])([^*\n]*?[^\s*]
 const CODE_CLASS = 'bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm font-mono text-pink-600 dark:text-pink-400 mx-0.5';
 const STRONG_CLASS = 'font-semibold text-gray-800 dark:text-gray-200';
 
-const parseInline = (text: string, keyPrefix: string): React.ReactNode[] => {
+const parseInline = (text: string, keyPrefix: string, strongClass = STRONG_CLASS): React.ReactNode[] => {
     const nodes: React.ReactNode[] = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
@@ -33,9 +33,9 @@ const parseInline = (text: string, keyPrefix: string): React.ReactNode[] => {
         if (code !== undefined) {
             nodes.push(<code key={key} className={CODE_CLASS}>{code}</code>);
         } else if (bold !== undefined) {
-            nodes.push(<strong key={key} className={STRONG_CLASS}>{parseInline(bold, `${key}-`)}</strong>);
+            nodes.push(<strong key={key} className={strongClass}>{parseInline(bold, `${key}-`, strongClass)}</strong>);
         } else {
-            nodes.push(<em key={key}>{parseInline(italic, `${key}-`)}</em>);
+            nodes.push(<em key={key}>{parseInline(italic, `${key}-`, strongClass)}</em>);
         }
         lastIndex = pattern.lastIndex;
     }
@@ -43,7 +43,8 @@ const parseInline = (text: string, keyPrefix: string): React.ReactNode[] => {
     return nodes;
 };
 
-export const renderFormattedText = (text: string | null | undefined): React.ReactNode => {
+/** `strongClassName` replaces the default bold styling, e.g. on coloured backgrounds. */
+export const renderFormattedText = (text: string | null | undefined, options?: { strongClassName?: string }): React.ReactNode => {
     if (!text) return null;
-    return <>{parseInline(text, '')}</>;
+    return <>{parseInline(text, '', options?.strongClassName ?? STRONG_CLASS)}</>;
 };

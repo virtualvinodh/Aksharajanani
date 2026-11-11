@@ -356,10 +356,16 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const handleRenameGroup = useCallback((index: number, newName: string) => {
         const targetSet = visibleCharacterSets[index];
         if (!targetSet) return;
-        
-        renameGroup(targetSet.nameKey, newName.trim(), 'set');
+        const name = newName.trim();
+        if (name === targetSet.nameKey) return;
+        const taken = (characterSets || []).some(s => s !== targetSet && (s.nameKey === name || t(s.nameKey) === name));
+        if (taken) {
+            showNotification(t('errorCharSetExists'), 'error');
+            return;
+        }
+        renameGroup(targetSet.nameKey, name, 'set');
 
-    }, [visibleCharacterSets, renameGroup]);
+    }, [visibleCharacterSets, characterSets, renameGroup, showNotification, t]);
 
     const handleRequestDeleteGroup = useCallback((index: number) => {
         const targetSet = visibleCharacterSets[index];

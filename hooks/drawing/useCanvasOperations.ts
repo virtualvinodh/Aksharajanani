@@ -49,9 +49,17 @@ export const useCanvasOperations = ({
 
     const handlePaste = useCallback(() => {
         if (!clipboard) return;
+        // Copies stay grouped with each other but get their own group IDs, so they are
+        // never selected together with the originals.
+        const freshGroupIds = new Map<string, string>();
+        const groupIdFor = (oldId: string) => {
+            if (!freshGroupIds.has(oldId)) freshGroupIds.set(oldId, generateId());
+            return freshGroupIds.get(oldId)!;
+        };
         const pastedPaths = clipboard.map(p => ({
             ...p,
             id: generateId(),
+            groupId: p.groupId ? groupIdFor(p.groupId) : undefined,
             points: p.points.map(pt => ({ x: pt.x + 10, y: pt.y + 10 })),
             segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({...seg, point: { x: seg.point.x + 10, y: seg.point.y + 10 }}))) : undefined
         }));

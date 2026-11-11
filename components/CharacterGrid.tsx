@@ -66,6 +66,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
   // Local state for inline editing
   const [editingGroupIndex, setEditingGroupIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [editStartValue, setEditStartValue] = useState('');
 
   const ListContainer = useMemo(() => forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(function ListContainer(props, ref) {
     const gridClasses = variant === 'overlay'
@@ -124,7 +125,9 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
 
   const startEditing = (index: number, currentName: string) => {
       setEditingGroupIndex(index);
-      setEditValue(t(currentName) === currentName ? currentName : t(currentName)); // Use resolved name
+      const shown = t(currentName) === currentName ? currentName : t(currentName); // Use resolved name
+      setEditValue(shown);
+      setEditStartValue(shown);
   };
 
   const cancelEditing = () => {
@@ -133,7 +136,9 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
   };
 
   const saveEditing = (index: number) => {
-      if (onRenameGroup && editValue.trim()) {
+      // Pressing Enter without changing anything must not turn the set's key into its
+      // translated label.
+      if (onRenameGroup && editValue.trim() && editValue.trim() !== editStartValue.trim()) {
           onRenameGroup(index, editValue.trim());
       }
       setEditingGroupIndex(null);

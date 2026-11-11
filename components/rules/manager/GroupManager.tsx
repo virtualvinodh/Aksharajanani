@@ -290,6 +290,12 @@ const GroupManager: React.FC<GroupManagerProps> = ({ groups, setGroups, markClas
         const trimmedKey = newKey.trim();
         const lowerKey = trimmedKey.toLowerCase();
 
+        // An empty name would be exported as `@ = [...]`, which breaks the font build.
+        if (!trimmedKey || trimmedKey === '$' || trimmedKey === '@') {
+            showNotification(t('errorGroupNameRequired'), 'error');
+            return;
+        }
+
         // --- GLOBAL CASE-INSENSITIVE DUPLICATE CHECK ---
         const existingCharSetKeys = characterSets.map(cs => cs.nameKey.toLowerCase());
         const isSelfRename = key.toLowerCase() === lowerKey;

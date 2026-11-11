@@ -42,8 +42,14 @@ export const useRefactoring = () => {
              characterDispatch({ type: 'SET_CHARACTER_SETS', payload: newState.characterSets });
         } else {
              // For groups, the fontRules update handles the definition change
-             // We also update the positioningGroupNames set for UI filtering
-             setPositioningGroupNames(new Set(Object.keys(newState.groups)));
+             // Only the renamed group changes; other groups keep their positioning status.
+             setPositioningGroupNames(prev => {
+                 if (!prev.has(oldName)) return prev;
+                 const next = new Set(prev);
+                 next.delete(oldName);
+                 next.add(newName);
+                 return next;
+             });
         }
 
         setPositioningRules(newState.positioningRules);

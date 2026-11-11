@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { renderFormattedText } from '../utils/formattedText';
 import { useLocale } from '../contexts/LocaleContext';
 import { UndoIcon } from '../constants';
 
@@ -60,7 +61,7 @@ const Notification: React.FC<NotificationProps> = ({ message, onClose, duration 
                 fontFeatureSettings: 'var(--guide-font-feature-settings)'
             }}
         >
-            {message}
+            {renderFormattedText(message, { strongClassName: 'font-extrabold' })}
         </span>
         {onUndo && (
           <button

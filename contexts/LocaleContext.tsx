@@ -49,7 +49,14 @@ export const LocaleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 })
             );
 
-            const allTranslations = Object.fromEntries(await Promise.all(promises));
+            // One locale failing (offline, server error) must not blank the app: use what
+            // loaded, and missing locales fall back to English or the key.
+            const settled = await Promise.allSettled(promises);
+            const allTranslations = Object.fromEntries(settled.map((r, i) => {
+                if (r.status === 'fulfilled') return r.value;
+                console.error(`Failed to load translations for ${availableLocales[i].code}:`, r.reason);
+                return [availableLocales[i].code, {}];
+            }));
             setTranslations(allTranslations as FetchedTranslations);
 
         } catch (error) {

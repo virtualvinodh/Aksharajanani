@@ -944,5 +944,11 @@
 	"yLabel": "Y",
 	"yOffset": "Y Offset",
 	"zoomIn": "Zoom In",
-	"zoomOut": "Zoom Out"
+	"zoomOut": "Zoom Out",
+	"errorScreenTitle": "Something went wrong",
+	"errorScreenMessage": "This screen ran into a problem. Try again first: reloading the page loses any changes that haven’t been saved yet.",
+	"errorScreenRetry": "Try again",
+	"errorScreenReload": "Reload",
+	"errorScreenDetails": "Details",
+	"glyphNotInProject": "“{name}” isn’t in this project"
 }

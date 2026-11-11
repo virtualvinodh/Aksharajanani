@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Character, RecommendedKerning, KerningMap } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { SparklesIcon, UndoIcon, CheckCircleIcon, SearchIcon, GridViewIcon } from '../../constants';
@@ -61,6 +61,10 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
     }, [characterSets, glyphDataMap, glyphVersion]);
 
     const totalPages = Math.ceil(filteredPairs.length / PAGE_SIZE);
+    // A narrower search can leave us past the last page; snap back so results stay visible.
+    useEffect(() => {
+        if (currentPage > Math.max(1, totalPages)) setCurrentPage(Math.max(1, totalPages));
+    }, [currentPage, totalPages]);
     const paginatedPairs = filteredPairs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     const handleAutoKern = async () => {
@@ -77,7 +81,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
         setIsProgressModalOpen(true);
         const results = await calculateAutoKerning(pairsToKern, glyphDataMap, metrics, settings.strokeThickness, setKerningProgressValue, recommendedKerning);
         if (results.size > 0) {
-            kerningDispatch({ type: 'SET_SUGGESTIONS', payload: results });
+            kerningDispatch({ type: 'MERGE_SUGGESTIONS', payload: results });
             showNotification(t('autoKerningComplete', { count: results.size }), 'success');
         }
         setIsProgressModalOpen(false);

@@ -492,7 +492,7 @@ const RuleManager: React.FC<RuleManagerProps> = ({
                         <h3 className="text-xl font-bold text-gray-800 dark:text-white">{t('featureRules')}</h3>
                         <p className="text-sm text-gray-500">{t('featureRulesDesc')}</p>
                     </div>
-                    {!isAdding && !editingIndex && (
+                    {!isAdding && editingIndex === null && (
                         <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
                             <AddIcon className="w-4 h-4" /> {t('add')} Rule
                         </button>
@@ -500,7 +500,7 @@ const RuleManager: React.FC<RuleManagerProps> = ({
                 </div>
 
                 {isAdding && <RuleEditor onSave={handleSaveRule} onCancel={() => setIsAdding(false)} characterSets={characterSets} groups={groups} />}
-                {editingIndex !== null && <RuleEditor rule={positioningRules[editingIndex]} onSave={handleSaveRule} onCancel={() => setEditingIndex(null)} characterSets={characterSets} groups={groups} />}
+                {editingIndex !== null && <RuleEditor key={editingIndex} rule={positioningRules[editingIndex]} onSave={handleSaveRule} onCancel={() => setEditingIndex(null)} characterSets={characterSets} groups={groups} />}
 
                 <div className="space-y-3">
                     {positioningRules.map((rule, index) => (
@@ -510,7 +510,7 @@ const RuleManager: React.FC<RuleManagerProps> = ({
                             mark={rule.mark || []} 
                             tags={{ gpos: rule.gpos, gsub: rule.gsub, movement: rule.movement }} 
                             ligatureMap={rule.ligatureMap}
-                            onEdit={() => setEditingIndex(index)}
+                            onEdit={() => { setIsAdding(false); setEditingIndex(index); }}
                             onDelete={() => handleDeleteRule(index)}
                         />
                     ))}

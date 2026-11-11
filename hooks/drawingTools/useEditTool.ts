@@ -254,6 +254,7 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
         if (Math.min(outlineDist, freehandDist) < tolerance) {
             if (outlineDist < freehandDist) {
                 const { pathId, groupIndex, location } = closestOutlineInfo!;
+                let divided = false;
                 const newPaths = currentPaths.map(p => {
                     if (p.id === pathId) {
                         // OPTIMIZATION: Use deepClone
@@ -264,8 +265,12 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
                             closed: true,
                             insert: false 
                         });
-                        const newSegment = paperPath.divideAt(location);
+                        // `location` belongs to the path built during the hit test, so split
+                        // the matching curve of this copy at the same time value.
+                        const curve = paperPath.curves[location.index];
+                        const newSegment = curve ? curve.divideAtTime(location.time) : null;
                         if (newSegment) {
+                            divided = true;
                             const updatedGroup = paperPath.segments.map((seg: any) => ({
                                 point: { x: seg.point.x, y: seg.point.y },
                                 handleIn: { x: seg.handleIn.x, y: seg.handleIn.y },
@@ -278,6 +283,7 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
                     }
                     return p;
                 });
+                if (!divided) return;
                 onPathsChange(newPaths);
                 setFocusedPathId(pathId);
             } else {

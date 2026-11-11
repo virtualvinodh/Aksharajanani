@@ -34,7 +34,8 @@ export const useProjectPersistence = (
         baseAttachmentClasses, 
         recommendedKerning,
         isEditMode,
-        baseFontBinary
+        baseFontBinary,
+        guideFont
     } = useProject();
 
     const [projectId, setProjectId] = useState<number | undefined>(initialProjectId);
@@ -67,13 +68,14 @@ export const useProjectPersistence = (
             baseAttachmentClasses: baseAttachmentClasses || undefined,
             recommendedKerning: recommendedKerning || undefined,
             groups: fontRules.groups || undefined,
-            guideFont: script.guideFont || undefined,
+            // The guide font chosen in Settings lives in ProjectContext, not on the script.
+            guideFont: guideFont || script.guideFont || undefined,
             
             // Edit Mode
             isEditMode,
             baseFontBinary
         };
-    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, glyphVersion, isEditMode, baseFontBinary]);
+    }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, guideFont, glyphVersion, isEditMode, baseFontBinary]);
 
     useEffect(() => {
         if (!isScriptDataLoading && lastSavedState !== null) {
@@ -84,7 +86,7 @@ export const useProjectPersistence = (
         // glyphDataMap is a ref, so it's stable. glyphVersion changes on update.
         glyphVersion, 
         kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, projectName,
-        positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning,
+        positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, guideFont,
         // Logic dependencies
         isScriptDataLoading, lastSavedState
     ]);

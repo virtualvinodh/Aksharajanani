@@ -253,6 +253,23 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
         }
     }
 
+    // A new character keeps its source code point, which may already belong to a different
+    // character in this project (or to another row here). Move those to free private-use code
+    // points so no two characters share one and every row can be selected on its own.
+    const taken = new Set<number>();
+    currentCharsByName.forEach(c => { if (c.unicode !== undefined) taken.add(c.unicode); });
+    drawnSourceGlyphs.forEach(item => { if (item.targetCharExists) taken.add(item.unicode); });
+    let nextPua = 0xE000;
+    const freePua = () => {
+        while (taken.has(nextPua)) nextPua = nextPua === 0xF8FF ? 0xF0000 : nextPua + 1;
+        return nextPua;
+    };
+    drawnSourceGlyphs.forEach(item => {
+        if (item.targetCharExists) return;
+        if (taken.has(item.unicode)) item.unicode = freePua();
+        taken.add(item.unicode);
+    });
+
     return drawnSourceGlyphs.sort((a,b) => a.unicode - b.unicode);
   }, [sourceProject, currentGlyphData, currentCharsByName, glyphVersion, effectiveMatchByUnicode]);
 

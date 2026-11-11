@@ -84,6 +84,22 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
     allCharsByName, glyphDataMap, strokeThickness, showNotification, groups
 }) => {
     const { t } = useLocale();
+
+    // A rule can name a glyph that was deleted or renamed; show a placeholder instead of crashing.
+    const renderGlyph = (name: string) => {
+        const char = allCharsByName.get(name);
+        if (!char) {
+            const label = t('glyphNotInProject', { name });
+            return (
+                <div title={label} aria-label={label} className="w-20 h-20 rounded-md border-2 border-dashed border-red-300 dark:border-red-800 flex flex-col items-center justify-center text-center p-1">
+                    <span className="text-red-500 font-bold">?</span>
+                    <span className="text-[11px] text-gray-500 truncate w-full">{name}</span>
+                </div>
+            );
+        }
+        return <GlyphTile character={char} glyphData={glyphDataMap.get(char.unicode || 0)} strokeThickness={strokeThickness} />;
+    };
+
     const [editorState, setEditorState] = useState<{ type: 'simple' | 'contextual', target: string | null, value: string, left: string[], right: string[] }>({
         type: 'simple', target: null, value: '0', left: [], right: []
     });
@@ -369,7 +385,7 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
                                 <span className="font-mono text-sm text-purple-800 dark:text-purple-200 font-bold">{key}</span>
                             </div>
                         ) : (
-                            <GlyphTile character={allCharsByName.get(key)!} glyphData={glyphDataMap.get(allCharsByName.get(key)?.unicode || 0)} strokeThickness={strokeThickness} />
+                            renderGlyph(key)
                         )}
                         <span className="text-xl font-bold mx-2 text-indigo-500 dark:text-indigo-400">→</span>
                         <span className="font-mono text-lg font-semibold p-2 bg-gray-100 dark:bg-gray-700 rounded-md">{value as string}</span>
@@ -391,15 +407,15 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
                 return (
                     <div key={index} className="p-3 border bg-white dark:bg-gray-800 rounded-lg flex justify-between items-center dark:border-gray-700 group shadow-sm">
                         <div className="flex items-center gap-1 flex-wrap">
-                            {(rule.left || []).map((name: string, i: number) => (name.startsWith('@') || name.startsWith('$')) ? <span key={`l-${i}`} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-mono font-bold">{name}</span> : <div key={`l-${i}`} className="opacity-60 scale-75"><GlyphTile character={allCharsByName.get(name)!} glyphData={glyphDataMap.get(allCharsByName.get(name)?.unicode || 0)} strokeThickness={strokeThickness} /></div>)}
+                            {(rule.left || []).map((name: string, i: number) => (name.startsWith('@') || name.startsWith('$')) ? <span key={`l-${i}`} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-mono font-bold">{name}</span> : <div key={`l-${i}`} className="opacity-60 scale-75">{renderGlyph(name)}</div>)}
                             
                             {isTargetGroup ? (
                                 <span className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-mono font-bold">{rule.target}</span>
                             ) : (
-                                <GlyphTile character={allCharsByName.get(rule.target)!} glyphData={glyphDataMap.get(allCharsByName.get(rule.target)?.unicode || 0)} strokeThickness={strokeThickness} />
+                                renderGlyph(rule.target)
                             )}
                             
-                            {(rule.right || []).map((name: string, i: number) => (name.startsWith('@') || name.startsWith('$')) ? <span key={`r-${i}`} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-mono font-bold">{name}</span> : <div key={`r-${i}`} className="opacity-60 scale-75"><GlyphTile character={allCharsByName.get(name)!} glyphData={glyphDataMap.get(allCharsByName.get(name)?.unicode || 0)} strokeThickness={strokeThickness} /></div>)}
+                            {(rule.right || []).map((name: string, i: number) => (name.startsWith('@') || name.startsWith('$')) ? <span key={`r-${i}`} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-mono font-bold">{name}</span> : <div key={`r-${i}`} className="opacity-60 scale-75">{renderGlyph(name)}</div>)}
                             <span className="text-xl font-bold mx-2 text-indigo-500 dark:text-indigo-400">→</span>
                             <span className="font-mono p-1.5 bg-gray-100 dark:bg-gray-700 rounded font-bold text-sm">{rule.space}</span>
                         </div>

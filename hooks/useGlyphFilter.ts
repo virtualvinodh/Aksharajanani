@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { Character, GlyphData, MarkPositioningMap, KerningMap } from '../types';
 import { useLayout } from '../contexts/LayoutContext';
+import { useGlyphData } from '../contexts/GlyphDataContext';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { filterAndSortCharacters } from '../utils/searchUtils';
 
@@ -23,6 +24,8 @@ export const useGlyphFilter = ({
     showHidden = false
 }: UseGlyphFilterProps) => {
     const { filterMode, searchQuery } = useLayout();
+    // glyphDataMap is updated in place, so the version is what tells us a glyph changed.
+    const { version: glyphVersion } = useGlyphData();
     const isSearching = searchQuery.trim().length > 0;
     const isFiltered = filterMode !== 'none' || isSearching;
 
@@ -120,7 +123,8 @@ export const useGlyphFilter = ({
         
         // FIX: Removed .sort() when not searching to preserve logical grid order
         return isSearching ? filterAndSortCharacters(candidates, searchQuery) : candidates;
-    }, [characters, glyphDataMap, filterMode, showHidden, searchQuery, isSearching, markPositioningMap, kerningMap, allCharsByName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- glyphVersion is the change signal for the mutable map
+    }, [characters, glyphDataMap, glyphVersion, filterMode, showHidden, searchQuery, isSearching, markPositioningMap, kerningMap, allCharsByName]);
 
     return { filteredList, isFiltered };
 };

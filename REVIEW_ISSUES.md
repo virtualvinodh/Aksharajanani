@@ -117,10 +117,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** `'move'` regenerates the whole glyph with `generateCompositeGlyphData`, dropping extra strokes and manual point edits and invalidating selection IDs. Paths with `component-N` group IDs on a glyph with neither `link` nor `composite` can't be moved at all.
   - **Fix:** transform only the `component-i` paths, and intercept only when `link` or `composite` is set.
 
-- [ ] **D6 Double-click to add a point on an outline does nothing** (confirmed)
+- [x] **D6 Double-click to add a point on an outline does nothing** (confirmed)
   - **Where:** `hooks/drawingTools/useEditTool.ts` 221, 259–264.
   - **Problem:** the location comes from one `paper.Path`, but `divideAt` is called on a different path, so it returns null. An unchanged history entry is still pushed.
   - **Fix:** `paperPath.curves[location.index].divideAtTime(location.time)`.
+  - **Fixed:** the click location is split on the matching curve of the copied path (`curves[index].divideAtTime(time)`); nothing is pushed to history if no split happens. Checked with paper.js: the old call returned null, the new one adds the point.
 
 - [ ] **D7 Slice and eraser damage outlines and change stroke types** (confirmed by reading)
   - **Where:** `hooks/drawingTools/useSliceTool.ts` 66–98; `useEraserTool.ts` 141.
@@ -154,15 +155,17 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** add the same target guard.
   - **Fixed:** the edit tool ignores keys typed in inputs, textareas, selects and editable text (`utils/domUtils.ts`, tested). `useDrawingShortcuts` still has its own older guard, which doesn't cover editable text.
 
-- [ ] **D12 Pasted copies join the original's group** (confirmed by reading)
+- [x] **D12 Pasted copies join the original's group** (confirmed by reading)
   - **Where:** `hooks/drawing/useCanvasOperations.ts` 50–57.
   - **Problem:** paste keeps the `groupId`, so the original and the copy are selected together. A pasted `component-N` group triggers D5.
   - **Fix:** give each pasted group a fresh ID.
+  - **Fixed:** pasted shapes get fresh group IDs (shapes grouped together stay grouped with each other); checked in the browser.
 
-- [ ] **D13 Name-matched glyph import can duplicate a unicode** (confirmed by reading)
+- [x] **D13 Name-matched glyph import can duplicate a unicode** (confirmed by reading)
   - **Where:** `components/ImportGlyphsModal.tsx` 236–245, 346–357.
   - **Problem:** a "new" character keeps the source unicode without checking the target. That gives two characters on one code point, an uncounted overwrite, and colliding selection state.
   - **Fix:** if the unicode is already taken, assign a PUA code point.
+  - **Fixed:** after matching, any new character whose code point is already used in the project (or by another row) moves to a free private-use code point, so rows and characters never share one.
 
 - [x] **D14 Trackpad pinch and ctrl+wheel also zoom the page** (confirmed)
   - **Where:** `useDrawingCanvas.ts` 456–457; the same in `hooks/useKerningCanvas.ts` 128–144.
@@ -202,10 +205,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** `null` becomes 0 ("kern until touching") instead of the default. Group rules (`$caps`) never match. The worker and main-thread paths treat `'lsb'`/`'rsb'` differently.
   - **Fix:** treat null as the default, resolve rules with `expandMembers` (exact pair before group), and share one resolver.
 
-- [ ] **K6 Auto-Kern replaces all existing suggestions** (confirmed)
+- [x] **K6 Auto-Kern replaces all existing suggestions** (confirmed)
   - **Where:** `components/kerning/KerningSelectionView.tsx` 81.
   - **Problem:** it dispatches `SET_SUGGESTIONS`, which replaces the whole map. Unaccepted suggestions from earlier runs and from the background worker disappear.
   - **Fix:** use `MERGE_SUGGESTIONS`.
+  - **Fixed:** Auto-Kern adds its results to the existing suggestions (`MERGE_SUGGESTIONS`) instead of replacing them.
 
 - [ ] **K7 Kerning worker results dropped or misrouted** (confirmed by tracing)
   - **Where:** `KerningContext.tsx` 112–139, 233–236.
@@ -243,6 +247,7 @@ A user can see or hit these. All ⚠ items are here.
   - **Where:** `useKerningCanvas.ts` 128–144; `KerningSelectionView.tsx` 53–65, 287.
   - **Problem:** wheel zoom ignores the centre translation, so it drifts about 40 px per step. `currentPage` is never reset, so a narrowed search shows "No results" with no pagination controls.
   - **Fix:** correct the zoom math, and reset to page 1 when the filter changes.
+  - **Partly fixed:** pagination part: the page snaps back to the last page when a narrower search leaves it past the end. The zoom drift is still open.
 
 ---
 
@@ -286,9 +291,10 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** a double Ctrl+S on a new project calls `addProject` twice. "Save & change" and "Save & load" don't await the save, so a failed save (e.g. QuotaExceeded) is reported after the work is already gone.
   - **Fix:** serialize saves through an in-flight promise, await them, and abort navigation on failure.
 
-- [ ] **P9 Guide font changed in Settings isn't saved** (confirmed)
+- [x] **P9 Guide font changed in Settings isn't saved** (confirmed)
   - **Where:** `useProjectPersistence.ts` (`getProjectState` uses `script.guideFont`); `components/SettingsPage.tsx` 60.
   - **Fix:** save `guideFont` from ProjectContext, and add it to the dirty deps.
+  - **Fixed:** `getProjectState` saves the guide font from ProjectContext, and it counts as an unsaved change; checked in the browser.
 
 - [x] **P10 "Include Latin" ignored for a new empty project** (confirmed)
   - **Where:** `ScriptSelection.tsx` ~515; `useProjectLoad.ts` 75, ~165.
@@ -296,15 +302,17 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** omit the field, or test `?.length`.
   - **Fixed:** empty lists are treated as "no sets" (`?.length`), so the toggle adds A–Z/a–z; checked in the browser. A saved project with a truly empty list now loads the script's default sets.
 
-- [ ] **P11 Status filters go stale after drawing** (confirmed)
+- [x] **P11 Status filters go stale after drawing** (confirmed)
   - **Where:** `hooks/useGlyphFilter.ts` 123.
   - **Problem:** the memo depends on `glyphDataMap`, which is mutated in place, and not on `glyphVersion`.
   - **Fix:** add `glyphVersion`.
+  - **Fixed:** the filter reruns when any glyph changes (`glyphVersion` from GlyphDataContext).
 
-- [ ] **P12 One failed translation fetch blanks the whole app** (confirmed)
+- [x] **P12 One failed translation fetch blanks the whole app** (confirmed)
   - **Where:** `contexts/LocaleContext.tsx` 55–59, 138.
   - **Problem:** if any locale fails to load (offline, 5xx), `translations` stays null and the provider renders null.
   - **Fix:** use `Promise.allSettled` with `{}` per locale, or show an error state.
+  - **Fixed:** translations load with `Promise.allSettled`; a failed locale becomes `{}` and falls back to English. Checked in the browser with `ta.json` blocked.
 
 - [ ] **P13 Undo of delete and bulk operations reverts later edits** (confirmed by reading)
   - **Where:** `handleDeleteGlyph` and the bulk operations in `useGlyphActions.ts` / `useBatchOperations.ts`.
@@ -315,26 +323,29 @@ A user can see or hit these. All ⚠ items are here.
 
 ## R: Rules UI
 
-- [ ] **R1 ⚠ A dist rule with an unknown glyph white-screens the app** (confirmed)
+- [x] **R1 ⚠ A dist rule with an unknown glyph white-screens the app** (confirmed)
   - **Where:** `components/rules/DistRulesEditor.tsx` 358, 380, 385, 388.
   - **Problem:** `allCharsByName.get(name)!` is passed to `GlyphTile`. There is no ErrorBoundary anywhere, so the whole tree unmounts every time the dist tab opens. Deleting or renaming a referenced glyph does the same.
   - **Fix:** render a placeholder when the lookup misses, validate on save, and add a top-level ErrorBoundary.
+  - **Fixed:** missing glyphs show a dashed "?" tile with their name (checked in the browser with a project naming missing glyphs), and a top-level ErrorBoundary (`components/ErrorBoundary.tsx`) shows a "Something went wrong" screen with Try again / Reload instead of a blank page. Validation on save is still open.
 
 - [ ] **R2 ⚠ Saving a rule silently overwrites another rule with the same output** (confirmed)
   - **Where:** `hooks/useRulesState.ts` (handleSaveNewRule/handleUpdateRule).
   - **Problem:** rules are keyed by their output glyph, so a second contextual rule producing the same replacement replaces the first. Editing a rule's output to an existing name deletes that rule.
   - **Fix:** warn or block on collision. Longer term, store rules as arrays.
 
-- [ ] **R3 Renaming a group marks every group as a positioning group** (confirmed)
+- [x] **R3 Renaming a group marks every group as a positioning group** (confirmed)
   - **Where:** `hooks/useRefactoring.ts` 47.
   - **Problem:** `setPositioningGroupNames(new Set(Object.keys(newState.groups)))`. After one rename every group shows the lock icon, and the groups appear in the Positioning Rules modal, where deleting them removes them globally.
   - **Fix:** only add or remove the renamed key.
   - (The "rename discards unsaved local edits" part is gone now that rule edits are committed immediately.)
+  - **Fixed:** only the renamed group is swapped in `positioningGroupNames`.
 
-- [ ] **R4 Renaming a character-set header pre-fills the translated label and can break export** (confirmed)
+- [x] **R4 Renaming a character-set header pre-fills the translated label and can break export** (confirmed)
   - **Where:** `components/CharacterGrid.tsx` 124–138; `components/DrawingWorkspace.tsx` 358–363.
   - **Problem:** pressing Enter without changes renames `vowels` to its translated label (e.g. `உயிரெழுத்துக்கள்`), which sanitizes to `@` and breaks FEA (see E5).
   - **Fix:** pre-fill `nameKey`, skip unchanged renames, and sanitize with a uniqueness check.
+  - **Fixed:** an unchanged rename is ignored (checked in the browser: Enter on "Vowels" keeps `vowels`), and a name already used by another set is refused. The field still pre-fills the translated label, which is friendlier than the internal key. Sanitising non-Latin names for FEA belongs to E5.
 
 - [x] **R5 Positioning rule editor adds one tag per keystroke** (confirmed)
   - **Where:** `components/rules/manager/RuleManager.tsx` 216, 225.
@@ -342,20 +353,23 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** keep local input state, and add a tag on select/Enter.
   - **Fixed:** tags are added only on Enter or when a suggestion is picked; typing just filters.
 
-- [ ] **R6 Positioning rule add/edit overwrites the wrong rule** (confirmed)
+- [x] **R6 Positioning rule add/edit overwrites the wrong rule** (confirmed)
   - **Where:** `RuleManager.tsx` 398–408, 460, 468.
   - **Problem:** `!editingIndex` treats index 0 as falsy, so adding a rule while editing #1 overwrites #1. The editing `RuleEditor` has no `key`, so switching rules keeps the old form values.
   - **Fix:** use `editingIndex === null`, and set `key={editingIndex}`.
+  - **Fixed:** the Add button checks `editingIndex === null`, opening a rule for editing closes the add form, and the edit form has `key={editingIndex}`.
 
-- [ ] **R7 Positioning group manager accepts empty names; renames don't refactor** (confirmed)
+- [x] **R7 Positioning group manager accepts empty names; renames don't refactor** (confirmed)
   - **Where:** `components/rules/manager/GroupManager.tsx` 273, 289, 325.
   - **Problem:** `groups['']` generates `@ = [...]`. Renaming `$foo` leaves stale references in rules and anchors.
   - **Fix:** require a non-empty sanitized name, and use `renameGroupInState`.
+  - **Fixed:** empty names (or a bare `$`/`@`) are refused. Making renames update the rules that use the group is still open.
 
-- [ ] **R8 Lookups pane: shared add state, silent validation** (confirmed)
+- [x] **R8 Lookups pane: shared add state, silent validation** (confirmed)
   - **Where:** `components/rules/LookupsPane.tsx` 38, 78, 99, 119.
   - **Problem:** "Add Single Rule" opens in every lookup at once, and validation errors go to a no-op `showNotification`.
   - **Fix:** store `{lookupKey, type}`, and pass the real notifier.
+  - **Fixed:** the add form is tied to one lookup (`{lookupKey, type}`), and rule editors in the pane get the real notifier.
 
 - [ ] **R9 "Add Lookup" does nothing on an implied feature** (confirmed)
   - **Where:** `components/RulesPage.tsx` 541–560; `useRulesState.ts` (handleAddLookupReference).
@@ -373,10 +387,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** wrap it in `useCallback`, or rebuild the index only when the palette opens.
   - **Fixed:** the search box resets only when the palette opens, so it can't clear while typing.
 
-- [ ] **R12 `GlyphTile` reads a field the rules context doesn't have** (confirmed; TS2339)
+- [x] **R12 `GlyphTile` reads a field the rules context doesn't have** (confirmed; TS2339)
   - **Where:** `components/GlyphTile.tsx` 35.
   - **Problem:** `const { groups } = useRules()` is always undefined, so `$groups` are ignored for positioned tiles.
   - **Fix:** use `state.fontRules?.groups`.
+  - **Fixed:** already done in the type-error cleanup (`915db10`): `GlyphTile` reads `rulesState.fontRules?.groups`.
 
 ---
 
@@ -402,7 +417,7 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** 15 keys are missing (they fall back to English, e.g. `copySelection`, `pasteSelection`, `ignorePair`). Three placeholder mismatches: `linkedGlyphLocked` drops `{components}`, `mismatchedScriptError` drops `{currentScript}`, and `mismatchedScriptMessage` drops both.
 
 - [x] **U5 Tour and hint text shows raw markdown** (e.g. `**Pen Tool**`) (confirmed in the browser)
-  - **Fixed:** one shared renderer (`utils/formattedText.tsx`, tested) for bold, italic and code in the tour, hints, Help and About; it replaced 23+ places that inserted locale text as raw HTML. Two toast messages still show `**` (`compositeGlyphPrefilledShort`, `linkedGlyphLockedShort`).
+  - **Fixed:** one shared renderer (`utils/formattedText.tsx`, tested) for bold, italic and code in the tour, hints, Help and About; it replaced 23+ places that inserted locale text as raw HTML. The two notifications that still showed `**` now render bold too (`renderFormattedText` takes a bold class for coloured backgrounds).
 
 - [ ] **U6 The drawing tour reappears when a second glyph is opened and blocks the canvas** (confirmed in the browser)
 
