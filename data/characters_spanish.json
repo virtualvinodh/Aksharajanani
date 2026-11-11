@@ -391,7 +391,7 @@
         "name": "á",
         "glyphClass": "ligature",
         "unicode": 225,
-        "ligature": [
+        "liga": [
           "a", "́"
         ],        
         "position": [

@@ -9,7 +9,7 @@ import { usePositioning } from '../contexts/PositioningContext';
 import { useRules } from '../contexts/RulesContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { getUnifiedPaths } from '../services/glyphRenderService';
-import { isGlyphDrawn as isDrawnCheck } from '../utils/glyphUtils';
+import { isGlyphComplete } from '../utils/glyphUtils';
 
 // Props it receives from CharacterGrid
 interface UnifiedCardProps {
@@ -45,8 +45,9 @@ const UnifiedCard: React.FC<UnifiedCardProps> = (props) => {
     if (sourceChars) {
         sourceChars.forEach(name => {
             const comp = allCharsByName.get(name);
-            // Check if component exists and is drawn
-            if (!comp || comp.unicode === undefined || !isDrawnCheck(glyphDataMap.get(comp.unicode))) {
+            // Check the component exists and is complete: drawn, or itself built (a positioned ϊ is
+            // a fine base for ΐ; requiring a drawing of its own kept ΐ and ΰ locked for good).
+            if (!comp || comp.unicode === undefined || !isGlyphComplete(comp, glyphDataMap, markPositioningMap, kerningMap, allCharsByName)) {
                 missingComponents.push(name);
             }
         });

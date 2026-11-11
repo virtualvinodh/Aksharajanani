@@ -25,6 +25,9 @@ def walk_defs(defs):
         if isinstance(item, dict) and 'characters' in item:
             for c in item['characters']: yield item.get('nameKey'), c
 results = {}
+# Keys a character entry may have (see the Character type in types.ts); anything else is likely a typo.
+KNOWN_KEYS = {'name', 'unicode', 'glyphClass', 'liga', 'composite', 'compositeTransform', 'link', 'position',
+              'kern', 'advWidth', 'lsb', 'rsb', 'gsub', 'gpos', 'hidden', 'optional', 'option', 'desc', 'label', 'if'}
 for s in scripts:
     sid = s['id']; probs = defaultdict(list)
     chars_def = load(D(f'characters_{sid}.json')); pos_def = load(D(f'positioning_{sid}.json')); rules = load(D(f'rules_{sid}.json'))
@@ -36,6 +39,8 @@ for s in scripts:
         n = c.get('name')
         if not n: probs['entry without name'].append(json.dumps(c, ensure_ascii=False)[:80]); continue
         names[n] += 1; defined.add(n)
+        for key in c:
+            if key not in KNOWN_KEYS: probs['unknown key (typo?)'].append(f'{n!r}: {key!r}')
         cp = c.get('unicode')
         if cp is None and len([*n]) == 1: cp = ord(n)
         elif cp is not None and len([*n]) == 1 and ord(n) != cp and not (0xE000 <= ord(n) <= 0xF8FF):
