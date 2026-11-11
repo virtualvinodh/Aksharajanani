@@ -16,6 +16,32 @@ const sanitizeIdentifier = (name: string) => name.replace(/\s+/g, '_').replace(/
 const BOOLEAN_LOOKUP_FLAGS = new Set(['RightToLeft', 'IgnoreBaseGlyphs', 'IgnoreLigatures', 'IgnoreMarks']);
 const CLASS_LOOKUP_FLAGS = new Set(['UseMarkFilteringSet', 'MarkAttachmentType']);
 
+/** A mark exported with zero advance; fontBuilder places its left edge at x = 0. */
+export const isZeroWidthMark = (c: Pick<Character, 'glyphClass' | 'advWidth'>): boolean =>
+    c.glyphClass === 'mark' && (c.advWidth === 0 || c.advWidth === '0');
+
+/**
+ * X of a GPOS anchor on the base glyph (font units). fontBuilder puts a glyph's left edge at its
+ * LSB, except zero-width marks, whose left edge goes to 0; the mark class anchor is the mark's
+ * origin. So the anchor is where the mark's left edge should land, measured from the base's
+ * origin, minus the mark's own left edge (E7: this used the base's LSB even when the base was a
+ * zero-width mark, i.e. for mark-to-mark, and ignored a spacing mark's own LSB).
+ */
+export const computeMarkAnchorX = (args: {
+    baseChar: Pick<Character, 'glyphClass' | 'advWidth' | 'lsb'>;
+    markChar: Pick<Character, 'glyphClass' | 'advWidth' | 'lsb'>;
+    baseBboxX: number;
+    markBboxX: number;
+    offsetX: number;
+    scale: number;
+    defaultLSB: number;
+}): number => {
+    const leftEdge = (c: Pick<Character, 'glyphClass' | 'advWidth' | 'lsb'>) =>
+        isZeroWidthMark(c) ? 0 : (c.lsb ?? args.defaultLSB) * args.scale;
+    const distance = ((args.markBboxX + args.offsetX) - args.baseBboxX) * args.scale;
+    return Math.round(leftEdge(args.baseChar) + distance - leftEdge(args.markChar));
+};
+
 /**
  * Turns a rules-file `lookupflags` object into one FEA statement, e.g.
  * `{ IgnoreMarks: "true", UseMarkFilteringSet: "$virama" }` → `lookupflag IgnoreMarks UseMarkFilteringSet @virama;`.
@@ -841,13 +867,12 @@ export const generateFea = (
 
             if (!gposFeatures.has(gposTag)) gposFeatures.set(gposTag, []);
             
-            // Side bearings are authored in canvas units; createFont places the base outline at
-            // LSB * scale in font units, so the anchor must use the same conversion.
-            const LSB_f = (baseChar.lsb ?? metrics.defaultLSB) * scale;
-
-            const canvas_distance_x = (markBbox.x + offset.x) - baseBbox.x;
-            const font_distance_x = canvas_distance_x * scale;
-            const anchorX = Math.round(LSB_f + font_distance_x);
+            // Side bearings are authored in canvas units and converted with `scale`, like the
+            // outlines; see computeMarkAnchorX for where each glyph's left edge ends up.
+            const anchorX = computeMarkAnchorX({
+                baseChar, markChar, baseBboxX: baseBbox.x, markBboxX: markBbox.x,
+                offsetX: offset.x, scale, defaultLSB: metrics.defaultLSB
+            });
 
             const anchorY = Math.round(-offset.y * scale);
             

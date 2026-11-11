@@ -69,7 +69,7 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** emit one `lookupflag A B UseMarkFilteringSet @x;` statement, treat boolean values as bare flag names, and map `$group` to `@group`.
   - **Fixed:** one `lookupflag` statement per lookup (`formatLookupFlags` in `services/feaService.ts`, tested): boolean flags become bare names, `$group`/`@group` become `@group`, unknown flags are skipped. Checked with feaLib: the old `lookupflag IgnoreMarks true;` is rejected, the new forms compile. The shipped Kannada/Telugu `UseMarkFilteringSet @virama` output is unchanged (Kannada export identical apart from the `head` timestamp). The Rules screens show the same text.
 
-- [ ] **E7 Zero-width marks get wrong advances and anchors** (confirmed)
+- [x] **E7 Zero-width marks get wrong advances and anchors** (confirmed)
   - **Where:** `fontBuilder.ts` (zero-advance branch); `feaService.ts` ~857.
   - **Problem:**
     - `advWidth: 0` is honoured only when `glyphClass === 'mark'`. Devanagari `ं` (base, advWidth 0) is exported with advance = bbox + RSB, so a gap appears after every "कं".
@@ -77,7 +77,10 @@ A user can see or hit these. All ⚠ items are here.
     - mkmk anchors add the base's LSB even when the base is a zero-width mark.
   - **Fix:** gate the zero-advance rule on `advWidth === 0` alone, don't re-shift imported outlines, and use LSB 0 for zero-advance bases.
   - **Partly fixed (data):** the first bullet was a data slip, not a code problem. In `data/characters_devanagari.json`, `ं` (U+0902) was `glyphClass: "base"` with `advWidth: 0`, while its neighbour `ँ` is a `mark`, Unicode calls it a non-spacing mark, and the positioning rules use it as a mark. It is now a `mark`. Export check (क + ं): advance 414 → 0, GDEF class base → mark, mark positioning (GPOS type 4) unchanged. A scan of all scripts found no other non-spacing mark classed as base except Malayalam `ു ൂ ൃ ൄ`, which look deliberate (spacing in reformed orthography), so they were left alone.
-  - **Still open (no decision needed):** the edit-mode re-shift of imported zero-width marks, and the mkmk base-LSB offset.
+  - **Fixed (code):**
+    - Edit mode no longer moves zero-width marks to x = 0, so the original font's GPOS anchors still fit (import now reproduces the original coordinates, E2). Checked with a test font whose grave is drawn at x −300..−100 with a GPOS anchor: rendered with HarfBuzz, the old build put the grave at 450..650 over an `a` at 50..450; now it is at 150..350, as in the original.
+    - GPOS anchors use one formula (`computeMarkAnchorX`, tested): the base's left edge is 0 for a zero-width mark (mark-to-mark no longer adds its LSB), and a spacing mark's own LSB is subtracted. Unchanged for the common case (base + zero-width mark): a Devanagari export with marks is identical apart from the `head` timestamp.
+    - Found while testing: edit-mode patching left every hmtx LSB at 0 (opentype.js writes 0), while TrueType rasterizers can position glyphs by it. `patch_font` now sets each LSB to the outline's left edge (a = 50, grave = −300 in the test font).
 
 - [x] **E8 Newer Indic script tags are missing** (confirmed by reading)
   - **Where:** `data/indicScripts.json`; `feaService.ts` 176–177, 232–233.

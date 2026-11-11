@@ -206,6 +206,30 @@ def patch_font(base_data, delta_data):
         if g_name in delta_metrics:
             base_hmtx.metrics[g_name] = delta_metrics[g_name]
     base_font['hhea'] = delta_font['hhea']
+
+    # Keep each left side bearing equal to the outline's left edge. The delta's metrics come
+    # from opentype.js, which writes lsb 0, and some rasterizers position TrueType glyphs by
+    # the hmtx lsb rather than by the outline.
+    try:
+        if 'glyf' in base_font:
+            glyf_table = base_font['glyf']
+            for g_name in base_order:
+                if g_name not in base_hmtx.metrics:
+                    continue
+                g = glyf_table[g_name]
+                g.recalcBounds(glyf_table)
+                adv = base_hmtx.metrics[g_name][0]
+                base_hmtx.metrics[g_name] = (adv, g.xMin if g.numberOfContours != 0 else 0)
+        elif 'CFF ' in base_font:
+            charstrings = base_font['CFF '].cff.topDictIndex[0].CharStrings
+            for g_name in base_order:
+                if g_name not in base_hmtx.metrics:
+                    continue
+                b = charstrings[g_name].calcBounds(charstrings)
+                adv = base_hmtx.metrics[g_name][0]
+                base_hmtx.metrics[g_name] = (adv, int(round(b[0])) if b else 0)
+    except Exception as e:
+        print(f"[Python] Could not recompute side bearings: {e}")
     
     # Only swap maxp if we are NOT converting CFF->TTF (which would mean base is TTF but delta is CFF)
     # If base is TTF, we want maxp 1.0. If delta is CFF, it has maxp 0.5.

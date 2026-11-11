@@ -361,9 +361,12 @@ export const createFont = (
               
               if (charDef?.glyphClass === 'mark' && (charDef.advWidth === 0 || charDef.advWidth === '0')) {
                   // This is a non-spacing mark. Its advance width must be 0.
-                  // We shift the glyph so its left edge is at x=0.
-                  const shiftX = -bbox.x1;
-                  if (isFinite(shiftX)) {
+                  // We shift the glyph so its left edge is at x=0 (the app's GPOS anchors assume
+                  // that). In edit mode the original font's GPOS is kept, and its anchors assume
+                  // the mark's original position (often left of the origin), which import now
+                  // reproduces exactly, so leave it where it is (E7).
+                  const shiftX = isEditMode ? 0 : -bbox.x1;
+                  if (isFinite(shiftX) && shiftX !== 0) {
                       for (const cmd of finalOtPath.commands) {
                           if (cmd.x !== undefined) cmd.x += shiftX;
                           if (cmd.x1 !== undefined) cmd.x1 += shiftX;
