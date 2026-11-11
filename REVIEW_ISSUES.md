@@ -571,6 +571,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** with All Pairs → Select All, auto-spacing changes only some pairs (in the English run 4,345 of the 10,000 pairs; for Tamil, All Pairs would mean 36,828), but the list keeps showing all of them. The few that changed, the ones worth looking at before pressing Accept, are scattered among thousands of untouched ones. There is a filter for pairs waiting for review (the funnel menu), but it's off by default, and it also lists pairs whose suggestion is 0 (no change).
   - **Suggested fix:** after auto-spacing, show only the pairs it actually changed, with a clear "Show all pairs" switch to get the rest back, and leave out suggestions of 0 from that view.
 
+- [ ] **U20 Add a visible "Accept auto-generated" button for all positioned and linked letters** (requested by the author)
+  - **Where:** the character grid header (`components/drawing/DrawingWorkspaceHeader.tsx`, `components/DrawingWorkspace.tsx`); the action is `handleAcceptAllDefaults` (`hooks/positioning/usePositioningActions.ts`).
+  - **Problem:** once the letters are drawn, the app has already made the accented and joined forms (49 in Tamil, 26–28 in French, Portuguese and Cyrillic), but each still has to be accepted. Today that means opening them one by one, or knowing that "Accept All (n)" appears only after choosing "Auto-generated" or "To be reviewed" in the funnel filter menu. A beginner won't find it.
+  - **Suggested fix:** show an "Accept auto-generated (n)" button on the grid whenever n > 0 (for example next to the progress bar), covering positioned and linked letters in one go, with a short confirmation and Undo. Keep the per-letter review for people who want to adjust placements. It would also help the "your font is ready" moment come sooner.
+
 ---
 
 ## S: Script data
