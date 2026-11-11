@@ -440,8 +440,10 @@ A user can see or hit these. All ⚠ items are here.
 - [x] **U9 The feature-error dialog text is cut off** (confirmed in the browser)
   - **Fixed:** the error text wraps and scrolls inside a wider dialog.
 
-- [ ] **U10 The Positioning tab says "No mark characters have been drawn" when the marks are linked glyphs** (confirmed in the browser: Tutorial script, `ͤ` with `link: ["e"]`)
-  - **Needs a decision:** the positioning lists only include marks with their own drawing (`isGlyphDrawn`, with `// REVERT:` comments in `hooks/positioning/usePositioningData.ts` showing a broader check was tried and backed out). Linked marks have no drawing of their own until they are generated, so including them needs a decision on how they should render there.
+- [ ] **U10 The Positioning tab says "No mark characters have been drawn" when the marks are linked glyphs** (to be verified properly; the original diagnosis looks wrong)
+  - **Re-checked (browser):** after drawing `e`, the linked `ͤ` gets its own drawing at once and counts as drawn. The Tutorial script's only positioning pairs are `n + ̃` and `n + ̄`; `ͤ` is in none, so the empty By Mark view was correct while `n`, `̃` and `̄` were undrawn. The link was never the cause. The author also found linked marks available for positioning in their own check.
+  - **Still to verify:** positioning with a linked mark that *is* in a rule (e.g. add a rule using `ͤ`, then check it appears, previews correctly and exports).
+  - **Changed:** the message was misleading (it said no marks were drawn when one was). It now reads "No marks are ready to position yet. In the character grid, draw the marks used in positioning and the letters they go on." (Tamil updated too).
 
 - [x] **U11 The header ⋮ (More) button has no accessible name** (confirmed)
   - **Fixed:** ⋮ and the phone drawer's icon buttons have `aria-label` and `title`.

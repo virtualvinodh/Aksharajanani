@@ -607,7 +607,7 @@
 	"positioning": "Positioning",
 	"positioningJsonFile": "positioning.json",
 	"positioningNoBasesDrawn": "No base characters have been drawn yet. Please go to the main editor to draw them before positioning.",
-	"positioningNoMarksDrawn": "No mark characters have been drawn yet. Please go to the main editor to draw them before positioning.",
+	"positioningNoMarksDrawn": "No marks are ready to position yet. In the character grid, draw the marks used in positioning and the letters they go on.",
 	"positioningPairDeleted": "Positioning pair deleted.",
 	"positioningProgress": "{completed}/{total} pairs positioned ({percentage}%)",
 	"positioningProgressLabel": "Positioning: {percentage}%",

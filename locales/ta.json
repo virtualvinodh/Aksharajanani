@@ -588,7 +588,7 @@
 	"positioning": "நிலைப்படுத்துதல்",
 	"positioningJsonFile": "positioning.json கோப்பு",
 	"positioningNoBasesDrawn": "அடிப்படை எழுத்துக்கள் இன்னும் வரையப்படவில்லை.",
-	"positioningNoMarksDrawn": "குறிகள் இன்னும் வரையப்படவில்லை.",
+	"positioningNoMarksDrawn": "நிலைப்படுத்த இன்னும் குறிகள் தயாராக இல்லை. நிலைப்படுத்தலில் பயன்படும் குறிகளையும், அவை சேரும் எழுத்துக்களையும் எழுத்து கட்டத்தில் வரையவும்.",
 	"positioningPairDeleted": "நிலைப்படுத்தல் ஜோடி நீக்கப்பட்டது.",
 	"positioningProgress": "{completed}/{total} ஜோடிகள் நிலைநிறுத்தப்பட்டன ({percentage}%)",
 	"positioningProgressLabel": "நிலைப்படுத்தல்: {percentage}%",
