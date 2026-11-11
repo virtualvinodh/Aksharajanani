@@ -46,16 +46,20 @@ const sets = [...JSON.parse(fs.readFileSync(`${REPO}/data/characters_${DATA_ID}.
     .filter(st => st.characters);
 // Hidden glyphs aren't in the grid; linked ones (i = ı + dot) the app makes by itself.
 const ORDER = sets.flatMap(st => st.characters.filter(c => !c.hidden).map(c => ({
-    name: c.name, set: en[st.nameKey] || st.nameKey, positioned: !!c.position, built: !!c.composite, linked: !!c.link,
+    name: c.name, set: en[st.nameKey] || st.nameKey, positioned: !!c.position, built: !!c.composite, parts: c.composite || [], linked: !!c.link,
 })));
 // Strokes for each glyph. The hand-made alphabet is drawn on the European guide lines (baseline
 // 660), so it moves with the script's baseline; traced strokes are already on the script's lines.
 const shiftY = scriptDef.metrics.baseLineY - guides.B;
 const STROKES = Object.fromEntries(Object.entries(G).map(([n, ss]) => [n, ss.map(st => st.map(([x, y]) => [x, y + shiftY]))]));
 const tracedFile = path.join(__dirname, 'strokes', `${DATA_ID}.json`);
-if (fs.existsSync(tracedFile)) Object.assign(STROKES, JSON.parse(fs.readFileSync(tracedFile, 'utf8')).strokes);
-// A built glyph starts from its parts in the editor; only hand-made extra strokes go on top (Ґ).
-const canDraw = (it) => !it.positioned && !it.linked && (it.built ? !!G[it.name] : !!STROKES[it.name]);
+const TRACED = fs.existsSync(tracedFile) ? JSON.parse(fs.readFileSync(tracedFile, 'utf8')).strokes : {};
+Object.assign(STROKES, TRACED);
+// A built glyph starts from its parts in the editor. Hand-made strokes go on top of that start
+// (Ґ = Г + upturn). In a traced script the start is only a starting point (ஆ starts as அ, ஞூ as
+// ஞு), so it's finished the way a person would: cleared and written whole, as the font has it.
+const finishesFromTrace = (it) => it.built && !G[it.name] && !!TRACED[it.name];
+const canDraw = (it) => !it.positioned && !it.linked && (it.built ? !!G[it.name] || finishesFromTrace(it) : !!STROKES[it.name]);
 fs.mkdirSync(OUT, { recursive: true });
 const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
 
@@ -151,14 +155,25 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
         }
         tile = p.locator(sel).first();
         await tile.scrollIntoViewIfNeeded().catch(() => {});
-        await tile.click(); await p.waitForTimeout(1300); await closeTips();
+        // A grid tip (with a dark overlay) can open just as we get back to the grid: close it and retry.
+        await closeTips();
+        await tile.click({ timeout: 5000 }).catch(async () => { await p.waitForTimeout(800); await closeTips(); await tile.click(); });
+        await p.waitForTimeout(1300); await closeTips();
+    };
+    // Clear a built letter's starting point and pick the pen (the editor may open with Select).
+    const clearForFinishing = async () => {
+        await closeTips();
+        await p.locator('button[title="Clear"]').first().click().catch(() => {}); await p.waitForTimeout(400);
+        await p.locator('[data-tour="toolbar-pen"]').first().click().catch(() => {}); await p.waitForTimeout(200);
     };
     const title = async () => (await navRow().locator('h2').first().innerText().catch(() => '')).trim();
 
     if (process.env.DEBUG_GLYPHS) {
         for (const name of process.env.DEBUG_GLYPHS.split(',')) {
-            await openGlyph(ORDER.find(o => o.name === name)); await p.waitForTimeout(1500); await closeTips();
-            if (STROKES[name]) await drawGlyph(name);
+            const item = ORDER.find(o => o.name === name);
+            await openGlyph(item); await p.waitForTimeout(1500); await closeTips();
+            if (finishesFromTrace(item)) await clearForFinishing();
+            if (STROKES[name] && (!item.built || canDraw(item))) await drawGlyph(name);
             // The code point keeps Ω and ω apart (macOS treats their file names as the same).
             const cp = [...name].map(ch => ch.codePointAt(0).toString(16)).join('-');
             await p.screenshot({ path: path.join(OUT, `dbg-${name}-${cp}.png`) });
@@ -180,7 +195,12 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
             await back(); await openGlyph(item);
             if ((await title()) !== item.name) { missing.push(item.name); continue; }
         }
-        await caption(`Draw “${item.name}”  (${drawn.length + 1} of ${toDraw.length})`);
+        if (finishesFromTrace(item)) {
+            await caption(`Finish “${item.name}”: the app starts it from ${item.parts.join(' + ')}; write the whole letter  (${drawn.length + 1} of ${toDraw.length})`);
+            await clearForFinishing();
+        } else {
+            await caption(`Draw “${item.name}”  (${drawn.length + 1} of ${toDraw.length})`);
+        }
         await drawGlyph(item.name); drawn.push(item.name); await p.waitForTimeout(120); await closeTips();
         if (['A', 'g', '&', '5'].includes(item.name)) await shot(`02-draw-${encodeURIComponent(item.name)}`);
         const next = navRow().locator(':scope > button').last();
@@ -190,7 +210,7 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
     await back(); await p.waitForTimeout(1500); await shot('03-grid-drawn');
 
     // 2b. Letters the app builds from two others (Æ = A + E): open each and keep what the app made.
-    const toBuild = ORDER.filter(it => it.built && !G[it.name]);
+    const toBuild = ORDER.filter(it => it.built && !canDraw(it)); // the rest were drawn or finished above
     for (const item of toBuild) {
         await caption(`“${item.name}” is built by the app from letters already drawn: check it`);
         await openGlyph(item); await p.waitForTimeout(1200);

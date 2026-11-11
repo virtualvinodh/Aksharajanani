@@ -10,8 +10,9 @@ as e2e/alphabet.cjs. The strokes are placed on the script's own guide lines.
 
 Without a font it downloads the script's guide font (guideFont in scripts.json).
 Writes tools/e2e/strokes/<script>.json and a preview, tools/e2e/out/trace-<script>.png.
-The reference glyph (default: the script's first letter outside ASCII) is scaled to fill the
-space between the script's top line and baseline. Glyphs the font lacks are listed; give them
+Strokes are placed exactly where the editor draws its guide letter (same size and position), so
+signs keep their place next to the letter. Scripts without a grid name size instead scale the
+reference glyph (default: the first letter outside ASCII) to fill their top line to baseline. Glyphs the font lacks are listed; give them
 hand-drawn strokes in alphabet.cjs instead.
 """
 import json, os, re, sys
@@ -50,10 +51,13 @@ upm = face.upem
 ft = freetype.Face(font_path)
 
 def shape(text):
+    # Shaped the way the browser shapes the editor's guide letter: a sign on its own gets a
+    # dotted circle in front of it, which takes up room (it's left out when rendering below).
     buf = hb.Buffer(); buf.add_str(text); buf.guess_segment_properties()
-    buf.flags = hb.BufferFlags.DO_NOT_INSERT_DOTTED_CIRCLE
     hb.shape(hbfont, buf, {})
     return list(zip(buf.glyph_infos, buf.glyph_positions))
+
+DOTTED = hbfont.get_nominal_glyph(0x25CC)
 
 def glyph_top(text):
     top = None
@@ -64,23 +68,30 @@ def glyph_top(text):
 
 if ref is None:
     ref = next((c['name'] for c in chars if c.get('glyphClass', 'base') == 'base' and len(c['name']) == 1 and ord(c['name']) > 0x7f), 'x')
-scale = (BASE - TOP) / glyph_top(ref)       # canvas units per font unit
+# Same size as the editor's guide letter (the grid's characterNameSize, in canvas units per em),
+# so the strokes land exactly on it. Without one, scale the reference glyph to the guide lines.
+name_size = (script.get('grid') or {}).get('characterNameSize')
+scale = name_size / upm if name_size else (BASE - TOP) / glyph_top(ref)  # canvas units per font unit
 PX = 0.5                                     # pixels per canvas unit
 ppu = scale * PX                             # pixels per font unit
 ft.set_char_size(int(upm * ppu * 64), 0, 72, 72)
 
 def render(text):
-    """Rasterise the shaped text on a 1000 x 1000 canvas (origin at canvas x=500, y=BASE)."""
+    """Rasterise the text on the 1000 x 1000 canvas where the editor draws its guide letter:
+    centred on its advance at x = 500, on the baseline."""
     W = int(1000 * PX); img = np.zeros((W, W), dtype=np.uint8)
+    run = shape(text)
+    origin = 500 - sum(pos.x_advance for _, pos in run) * scale / 2  # canvas x of the pen start
     pen = 0; drew = False
-    for info, pos in shape(text):
+    for info, pos in run:
         if info.codepoint == 0: return None  # the font doesn't have it
+        if info.codepoint == DOTTED and '\u25cc' not in text: pen += pos.x_advance; continue
         ft.load_glyph(info.codepoint, freetype.FT_LOAD_DEFAULT | freetype.FT_LOAD_NO_HINTING)
         ft.glyph.render(freetype.FT_RENDER_MODE_NORMAL)
         bm = ft.glyph.bitmap
         if bm.width and bm.rows:
             a = np.array(bm.buffer, dtype=np.uint8).reshape(bm.rows, bm.pitch)[:, :bm.width]
-            x0 = int(round(500 * PX + (pen + pos.x_offset) * ppu)) + ft.glyph.bitmap_left
+            x0 = int(round(origin * PX + (pen + pos.x_offset) * ppu)) + ft.glyph.bitmap_left
             y0 = int(round(BASE * PX - pos.y_offset * ppu)) - ft.glyph.bitmap_top
             ys, xs = slice(max(0, y0), min(W, y0 + bm.rows)), slice(max(0, x0), min(W, x0 + bm.width))
             img[ys, xs] = np.maximum(img[ys, xs], a[ys.start - y0:ys.stop - y0, xs.start - x0:xs.stop - x0])
@@ -127,7 +138,7 @@ def strokes_for(text):
     if img is None: return None
     ink = img > 110
     if not ink.any(): return None
-    cols = np.nonzero(ink.any(axis=0))[0]; cx = (cols[0] + cols[-1]) / 2  # centre the glyph
+    cx = 500 * PX  # canvas centre; strokes are stored relative to it
     out = []
     lab = label(ink, connectivity=2)
     for k in range(1, lab.max() + 1):  # each separate piece of ink on its own
@@ -149,7 +160,7 @@ for c in chars:
     name = c['name']
     if c.get('position') or c.get('link') or c.get('hidden'): continue
     if len(name) > 1 and re.fullmatch(r'[A-Za-z]+', name): continue  # named controls (zwj)
-    s = strokes_for(name)
+    s = strokes_for(c.get('label') or name)  # the editor's guide shows the label if there is one
     if s: result[name] = s
     else: missing.append(name)
 
