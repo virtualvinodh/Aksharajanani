@@ -2,6 +2,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning, Point } from '../../types';
 import { calculateAutoKerning } from '../../services/kerningService';
+import { useRules } from '../../contexts/RulesContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { getAccurateGlyphBBox, getGlyphSubBBoxes } from '../../services/glyphRenderService';
 
 interface UseKerningSessionProps {
@@ -20,6 +22,10 @@ interface UseKerningSessionProps {
 export const useKerningSession = ({
     pair, initialValue, glyphDataMap, strokeThickness, metrics, settings, recommendedKerning, onSave, onNavigate
 }: UseKerningSessionProps) => {
+    // Groups and character sets let `$group` rules in recommendedKerning match (K5).
+    const { state: rulesState } = useRules();
+    const { characterSets } = useProject();
+    const groupContext = { groups: rulesState.fontRules?.groups || {}, characterSets };
     // --- State ---
     const [kernValue, setKernValue] = useState(String(initialValue));
     const [isDirty, setIsDirty] = useState(false);
@@ -124,7 +130,7 @@ export const useKerningSession = ({
     const handleAutoKern = useCallback(async () => {
         setIsAutoKerning(true);
         try {
-            const results = await calculateAutoKerning([pair], glyphDataMap, metrics, strokeThickness, () => {}, recommendedKerning);
+            const results = await calculateAutoKerning([pair], glyphDataMap, metrics, strokeThickness, () => {}, recommendedKerning, groupContext);
             const key = `${pair.left.unicode}-${pair.right.unicode}`;
             if (results.has(key)) {
                 handleKernValueChange(String(results.get(key)));
@@ -132,7 +138,8 @@ export const useKerningSession = ({
         } finally {
             setIsAutoKerning(false);
         }
-    }, [pair, glyphDataMap, metrics, strokeThickness, recommendedKerning, handleKernValueChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- groupContext is rebuilt each render from stable sources
+    }, [pair, glyphDataMap, metrics, strokeThickness, recommendedKerning, handleKernValueChange, rulesState.fontRules, characterSets]);
 
     // --- Optical Gap (X-Dist) Math ---
     useEffect(() => {

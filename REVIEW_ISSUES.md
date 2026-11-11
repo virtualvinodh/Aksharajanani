@@ -34,23 +34,25 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** keep the reject function and reject on `init_error`/`onerror`; null out `worker` so it can restart; add a per-request timeout.
   - **Fixed:** the worker is torn down on `init_error`, `onerror` or a 5-minute timeout: waiting requests fail with a clear message ("The font compiler could not start… Check your internet connection and try again") and the next export starts a fresh worker. Checked in the browser with the Pyodide/PyPI downloads blocked: the old build was still spinning after 40 s and couldn't export again; now the error appears in about 7 s, and exporting works once the network is back.
 
-- [ ] **E2 ⚠ Imported fonts come back rescaled and shifted** (confirmed)
+- [x] **E2 ⚠ Imported fonts come back rescaled and shifted** (confirmed)
   - **Where:** `services/importFontService.ts` 47–61, 129–136 vs `services/fontBuilder.ts` (outline transform).
   - **Problem:** import maps glyph y to canvas `600 - y`; export maps canvas to `(1000 - y)·(asc - desc)/1000 + desc`. These only cancel out when asc - desc = 1000 and desc = -400. Test: UPM 1000, hhea 900/-300. Glyph `A` [50,0,550,700] came back as [50,180,650,1020], 1.2× larger and raised 180 units, with its advance changed from 600 to 700.
   - **Fix:** derive the import mapping from the same formula as export: `y_canvas = 1000 - (y - desc)/k`.
+  - **Fixed:** import is now the exact inverse of the export transform (k = (asc − desc)/canvas; baseline/top line derived from it), and bearings are converted to canvas units; the left bearing is taken from the outline's left edge. Checked in the browser with a test font (UPM 1000, asc 900, desc −300): `A` [50,0,550,700] adv 600 came back as [0,180,600,1020] adv 1320 on the old build, and [50,0,550,700] adv 600 now (`g` within 1 unit).
 
 - [ ] **E3 ⚠ Edit mode forces UPM to 1000 but keeps the base font's GPOS units** (confirmed by reading)
   - **Where:** `importFontService.ts` 47–51; `pythonFontService.ts` 178–213.
   - **Problem:** outlines and `head` are rescaled to 1000 UPM, while `patch_font` keeps the base font's GSUB/GPOS/GDEF values in their original units. Editing a 2048-UPM font makes all kerning and anchors about 2× too large.
   - **Fix:** in edit mode keep the original UPM at scale 1, or scale GPOS on patch (e.g. `fontTools.ttLib.scaleUpem`).
 
-- [ ] **E4 ⚠ Edit-mode `patch_font` can crash or corrupt the cmap** (confirmed)
+- [x] **E4 ⚠ Edit-mode `patch_font` can crash or corrupt the cmap** (confirmed)
   - **Where:** `pythonFontService.ts` 180, 192–205.
   - **Problem:** hmtx and cmap are replaced wholesale from the delta font, but the base glyph order is kept.
     - A base glyph missing from the delta causes `KeyError` on save. Example: the base names ZWJ `zwj`, but the delta emits `uni200D`.
     - Secondary code points are lost (e.g. `space` serving both U+0020 and U+00A0).
     - PUA code points assigned on import leak into the cmap.
   - **Fix:** merge per glyph name into the base hmtx and cmap, and skip PUA code points that came from `isPuaAssigned`.
+  - **Fixed:** `glyf` (TrueType) and `hmtx` are merged per glyph name into the base instead of being replaced, and the cmap is merged into the base's (secondary code points kept; PUA codes not already in the base left out; a format-12 table is added if needed). Checked with fontTools on Andale Mono and a CFF delta missing some glyphs: the old code failed with `KeyError 'exclam'`; now it patches, keeps untouched glyphs, keeps U+00B7/U+2219 on one glyph, and no PUA code leaks. (E3, the UPM mismatch, is still open.)
 
 - [ ] **E5 ⚠ FEA class-name sanitising breaks or silently changes features** (confirmed with feaLib)
   - **Where:** `services/feaService.ts` 14, 425, 442.
@@ -108,20 +110,23 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** invert against the image bounds, pick the frame by its bounds rather than its position, and downscale before tracing.
   - **Fixed:** the trace is inverted against the image's own size (not the 300×150 default view), the outer frame is dropped by its bounds, images over 1200 px are scaled down first, and the preview SVG now fits its box (it used to overflow and cover the Insert button). Checked in the browser with a 1000×1000 image of an L: the old build previewed a 300×150 frame; now the L's outline is previewed and inserted.
 
-- [ ] **D3 ⚠ Undo history wiped after every autosave** (confirmed by reading)
+- [x] **D3 ⚠ Undo history wiped after every autosave** (confirmed by reading)
   - **Where:** `hooks/drawing/useGlyphEditSession.ts` 112–122.
   - **Problem:** the effect depends on `[activeEditorForceUpdate, glyphData]`, and the global counter never resets. After any batch operation touches the open glyph, every autosave resets `currentPaths` and the history (so undo is lost about 500 ms after each edit), can drop an in-progress stroke, and replaces regenerated composite paths with stale stored ones.
   - **Fix:** keep the last-handled counter in a ref, and reload only when it increments.
+  - **Fixed:** the open glyph reloads only when a new bulk operation signals it (the last handled counter is kept in a ref), not on every save, so autosave no longer wipes undo or drops a stroke in progress. Not checked in the browser.
 
-- [ ] **D4 ⚠ Dragging a newly clicked path moves the previously selected component** (confirmed by reading)
+- [x] **D4 ⚠ Dragging a newly clicked path moves the previously selected component** (confirmed by reading)
   - **Where:** `hooks/drawingTools/useSelectTool.ts` 168–184, 292–303, 345.
   - **Problem:** `activeComponentIndex` is set from the old selection and isn't cleared when the click selects a different path. The guard at ~566 is dead code.
   - **Fix:** reset it at the start of `start()`, and set it only once the final target is known.
+  - **Fixed:** the component to drag is decided only once the click's target is known (reset at the start of every click; taken from the handle/selection being dragged or the newly clicked shapes). Not checked in the browser.
 
-- [ ] **D5 Transforming a component in a composite discards other edits** (confirmed by reading)
+- [x] **D5 Transforming a component in a composite discards other edits** (confirmed by reading)
   - **Where:** `useGlyphEditSession.ts` 133–177.
   - **Problem:** `'move'` regenerates the whole glyph with `generateCompositeGlyphData`, dropping extra strokes and manual point edits and invalidating selection IDs. Paths with `component-N` group IDs on a glyph with neither `link` nor `composite` can't be moved at all.
   - **Fix:** transform only the `component-i` paths, and intercept only when `link` or `composite` is set.
+  - **Fixed:** a component drag replaces only that component's shapes (regenerated without re-centring and placed where it sat at the start of the drag); other components, extra strokes and hand edits are kept, and selection survives. Glyphs without `link`/`composite` now move `component-N` shapes like ordinary shapes. Not confirmed in the browser: the automated drag didn't grab the component.
 
 - [x] **D6 Double-click to add a point on an outline does nothing** (confirmed)
   - **Where:** `hooks/drawingTools/useEditTool.ts` 221, 259–264.
@@ -129,7 +134,7 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** `paperPath.curves[location.index].divideAtTime(location.time)`.
   - **Fixed:** the click location is split on the matching curve of the copied path (`curves[index].divideAtTime(time)`); nothing is pushed to history if no split happens. Checked with paper.js: the old call returned null, the new one adds the point.
 
-- [ ] **D7 Slice and eraser damage outlines and change stroke types** (confirmed by reading)
+- [x] **D7 Slice and eraser damage outlines and change stroke types** (confirmed by reading)
   - **Where:** `hooks/drawingTools/useSliceTool.ts` 66–98; `useEraserTool.ts` 141.
   - **Problem:**
     - Outline slicing uses only `segmentGroups[0]` and drops handles, so counters vanish and curves become chords.
@@ -137,11 +142,13 @@ A user can see or hit these. All ⚠ items are here.
     - A `line` is treated as closed.
     - Eraser fragments are forced to `pen`.
   - **Fix:** use boolean operations for outlines (keeping type and handles), flatten with the app's `curveToPolyline`, and keep the original type and angle on fragments.
+  - **Fixed:** outlines are cut with paper.js boolean operations along the slice line (all contours, handles kept) into two closed outline pieces; pen/calligraphy strokes are flattened with the app's own curve instead of paper's `smooth()`; lines are no longer treated as closed; slice and eraser pieces keep calligraphy type and angle, and a line stays a line. Checked in the browser on a traced outline: old build gave two open pen strokes, now two closed outlines.
 
-- [ ] **D8 Undo/redo doesn't restore `compositeTransform`** (confirmed by reading)
+- [x] **D8 Undo/redo doesn't restore `compositeTransform`** (confirmed by reading)
   - **Where:** `useGlyphEditSession.ts` 409–460.
   - **Problem:** after undoing a linked-component move, the paths revert but the transform stays moved and is saved.
   - **Fix:** store `{paths, compositeTransform}` in each history entry.
+  - **Fixed:** each undo step stores `{paths, compositeTransform}`, and undo/redo restore both. Checked in the browser with the linked கி: after moving ி and pressing Undo, the old build kept the moved transform; now it goes back.
 
 - [x] **D9 Middle-button pan gets stuck on tools other than pan** (confirmed by reading)
   - **Where:** `hooks/useDrawingCanvas.ts` 343–364.
@@ -183,10 +190,11 @@ A user can see or hit these. All ⚠ items are here.
 
 ## K: Kerning and positioning
 
-- [ ] **K1 ⚠ Kerning editor tracks the pair by list index, so edits can land on the wrong pair** (confirmed swap; likely write)
+- [x] **K1 ⚠ Kerning editor tracks the pair by list index, so edits can land on the wrong pair** (confirmed swap; likely write)
   - **Where:** `components/KerningPage.tsx` 307–312, 326–336.
   - **Problem:** under the incomplete/toBeReviewed filters (or in Spaced after Reset), saving drops the pair from the list, and `editingIndex` silently points at the next pair. If an autosave fires mid-drag, the rest of the drag is written to the new pair.
   - **Fix:** store the pair key (`"L-R"`), not an index.
+  - **Fixed:** the open pair is tracked by its glyphs, not its list position; if saving filters it out of the list it stays open, and Previous/Next go to its old neighbours. Not checked in the browser.
 
 - [x] **K2 ⚠ Kerning Next/Previous/Back skip the unsaved-changes check** (confirmed)
   - **Where:** `components/kerning/KerningEditorHeader.tsx` 137, 147, 160; `hooks/kerning/useKerningSession.ts` 171–182.
@@ -194,23 +202,26 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** route these buttons through `handleNavigationAttempt`, and flush the pending timer on navigation instead of clearing it.
   - **Fixed:** Back, Previous/Next and the glyph strip go through one guard, like the drawing and positioning editors: with autosave the edit is saved first (no 800 ms gap); in manual mode the Unsaved Changes dialog asks (Save & Close / Discard / Cancel). Checked in the browser; the old build failed both cases.
 
-- [ ] **K3 ⚠ Two `calculateDefaultMarkOffset` implementations disagree** (confirmed)
+- [x] **K3 ⚠ Two `calculateDefaultMarkOffset` implementations disagree** (confirmed)
   - **Where:** `services/positioningHeuristicsService.ts` 113 vs `services/glyphRenderService.ts` 293.
   - **Problem:** with no `markAttachment` rule:
     - The editor, grid preview and export use the heuristics version, which places the mark side by side.
     - Confirm, accept-all, the cascades and FEA use the other version, which gives (0,0) for zero-width marks.
     - Example: ka+u shows an offset of (600,0) but saves (0,0), so the mark jumps. The class cascade then applies +600 to its siblings.
   - **Fix:** keep one implementation and route every caller through it.
+  - **Fixed:** one implementation (`positioningHeuristicsService`, the one the editor shows); `glyphRenderService` re-exports it, so Confirm, Accept All, the cascades and the FEA match the editor (author's choice). The cascade worker's copy already matched. Devanagari and Tamil exports unchanged (their marks have attachment rules); it changes the output only for zero-width marks without a rule.
 
-- [ ] **K4 Background auto-kern uses the glyph from before the save** (confirmed)
+- [x] **K4 Background auto-kern uses the glyph from before the save** (confirmed)
   - **Where:** `contexts/KerningContext.tsx` 146–206, triggered from `useGlyphActions.ts` 589–599.
   - **Problem:** `processQueue` closes over the `glyphDataMap` from before the save, and queued pairs carry the old bearings. Suggestions always lag one save behind.
   - **Fix:** read the maps through refs, queue unicodes, and resolve bearings when the batch is built.
+  - **Fixed:** batches read the latest glyph map and bearings when they are built (refs), not the ones captured when the save queued them. Not checked in the browser.
 
-- [ ] **K5 Recommended-kerning targets resolved wrongly** (confirmed)
+- [x] **K5 Recommended-kerning targets resolved wrongly** (confirmed)
   - **Where:** `services/kerningService.ts` 99–114; worker path `useGlyphActions.ts` 507–511.
   - **Problem:** `null` becomes 0 ("kern until touching") instead of the default. Group rules (`$caps`) never match. The worker and main-thread paths treat `'lsb'`/`'rsb'` differently.
   - **Fix:** treat null as the default, resolve rules with `expandMembers` (exact pair before group), and share one resolver.
+  - **Fixed:** one shared reader (`resolveRecommendedTarget`, tested) for the Auto-kern button and the background auto-kern: null/missing = default gap, 0 = touching, `'lsb'`/`'rsb'` = bearings, exact pair before `$group` rules (groups now match).
 
 - [x] **K6 Auto-Kern replaces all existing suggestions** (confirmed)
   - **Where:** `components/kerning/KerningSelectionView.tsx` 81.
@@ -218,20 +229,23 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** use `MERGE_SUGGESTIONS`.
   - **Fixed:** Auto-Kern adds its results to the existing suggestions (`MERGE_SUGGESTIONS`) instead of replacing them.
 
-- [ ] **K7 Kerning worker results dropped or misrouted** (confirmed by tracing)
+- [x] **K7 Kerning worker results dropped or misrouted** (confirmed by tracing)
   - **Where:** `KerningContext.tsx` 112–139, 233–236.
   - **Problem:** `shouldDispatchDiscoveryRef` is a single global flag, so a background batch processed during "Detect new pairs" is discarded and never retried. `batchId` is sent but never checked. A second discovery call overwrites the first call's resolver, so the first promise never settles.
   - **Fix:** tag replies with `batchId`, and keep a map from batch ID to handler.
+  - **Fixed:** each worker request is registered by batch id with its own handler (background vs discovery); progress and results are routed by id, background results during a discovery are kept, and concurrent discoveries each settle. Not checked in the browser.
 
-- [ ] **K8 Virtual ligature code points are unstable and can collide** (likely)
+- [x] **K8 Virtual ligature code points are unstable and can collide** (likely)
   - **Where:** `hooks/positioning/usePositioningData.ts` 62, 136–142; `usePositioningActions.ts` 341–353.
   - **Problem:** the counter restarts at 0x100001 on every recompute, so a new pair can reuse a persisted code point. That pair then vanishes from the grid, and baked data is shown for the wrong pair.
   - **Fix:** derive a stable ID from base+mark, or allocate above the highest existing code point.
+  - **Fixed:** one shared allocator (`utils/virtualCodePoints.ts`, tested) used by the positioning workspace and the editor modal: the code point is derived from the base+mark pair and skips any code point already in the project, so it's stable and can't collide with saved pairs.
 
-- [ ] **K9 Copy Positions bakes outline marks in the wrong place** (confirmed)
+- [x] **K9 Copy Positions bakes outline marks in the wrong place** (confirmed)
   - **Where:** `usePositioningActions.ts` 319–322.
   - **Problem:** it translates `points` but not `segmentGroups`, and it bakes ligature glyphs even for GPOS-only pairs.
   - **Fix:** use the shared transform helper, and write glyph data only when the rule has `gsub`.
+  - **Fixed:** Copy Positions moves outline marks too (shared `translatePaths`), and bakes a combined glyph only when the pair's rule has `gsub`, like the other positioning paths. Not checked in the browser.
 
 - [x] **K10 Documented `center` anchor not implemented** (confirmed)
   - **Where:** `getAttachmentPointCoords` in `positioningHeuristicsService.ts` 56 and `glyphRenderService.ts` 220.
@@ -239,10 +253,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** add the case, and add it to the `AttachmentPoint` type.
   - **Fixed:** `center` added to both implementations, the `AttachmentPoint` type and the anchor dropdowns; tested that both copies agree on all nine points.
 
-- [ ] **K13 Propagation count and Undo are wrong when re-editing** (confirmed)
+- [x] **K13 Propagation count and Undo are wrong when re-editing** (confirmed)
   - **Where:** `usePositioningActions.ts` 141; `components/UnifiedEditorModal.tsx` 179.
   - **Problem:** `newSize - oldSize - 1` gives -1 or 0 when the siblings already exist, so no toast or Undo appears.
   - **Fix:** count the sibling keys actually written.
+  - **Fixed:** the count is the sibling pairs actually written or changed, so the message and Undo appear when re-editing. Not checked in the browser.
 
 - [x] **K14 `isGsubPair` checks the base instead of the mark** (confirmed)
   - **Where:** `components/PositioningEditorPage.tsx` 165.

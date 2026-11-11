@@ -2,6 +2,7 @@
 import { useMemo, useCallback } from 'react';
 import { PositioningRules, Character, GlyphData, CharacterSet, AttachmentClass, MarkPositioningMap } from '../../types';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
+import { createVirtualCodePointAllocator } from '../../utils/virtualCodePoints';
 import { expandMembers } from '../../services/groupExpansionService';
 import { parseSearchQuery, getCharacterMatchScore } from '../../utils/searchUtils';
 
@@ -59,7 +60,8 @@ export const usePositioningData = ({
 
     const positioningData = useMemo(() => {
         const newLigaturesByKey = new Map<string, Character>();
-        let virtualPuaCounter = 0x100000;
+        // Stable code points for not-yet-saved pair glyphs (K8).
+        const virtualCodePointFor = createVirtualCodePointAllocator(Array.from(allChars.values(), c => c.unicode));
 
         const rulesLigas = { 
             ...(fontRules?.tml2?.abvs?.liga || {}), 
@@ -133,13 +135,13 @@ export const usePositioningData = ({
                             if (existingChar) {
                                 targetLigature = existingChar;
                             } else {
-                                virtualPuaCounter++;
+                                const virtualCodePoint = virtualCodePointFor(baseChar.unicode!, markChar.unicode!);
                                 // Logic: GSUB implies a specific Ligature glyph. GPOS implies a Virtual pairing.
                                 const derivedClass = rule.gsub ? 'ligature' : 'virtual';
 
                                 targetLigature = {
                                     name: finalLigatureName,
-                                    unicode: virtualPuaCounter,
+                                    unicode: virtualCodePoint,
                                     glyphClass: derivedClass,
                                     // Use 'position' property to indicate this is a positioned pair
                                     position: [baseName, markName],

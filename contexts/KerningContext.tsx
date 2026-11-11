@@ -99,64 +99,82 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
     const pendingPairsRef = useRef<QueuedPair[]>([]);
     const debounceTimerRef = useRef<number | null>(null);
     const batchIdRef = useRef(0);
-    
-    // Discovery Refs
-    const onDiscoveryProgressRef = useRef<((p: number) => void) | null>(null);
-    const discoveryResolveRef = useRef<((results: Map<string, number>) => void) | null>(null);
-    const shouldDispatchDiscoveryRef = useRef(true);
+
+    // Latest data for batches built later (K4): a batch used to be built from the glyph map and
+    // bearings captured when the save queued it, so suggestions always lagged one save behind.
+    const glyphDataMapRef = useRef(glyphDataMap);
+    const settingsRef = useRef(settings);
+    const metricsRef = useRef(metrics);
+    const characterSetsRef = useRef(characterSets);
+    const ignoredPairsRef = useRef(state.ignoredPairs);
+    glyphDataMapRef.current = glyphDataMap;
+    settingsRef.current = settings;
+    metricsRef.current = metrics;
+    characterSetsRef.current = characterSets;
+    ignoredPairsRef.current = state.ignoredPairs;
+
+    // One handler per request (K7). A single shared flag/resolver used to drop background results
+    // that arrived during "Detect new pairs", and a second discovery left the first one hanging.
+    type BatchHandler =
+        | { kind: 'background' }
+        | { kind: 'discover'; resolve: (results: Map<string, number>) => void; onProgress: (p: number) => void; dispatchResults: boolean };
+    const handlersRef = useRef(new Map<number, BatchHandler>());
     
     // Initialize worker
     useEffect(() => {
         workerRef.current = initAutoKernWorker();
+        const handlers = handlersRef.current;
         
         workerRef.current.onmessage = (e) => {
-            const { results, type, progress } = e.data;
+            const { results, type, progress, batchId } = e.data;
+            const handler = handlers.get(batchId);
             
             if (type === 'progress') {
-                 if (onDiscoveryProgressRef.current) {
-                     onDiscoveryProgressRef.current(progress);
-                 }
-                 return;
+                if (handler?.kind === 'discover') handler.onProgress(progress);
+                return;
             }
 
             const resultMap = new Map<string, number>();
-            if (results && Object.keys(results).length > 0) {
-                Object.entries(results).forEach(([key, val]) => resultMap.set(key, val as number));
-                
-                // Only dispatch if allowed (default true)
-                if (shouldDispatchDiscoveryRef.current) {
-                    dispatch({ type: 'MERGE_SUGGESTIONS', payload: resultMap });
-                }
+            if (results) Object.entries(results).forEach(([key, val]) => resultMap.set(key, val as number));
+            handlers.delete(batchId);
+
+            const shouldDispatch = !handler || handler.kind === 'background' || handler.dispatchResults;
+            if (shouldDispatch && resultMap.size > 0) {
+                dispatch({ type: 'MERGE_SUGGESTIONS', payload: resultMap });
             }
-            
-            // If this was a discovery batch, resolve the promise with the map
-            if (type === 'complete' && discoveryResolveRef.current) {
-                 discoveryResolveRef.current(resultMap);
-                 discoveryResolveRef.current = null;
-                 onDiscoveryProgressRef.current = null;
-                 shouldDispatchDiscoveryRef.current = true; // Reset
-            }
+            if (handler?.kind === 'discover') handler.resolve(resultMap);
         };
 
         return () => {
             terminateAutoKernWorker();
+            // Nothing will answer pending discoveries now; settle them so callers don't hang.
+            handlers.forEach(h => { if (h.kind === 'discover') h.resolve(new Map()); });
+            handlers.clear();
         };
     }, []);
 
     const processQueue = useCallback(() => {
-        if (!workerRef.current || pendingPairsRef.current.length === 0 || !settings || !metrics) return;
+        const settingsNow = settingsRef.current;
+        const metricsNow = metricsRef.current;
+        if (!workerRef.current || pendingPairsRef.current.length === 0 || !settingsNow || !metricsNow) return;
         
         const batch = pendingPairsRef.current;
         pendingPairsRef.current = [];
+
+        // Resolve glyphs and bearings now, from the latest data.
+        const glyphs = glyphDataMapRef.current;
+        const charsByUnicode = new Map<number, Character>();
+        characterSetsRef.current?.forEach(set => set.characters.forEach(c => { if (c.unicode !== undefined) charsByUnicode.set(c.unicode, c); }));
         
-        // Prepare data payload
         const relevantGlyphs: Record<string, GlyphData> = {};
         const pairPayloads = batch.map(p => {
              const lId = p.left.unicode!;
              const rId = p.right.unicode!;
+             const left = charsByUnicode.get(lId) ?? p.left;
+             const right = charsByUnicode.get(rId) ?? p.right;
              
-             const lData = glyphDataMap.get(lId);
-             const rData = glyphDataMap.get(rId);
+             const lData = glyphs.get(lId);
+             const rData = glyphs.get(rId);
              
              if (lData && rData) {
                  relevantGlyphs[lId] = lData;
@@ -166,8 +184,8 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
                      leftId: lId,
                      rightId: rId,
                      targetDistance: p.targetDistance,
-                     leftRsb: p.left.rsb ?? metrics.defaultRSB,
-                     rightLsb: p.right.lsb ?? metrics.defaultLSB
+                     leftRsb: left.rsb ?? metricsNow.defaultRSB,
+                     rightLsb: right.lsb ?? metricsNow.defaultLSB
                  };
              }
              return null;
@@ -175,24 +193,25 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         if (pairPayloads.length > 0) {
             batchIdRef.current += 1;
+            handlersRef.current.set(batchIdRef.current, { kind: 'background' });
             workerRef.current.postMessage({
                 batchId: batchIdRef.current,
                 pairs: pairPayloads,
                 glyphDataMap: relevantGlyphs,
-                metrics,
-                strokeThickness: settings.strokeThickness
+                metrics: metricsNow,
+                strokeThickness: settingsNow.strokeThickness
             });
         }
-    }, [glyphDataMap, metrics, settings]);
+    }, []);
 
     const queueAutoKern = useCallback((pairs: QueuedPair[]) => {
-        if (!settings || !metrics) return;
+        if (!settingsRef.current || !metricsRef.current) return;
         
         // Deduplicate and filter ignored
         const existingKeys = new Set(pendingPairsRef.current.map(p => `${p.left.unicode}-${p.right.unicode}`));
         const newPairs = pairs.filter(p => {
              const key = `${p.left.unicode}-${p.right.unicode}`;
-             return !existingKeys.has(key) && !state.ignoredPairs.has(key);
+             return !existingKeys.has(key) && !ignoredPairsRef.current.has(key);
         });
         
         if (newPairs.length > 0) {
@@ -203,7 +222,7 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
             }
             debounceTimerRef.current = window.setTimeout(processQueue, 2000);
         }
-    }, [processQueue, settings, metrics, state.ignoredPairs]);
+    }, [processQueue]);
 
     // NEW: Discovery Logic
     const discoverKerning = useCallback(async (onProgress: (p: number) => void, shouldCalculateValues: boolean, returnResultsOnly: boolean = false): Promise<Map<string, number>> => {
@@ -231,11 +250,8 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
         });
         
         return new Promise((resolve) => {
-            onDiscoveryProgressRef.current = onProgress;
-            discoveryResolveRef.current = resolve;
-            shouldDispatchDiscoveryRef.current = !returnResultsOnly;
-            
             batchIdRef.current += 1;
+            handlersRef.current.set(batchIdRef.current, { kind: 'discover', resolve, onProgress, dispatchResults: !returnResultsOnly });
             workerRef.current!.postMessage({
                 batchId: batchIdRef.current,
                 type: 'discover',

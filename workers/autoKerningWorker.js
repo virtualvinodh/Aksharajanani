@@ -371,7 +371,7 @@ self.onmessage = async (e) => {
                 // Report progress
                 const currentProgress = Math.round((ops / totalOps) * 100);
                 if (currentProgress > lastProgress) {
-                    self.postMessage({ type: 'progress', progress: currentProgress });
+                    self.postMessage({ type: 'progress', progress: currentProgress, batchId });
                     lastProgress = currentProgress;
                 }
                 

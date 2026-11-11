@@ -50,7 +50,7 @@ interface DrawingCanvasProps {
   lockedMessage?: string;
   transformMode?: 'all' | 'move-only';
   movementConstraint?: 'horizontal' | 'vertical' | 'none';
-  onTransformComponent?: (index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => void;
+  onTransformComponent?: (index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => boolean | void;
 }
 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 

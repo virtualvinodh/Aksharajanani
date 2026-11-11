@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Point, ImageTransform } from '../../types';
+import { Point, ImageTransform, Path } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { VEC } from '../../utils/vectorUtils';
 import { getAccurateGlyphBBox, BoundingBox } from '../../services/glyphRenderService';
@@ -163,27 +163,24 @@ export const useSelectTool = ({
     const start = (point: Point, e: React.MouseEvent) => {
         const handle = getHandleAtPoint(point);
 
-        // --- COMPONENT DETECTION ---
-        // If transformations are not disabled and onTransformComponent is provided
-        if (!disableTransformations && onTransformComponent && selectedPathIds.size > 0 && !isImageSelected) {
-            // Check if all selected paths belong to the same component group
-            const selectedPaths = currentPaths.filter(p => selectedPathIds.has(p.id));
-            const firstGroupId = selectedPaths[0]?.groupId;
+        // The component being dragged is decided only once the click's target is known (D4): it
+        // used to be taken from the previous selection even when the click selected another shape.
+        activeComponentIndex.current = null;
+        const beginComponentTransform = (paths: Path[]) => {
+            if (disableTransformations || !onTransformComponent || paths.length === 0 || isImageSelected) return;
+            const firstGroupId = paths[0]?.groupId;
             const componentMatch = firstGroupId?.match(/^component-(\d+)$/);
-            
-            if (componentMatch) {
-                const index = parseInt(componentMatch[1], 10);
-                const isSingleComponent = selectedPaths.every(p => p.groupId === firstGroupId);
-                
-                if (isSingleComponent) {
-                    activeComponentIndex.current = index;
-                    // Notify session to snapshot initial transform state
-                    onTransformComponent(index, 'start', { x: 0, y: 0, scale: 1, rotation: 0 });
-                }
+            if (!componentMatch || !paths.every(p => p.groupId === firstGroupId)) return;
+            const index = parseInt(componentMatch[1], 10);
+            // The session returns false when the glyph has no components (plain shapes then).
+            if (onTransformComponent(index, 'start', { x: 0, y: 0, scale: 1, rotation: 0 }) !== false) {
+                activeComponentIndex.current = index;
             }
-        }
+        };
+        const currentSelection = () => currentPaths.filter(p => selectedPathIds.has(p.id));
 
         if (handle) {
+            beginComponentTransform(currentSelection());
             setIsDrawing(true);
             setTransformAction({
                 type: handle.type,
@@ -216,6 +213,7 @@ export const useSelectTool = ({
                 }
                 
                 // Click is inside the current selection. Start a move operation on the whole selection.
+                if (!isImageSelected) beginComponentTransform(currentSelection());
                 setIsDrawing(true);
                 setTransformAction({
                     type: 'move',
@@ -288,19 +286,8 @@ export const useSelectTool = ({
                 if (!disableTransformations) {
                     const newSelectedPaths = currentPaths.filter(p => newSelection.has(p.id));
                     
-                    // --- COMPONENT DETECTION FOR CLICK-TO-MOVE ---
-                    if (onTransformComponent && newSelectedPaths.length > 0) {
-                         const firstGroupId = newSelectedPaths[0].groupId;
-                         const componentMatch = firstGroupId?.match(/^component-(\d+)$/);
-                         if (componentMatch) {
-                              const index = parseInt(componentMatch[1], 10);
-                              const isSingleComponent = newSelectedPaths.every(p => p.groupId === firstGroupId);
-                              if (isSingleComponent) {
-                                  activeComponentIndex.current = index;
-                                  onTransformComponent(index, 'start', { x: 0, y: 0, scale: 1, rotation: 0 });
-                              }
-                         }
-                    }
+                    // --- COMPONENT DETECTION FOR CLICK-TO-MOVE (the newly selected shapes) ---
+                    beginComponentTransform(newSelectedPaths);
 
                     const box = getAccurateGlyphBBox(newSelectedPaths, settings.strokeThickness);
                     if (box) {
@@ -563,7 +550,8 @@ export const useSelectTool = ({
         }
 
         if (transformAction) {
-            if (transformAction.target === 'paths' && activeComponentIndex.current === null) {
+            // Commit the drag (also for component drags) so it becomes one undo step.
+            if (transformAction.target === 'paths') {
                 onPathsChange(currentPaths);
             }
         } else if (marqueeBox) {

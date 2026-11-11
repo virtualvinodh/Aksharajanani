@@ -137,8 +137,12 @@ export const useEraserTool = ({ isDrawing, setIsDrawing, currentPaths, setCurren
             if (!wasErased) {
                 newPaths.push(path);
             } else {
+                // Fragments keep the stroke's kind (D7): calligraphy keeps its type and angle, a
+                // line stays a straight line; curves and shapes become pen strokes.
                 segments.forEach(seg => {
-                    newPaths.push({ ...path, type: 'pen', points: seg, id: generateId() });
+                    if (path.type === 'calligraphy') newPaths.push({ ...path, points: seg, id: generateId() });
+                    else if (path.type === 'line') newPaths.push({ ...path, points: [seg[0], seg[seg.length - 1]], id: generateId() });
+                    else newPaths.push({ ...path, type: 'pen', points: seg, id: generateId() });
                 });
             }
         });

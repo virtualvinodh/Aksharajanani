@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { RecommendedKerning, Character } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { useProject } from '../contexts/ProjectContext';
@@ -39,7 +39,10 @@ const KerningPage: React.FC<KerningPageProps> = ({
     const { settings, metrics } = useSettings();
     const { state: rulesState } = useRules();
     
-    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    // The open pair is tracked by its glyphs, not its list position (K1): saving can drop it from a
+    // filtered list, and an index would then silently point at the next pair.
+    const [editingPair, setEditingPair] = useState<{ left: Character; right: Character } | null>(null);
+    const lastIndexRef = useRef(0);
     const [selectedLeftChars, setSelectedLeftChars] = useState(new Set<number>());
     const [selectedRightChars, setSelectedRightChars] = useState(new Set<number>());
 
@@ -253,30 +256,35 @@ const KerningPage: React.FC<KerningPageProps> = ({
         if (pendingNavigationTarget) {
             const index = filteredPairs.findIndex(p => `${p.left.unicode}-${p.right.unicode}` === pendingNavigationTarget);
             if (index !== -1) {
-                setEditingIndex(index);
+                setEditingPair(filteredPairs[index]);
                 setPendingNavigationTarget(null);
             }
         }
     }, [pendingNavigationTarget, filteredPairs, setPendingNavigationTarget]);
 
+    const pairKey = (p: { left: Character; right: Character }) => `${p.left.unicode}-${p.right.unicode}`;
+    const editingIndex = editingPair ? filteredPairs.findIndex(p => pairKey(p) === pairKey(editingPair)) : -1;
+    if (editingIndex >= 0) lastIndexRef.current = editingIndex;
+    // Neighbours: if the pair just left the list, the next pair now sits at its old position.
+    const prevPair = editingPair ? (editingIndex >= 0 ? filteredPairs[editingIndex - 1] : filteredPairs[lastIndexRef.current - 1]) : undefined;
+    const nextPair = editingPair ? (editingIndex >= 0 ? filteredPairs[editingIndex + 1] : filteredPairs[lastIndexRef.current]) : undefined;
+
     const handleNavigate = (target: 'prev' | 'next' | Character) => {
         if (typeof target === 'object') {
             // It's a Character object (from Source strip) - Switch to Drawing Workspace
-            setEditingIndex(null);
+            setEditingPair(null);
             selectCharacter(target);
             setWorkspace('drawing');
             return;
         }
 
         // It's a direction string - Navigate within Kerning list
-        if (editingIndex === null) return;
-        if (target === 'prev' && editingIndex > 0) setEditingIndex(editingIndex - 1);
-        if (target === 'next' && editingIndex < filteredPairs.length - 1) setEditingIndex(editingIndex + 1);
+        if (target === 'prev' && prevPair) setEditingPair(prevPair);
+        if (target === 'next' && nextPair) setEditingPair(nextPair);
     };
 
     const handleDeletePair = useCallback(() => {
-        if (editingIndex === null) return;
-        const pair = filteredPairs[editingIndex];
+        const pair = editingPair;
         if (!pair) return;
 
         const key = `${pair.left.unicode}-${pair.right.unicode}`;
@@ -289,22 +297,20 @@ const KerningPage: React.FC<KerningPageProps> = ({
             newMap.delete(key);
             kerningDispatch({ type: 'SET_MAP', payload: newMap });
         }
-        setEditingIndex(null);
-    }, [editingIndex, filteredPairs, kerningMap, kerningDispatch, filterMode, showNotification, t]);
+        setEditingPair(null);
+    }, [editingPair, kerningMap, kerningDispatch, filterMode, showNotification, t]);
 
     const handleIgnorePair = useCallback(() => {
-        if (editingIndex === null) return;
-        const pair = filteredPairs[editingIndex];
+        const pair = editingPair;
         if (!pair) return;
         const key = `${pair.left.unicode}-${pair.right.unicode}`;
         kerningDispatch({ type: 'IGNORE_PAIR', payload: key });
         showNotification(t('pairIgnored'), 'info');
-        setEditingIndex(null);
-    }, [editingIndex, filteredPairs, kerningDispatch, showNotification, t]);
+        setEditingPair(null);
+    }, [editingPair, kerningDispatch, showNotification, t]);
 
-    if (editingIndex !== null) {
-        const pair = filteredPairs[editingIndex];
-        if (!pair) { setEditingIndex(null); return null; }
+    if (editingPair) {
+        const pair = editingPair;
         const key = `${pair.left.unicode}-${pair.right.unicode}`;
         const isKerned = kerningMap.has(key);
         const initialValue = kerningMap.get(key) ?? suggestedKerningMap.get(key) ?? 0;
@@ -332,8 +338,8 @@ const KerningPage: React.FC<KerningPageProps> = ({
                     kerningDispatch({ type: 'SET_MAP', payload: newMap });
                     kerningDispatch({ type: 'REMOVE_SUGGESTIONS', payload: [key] });
                 }}
-                onClose={() => setEditingIndex(null)} onNavigate={handleNavigate}
-                hasPrev={editingIndex > 0} hasNext={editingIndex < filteredPairs.length - 1}
+                onClose={() => setEditingPair(null)} onNavigate={handleNavigate}
+                hasPrev={!!prevPair} hasNext={!!nextPair}
                 glyphVersion={glyphVersion}
                 isKerned={isKerned}
                 onDelete={handleDeletePair}
@@ -351,7 +357,7 @@ const KerningPage: React.FC<KerningPageProps> = ({
     return (
         <KerningSelectionView 
             filteredPairs={filteredPairs}
-            onEditPair={(pair) => setEditingIndex(filteredPairs.indexOf(pair))}
+            onEditPair={(pair) => setEditingPair(pair)}
             selectedLeftChars={selectedLeftChars} setSelectedLeftChars={setSelectedLeftChars}
             selectedRightChars={selectedRightChars} setSelectedRightChars={setSelectedRightChars}
             mode={mode} showRecommendedLabel={showRecommendedLabel}

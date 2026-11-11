@@ -13,6 +13,7 @@ import { generateCompositeGlyphData, getAccurateGlyphBBox, calculateDefaultMarkO
 import * as dbService from '../../services/dbService';
 import { deepClone } from '../../utils/cloneUtils';
 import { findCharacterLocations, restoreCharacters, pairEntriesInvolving } from '../../utils/undoHelpers';
+import { resolveRecommendedTarget } from '../../services/kerningService';
 import { useRules } from '../../contexts/RulesContext';
 import { expandMembers } from '../../services/groupExpansionService';
 
@@ -149,7 +150,7 @@ export const useGlyphActions = (
         
         const affectedPairs: QueuedPair[] = [];
         
-        recommendedKerning.forEach(([leftRule, rightRule, val]) => {
+        recommendedKerning.forEach(([leftRule, rightRule]) => {
             const lefts = expandMembers([leftRule], groups, characterSets);
             const rights = expandMembers([rightRule], groups, characterSets);
             
@@ -158,18 +159,16 @@ export const useGlyphActions = (
             
             if (!isLeft && !isRight) return;
             
-            let targetDist: number | null = null;
-            if (val !== undefined) {
-                 if (typeof val === 'number') targetDist = val;
-                 else if (!isNaN(Number(val))) targetDist = Number(val);
-                 else if (val === 'lsb' || val === 'rsb') targetDist = null; 
-            }
+            // Same reading of the rule as the Auto-kern button (K5): an exact pair rule wins over
+            // this group rule, null means "default gap", and 'lsb'/'rsb' use the glyphs' bearings.
+            const targetFor = (left: Character, right: Character) =>
+                metrics ? resolveRecommendedTarget(left, right, recommendedKerning, metrics, { groups, characterSets }).target : null;
 
             if (isLeft) {
                 rights.forEach(rName => {
                     const rChar = allCharsByName.get(rName);
                     if (rChar?.unicode !== undefined && isGlyphDrawn(glyphDataMap.get(rChar.unicode))) {
-                        affectedPairs.push({ left: char, right: rChar, targetDistance: targetDist });
+                        affectedPairs.push({ left: char, right: rChar, targetDistance: targetFor(char, rChar) });
                     }
                 });
             }
@@ -178,7 +177,7 @@ export const useGlyphActions = (
                  lefts.forEach(lName => {
                     const lChar = allCharsByName.get(lName);
                     if (lChar?.unicode !== undefined && isGlyphDrawn(glyphDataMap.get(lChar.unicode))) {
-                        affectedPairs.push({ left: lChar, right: char, targetDistance: targetDist });
+                        affectedPairs.push({ left: lChar, right: char, targetDistance: targetFor(lChar, char) });
                     }
                 });
             }
@@ -188,7 +187,7 @@ export const useGlyphActions = (
             queueAutoKern(affectedPairs);
         }
 
-    }, [recommendedKerning, characterSets, allCharsByUnicode, allCharsByName, groups, glyphDataMap, queueAutoKern, suggestedKerningMap, kerningMap, kerningDispatch, settings?.isBackgroundAutoKerningEnabled]);
+    }, [recommendedKerning, characterSets, allCharsByUnicode, allCharsByName, groups, glyphDataMap, queueAutoKern, suggestedKerningMap, kerningMap, kerningDispatch, settings?.isBackgroundAutoKerningEnabled, metrics]);
 
     const handleSaveGlyph = useCallback(async (
         unicode: number,

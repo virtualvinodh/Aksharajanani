@@ -120,9 +120,23 @@ def patch_font(base_data, delta_data):
 
     # 2. Table Swap: Shapes
     if 'glyf' in delta_font:
-        print("[Python] Swapping 'glyf' and 'loca' tables (Targeting TTF)...")
-        base_font['glyf'] = delta_font['glyf']
-        base_font['loca'] = delta_font['loca']
+        print("[Python] Patching 'glyf' (Targeting TTF)...")
+        delta_glyf = delta_font['glyf']
+        delta_names = set(delta_glyf.keys())
+        if 'glyf' in base_font:
+            # Merge per glyph (E4): glyphs the delta doesn't have under the same name keep their
+            # base outline instead of making the save fail with a KeyError.
+            base_glyf = base_font['glyf']
+            for g_name in base_order:
+                if g_name in delta_names:
+                    base_glyf[g_name] = delta_glyf[g_name]
+        else:
+            from fontTools.ttLib.tables._g_l_y_f import Glyph as _EmptyGlyph
+            for g_name in base_order:
+                if g_name not in delta_names:
+                    delta_glyf[g_name] = _EmptyGlyph()
+            base_font['glyf'] = delta_glyf
+            base_font['loca'] = delta_font['loca']
         import struct
         base_font.sfntVersion = struct.pack(">BBBB", 0, 1, 0, 0) # Ensure TTF signature
         # If base was CFF, remove it
@@ -183,9 +197,15 @@ def patch_font(base_data, delta_data):
                  if 'loca' in base_font: del base_font['loca']
     
     # 3. Table Swap: Metrics
-    print("[Python] Swapping 'hmtx', 'hhea', and 'maxp' tables...")
-    base_font['hmtx'] = delta_font['hmtx']
-    base_font['hhea'] = delta_font['hhea'] # Contains numberOfHMetrics
+    # Merge advances per glyph (E4): glyphs missing from the delta keep their base metrics
+    # instead of breaking the save. (hhea's numberOfHMetrics is recomputed on save.)
+    print("[Python] Merging 'hmtx'; swapping 'hhea' and 'maxp'...")
+    base_hmtx = base_font['hmtx']
+    delta_metrics = delta_font['hmtx'].metrics
+    for g_name in base_order:
+        if g_name in delta_metrics:
+            base_hmtx.metrics[g_name] = delta_metrics[g_name]
+    base_font['hhea'] = delta_font['hhea']
     
     # Only swap maxp if we are NOT converting CFF->TTF (which would mean base is TTF but delta is CFF)
     # If base is TTF, we want maxp 1.0. If delta is CFF, it has maxp 0.5.
@@ -194,22 +214,48 @@ def patch_font(base_data, delta_data):
 
     # 4. Table Swap: CMAP
     # We update the cmap to ensure any NEW unicode points assigned in the editor are reachable.
-    print("[Python] Swapping 'cmap' table...")
-    
-    # Sanitize CMAP: Only keep mappings for glyphs that exist in base_font
-    # This prevents KeyErrors if delta_font has extra glyphs (like .notdef.1) not in base_font
+    # Merge into the base cmap (E4) instead of replacing it: the base's secondary code points
+    # (e.g. 'space' for both U+0020 and U+00A0) are kept, delta mappings are only added for glyphs
+    # the base has, and private-use code points that the importer assigned to unencoded glyphs
+    # (any PUA code the base didn't already map) are left out.
+    print("[Python] Merging 'cmap'...")
     base_glyph_set = set(base_order)
-    new_cmap_table = delta_font['cmap']
-    
-    for table in new_cmap_table.tables:
-        # Create a filtered dictionary
-        filtered_cmap = {
-            code: name for code, name in table.cmap.items() 
-            if name in base_glyph_set
-        }
-        table.cmap = filtered_cmap
-        
-    base_font['cmap'] = new_cmap_table
+
+    def _is_pua(code):
+        return 0xE000 <= code <= 0xF8FF or 0xF0000 <= code <= 0xFFFFD or 0x100000 <= code <= 0x10FFFD
+
+    base_mappings = {}
+    for table in base_font['cmap'].tables:
+        if table.isUnicode():
+            base_mappings.update(table.cmap)
+    merged = dict(base_mappings)
+    for table in delta_font['cmap'].tables:
+        if not table.isUnicode():
+            continue
+        for code, name in table.cmap.items():
+            if name not in base_glyph_set:
+                continue
+            if _is_pua(code) and code not in base_mappings:
+                continue
+            merged[code] = name
+
+    has_full_table = False
+    for table in base_font['cmap'].tables:
+        if not table.isUnicode():
+            continue
+        if table.format in (12, 13):
+            table.cmap = dict(merged)
+            has_full_table = True
+        elif table.format == 0:
+            table.cmap = {c: n for c, n in merged.items() if c <= 0xFF}
+        else:
+            table.cmap = {c: n for c, n in merged.items() if c <= 0xFFFF}
+    if not has_full_table and any(c > 0xFFFF for c in merged):
+        from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
+        full = CmapSubtable.newSubtable(12)
+        full.platformID, full.platEncID, full.language = 3, 10, 0
+        full.cmap = dict(merged)
+        base_font['cmap'].tables.append(full)
     
     # 5. Table Swap: OS/2 (Required for metrics consistency)
     print("[Python] Swapping 'OS/2' table...")

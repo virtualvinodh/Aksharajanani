@@ -9,6 +9,7 @@ import CharacterSelectionPanel from './CharacterSelectionPanel';
 import CharacterSelectionRow from './CharacterSelectionRow';
 import { useKerning } from '../../contexts/KerningContext';
 import { useProject } from '../../contexts/ProjectContext';
+import { useRules } from '../../contexts/RulesContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLayout } from '../../contexts/LayoutContext';
@@ -42,6 +43,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
     const { showNotification, filterMode, searchQuery } = useLayout();
     const { dispatch: kerningDispatch, discoverKerning } = useKerning();
     const { characterSets, allCharsByUnicode, setRecommendedKerning, recommendedKerning } = useProject();
+    const { state: rulesState } = useRules();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { settings, metrics } = useSettings();
 
@@ -79,7 +81,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
         }
 
         setIsProgressModalOpen(true);
-        const results = await calculateAutoKerning(pairsToKern, glyphDataMap, metrics, settings.strokeThickness, setKerningProgressValue, recommendedKerning);
+        const results = await calculateAutoKerning(pairsToKern, glyphDataMap, metrics, settings.strokeThickness, setKerningProgressValue, recommendedKerning, { groups: rulesState.fontRules?.groups || {}, characterSets });
         if (results.size > 0) {
             kerningDispatch({ type: 'MERGE_SUGGESTIONS', payload: results });
             showNotification(t('autoKerningComplete', { count: results.size }), 'success');

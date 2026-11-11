@@ -1,5 +1,5 @@
 
-import { Point } from '../types';
+import { Point, Path } from '../types';
 
 // Ramer-Douglas-Peucker Path Simplification
 const getPerpendicularDistance = (point: Point, lineStart: Point, lineEnd: Point): number => {
@@ -55,3 +55,10 @@ export const simplifyPath = (points: Point[], epsilon: number): Point[] => {
   
   return result;
 };
+
+/** Moves every point of the paths by `offset`: freehand points and outline segments alike. */
+export const translatePaths = (paths: Path[], offset: Point): Path[] => paths.map(p => ({
+    ...p,
+    points: p.points.map(pt => ({ x: pt.x + offset.x, y: pt.y + offset.y })),
+    segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: { x: seg.point.x + offset.x, y: seg.point.y + offset.y } }))) : undefined,
+}));

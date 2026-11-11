@@ -68,7 +68,7 @@ export interface UseDrawingCanvasProps {
     transformMode?: 'all' | 'move-only';
     movementConstraint?: 'horizontal' | 'vertical' | 'none';
     currentCharacter?: Character;
-    onTransformComponent?: (index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => void;
+    onTransformComponent?: (index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => boolean | void;
 }
 
 export interface ToolHookProps extends UseDrawingCanvasProps {

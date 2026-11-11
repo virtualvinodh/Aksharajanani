@@ -1,5 +1,6 @@
 
-import { Character, GlyphData, FontMetrics, RecommendedKerning } from '../types';
+import { Character, CharacterSet, GlyphData, FontMetrics, RecommendedKerning } from '../types';
+import { expandMembers } from './groupExpansionService';
 import { getGlyphSubBBoxes, BBox } from './glyphRenderService';
 
 /**
@@ -20,6 +21,45 @@ export const doBBoxesCollide = (boxA: BBox | null, boxB: BBox | null): boolean =
     );
 };
 
+
+export interface KerningGroupContext {
+    groups: Record<string, string[]>;
+    characterSets: CharacterSet[] | null | undefined;
+}
+
+/**
+ * The target gap a `recommendedKerning` rule asks for, shared by the auto-kern tool and the
+ * background auto-kern (K5). Per positioning_json.md:
+ * - an exact pair rule beats a group rule (`$caps`), and groups are expanded;
+ * - a missing, null or empty target means "use the default" (returns null), not 0;
+ * - `0` (or "0") means kern until the glyphs touch; any other number is the gap;
+ * - `'lsb'` / `'rsb'` mean the right glyph's LSB / the left glyph's RSB.
+ * Returns `{ rule: false }` when no rule covers the pair.
+ */
+export const resolveRecommendedTarget = (
+    left: Character,
+    right: Character,
+    recommendedKerning: RecommendedKerning[] | null | undefined,
+    metrics: Pick<FontMetrics, 'defaultLSB' | 'defaultRSB'>,
+    groupContext?: KerningGroupContext
+): { rule: boolean; target: number | null } => {
+    if (!recommendedKerning || recommendedKerning.length === 0) return { rule: false, target: null };
+    let rule = recommendedKerning.find(r => r[0] === left.name && r[1] === right.name);
+    if (!rule && groupContext) {
+        rule = recommendedKerning.find(r =>
+            expandMembers([r[0]], groupContext.groups, groupContext.characterSets ?? undefined).includes(left.name) &&
+            expandMembers([r[1]], groupContext.groups, groupContext.characterSets ?? undefined).includes(right.name)
+        );
+    }
+    if (!rule) return { rule: false, target: null };
+
+    const goal = rule[2];
+    if (goal === undefined || goal === null || (typeof goal === 'string' && goal.trim() === '')) return { rule: true, target: null };
+    if (goal === 'lsb') return { rule: true, target: right.lsb ?? metrics.defaultLSB };
+    if (goal === 'rsb') return { rule: true, target: left.rsb ?? metrics.defaultRSB };
+    const n = Number(goal);
+    return { rule: true, target: Number.isFinite(n) ? n : null };
+};
 
 /**
  * Calculates optically-pleasing kerning values for a list of character pairs.
@@ -69,7 +109,8 @@ export async function calculateAutoKerning(
     metrics: FontMetrics,
     strokeThickness: number,
     onProgress: (progress: number) => void,
-    recommendedKerning: RecommendedKerning[] | null
+    recommendedKerning: RecommendedKerning[] | null,
+    groupContext?: KerningGroupContext
 ): Promise<Map<string, number>> {
 
     const newKerningMap = new Map<string, number>();
@@ -96,32 +137,11 @@ export async function calculateAutoKerning(
 
         // --- Step 1: Determine the target distance for the x-height gap. ---
         let targetDistance: number;
-        const rule = recommendedKerning?.find(r => r[0] === leftChar.name && r[1] === rightChar.name);
+        const recommended = resolveRecommendedTarget(leftChar, rightChar, recommendedKerning, metrics, groupContext);
 
-        if (rule && rule.length === 3) {
-            // A specific rule exists for this pair.
-            const goal = rule[2];
-            if (goal === 0) {
-                // SPECIAL CASE: A value of 0 in the rule means kern until the glyphs touch.
-                // The target gap is set to 0. The binary search will then find the tightest
-                // possible kerning value that avoids collision.
-                targetDistance = 0;
-            } else if (!isNaN(Number(goal))) {
-                // The rule is a non-zero numerical value. Use it as the target gap.
-                targetDistance = Number(goal);
-            } else if (goal === 'lsb') {
-                // The rule says the gap should be the right character's LSB.
-                targetDistance = rightChar.lsb ?? metrics.defaultLSB;
-            } else if (goal === 'rsb') {
-                 // The rule says the gap should be the left character's RSB.
-                targetDistance = leftChar.rsb ?? metrics.defaultRSB;
-            } else {
-                // Fallback for an invalid rule value (e.g., misspelled string).
-                // Use the default logic but correct for negative side bearings which can cause issues.
-                const rsbL = (leftChar.rsb ?? metrics.defaultRSB) < 0 ? metrics.defaultRSB : (leftChar.rsb ?? metrics.defaultRSB);
-                const lsbR = (rightChar.lsb ?? metrics.defaultLSB) < 0 ? metrics.defaultLSB : (rightChar.lsb ?? metrics.defaultLSB);
-                targetDistance = rsbL + lsbR;
-            }
+        if (recommended.target !== null) {
+            // 0 = kern until the glyphs touch; any other value is the gap to keep.
+            targetDistance = recommended.target;
         } else {
             // Default logic: The target gap is the sum of the outer side bearings.
             // Correct for negative side bearings to ensure a non-negative target distance.

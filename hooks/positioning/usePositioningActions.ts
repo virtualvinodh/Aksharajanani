@@ -9,6 +9,7 @@ import { updatePositioningAndCascade } from '../../services/positioningService';
 import { getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../../services/glyphRenderService';
 import { Character, GlyphData, Point, Path, PositioningRules, AttachmentClass, MarkAttachmentRules, CharacterSet, FontMetrics, MarkPositioningMap } from '../../types';
 import { deepClone } from '../../utils/cloneUtils';
+import { translatePaths } from '../../utils/pathUtils';
 import { expandMembers } from '../../services/groupExpansionService';
 
 interface UsePositioningActionsProps {
@@ -137,7 +138,15 @@ export const usePositioningActions = ({
             isManual
         });
     
-        const propagatedCount = result.updatedMarkPositioningMap.size - markPositioningMap.size - 1;
+        // Count the sibling pairs actually written (K13). Subtracting map sizes gave 0 or -1 when the
+        // siblings already had positions, so re-editing showed no message and no Undo.
+        const primaryKey = `${baseChar.unicode}-${markChar.unicode}`;
+        let propagatedCount = 0;
+        result.updatedMarkPositioningMap.forEach((value, key) => {
+            if (key === primaryKey) return;
+            const before = markPositioningMap.get(key);
+            if (!before || before.x !== value.x || before.y !== value.y) propagatedCount++;
+        });
     
         if (propagatedCount > 0) {
             const undoPropagation = () => {
@@ -312,17 +321,21 @@ export const usePositioningActions = ({
                 const targetKey = `${targetCombo.base.unicode}-${targetCombo.mark.unicode}`;
                 newMarkPositioningMap.set(targetKey, sourceOffset);
 
+                positionsCopiedCount++;
+
+                // Bake a combined glyph only for GSUB rules, like every other positioning path, and
+                // move outline marks too (K9: only freehand points were moved, and GPOS-only pairs
+                // got baked glyphs).
+                const rule = positioningRules?.find(r =>
+                    expandMembers(r.base, groups, characterSets || undefined).includes(targetCombo.base.name) &&
+                    expandMembers(r.mark || [], groups, characterSets || undefined).includes(targetCombo.mark.name)
+                );
                 const baseGlyph = glyphDataMap.get(targetCombo.base.unicode);
                 const markGlyph = glyphDataMap.get(targetCombo.mark.unicode);
-                if (baseGlyph && markGlyph) {
-                    const transformedMarkPaths = deepClone(markGlyph.paths).map((p: Path) => ({
-                        ...p,
-                        points: p.points.map((pt: Point) => ({ x: pt.x + sourceOffset.x, y: pt.y + sourceOffset.y }))
-                    }));
-                    const combinedPaths = [...baseGlyph.paths, ...transformedMarkPaths];
+                if (rule?.gsub && baseGlyph && markGlyph) {
+                    const combinedPaths = [...baseGlyph.paths, ...translatePaths(deepClone(markGlyph.paths), sourceOffset)];
                     newGlyphDataMap.set(targetCombo.ligature.unicode, { paths: combinedPaths });
                     ligaturesToAddOrUpdate.push(targetCombo.ligature);
-                    positionsCopiedCount++;
                 }
             }
         });
@@ -358,7 +371,7 @@ export const usePositioningActions = ({
         } else {
             showNotification(t('noPositionsToCopy'), 'info');
         }
-    }, [markPositioningMap, displayedCombinations, viewMode, glyphDataMap, positioningDispatch, glyphDataDispatch, characterDispatch, showNotification, t]);
+    }, [markPositioningMap, displayedCombinations, viewMode, glyphDataMap, positioningDispatch, glyphDataDispatch, characterDispatch, showNotification, t, positioningRules, groups, characterSets]);
 
     const handleResetPositions = useCallback((pairsToReset: { base: Character; mark: Character; ligature: Character }[], activeItemName: string | undefined, onComplete: () => void) => {
         if (!characterSets) return;

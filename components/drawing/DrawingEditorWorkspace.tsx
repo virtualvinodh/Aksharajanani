@@ -67,7 +67,7 @@ interface DrawingEditorWorkspaceProps {
     gridConfig: { characterNameSize: number };
     kerningMap: KerningMap;
     markPositioningMap: MarkPositioningMap;
-    onTransformComponent?: (index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => void;
+    onTransformComponent?: (index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => boolean | void;
 }
 
 const DrawingEditorWorkspace: React.FC<DrawingEditorWorkspaceProps> = (props) => {

@@ -7,6 +7,7 @@ import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContex
 import { useKerning } from '../contexts/KerningContext';
 import { usePositioning } from '../contexts/PositioningContext';
 import { useRules } from '../contexts/RulesContext';
+import { createVirtualCodePointAllocator } from '../utils/virtualCodePoints';
 import { expandMembers } from '../services/groupExpansionService';
 import { updatePositioningAndCascade } from '../services/positioningService';
 import { getAccurateGlyphBBox, calculateDefaultMarkOffset, generateCompositeGlyphData } from '../services/glyphRenderService';
@@ -145,7 +146,8 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
           });
       });
       if (positioningRules) {
-          let virtualId = 0x100000;
+          // Same code points as the positioning workspace (K8).
+          const virtualCodePointFor = createVirtualCodePointAllocator(Array.from(allCharsByName.values(), c => c.unicode));
           positioningRules.forEach(rule => {
               const bases = expandMembers(rule.base, groups, allCharacterSets);
               const marks = expandMembers(rule.mark || [], groups, allCharacterSets);
@@ -156,7 +158,7 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
                       if (bChar && mChar && bChar.unicode !== undefined && mChar.unicode !== undefined) {
                           const key = `${bChar.unicode}-${mChar.unicode}`;
                           if (!map.has(key)) {
-                              map.set(key, { name: bName + mName, unicode: virtualId++, position: [bName, mName], glyphClass: 'ligature' });
+                              map.set(key, { name: bName + mName, unicode: virtualCodePointFor(bChar.unicode, mChar.unicode), position: [bName, mName], glyphClass: 'ligature' });
                           }
                       }
                   });

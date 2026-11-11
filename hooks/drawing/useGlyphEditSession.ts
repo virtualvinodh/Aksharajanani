@@ -1,6 +1,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Path, Character, GlyphData, AppSettings, FontMetrics, MarkAttachmentRules, CharacterSet, ComponentTransform, ScriptConfig } from '../../types';
+
+interface HistoryEntry {
+    paths: Path[];
+    compositeTransform: ComponentTransform[] | undefined;
+}
 import { useLocale } from '../../contexts/LocaleContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
@@ -82,7 +87,9 @@ export const useGlyphEditSession = ({
         return !isGlyphDrawn(glyphData);
     });
 
-    const [history, setHistory] = useState<Path[][]>([currentPaths]);
+    // Each undo step stores the component transforms too, so undoing a component move also
+    // restores where the component is (D8).
+    const [history, setHistory] = useState<HistoryEntry[]>(() => [{ paths: currentPaths, compositeTransform: character.compositeTransform }]);
     const [historyIndex, setHistoryIndex] = useState(0);
     
     // Metadata States
@@ -101,6 +108,10 @@ export const useGlyphEditSession = ({
     const [compositeTransform, setCompositeTransformState] = useState<ComponentTransform[] | undefined>(character.compositeTransform);
     
     const transformSnapshot = useRef<ComponentTransform[]>([]);
+    // Paths on screen and the un-centred regenerated composite at the start of a component drag (D5).
+    const dragStartRef = useRef<{ paths: Path[]; regenerated: Path[] } | null>(null);
+    const currentPathsRef = useRef(currentPaths);
+    currentPathsRef.current = currentPaths;
 
     const metaRef = useRef({ lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform });
     
@@ -109,27 +120,46 @@ export const useGlyphEditSession = ({
     }, [lsb, rsb, glyphClass, advWidth, label, position, kern, gpos, gsub, link, composite, liga, compositeTransform]);
     
     // --- FORCE UPDATE LISTENER ---
+    // Reload only when a new external bulk operation signals it (D3). This used to run on every
+    // glyphData change once the counter was ever > 0, so each autosave wiped undo and could drop
+    // a stroke in progress. The bulk op dispatches its data and bumps the counter in one render.
+    const lastForceUpdateRef = useRef(activeEditorForceUpdate);
     useEffect(() => {
-        if (activeEditorForceUpdate > 0 && glyphData) {
-            // Reload paths from global store due to external bulk op
-            const newPaths = deepClone(glyphData.paths || []);
-            setCurrentPaths(newPaths);
-            setInitialPathsOnLoad(newPaths);
-            // Reset history to match new state (prevents undoing into pre-transform state which is confusing)
-            setHistory([newPaths]);
-            setHistoryIndex(0);
-        }
+        if (activeEditorForceUpdate === lastForceUpdateRef.current) return;
+        lastForceUpdateRef.current = activeEditorForceUpdate;
+        if (!glyphData) return;
+        const newPaths = deepClone(glyphData.paths || []);
+        setCurrentPaths(newPaths);
+        setInitialPathsOnLoad(newPaths);
+        // Reset history to match new state (prevents undoing into pre-transform state which is confusing)
+        setHistory([{ paths: newPaths, compositeTransform: metaRef.current.compositeTransform }]);
+        setHistoryIndex(0);
     }, [activeEditorForceUpdate, glyphData]);
 
-    const handleTransformComponent = useCallback((index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform) => {
-        if (!character.link && !character.composite) return;
-        
+    const handleTransformComponent = useCallback((index: number, action: 'start' | 'move' | 'end', delta: ComponentTransform): boolean => {
+        // Only linked/composite glyphs have components to transform. Returning false lets the select
+        // tool move `component-N` paths like ordinary shapes instead (D5).
+        if (!character.link && !character.composite) return false;
+
+        const allCharsByName = new Map<string, Character>();
+        allCharacterSets.flatMap(set => set.characters).forEach(char => allCharsByName.set(char.name, char));
+        const regenerate = (transforms: ComponentTransform[]) => generateCompositeGlyphData({
+            character: { ...character, compositeTransform: transforms, link: character.link, composite: character.composite },
+            allCharsByName, allGlyphData, settings, metrics, markAttachmentRules, allCharacterSets, groups,
+            center: false
+        });
+        const groupId = `component-${index}`;
+
         if (action === 'start') {
             transformSnapshot.current = deepClone(compositeTransform || []);
             const componentCount = (character.link || character.composite || []).length;
             while (transformSnapshot.current.length < componentCount) {
                 transformSnapshot.current.push({ scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' });
             }
+            dragStartRef.current = {
+                paths: deepClone(currentPathsRef.current),
+                regenerated: regenerate(transformSnapshot.current)?.paths || []
+            };
         } else if (action === 'move') {
             const initial = transformSnapshot.current[index] || { scale: 1, scaleX: 1, scaleY: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
             const updated = { ...initial };
@@ -150,38 +180,43 @@ export const useGlyphEditSession = ({
             
             setCompositeTransformState(newTransforms);
             hasPendingCascade.current = true;
-            
-            const tempChar: Character = { 
-                ...character, 
-                compositeTransform: newTransforms,
-                link: character.link,
-                composite: character.composite
-            };
-            
-            const allCharsByName = new Map<string, Character>();
-            allCharacterSets.flatMap(set => set.characters).forEach(char => allCharsByName.set(char.name, char));
 
-            const newData = generateCompositeGlyphData({
-                character: tempChar,
-                allCharsByName,
-                allGlyphData,
-                settings,
-                metrics,
-                markAttachmentRules,
-                allCharacterSets,
-                groups
-            });
-            
-            if (newData) {
+            const newData = regenerate(newTransforms);
+            if (!newData) return true;
+
+            // Replace only this component's shapes; other components, extra strokes and hand edits
+            // stay exactly as they are (D5). The regenerated shapes are placed where the component
+            // sat on screen at the start of the drag.
+            const start = dragStartRef.current;
+            const startOnScreen = start?.paths.filter(p => p.groupId === groupId) || [];
+            const startRegenerated = start?.regenerated.filter(p => p.groupId === groupId) || [];
+            const screenBox = startOnScreen.length ? getAccurateGlyphBBox(startOnScreen, settings.strokeThickness) : null;
+            const regenBox = startRegenerated.length ? getAccurateGlyphBBox(startRegenerated, settings.strokeThickness) : null;
+            if (!start || !screenBox || !regenBox) {
                 setCurrentPaths(newData.paths);
+                return true;
             }
+            const offset = { x: screenBox.x - regenBox.x, y: screenBox.y - regenBox.y };
+            const moved = newData.paths.filter(p => p.groupId === groupId).map((p, k) => ({
+                ...p,
+                // Keep the ids so the selection survives the drag.
+                id: startOnScreen.length === startRegenerated.length && startOnScreen[k] ? startOnScreen[k].id : p.id,
+                points: p.points.map(pt => ({ x: pt.x + offset.x, y: pt.y + offset.y })),
+                segmentGroups: p.segmentGroups ? p.segmentGroups.map(group => group.map(seg => ({ ...seg, point: { x: seg.point.x + offset.x, y: seg.point.y + offset.y } }))) : undefined
+            }));
+            const firstIndex = start.paths.findIndex(p => p.groupId === groupId);
+            const others = start.paths.filter(p => p.groupId !== groupId);
+            others.splice(Math.min(firstIndex, others.length), 0, ...moved);
+            setCurrentPaths(others);
         } else if (action === 'end') {
             transformSnapshot.current = [];
+            dragStartRef.current = null;
             if (settings.isAutosaveEnabled) {
                 if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
-                autosaveTimeout.current = window.setTimeout(() => performSave(currentPaths, { isDraft: true, silent: true }), 500);
+                autosaveTimeout.current = window.setTimeout(() => performSave(currentPathsRef.current, { isDraft: true, silent: true }), 500);
             }
         }
+        return true;
     }, [character, compositeTransform, allCharacterSets, allGlyphData, settings, metrics, markAttachmentRules, groups]);
 
     useEffect(() => {
@@ -412,7 +447,7 @@ export const useGlyphEditSession = ({
         }
 
         const newHistory = history.slice(0, historyIndex + 1);
-        newHistory.push(newPaths);
+        newHistory.push({ paths: newPaths, compositeTransform: metaRef.current.compositeTransform });
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
         
@@ -427,19 +462,26 @@ export const useGlyphEditSession = ({
         }
     }, [history, historyIndex, settings.isAutosaveEnabled, performSave, currentPaths, character, settings.strokeThickness]);
 
+    const restoreCompositeTransform = useCallback((value: ComponentTransform[] | undefined) => {
+        if (JSON.stringify(value) === JSON.stringify(metaRef.current.compositeTransform)) return;
+        setCompositeTransformState(value);
+        metaRef.current = { ...metaRef.current, compositeTransform: value };
+    }, []);
+
     const undo = useCallback(() => {
         if (historyIndex > 0) {
             const newIndex = historyIndex - 1;
             setHistoryIndex(newIndex);
-            const newPaths = history[newIndex];
+            const { paths: newPaths, compositeTransform: entryTransform } = history[newIndex];
             setCurrentPaths(newPaths);
+            restoreCompositeTransform(entryTransform);
             hasPendingCascade.current = true;
             if (settings.isAutosaveEnabled) {
                 if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
                 autosaveTimeout.current = window.setTimeout(() => performSave(newPaths, { isDraft: true, silent: true }), 500);
             }
         }
-    }, [history, historyIndex, settings.isAutosaveEnabled, performSave]);
+    }, [history, historyIndex, settings.isAutosaveEnabled, performSave, restoreCompositeTransform]);
     
     // Create a stable ref for undo that is always up-to-date for async callbacks (like notification actions)
     const undoRef = useRef(undo);
@@ -449,15 +491,16 @@ export const useGlyphEditSession = ({
         if (historyIndex < history.length - 1) {
             const newIndex = historyIndex + 1;
             setHistoryIndex(newIndex);
-            const newPaths = history[newIndex];
+            const { paths: newPaths, compositeTransform: entryTransform } = history[newIndex];
             setCurrentPaths(newPaths);
+            restoreCompositeTransform(entryTransform);
             hasPendingCascade.current = true;
             if (settings.isAutosaveEnabled) {
                 if (autosaveTimeout.current) clearTimeout(autosaveTimeout.current);
                 autosaveTimeout.current = window.setTimeout(() => performSave(newPaths, { isDraft: true, silent: true }), 500);
             }
         }
-    }, [history, historyIndex, settings.isAutosaveEnabled, performSave]);
+    }, [history, historyIndex, settings.isAutosaveEnabled, performSave, restoreCompositeTransform]);
 
     const canUndo = historyIndex > 0;
     const canRedo = historyIndex < history.length - 1;

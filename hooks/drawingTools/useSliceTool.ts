@@ -1,9 +1,67 @@
 
 import { useState, useCallback } from 'react';
-import { Point, Path } from '../../types';
+import { Point, Path, Segment } from '../../types';
 import { generateId, ToolHookProps } from './types';
 import { paperScope } from '../../services/glyphRenderService';
 import { VEC } from '../../utils/vectorUtils';
+import { curveToPolyline, quadraticCurveToPolyline } from '../../utils/strokeExpansion';
+
+// --- Outline slicing (D7) ---
+// Outlines are cut with boolean operations on the whole compound shape, so counters (holes) and
+// curve handles survive, and the pieces stay closed outlines.
+const buildOutlineItem = (pathData: Path): paper.CompoundPath => {
+    const children = (pathData.segmentGroups || []).filter(g => g.length > 1).map(group => new paperScope.Path({
+        segments: group.map(seg => new paperScope.Segment(
+            new paperScope.Point(seg.point.x, seg.point.y),
+            new paperScope.Point(seg.handleIn.x, seg.handleIn.y),
+            new paperScope.Point(seg.handleOut.x, seg.handleOut.y)
+        )),
+        closed: true,
+        insert: false
+    }));
+    return new paperScope.CompoundPath({ children, insert: false });
+};
+
+const outlineFromItem = (item: paper.PathItem, source: Path): Path | null => {
+    const parts = (item instanceof paperScope.CompoundPath ? item.children : [item]) as paper.Path[];
+    const segmentGroups: Segment[][] = parts
+        .filter(part => part.segments && part.segments.length > 1 && Math.abs(part.area) > 1)
+        .map(part => part.segments.map(seg => ({
+            point: { x: seg.point.x, y: seg.point.y },
+            handleIn: { x: seg.handleIn.x, y: seg.handleIn.y },
+            handleOut: { x: seg.handleOut.x, y: seg.handleOut.y }
+        })));
+    if (segmentGroups.length === 0) return null;
+    return { ...source, id: generateId(), points: [], segmentGroups };
+};
+
+const outlineCrossesLine = (pathData: Path, p1: Point, p2: Point): boolean => {
+    if (!pathData.segmentGroups?.length || VEC.len(VEC.sub(p2, p1)) < 0.5) return false;
+    const item = buildOutlineItem(pathData);
+    const line = new paperScope.Path.Line({ from: [p1.x, p1.y], to: [p2.x, p2.y], insert: false });
+    return item.getIntersections(line).length > 0;
+};
+
+/** Splits an outline along the line through p1→p2 into the part on each side (closed outlines). */
+const sliceOutline = (pathData: Path, p1: Point, p2: Point): Path[] | null => {
+    if (!outlineCrossesLine(pathData, p1, p2)) return null;
+    const item = buildOutlineItem(pathData);
+    const dir = VEC.normalize(VEC.sub(p2, p1));
+    const normal = VEC.perp(dir);
+    const BIG = 100000;
+    const a = VEC.sub(p1, VEC.scale(dir, BIG));
+    const b = VEC.add(p2, VEC.scale(dir, BIG));
+    const side = new paperScope.Path({
+        segments: [[a.x, a.y], [b.x, b.y], [b.x + normal.x * BIG, b.y + normal.y * BIG], [a.x + normal.x * BIG, a.y + normal.y * BIG]],
+        closed: true,
+        insert: false
+    });
+    const pieces = [
+        outlineFromItem(item.intersect(side, { insert: false }), pathData),
+        outlineFromItem(item.subtract(side, { insert: false }), pathData),
+    ].filter((p): p is Path => !!p);
+    return pieces.length > 1 ? pieces : null;
+};
 
 
 export const useSliceTool = ({
@@ -75,14 +133,15 @@ export const useSliceTool = ({
         } 
         
         // 2. Handle Curves/Pens - Smoothing
-        else if (pathData.type === 'pen' || pathData.type === 'curve') {
+        else if (pathData.type === 'pen' || pathData.type === 'calligraphy' || pathData.type === 'curve') {
              if (pathData.points.length < 2) return { points: pathData.points, isClosed: false };
-             paperItem = new paperScope.Path({ segments: pathData.points.map(p => [p.x, p.y]) });
-             if (pathData.type === 'pen') paperItem.smooth();
-             paperItem.flatten(2);
-             const points = paperItem.segments.map((s: any) => ({ x: s.point.x, y: s.point.y }));
+             // Follow the stroke the way the app draws it (its own curve), not paper's smooth(),
+             // which bulged pen strokes after a cut (D7).
+             const points = pathData.type === 'curve' && pathData.points.length === 3
+                 ? quadraticCurveToPolyline(pathData.points)
+                 : pathData.points.length > 2 ? curveToPolyline(pathData.points) : [...pathData.points];
              // Heuristic check for visual closure
-             const isClosed = paperItem.closed || (points.length > 2 && VEC.len(VEC.sub(points[0], points[points.length-1])) < 5);
+             const isClosed = points.length > 2 && VEC.len(VEC.sub(points[0], points[points.length-1])) < 5;
              
              // Ensure unique vertices for closed loops to simplify intersection logic
              if (isClosed && points.length > 1 && VEC.len(VEC.sub(points[0], points[points.length-1])) < 0.1) {
@@ -94,7 +153,7 @@ export const useSliceTool = ({
         // 3. Handle Circles/Ellipses/Polygons - Explicit Points
         else {
              const points = [...pathData.points];
-             const isClosed = ['circle', 'ellipse', 'rect', 'line'].includes(pathData.type);
+             const isClosed = ['circle', 'ellipse', 'rect'].includes(pathData.type); // a line is open (D7)
              // Remove duplicate end point if present to make math easier
              if (isClosed && points.length > 1 && VEC.len(VEC.sub(points[0], points[points.length-1])) < 0.1) {
                  points.pop();
@@ -105,6 +164,10 @@ export const useSliceTool = ({
 
     // Check intersection for a single path
     const checkPathIntersection = useCallback((pathData: Path, p1: Point, p2: Point) => {
+        if (pathData.type === 'outline') {
+            const hit = outlineCrossesLine(pathData, p1, p2);
+            return { intersections: hit ? [{ index: 0, point: p1 }] : [], points: [] as Point[], isClosed: true };
+        }
         const { points, isClosed } = getFlattenedPoints(pathData);
         if (points.length < 2) return { intersections: [] as { index: number, point: Point }[], points, isClosed };
 
@@ -160,21 +223,24 @@ export const useSliceTool = ({
         const newPathsList: Path[] = [];
         let replaced = false;
 
+        let sourcePath: Path | null = null;
         const createPathFromPoints = (pts: Point[]): Path | null => {
             if (pts.length < 2) return null;
-            
+            const newId = generateId();
+            newPathIds.push(newId);
+
+            // Pieces keep the stroke's kind (D7): a line stays a straight line, calligraphy keeps
+            // its type and pen angle; everything else becomes a dense pen stroke.
+            if (sourcePath?.type === 'line') {
+                return { ...sourcePath, id: newId, type: 'line', points: [pts[0], pts[pts.length - 1]], groupId: undefined };
+            }
             // Densify the path (insert points every ~4px) to preserve corners/straight lines
             // from being collapsed by the renderer's smoothing.
             const densePoints = densifyPolyline(pts);
-
-            const newId = generateId();
-            newPathIds.push(newId);
-            
-            return {
-                id: newId,
-                type: 'pen', // Keep as 'pen' for smooth rendering, but now dense enough to hold shape
-                points: densePoints
-            };
+            if (sourcePath?.type === 'calligraphy') {
+                return { ...sourcePath, id: newId, type: 'calligraphy', points: densePoints, groupId: undefined };
+            }
+            return { id: newId, type: 'pen', points: densePoints };
         };
 
         currentPaths.forEach(pathData => {
@@ -183,6 +249,15 @@ export const useSliceTool = ({
                 return;
             }
 
+            if (pathData.type === 'outline') {
+                const pieces = sliceOutline(pathData, p1, p2);
+                if (!pieces) { newPathsList.push(pathData); return; }
+                replaced = true;
+                pieces.forEach(piece => { newPathIds.push(piece.id); newPathsList.push(piece); });
+                return;
+            }
+
+            sourcePath = pathData;
             const { intersections, points, isClosed } = checkPathIntersection(pathData, p1, p2);
 
             if (intersections.length === 0) {

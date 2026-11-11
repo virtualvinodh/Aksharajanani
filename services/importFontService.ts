@@ -1,6 +1,7 @@
 
 import { ProjectData, GlyphData, Path, Segment, Point, AppSettings, FontMetrics, CharacterSet } from '../types';
 import { getGlyphExportNameByUnicode } from '../utils/glyphUtils';
+import { DRAWING_CANVAS_SIZE } from '../canvasConstants';
 import opentype from 'opentype.js';
 
 const generateId = () => `${Date.now()}-${Math.random()}`;
@@ -47,14 +48,26 @@ export const extractProjectData = async (
 ): Promise<ProjectData> => {
     
     const scale = 1000 / font.unitsPerEm;
-    const baseLineY = 600; // Standard baseline for 1000 UPM
+    const ascender = Math.round(font.ascender * scale);
+    const descender = Math.round(font.descender * scale);
+
+    // Map font units onto the drawing canvas with exactly the inverse of the export transform in
+    // fontBuilder (E2): export writes  x_font = x·k  and  y_font = (CANVAS − y)·k + descender,
+    // with k = (ascender − descender) / CANVAS. The old fixed mapping (baseline 600, scale 1)
+    // only matched when ascender − descender was 1000 and descender −400, so other fonts came
+    // back scaled and shifted.
+    const k = (ascender - descender) / DRAWING_CANVAS_SIZE || 1;
+    const toCanvasX = (xFont: number) => xFont / k;
+    const toCanvasY = (yFont: number) => DRAWING_CANVAS_SIZE - (yFont - descender) / k;
+    const baseLineY = Math.round(toCanvasY(0));
+    const capHeight = (font.tables?.os2?.sCapHeight ? font.tables.os2.sCapHeight * scale : ascender * 0.7);
 
     const metrics: FontMetrics = {
         unitsPerEm: 1000,
-        ascender: Math.round(font.ascender * scale),
-        descender: Math.round(font.descender * scale),
+        ascender,
+        descender,
         defaultAdvanceWidth: 800,
-        topLineY: baseLineY - Math.round(font.ascender * scale * 0.6), // Approximate cap height
+        topLineY: Math.round(toCanvasY(capHeight)),
         baseLineY: baseLineY,
         styleName: 'Regular',
         spaceAdvanceWidth: 400,
@@ -128,13 +141,10 @@ export const extractProjectData = async (
         let currentGroup: Segment[] = [];
 
         // Helper to transform coordinates
+        // getPath(0, 0, unitsPerEm) gives screen coordinates (y down), so the font's y is −y.
         const tr = (x: number, y: number): Point => ({
-            x: Math.round(x * scale),
-            // Flip Y axis: opentype.js uses Y-up, but sometimes we need to invert or preserve based on context.
-            // User reported shapes are upside down with (baseLineY - y).
-            // This implies we need to flip the rendering.
-            // Let's try inverting the direction.
-            y: Math.round(baseLineY - (y * scale * -1)) 
+            x: Math.round(toCanvasX(x * scale)),
+            y: Math.round(toCanvasY(-y * scale))
         });
 
         // We need to track the previous handleOut to assign to the next segment's handleIn logic
@@ -332,8 +342,11 @@ export const extractProjectData = async (
             originalName: glyph.name, // Store original name for Edit Mode
             glyphClass: glyphClass,
             advWidth: Math.round(glyph.advanceWidth * scale),
-            lsb: Math.round((glyph.leftSideBearing || 0) * scale),
-            rsb: Math.round(((glyph.advanceWidth || 0) - (glyph.xMax || 0)) * scale),
+            // Bearings are in canvas units (export multiplies them by k, like the outlines).
+            // Export puts the outline's left edge at the LSB, so import the left edge itself
+            // (hmtx's lsb normally equals it, but not every font writes it correctly).
+            lsb: Math.round(toCanvasX((segmentGroups.length ? glyph.getBoundingBox().x1 : (glyph.leftSideBearing ?? 0)) * scale)),
+            rsb: Math.round(toCanvasX(((glyph.advanceWidth || 0) - (glyph.xMax ?? glyph.getBoundingBox().x2 ?? 0)) * scale)),
             isPuaAssigned: isPuaAssigned
         });
     }
