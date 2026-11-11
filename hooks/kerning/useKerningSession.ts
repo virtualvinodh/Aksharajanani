@@ -181,27 +181,45 @@ export const useKerningSession = ({
         return () => { if (debounceTimeout.current) clearTimeout(debounceTimeout.current); };
     }, [kernValue, isDirty, settings.isAutosaveEnabled, handleSave]);
 
-    const handleNavigationAttempt = useCallback((target: Character | 'prev' | 'next') => {
-        if (settings.isAutosaveEnabled && isDirty) {
-             handleSave();
-        }
-        // In simple/manual save mode, dirty state is handled by modal in header if navigated away?
-        // Actually KerningEditorHeader handles dirty state before calling onNavigate/onClose.
-        // But clicking a glyph in the strip is a direct navigation request.
-        
-        // If we are dirty and NOT autosave, we should ideally prompt.
-        // For now, we will auto-save on strip navigation to keep it fluid, 
-        // mirroring the Drawing workspace behavior for linked glyphs.
-        if (isDirty) {
+    // Leaving a pair (Back, Prev/Next, the glyph strip) works like the drawing and positioning
+    // editors: with autosave the edit is saved first; in manual mode the user is asked.
+    const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
+    const pendingLeaveRef = useRef<(() => void) | null>(null);
+
+    const attemptLeave = useCallback((leave: () => void) => {
+        if (!isDirty) { leave(); return; }
+        if (settings.isAutosaveEnabled) {
+            // Save now instead of waiting for the autosave timer, which is cancelled when the pair changes.
+            if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
             handleSave();
+            leave();
+            return;
         }
-        
-        if (target === 'prev' || target === 'next') {
-            onNavigate(target);
-        } else {
-            onNavigate(target);
-        }
-    }, [isDirty, handleSave, onNavigate, settings.isAutosaveEnabled]);
+        pendingLeaveRef.current = leave;
+        setIsUnsavedModalOpen(true);
+    }, [isDirty, settings.isAutosaveEnabled, handleSave]);
+
+    const handleNavigationAttempt = useCallback((target: Character | 'prev' | 'next') => {
+        attemptLeave(() => onNavigate(target));
+    }, [attemptLeave, onNavigate]);
+
+    const handleCloseAttempt = useCallback((onClose: () => void) => {
+        attemptLeave(onClose);
+    }, [attemptLeave]);
+
+    const finishPendingLeave = useCallback((save: boolean) => {
+        const leave = pendingLeaveRef.current;
+        pendingLeaveRef.current = null;
+        setIsUnsavedModalOpen(false);
+        if (save) handleSave();
+        else setIsDirty(false);
+        leave?.();
+    }, [handleSave]);
+
+    const cancelPendingLeave = useCallback(() => {
+        pendingLeaveRef.current = null;
+        setIsUnsavedModalOpen(false);
+    }, []);
 
     return {
         kernValue, setKernValue: handleKernValueChange,
@@ -212,6 +230,8 @@ export const useKerningSession = ({
         isXDistFocused, setIsXDistFocused, isXDistHovered, setIsXDistHovered,
         isKernFocused, setIsKernFocused, isKernHovered, setIsKernHovered,
         showMeasurement: isXDistFocused || isXDistHovered || isKernFocused || isKernHovered,
-        handleNavigationAttempt
+        handleNavigationAttempt, handleCloseAttempt,
+        isUnsavedModalOpen, confirmSaveAndLeave: () => finishPendingLeave(true),
+        confirmDiscardAndLeave: () => finishPendingLeave(false), cancelPendingLeave
     };
 };

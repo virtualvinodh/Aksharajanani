@@ -950,5 +950,6 @@
 	"errorScreenRetry": "Try again",
 	"errorScreenReload": "Reload",
 	"errorScreenDetails": "Details",
-	"glyphNotInProject": "“{name}” isn’t in this project"
+	"glyphNotInProject": "“{name}” isn’t in this project",
+	"errorRuleOutputExists": "Another rule here already produces “{name}”. Edit that rule instead, or choose a different result."
 }

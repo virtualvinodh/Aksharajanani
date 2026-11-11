@@ -129,19 +129,23 @@ export const useKerningCanvas = ({
     const handleWheel = useCallback((e: WheelEvent) => {
         const viewportPoint = getViewportPoint(e);
         if (!viewportPoint) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
         const zoomFactor = -e.deltaY * 0.001;
-        const newZoom = Math.max(0.1, Math.min(10, zoomRef.current * (1 + zoomFactor)));
-        const pointInCanvas = {
-            x: (viewportPoint.x - viewOffsetRef.current.x) / zoomRef.current,
-            y: (viewportPoint.y - viewOffsetRef.current.y) / zoomRef.current
-        };
+        const oldZoom = zoomRef.current;
+        const newZoom = Math.max(0.1, Math.min(10, oldZoom * (1 + zoomFactor)));
+        // The view is drawn at screen = centre + scale·(world − pivot) + viewOffset (see the draw
+        // effect), so keep the point under the cursor fixed relative to the canvas centre.
+        const ratio = newZoom / oldZoom;
+        const cx = canvas.width / 2, cy = canvas.height / 2;
+        const off = viewOffsetRef.current;
         const newViewOffset = {
-            x: viewportPoint.x - pointInCanvas.x * newZoom,
-            y: viewportPoint.y - pointInCanvas.y * newZoom
+            x: viewportPoint.x - cx - ratio * (viewportPoint.x - cx - off.x),
+            y: viewportPoint.y - cy - ratio * (viewportPoint.y - cy - off.y)
         };
         setZoom(newZoom);
         setViewOffset(newViewOffset);
-    }, [getViewportPoint, setZoom, setViewOffset]);
+    }, [getViewportPoint, setZoom, setViewOffset, canvasRef]);
     useNonPassiveWheel(canvasRef, handleWheel);
 
     const handleTouchStart = useCallback((e: React.TouchEvent) => {

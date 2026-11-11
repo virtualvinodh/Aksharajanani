@@ -8,6 +8,7 @@ import { useKerningSession } from '../hooks/kerning/useKerningSession';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
 import Modal from './Modal';
+import UnsavedChangesModal from './UnsavedChangesModal';
 import { useLocale } from '../contexts/LocaleContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
@@ -237,9 +238,9 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
         <div className="flex-1 flex flex-col h-full w-full bg-white dark:bg-gray-800 min-h-0 overflow-hidden" data-tour="kerning-editor-page">
             <KerningEditorHeader 
                 pair={props.pair} 
-                onClose={props.onClose}
+                onClose={() => session.handleCloseAttempt(props.onClose)}
                 onDelete={props.onDelete}
-                onNavigate={props.onNavigate} 
+                onNavigate={session.handleNavigationAttempt} 
                 hasPrev={props.hasPrev} 
                 hasNext={props.hasNext} 
                 onAutoKern={session.handleAutoKern} 
@@ -331,6 +332,12 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
             >
                 <p>This will convert the kerning pair into a static ligature glyph. You will be able to edit the outlines manually.</p>
             </Modal>
+            <UnsavedChangesModal
+                isOpen={session.isUnsavedModalOpen}
+                onClose={session.cancelPendingLeave}
+                onSave={session.confirmSaveAndLeave}
+                onDiscard={session.confirmDiscardAndLeave}
+            />
         </div>
     );
 };

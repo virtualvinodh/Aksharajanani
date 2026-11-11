@@ -14,7 +14,7 @@ export type RuleType = 'ligature' | 'contextual' | 'multiple' | 'single';
 export type DistRuleType = 'simple' | 'contextual';
 
 export const useRulesState = () => {
-    useLocale();
+    const { t } = useLocale();
     const { state: rulesState, dispatch: rulesDispatch } = useRules();
     const { showNotification } = useLayout();
     const { allCharsByUnicode } = useProject();
@@ -138,8 +138,28 @@ export const useRulesState = () => {
         setRuleToDelete(null);
     };
 
-    const handleSaveNewRule = (contextName: string, newRule: any, ruleType: RuleType, context: 'feature' | 'lookup' = 'feature') => {
-        if (!contextName) return;
+    // Rules are stored by their result glyph, so a second rule with the same result would
+    // silently replace the first. Refuse instead and keep the editor open.
+    const getRuleKey = (rule: any, ruleType: RuleType): string | undefined => (
+        ruleType === 'ligature' ? rule.ligatureName :
+        ruleType === 'contextual' ? rule.replacementName :
+        ruleType === 'multiple' ? rule.outputString :
+        rule.outputName
+    );
+    const ruleKeyTaken = (contextName: string, key: string | undefined, ruleType: RuleType, context: 'feature' | 'lookup', ignoreKey?: string): boolean => {
+        if (!key || key === ignoreKey) return false;
+        const container = context === 'feature' ? localRules[scriptTag!]?.[contextName] : localRules.lookups?.[contextName];
+        const group = container?.[getRuleGroupKey(ruleType)];
+        if (group && Object.prototype.hasOwnProperty.call(group, key)) {
+            showNotification(t('errorRuleOutputExists', { name: key }), 'error');
+            return true;
+        }
+        return false;
+    };
+
+    const handleSaveNewRule = (contextName: string, newRule: any, ruleType: RuleType, context: 'feature' | 'lookup' = 'feature'): boolean => {
+        if (!contextName) return false;
+        if (ruleKeyTaken(contextName, getRuleKey(newRule, ruleType), ruleType, context)) return false;
         setLocalRules(prevRules => {
             const newRules = deepClone(prevRules);
             const ruleGroup = getRuleGroupKey(ruleType);
@@ -174,10 +194,12 @@ export const useRulesState = () => {
             return newRules;
         });
         setAddingRuleType(null);
+        return true;
     };
 
-    const handleUpdateRule = (contextName: string, oldKey: string, updatedRule: any, ruleType: RuleType, context: 'feature' | 'lookup' = 'feature') => {
-        if (!contextName) return;
+    const handleUpdateRule = (contextName: string, oldKey: string, updatedRule: any, ruleType: RuleType, context: 'feature' | 'lookup' = 'feature'): boolean => {
+        if (!contextName) return false;
+        if (ruleKeyTaken(contextName, getRuleKey(updatedRule, ruleType), ruleType, context, oldKey)) return false;
         setLocalRules(prev => {
             const newRules = deepClone(prev);
             const ruleGroup = getRuleGroupKey(ruleType);
@@ -199,6 +221,7 @@ export const useRulesState = () => {
             return newRules;
         });
         setEditingRule(null);
+        return true;
     };
     
     const handleConfirmAddFeature = (tag: string) => {

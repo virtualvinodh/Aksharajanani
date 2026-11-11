@@ -271,9 +271,24 @@ const DistRulesEditor: React.FC<DistRulesEditorProps> = ({
          );
     };
 
+    // A name must be a glyph in the project, or a group / character set ($name or @name).
+    const isKnownName = (name: string) => {
+        if (name.startsWith('$') || name.startsWith('@')) {
+            const groupName = name.substring(1);
+            return !!groups?.[groupName] || allCharacterSets.some(set => set.nameKey === groupName);
+        }
+        return allCharsByName.has(name);
+    };
+
     const handleSave = () => {
         const { type, target, value, left, right } = editorState;
         if (!type) return;
+
+        const unknown = [target, ...left, ...right].filter((n): n is string => !!n).find(n => !isKnownName(n));
+        if (unknown) {
+            showNotification(t('glyphNotInProject', { name: unknown }), 'error');
+            return;
+        }
 
         if (type === 'simple') {
             if (!target) {

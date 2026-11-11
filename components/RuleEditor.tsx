@@ -23,7 +23,7 @@ interface RuleEditorProps {
     glyphDataMap?: Map<number, GlyphData>;
     strokeThickness?: number;
     isNew: boolean;
-    onSave: (newRule: LigatureRule | ContextualRule | MultipleRule | SingleRule, ruleType: RuleEditorProps['ruleType']) => void;
+    onSave: (newRule: LigatureRule | ContextualRule | MultipleRule | SingleRule, ruleType: RuleEditorProps['ruleType']) => boolean | void;
     onCancel?: () => void;
     showNotification: (message: string, type?: 'success' | 'info' | 'error') => void;
     mode?: RuleEditorMode;
@@ -276,8 +276,8 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
     const handleSave = () => {
         if (ruleType === 'ligature') {
             if (ligature && components.length > 0) {
-                onSave({ ligatureName: ligature, componentNames: components }, 'ligature');
-                if (isNew) { setComponents([]); setLigature(null); }
+                const ok = onSave({ ligatureName: ligature, componentNames: components }, 'ligature') !== false;
+                if (isNew && ok) { setComponents([]); setLigature(null); }
             } else {
                 showNotification(t('errorLigatureRule'), 'error');
             }
@@ -286,22 +286,22 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                 const rule: ContextualRuleValue = { replace: target };
                 if (leftContext.length > 0) rule.left = leftContext;
                 if (rightContext.length > 0) rule.right = rightContext;
-                onSave({ replacementName: replacement, rule }, 'contextual');
-                 if (isNew) { setLeftContext([]); setTarget([]); setRightContext([]); setReplacement(null); }
+                const ok = onSave({ replacementName: replacement, rule }, 'contextual') !== false;
+                 if (isNew && ok) { setLeftContext([]); setTarget([]); setRightContext([]); setReplacement(null); }
             } else {
                 showNotification(t('errorContextualRule'), 'error');
             }
         } else if (ruleType === 'multiple') {
              if (multiInputGlyph && outputSequence.length > 0) {
-                onSave({ inputName: [multiInputGlyph], outputString: outputSequence.join(',') }, 'multiple');
-                if (isNew) { setMultiInputGlyph(null); setOutputSequence([]); }
+                const ok = onSave({ inputName: [multiInputGlyph], outputString: outputSequence.join(',') }, 'multiple') !== false;
+                if (isNew && ok) { setMultiInputGlyph(null); setOutputSequence([]); }
              } else {
                 showNotification(t('errorMultipleRule'), 'error');
              }
         } else if (ruleType === 'single') {
             if (singleInput && singleOutput) {
-                onSave({ outputName: singleOutput, inputName: [singleInput] }, 'single');
-                if (isNew) { setSingleInput(null); setSingleOutput(null); }
+                const ok = onSave({ outputName: singleOutput, inputName: [singleInput] }, 'single') !== false;
+                if (isNew && ok) { setSingleInput(null); setSingleOutput(null); }
             } else {
                 showNotification(t('errorSingleRule'), 'error');
             }

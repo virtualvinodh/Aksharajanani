@@ -274,6 +274,9 @@ export const useJITHints = (
                              ]);
                              setStepIndex(0);
                              setRun(true);
+                             // Show the toolbar tour once, however it ends (finished, closed, or
+                             // interrupted by leaving the glyph); it must not restart on every glyph.
+                             try { localStorage.setItem(toolbarStorageKey, 'true'); } catch { /* storage unavailable */ }
                          }, 500);
                          return () => clearTimeout(timer);
                     }

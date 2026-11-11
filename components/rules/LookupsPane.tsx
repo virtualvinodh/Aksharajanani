@@ -14,8 +14,8 @@ interface LookupsPaneProps {
     onAddLookup: (name: string) => boolean;
     onUpdateLookup: (oldName: string, newName: string) => boolean;
     onDeleteLookup: (name: string) => void;
-    onSaveRule: (lookupName: string, rule: any, type: RuleType, context: 'lookup') => void;
-    onUpdateRule: (lookupName: string, oldKey: string, rule: any, type: RuleType, context: 'lookup') => void;
+    onSaveRule: (lookupName: string, rule: any, type: RuleType, context: 'lookup') => boolean | void;
+    onUpdateRule: (lookupName: string, oldKey: string, rule: any, type: RuleType, context: 'lookup') => boolean | void;
     onDeleteRule: (context: 'lookup', lookupName: string, key: string, type: RuleType) => void;
     allCharacterSets: CharacterSet[];
     allCharsByName: Map<string, Character>;
@@ -93,7 +93,7 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                     <RuleEditor
                         isNew={true}
                         ruleType={addingRule!.type} 
-                        onSave={(newRule, type) => { onSaveRule(lookupKey, newRule, type, 'lookup'); setAddingRule(null); }}
+                        onSave={(newRule, type) => { const ok = onSaveRule(lookupKey, newRule, type, 'lookup') !== false; if (ok) setAddingRule(null); return ok; }}
                         onCancel={() => setAddingRule(null)}
                         allCharacterSets={allCharacterSets}
                         allCharsByName={allCharsByName}
@@ -113,7 +113,7 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                             ruleKey={key}
                             ruleValue={value}
                             ruleType={ruleType}
-                            onSave={(updatedRule, type) => { onUpdateRule(lookupKey, key, updatedRule, type, 'lookup'); setEditingRule(null); }}
+                            onSave={(updatedRule, type) => { const ok = onUpdateRule(lookupKey, key, updatedRule, type, 'lookup') !== false; if (ok) setEditingRule(null); return ok; }}
                             onCancel={() => setEditingRule(null)}
                             allCharacterSets={allCharacterSets}
                             allCharsByName={allCharsByName}

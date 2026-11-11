@@ -184,10 +184,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** under the incomplete/toBeReviewed filters (or in Spaced after Reset), saving drops the pair from the list, and `editingIndex` silently points at the next pair. If an autosave fires mid-drag, the rest of the drag is written to the new pair.
   - **Fix:** store the pair key (`"L-R"`), not an index.
 
-- [ ] **K2 ⚠ Kerning Next/Previous/Back skip the unsaved-changes check** (confirmed)
+- [x] **K2 ⚠ Kerning Next/Previous/Back skip the unsaved-changes check** (confirmed)
   - **Where:** `components/kerning/KerningEditorHeader.tsx` 137, 147, 160; `hooks/kerning/useKerningSession.ts` 171–182.
   - **Problem:** in manual mode, edits are discarded without a prompt. In autosave mode, navigating within 800 ms loses the last change.
   - **Fix:** route these buttons through `handleNavigationAttempt`, and flush the pending timer on navigation instead of clearing it.
+  - **Fixed:** Back, Previous/Next and the glyph strip go through one guard, like the drawing and positioning editors: with autosave the edit is saved first (no 800 ms gap); in manual mode the Unsaved Changes dialog asks (Save & Close / Discard / Cancel). Checked in the browser; the old build failed both cases.
 
 - [ ] **K3 ⚠ Two `calculateDefaultMarkOffset` implementations disagree** (confirmed)
   - **Where:** `services/positioningHeuristicsService.ts` 113 vs `services/glyphRenderService.ts` 293.
@@ -245,11 +246,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** use `props.markChar.name`.
   - **Fixed:** uses the mark name, via a tested `isGsubPositioningPair` helper. About eight other places copy the same rule lookup and could use it later.
 
-- [ ] **K15 Kerning canvas zoom drift and stranded pagination** (confirmed)
+- [x] **K15 Kerning canvas zoom drift and stranded pagination** (confirmed)
   - **Where:** `useKerningCanvas.ts` 128–144; `KerningSelectionView.tsx` 53–65, 287.
   - **Problem:** wheel zoom ignores the centre translation, so it drifts about 40 px per step. `currentPage` is never reset, so a narrowed search shows "No results" with no pagination controls.
   - **Fix:** correct the zoom math, and reset to page 1 when the filter changes.
-  - **Partly fixed:** pagination part: the page snaps back to the last page when a narrower search leaves it past the end. The zoom drift is still open.
+  - **Partly fixed:** pagination part: the page snaps back to the last page when a narrower search leaves it past the end. Zoom now keeps the point under the cursor fixed (the offset is computed relative to the canvas centre, matching how the view is drawn).
 
 ---
 
@@ -329,12 +330,13 @@ A user can see or hit these. All ⚠ items are here.
   - **Where:** `components/rules/DistRulesEditor.tsx` 358, 380, 385, 388.
   - **Problem:** `allCharsByName.get(name)!` is passed to `GlyphTile`. There is no ErrorBoundary anywhere, so the whole tree unmounts every time the dist tab opens. Deleting or renaming a referenced glyph does the same.
   - **Fix:** render a placeholder when the lookup misses, validate on save, and add a top-level ErrorBoundary.
-  - **Fixed:** missing glyphs show a dashed "?" tile with their name (checked in the browser with a project naming missing glyphs), and a top-level ErrorBoundary (`components/ErrorBoundary.tsx`) shows a "Something went wrong" screen with Try again / Reload instead of a blank page. Validation on save is still open.
+  - **Fixed:** missing glyphs show a dashed "?" tile with their name (checked in the browser with a project naming missing glyphs), and a top-level ErrorBoundary (`components/ErrorBoundary.tsx`) shows a "Something went wrong" screen with Try again / Reload instead of a blank page. Saving a spacing rule that names a glyph or group that doesn't exist is now refused with a message.
 
-- [ ] **R2 ⚠ Saving a rule silently overwrites another rule with the same output** (confirmed)
+- [x] **R2 ⚠ Saving a rule silently overwrites another rule with the same output** (confirmed)
   - **Where:** `hooks/useRulesState.ts` (handleSaveNewRule/handleUpdateRule).
   - **Problem:** rules are keyed by their output glyph, so a second contextual rule producing the same replacement replaces the first. Editing a rule's output to an existing name deletes that rule.
   - **Fix:** warn or block on collision. Longer term, store rules as arrays.
+  - **Fixed:** saving (new or edited) a rule whose result another rule in the same feature or lookup already produces is refused with a message, and the form keeps what was typed. Checked in the browser (AKHN: a second ligature producing ஸ்ரீ is refused; a different result saves). Storing rules as arrays, so two rules may share a result, is still open.
 
 - [x] **R3 Renaming a group marks every group as a positioning group** (confirmed)
   - **Where:** `hooks/useRefactoring.ts` 47.
@@ -395,6 +397,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** use `state.fontRules?.groups`.
   - **Fixed:** already done in the type-error cleanup (`915db10`): `GlyphTile` reads `rulesState.fontRules?.groups`.
 
+- [ ] **R13 The substitution-rule editor accepts names that aren't glyphs** (seen in the browser while testing R2)
+  - **Where:** `components/RuleEditor.tsx` (handleSave); the typed text in `SmartGlyphInput` is used as-is.
+  - **Problem:** typing text that isn't a glyph name (e.g. `ஙஸ்ரீ`) and saving creates a rule whose result tile is empty. Export skips it as undrawn, so nothing breaks, but the rule is junk.
+  - **Fix:** check every name against the project's glyphs and groups on save, as the spacing-rule editor now does (R1).
+
 ---
 
 ## U: UX, text and i18n
@@ -421,17 +428,20 @@ A user can see or hit these. All ⚠ items are here.
 - [x] **U5 Tour and hint text shows raw markdown** (e.g. `**Pen Tool**`) (confirmed in the browser)
   - **Fixed:** one shared renderer (`utils/formattedText.tsx`, tested) for bold, italic and code in the tour, hints, Help and About; it replaced 23+ places that inserted locale text as raw HTML. The two notifications that still showed `**` now render bold too (`renderFormattedText` takes a bold class for coloured backgrounds).
 
-- [ ] **U6 The drawing tour reappears when a second glyph is opened and blocks the canvas** (confirmed in the browser)
+- [x] **U6 The drawing tour reappears when a second glyph is opened and blocks the canvas** (confirmed in the browser)
+  - **Fixed:** the toolbar tour is marked as seen as soon as it is shown, so it appears once however it ends (you don't have to click through all 16 steps). Checked in the browser: on the old build the tour came back after the page was reloaded mid-tour; now it doesn't. Its overlay still blocks the canvas while it's open.
 
 - [x] **U7 The "Create" (Creator Studio) button shows the "tasks incomplete… export anyway?" warning** (confirmed in the browser)
   - **Fixed:** Create opens Studio without the incomplete-tasks warning (still stops when nothing is drawn); checked in the browser.
 
 - [ ] **U8 Imported-font glyphs are labelled `U+0041` instead of their characters** (confirmed in the browser)
+  - **Needs a decision:** imported projects turn on Settings → "Show Unicode values" on purpose (`services/importFontService.ts` 356), so each tile shows `U+0041` under the drawing; other projects start with it off. Whether imports should start with it off, or show the character as well, is a design call.
 
 - [x] **U9 The feature-error dialog text is cut off** (confirmed in the browser)
   - **Fixed:** the error text wraps and scrolls inside a wider dialog.
 
 - [ ] **U10 The Positioning tab says "No mark characters have been drawn" when the marks are linked glyphs** (confirmed in the browser: Tutorial script, `ͤ` with `link: ["e"]`)
+  - **Needs a decision:** the positioning lists only include marks with their own drawing (`isGlyphDrawn`, with `// REVERT:` comments in `hooks/positioning/usePositioningData.ts` showing a broader check was tried and backed out). Linked marks have no drawing of their own until they are generated, so including them needs a decision on how they should render there.
 
 - [x] **U11 The header ⋮ (More) button has no accessible name** (confirmed)
   - **Fixed:** ⋮ and the phone drawer's icon buttons have `aria-label` and `title`.
@@ -545,6 +555,7 @@ Code health only; no direct effect on what users see. (K12 is felt only as waiti
 
 ## Tooling: tests, lint, types, build
 
+
 - [x] **T1 Tests:**
   - `vitest` is in `dependencies` (move it to `devDependencies`);
   - there's no `test` script, though TESTING.md documents `npm run test`;
@@ -576,3 +587,7 @@ Code health only; no direct effect on what users see. (K12 is felt only as waiti
 
 - [x] **T8 No version pin for npm** (`packageManager`/`engines`), so lockfile flags change between npm versions.
   - **Fixed:** `packageManager: npm@11.21.2` and `engines.node` matching the toolchain (Node 20, 22 or 24+). npm 10.9 crashes in this repo when it has to re-resolve vitest's peers (`Cannot read properties of null (reading 'edgesOut')`); npm 11 doesn't.
+
+
+- [x] **T9 No CI:** nothing ran the checks on push.
+  - **Fixed:** `.github/workflows/check.yml` runs `npm ci` and `npm run check` (typecheck, lint, tests, build) on every push and pull request.
