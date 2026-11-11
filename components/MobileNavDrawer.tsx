@@ -43,7 +43,7 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
   setIsPaletteOpen,
   exportingType
 }) => {
-  useLocale();
+  const { t } = useLocale();
 
   const handleSelect = useCallback((character: Character, rect?: DOMRect) => {
     onSelectCharacter(character, rect);
@@ -66,26 +66,26 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
         <div className="p-2 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col gap-2">
                 <div className="grid grid-cols-4 gap-2">
-                    <button onClick={() => { onExportClick(); onClose(); }} disabled={exportingType !== null} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <button onClick={() => { onExportClick(); onClose(); }} aria-label={t('exportOtf')} title={t('exportOtf')} disabled={exportingType !== null} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                         <ExportIcon />
                     </button>
-                    <button onClick={() => { onCreatorClick(); onClose(); }} disabled={exportingType !== null} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <button onClick={() => { onCreatorClick(); onClose(); }} aria-label={t('creatorStudio')} title={t('creatorStudio')} disabled={exportingType !== null} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                         <CreatorIcon />
                     </button>
-                    <button data-tour="drawer-test-btn" onClick={() => { onTestClick(); onClose(); }} disabled={exportingType !== null} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <button data-tour="drawer-test-btn" onClick={() => { onTestClick(); onClose(); }} aria-label={t('testFont')} title={t('testFont')} disabled={exportingType !== null} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                         <TestIcon />
                     </button>
-                    <button onClick={() => { onSettingsClick(); onClose(); }} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <button onClick={() => { onSettingsClick(); onClose(); }} aria-label={t('settings')} title={t('settings')} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                         <SettingsIcon />
                     </button>
-                    <button onClick={() => setIsPaletteOpen(true)} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <button onClick={() => setIsPaletteOpen(true)} aria-label={t('commandPalette')} title={t('commandPalette')} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                         <SearchIcon />
                     </button>
                     <FilterMenu />
-                    <button onClick={() => { onCompareClick(); onClose(); }} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <button onClick={() => { onCompareClick(); onClose(); }} aria-label={t('compare')} title={t('compare')} className="flex flex-col items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                         <CompareIcon />
                     </button>
-                    <button onClick={() => { toggleSelectionMode(); onClose(); }} className={`flex flex-col items-center gap-1 text-xs font-semibold ${isMetricsSelectionMode ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'} bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors`}>
+                    <button onClick={() => { toggleSelectionMode(); onClose(); }} aria-label={t('select')} title={t('toggleBatchSelection')} aria-pressed={isMetricsSelectionMode} className={`flex flex-col items-center gap-1 text-xs font-semibold ${isMetricsSelectionMode ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'} bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors`}>
                         <BatchIcon />
                     </button>
                 </div>

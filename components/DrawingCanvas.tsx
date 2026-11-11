@@ -68,7 +68,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const {
     currentPaths, previewPath, marqueeBox, selectionBox, focusedPathId, selectedPointInfo, bgImageObject, hoveredPathIds,
     handleMouseDown, handleMouseMove, handleMouseUp, handleTouchStart, handleTouchMove,
-    handleTouchEnd, handleTouchCancel, handleWheel, handleDoubleClick, getCursor, isMobile, HANDLE_SIZE, handles,
+    handleTouchEnd, handleTouchCancel, handleDoubleClick, getCursor, isMobile, HANDLE_SIZE, handles,
     glyphBBox, hoveredMetric, draggingMetric,
     highlightedPathId
   } = useDrawingCanvas({
@@ -524,7 +524,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
-      onWheel={handleWheel}
       onDoubleClick={handleDoubleClick}
     />
   );

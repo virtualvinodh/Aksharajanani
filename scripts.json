@@ -70,7 +70,7 @@
       },
       "guideFont": {
         "fontName": "Mukta Malar",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/MuktaMalar-Regular-Modified.otf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts@a348d7fded9e95a5cfbd2052c7e92523dfe90d62/MuktaMalar-Regular-Modified.otf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -113,7 +113,7 @@
       },
       "guideFont": {
         "fontName": "Noto Sans Malayalam",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/NotoSansMalayalam-Modified.otf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts@a348d7fded9e95a5cfbd2052c7e92523dfe90d62/NotoSansMalayalam-Modified.otf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -156,7 +156,7 @@
       },
       "guideFont": {
         "fontName": "Meera Regular",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/Meera-Regular.ttf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts@a348d7fded9e95a5cfbd2052c7e92523dfe90d62/Meera-Regular.ttf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -199,7 +199,7 @@
       },
       "guideFont": {
         "fontName": "Noto Sans Telugu Modified",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/NotoSansTelugu-Modified.otf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts@a348d7fded9e95a5cfbd2052c7e92523dfe90d62/NotoSansTelugu-Modified.otf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -243,7 +243,7 @@
       },
       "guideFont": {
         "fontName": "Noto Sans Kannada Modified",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/NotoSansKannada-RegularModified.otf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts@a348d7fded9e95a5cfbd2052c7e92523dfe90d62/NotoSansKannada-RegularModified.otf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -284,7 +284,7 @@
       "grid": { "characterNameSize": 450 },
       "guideFont": {
         "fontName": "Noto Sans Devanagari",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/NotoSansDevanagari-Modified.otf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts@a348d7fded9e95a5cfbd2052c7e92523dfe90d62/NotoSansDevanagari-Modified.otf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -320,8 +320,8 @@
       },
       "grid": { "characterNameSize": 450 },
       "guideFont": {
-        "fontName": "Noto Sans Devanagari",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/NotoSansDevanagari-Modified.otf",
+        "fontName": "Noto Sans Gurmukhi",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io@4cf78353cd1668040ba8efa13029cd910fcdf9e2/fonts/NotoSansGurmukhi/hinted/ttf/NotoSansGurmukhi-Regular.ttf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -359,7 +359,7 @@
       },
       "guideFont": {
         "fontName": "Noto Sans Sinhala",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansSinhala/hinted/ttf/NotoSansSinhala-Regular.ttf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io@4cf78353cd1668040ba8efa13029cd910fcdf9e2/fonts/NotoSansSinhala/hinted/ttf/NotoSansSinhala-Regular.ttf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -403,7 +403,7 @@
       },
       "guideFont": {
         "fontName": "Noto Sans Lao",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansLao/hinted/ttf/NotoSansLao-Regular.ttf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io@4cf78353cd1668040ba8efa13029cd910fcdf9e2/fonts/NotoSansLao/hinted/ttf/NotoSansLao-Regular.ttf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -448,7 +448,7 @@
       },
       "guideFont": {
         "fontName": "Noto Sans Lao",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansLao/hinted/ttf/NotoSansLao-Regular.ttf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io@4cf78353cd1668040ba8efa13029cd910fcdf9e2/fonts/NotoSansLao/hinted/ttf/NotoSansLao-Regular.ttf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -492,7 +492,7 @@
       },
       "guideFont": {
         "fontName": "Noto Sans Hebrew",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansHebrew/hinted/ttf/NotoSansHebrew-Regular.ttf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io@4cf78353cd1668040ba8efa13029cd910fcdf9e2/fonts/NotoSansHebrew/hinted/ttf/NotoSansHebrew-Regular.ttf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -771,7 +771,7 @@
       },
       "guideFont": {
         "fontName": "Noto Sans Greek",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansGreek/hinted/ttf/NotoSansGreek-Regular.ttf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io@4cf78353cd1668040ba8efa13029cd910fcdf9e2/fonts/NotoSans/hinted/ttf/NotoSans-Regular.ttf",
         "stylisticSet": ""
       },
       "testPage": {
@@ -816,7 +816,7 @@
       },
       "guideFont": {
         "fontName": "Noto Sans Cyrillic",
-        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSansCyrillic/hinted/ttf/NotoSansCyrillic-Regular.ttf",
+        "fontUrl": "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io@4cf78353cd1668040ba8efa13029cd910fcdf9e2/fonts/NotoSans/hinted/ttf/NotoSans-Regular.ttf",
         "stylisticSet": ""
       },
       "testPage": {

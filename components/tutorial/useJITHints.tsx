@@ -5,6 +5,7 @@ import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { isGlyphDrawn } from '../../utils/glyphUtils';
+import { renderFormattedText } from '../../utils/formattedText';
 
 export const useJITHints = (
     translations: Record<string, string> | null,
@@ -50,7 +51,7 @@ export const useJITHints = (
                             content: (
                                 <div>
                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintExportTitle}</h3>
-                                    <p dangerouslySetInnerHTML={{__html: translations.hintExportContent}}></p>
+                                    <p>{renderFormattedText(translations.hintExportContent)}</p>
                                 </div>
                             ),
                             placement: 'bottom',
@@ -72,7 +73,7 @@ export const useJITHints = (
                             content: (
                                 <div>
                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintTestTitle}</h3>
-                                    <p dangerouslySetInnerHTML={{__html: translations.hintTestContent}}></p>
+                                    <p>{renderFormattedText(translations.hintTestContent)}</p>
                                 </div>
                             ),
                             placement: 'bottom',
@@ -110,7 +111,7 @@ export const useJITHints = (
                                      content: (
                                          <div>
                                              <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintGridDottedTitle}</h3>
-                                             <p dangerouslySetInnerHTML={{__html: translations.hintGridDottedContent}}></p>
+                                             <p>{renderFormattedText(translations.hintGridDottedContent)}</p>
                                          </div>
                                      ),
                                      placement: 'bottom',
@@ -131,7 +132,7 @@ export const useJITHints = (
                                 clearInterval(checkGridHints);
                                 setSteps([{
                                     target: '.tutorial-glyph-item',
-                                    content: translations.hintGridSelect || "Select a character card to start drawing your font.",
+                                    content: renderFormattedText(translations.hintGridSelect || "Select a character card to start drawing your font."),
                                     disableBeacon: true,
                                     placement: 'bottom' as Placement,
                                     spotlightClicks: true,
@@ -160,7 +161,7 @@ export const useJITHints = (
                         const timer = setTimeout(() => {
                             setSteps([{
                                target: '[data-tour="drawing-canvas"]',
-                               content: translations.hintEditorDraw || "Start drawing here.",
+                               content: renderFormattedText(translations.hintEditorDraw || "Start drawing here."),
                                disableBeacon: true,
                                placement: 'top' as Placement,
                                spotlightClicks: true,
@@ -185,7 +186,7 @@ export const useJITHints = (
                                     content: (
                                         <div>
                                             <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Toolbar</h3>
-                                            <p dangerouslySetInnerHTML={{__html: translations.toolbarIntro}}></p>
+                                            <p>{renderFormattedText(translations.toolbarIntro)}</p>
                                         </div>
                                     ),
                                     placement,
@@ -194,79 +195,79 @@ export const useJITHints = (
                                 },
                                 {
                                     target: '[data-tour="tool-select"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.toolSelect }} />,
+                                    content: <div>{renderFormattedText(translations.toolSelect)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="tool-pan"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.toolPan }} />,
+                                    content: <div>{renderFormattedText(translations.toolPan)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="toolbar-pen"]',
-                                    content: translations.toolbarPenContent,
+                                    content: renderFormattedText(translations.toolbarPenContent),
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="tool-calligraphy"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.toolCalligraphy }} />,
+                                    content: <div>{renderFormattedText(translations.toolCalligraphy)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="tool-eraser"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.toolEraser }} />,
+                                    content: <div>{renderFormattedText(translations.toolEraser)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="tool-slice"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.toolSlice }} />,
+                                    content: <div>{renderFormattedText(translations.toolSlice)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-undo"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionUndo }} />,
+                                    content: <div>{renderFormattedText(translations.actionUndo)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-redo"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionRedo }} />,
+                                    content: <div>{renderFormattedText(translations.actionRedo)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-cut"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionCut }} />,
+                                    content: <div>{renderFormattedText(translations.actionCut)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-copy"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionCopy }} />,
+                                    content: <div>{renderFormattedText(translations.actionCopy)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-paste"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionPaste }} />,
+                                    content: <div>{renderFormattedText(translations.actionPaste)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-group"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionGroup }} />,
+                                    content: <div>{renderFormattedText(translations.actionGroup)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 },
                                 {
                                     target: '[data-tour="action-ungroup"]',
-                                    content: <div dangerouslySetInnerHTML={{ __html: translations.actionUngroup }} />,
+                                    content: <div>{renderFormattedText(translations.actionUngroup)}</div>,
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 }
@@ -288,7 +289,7 @@ export const useJITHints = (
                                 content: (
                                     <div>
                                         <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintMetricsTitle}</h3>
-                                        <p dangerouslySetInnerHTML={{__html: translations.hintMetricsContent}}></p>
+                                        <p>{renderFormattedText(translations.hintMetricsContent)}</p>
                                     </div>
                                 ),
                                 placement: 'top',
@@ -316,7 +317,7 @@ export const useJITHints = (
                                  content: (
                                      <div>
                                          <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintCompositeTitle}</h3>
-                                         <p dangerouslySetInnerHTML={{__html: translations.hintCompositeContent}}></p>
+                                         <p>{renderFormattedText(translations.hintCompositeContent)}</p>
                                      </div>
                                  ),
                                  placement: 'top' as Placement,
@@ -342,7 +343,7 @@ export const useJITHints = (
                                  content: (
                                      <div>
                                          <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintLinkedTitle}</h3>
-                                         <p dangerouslySetInnerHTML={{__html: translations.hintLinkedContent}}></p>
+                                         <p>{renderFormattedText(translations.hintLinkedContent)}</p>
                                      </div>
                                  ),
                                  placement: 'top' as Placement,
@@ -352,7 +353,7 @@ export const useJITHints = (
                              },
                              {
                                  target: '[data-tour="header-unlink"]',
-                                 content: translations.hintUnlinkContent,
+                                 content: renderFormattedText(translations.hintUnlinkContent),
                                  placement: 'bottom' as Placement,
                                  disableBeacon: true,
                                  data: { isTutorial: false, storageKey: storageKey, translations }
@@ -371,7 +372,7 @@ export const useJITHints = (
                      const timer = setTimeout(() => {
                          setSteps([{
                              target: '[data-tour="header-relink"]',
-                             content: translations.hintRelinkContent,
+                             content: renderFormattedText(translations.hintRelinkContent),
                              placement: 'bottom' as Placement,
                              disableBeacon: true,
                              spotlightClicks: true,
@@ -394,7 +395,7 @@ export const useJITHints = (
                                 content: (
                                     <div>
                                         <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintPositionedTitle}</h3>
-                                        <p dangerouslySetInnerHTML={{__html: translations.hintPositionedContent}}></p>
+                                        <p>{renderFormattedText(translations.hintPositionedContent)}</p>
                                     </div>
                                 ),
                                 placement: 'top' as Placement,
@@ -404,14 +405,14 @@ export const useJITHints = (
                             },
                             {
                                 target: '[data-tour="header-detach-pos"]',
-                                content: translations.hintDetachContent,
+                                content: renderFormattedText(translations.hintDetachContent),
                                 placement: 'bottom' as Placement,
                                 disableBeacon: true,
                                 data: { isTutorial: false, storageKey: storageKey, translations }
                             },
                             {
                                 target: '[data-tour="header-accept-pos"]',
-                                content: translations.hintAcceptPosition,
+                                content: renderFormattedText(translations.hintAcceptPosition),
                                 placement: 'bottom' as Placement,
                                 spotlightClicks: true,
                                 disableBeacon: true,
@@ -435,7 +436,7 @@ export const useJITHints = (
                                 content: (
                                     <div>
                                         <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKernedTitle}</h3>
-                                        <p dangerouslySetInnerHTML={{__html: translations.hintKernedContent}}></p>
+                                        <p>{renderFormattedText(translations.hintKernedContent)}</p>
                                     </div>
                                 ),
                                 placement: 'top' as Placement,
@@ -445,14 +446,14 @@ export const useJITHints = (
                             },
                             {
                                 target: '[data-tour="header-detach-kern"]',
-                                content: translations.hintDetachContent,
+                                content: renderFormattedText(translations.hintDetachContent),
                                 placement: 'bottom' as Placement,
                                 disableBeacon: true,
                                 data: { isTutorial: false, storageKey: storageKey, translations }
                             },
                             {
                                 target: '[data-tour="header-accept-kern"]',
-                                content: translations.hintAcceptKerning,
+                                content: renderFormattedText(translations.hintAcceptKerning),
                                 placement: 'bottom' as Placement,
                                 spotlightClicks: true,
                                 disableBeacon: true,
@@ -529,7 +530,7 @@ export const useJITHints = (
                             content: (
                                 <div>
                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintWhatIsKerningTitle}</h3>
-                                    <p dangerouslySetInnerHTML={{__html: translations.hintWhatIsKerningContent}}></p>
+                                    <p>{renderFormattedText(translations.hintWhatIsKerningContent)}</p>
                                 </div>
                             ),
                             placement: 'bottom' as Placement,
@@ -541,7 +542,7 @@ export const useJITHints = (
                             content: (
                                 <div>
                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKerningViewsTitle}</h3>
-                                    <p dangerouslySetInnerHTML={{__html: translations.hintKerningViewsContent}}></p>
+                                    <p>{renderFormattedText(translations.hintKerningViewsContent)}</p>
                                 </div>
                             ),
                             placement: 'bottom' as Placement,
@@ -552,7 +553,7 @@ export const useJITHints = (
                             content: (
                                 <div>
                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKerningToolsTitle}</h3>
-                                    <p dangerouslySetInnerHTML={{__html: translations.hintKerningToolsContent}}></p>
+                                    <p>{renderFormattedText(translations.hintKerningToolsContent)}</p>
                                 </div>
                             ),
                             placement: 'bottom' as Placement,
@@ -649,7 +650,7 @@ export const useJITHints = (
                             content: (
                                 <div>
                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintKerningAcceptTitle}</h3>
-                                    <p dangerouslySetInnerHTML={{__html: translations.hintKerningAcceptContent}}></p>
+                                    <p>{renderFormattedText(translations.hintKerningAcceptContent)}</p>
                                 </div>
                             ),
                             placement: 'bottom',
@@ -680,7 +681,7 @@ export const useJITHints = (
                             content: (
                                 <div>
                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintRelatedPairsTitle}</h3>
-                                    <p>{translations.hintRelatedPairsContent}</p>
+                                    <p>{renderFormattedText(translations.hintRelatedPairsContent)}</p>
                                 </div>
                             ),
                             placement: 'top',
@@ -693,7 +694,7 @@ export const useJITHints = (
                             content: (
                                 <div>
                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">{translations.hintOverrideTitle}</h3>
-                                    <p>{translations.hintOverrideContent}</p>
+                                    <p>{renderFormattedText(translations.hintOverrideContent)}</p>
                                 </div>
                             ),
                             placement: 'top',

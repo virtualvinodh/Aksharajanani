@@ -4,6 +4,7 @@ import {
     MarkAttachmentRules,
     CharacterSet,
     FontMetrics,
+    PositioningRules,
     BoundingBox,
     // FIX: Import the AttachmentPoint type to resolve TypeScript errors.
     AttachmentPoint
@@ -18,12 +19,32 @@ export const getAttachmentPointCoords = (bbox: BoundingBox, pointName: Attachmen
         case 'topCenter': return { x: x + width / 2, y };
         case 'topRight': return { x: x + width, y };
         case 'midLeft': return { x, y: y + height / 2 };
+        case 'center': return { x: x + width / 2, y: y + height / 2 };
         case 'midRight': return { x: x + width, y: y + height / 2 };
         case 'bottomLeft': return { x, y: y + height };
         case 'bottomCenter': return { x: x + width / 2, y: y + height };
         case 'bottomRight': return { x: x + width, y: y + height };
         default: return { x, y }; // Fallback
     }
+};
+
+/**
+ * True when the positioning rule covering this base/mark pair (base in `rule.base`, mark in
+ * `rule.mark`, after group expansion) has a GSUB feature tag, i.e. the pair forms a ligature.
+ */
+export const isGsubPositioningPair = (
+    positioningRules: PositioningRules[] | null | undefined,
+    baseName: string,
+    markName: string,
+    groups: Record<string, string[]>,
+    characterSets?: CharacterSet[]
+): boolean => {
+    if (!positioningRules) return false;
+    const rule = positioningRules.find(r =>
+        expandMembers(r.base, groups, characterSets).includes(baseName) &&
+        expandMembers(r.mark, groups, characterSets).includes(markName)
+    );
+    return !!rule?.gsub;
 };
 
 export const resolveAttachmentRule = (

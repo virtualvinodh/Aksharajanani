@@ -111,6 +111,41 @@ const ManualRuleCard: React.FC<{
     </div>
 );
 
+// Glyph/group picker that adds a tag only when a suggestion is chosen or Enter is pressed;
+// typing just filters the suggestions.
+const TagAdder: React.FC<{
+    onAdd: (value: string) => void;
+    characterSets: CharacterSet[];
+    groups: Record<string, string[]>;
+    placeholder: string;
+}> = ({ onAdd, characterSets, groups, placeholder }) => {
+    const [inputValue, setInputValue] = useState('');
+
+    const commit = (raw: string) => {
+        const val = raw.trim();
+        if (!val) return;
+        onAdd(val);
+        setInputValue('');
+    };
+
+    return (
+        <SmartGlyphInput
+            value={inputValue}
+            onChange={setInputValue}
+            onSelect={commit}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commit(inputValue);
+                }
+            }}
+            characterSets={characterSets}
+            groups={groups}
+            placeholder={placeholder}
+        />
+    );
+};
+
 const RuleEditor: React.FC<{
     rule?: PositioningRules;
     onSave: (rule: PositioningRules) => void;
@@ -161,8 +196,8 @@ const RuleEditor: React.FC<{
         onSave(newRule);
     };
 
-    const addTag = (setter: React.Dispatch<React.SetStateAction<string[]>>, current: string[], val: string) => {
-        if (val && !current.includes(val)) setter([...current, val]);
+    const addTag = (setter: React.Dispatch<React.SetStateAction<string[]>>, val: string) => {
+        if (val) setter(prev => prev.includes(val) ? prev : [...prev, val]);
     };
 
     const removeTag = (setter: React.Dispatch<React.SetStateAction<string[]>>, current: string[], val: string) => {
@@ -213,7 +248,7 @@ const RuleEditor: React.FC<{
                             <span key={b} onClick={() => removeTag(setBase, base, b)} className="cursor-pointer hover:line-through"><Chip label={b} /></span>
                         ))}
                     </div>
-                    <SmartGlyphInput value="" onChange={(v) => addTag(setBase, base, v)} characterSets={characterSets} groups={groups} placeholder="Add base..." />
+                    <TagAdder onAdd={(v) => addTag(setBase, v)} characterSets={characterSets} groups={groups} placeholder="Add base..." />
                 </div>
                 <div className="space-y-2">
                     <label className="text-xs font-semibold text-gray-500 uppercase">{t('markTargets')}</label>
@@ -222,7 +257,7 @@ const RuleEditor: React.FC<{
                             <span key={m} onClick={() => removeTag(setMark, mark, m)} className="cursor-pointer hover:line-through"><Chip label={m} /></span>
                         ))}
                     </div>
-                    <SmartGlyphInput value="" onChange={(v) => addTag(setMark, mark, v)} characterSets={characterSets} groups={groups} placeholder="Add mark..." />
+                    <TagAdder onAdd={(v) => addTag(setMark, v)} characterSets={characterSets} groups={groups} placeholder="Add mark..." />
                 </div>
             </div>
 
@@ -325,7 +360,7 @@ const ManualAnchorForm: React.FC<{
     
     const attachmentPoints: AttachmentPoint[] = [
         'topLeft', 'topCenter', 'topRight', 
-        'midLeft', 'midRight', 
+        'midLeft', 'center', 'midRight', 
         'bottomLeft', 'bottomCenter', 'bottomRight'
     ];
 

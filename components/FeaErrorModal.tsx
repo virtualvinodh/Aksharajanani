@@ -17,6 +17,7 @@ const FeaErrorModal: React.FC<FeaErrorModalProps> = ({ isOpen, onClose, onConfir
       isOpen={isOpen}
       onClose={onClose}
       title={t('feaErrorModalTitle')}
+      size="2xl"
       titleClassName="text-yellow-600 dark:text-yellow-400"
       footer={
         <>
@@ -30,7 +31,8 @@ const FeaErrorModal: React.FC<FeaErrorModalProps> = ({ isOpen, onClose, onConfir
       }
     >
       <p className="mb-4">{t('feaErrorModalMessage')}</p>
-      <pre className="bg-gray-100 dark:bg-gray-900 text-red-600 dark:text-red-400 p-3 rounded-md text-sm overflow-x-auto max-h-40">{errorMessage}</pre>
+      {/* Long compiler messages wrap and scroll inside the dialog instead of being cut off. */}
+      <pre className="bg-gray-100 dark:bg-gray-900 text-red-600 dark:text-red-400 p-3 rounded-md text-sm whitespace-pre-wrap wrap-anywhere overflow-y-auto max-h-[50vh]">{errorMessage}</pre>
     </Modal>
   );
 };

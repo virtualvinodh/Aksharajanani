@@ -10,6 +10,8 @@ import { Tool } from '../types';
 import TutorialTooltip from './tutorial/TutorialTooltip';
 import { useLinearTutorial } from './tutorial/useLinearTutorial';
 import { useJITHints } from './tutorial/useJITHints';
+import { mergeWithEnglishFallback } from './tutorial/tutorialTranslations';
+import { fetchOptionalJson } from '../utils/optionalFetch';
 
 // Dummy component to get access to context
 const TutorialStateProvider: React.FC<{ onToolChange: (tool: Tool) => void }> = ({ onToolChange }) => {
@@ -79,24 +81,19 @@ const TutorialManager: React.FC = () => {
     }, [workspace, currentView, selectedCharacter, activeEngine.stepIndex, updateScrollOffset]);
 
     useEffect(() => {
+        let cancelled = false;
+        const fetchJson = (code: string) => fetchOptionalJson<Record<string, string>>(`/locales/tutorial/${code}.json`);
         const fetchTranslations = async () => {
-            try {
-                const response = await fetch(`/locales/tutorial/${locale}.json`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setTranslations(data);
-                } else {
-                    const fallback = await fetch(`/locales/tutorial/en.json`);
-                    if (fallback.ok) {
-                        const data = await fallback.json();
-                        setTranslations(data);
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to load tutorial translations:", error);
-            }
+            // English is always loaded so keys missing from a partial translation fall back per key.
+            const [english, localized] = await Promise.all([
+                fetchJson('en'),
+                locale === 'en' ? Promise.resolve(null) : fetchJson(locale),
+            ]);
+            if (cancelled || (!english && !localized)) return;
+            setTranslations(mergeWithEnglishFallback(english, localized));
         };
         fetchTranslations();
+        return () => { cancelled = true; };
     }, [locale]);
 
     const handleToolChange = useCallback((tool: Tool) => {

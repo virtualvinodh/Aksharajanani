@@ -217,7 +217,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     <ThemeSwitch className="hidden md:inline-flex" />
 
                     <div className="relative" ref={moreMenuRef}>
-                        <button onClick={() => setIsMoreMenuOpen(prev => !prev)} className="p-2 sm:p-2.5 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"><MoreIcon /></button>
+                        <button onClick={() => setIsMoreMenuOpen(prev => !prev)} aria-label={t('more')} title={t('more')} aria-expanded={isMoreMenuOpen} className="p-2 sm:p-2.5 bg-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"><MoreIcon /></button>
                         {isMoreMenuOpen && (
                             <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-30 max-h-[80vh] overflow-y-auto">
                                 <button onClick={() => { onSaveProject(); setIsMoreMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"><CodeBracketsIcon /> {t('exportJson')}</button>

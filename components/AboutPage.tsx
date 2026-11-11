@@ -2,26 +2,13 @@
 
 import React from 'react';
 import { useLocale } from '../contexts/LocaleContext';
+import { renderFormattedText } from '../utils/formattedText';
 import { BackIcon, DonateIcon } from '../constants';
 import Footer from './Footer';
 
 interface AboutPageProps {
   onClose: () => void;
 }
-
-const renderFormattedText = (text: string): React.ReactNode => {
-    const parts = text.split('**');
-    return (
-        <>
-            {parts.map((part, index) => {
-                if (index % 2 === 1) {
-                    return <strong key={index} className="font-semibold text-gray-800 dark:text-gray-200">{part}</strong>;
-                }
-                return part;
-            })}
-        </>
-    );
-};
 
 const ContentBlock: React.FC<{ titleKey: string; contentKey: string }> = ({ titleKey, contentKey }) => {
     const { t } = useLocale();

@@ -224,6 +224,7 @@ export const getAttachmentPointCoords = (bbox: BoundingBox, pointName: Attachmen
         case 'topCenter': return { x: x + width / 2, y };
         case 'topRight': return { x: x + width, y };
         case 'midLeft': return { x, y: y + height / 2 };
+        case 'center': return { x: x + width / 2, y: y + height / 2 };
         case 'midRight': return { x: x + width, y: y + height / 2 };
         case 'bottomLeft': return { x, y: y + height };
         case 'bottomCenter': return { x: x + width / 2, y: y + height };

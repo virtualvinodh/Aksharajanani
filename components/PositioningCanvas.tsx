@@ -45,7 +45,7 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
         if (onLockedInteraction) onLockedInteraction();
     }, [onLockedInteraction]);
 
-    const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel, isPanning, isDragging, handleTouchStart, handleTouchMove, handleTouchEnd } = usePositioningCanvas({
+    const { handleMouseDown, handleMouseMove, handleMouseUp, isPanning, isDragging, handleTouchStart, handleTouchMove, handleTouchEnd } = usePositioningCanvas({
         canvasRef, paths: markPaths, onPathsChange, tool, zoom, setZoom, viewOffset, setViewOffset, movementConstraint, canEdit,
         onLockedInteraction: handleLockedInteractionInternal
     });
@@ -198,7 +198,6 @@ const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchEnd}
-            onWheel={handleWheel}
         />
     );
 };

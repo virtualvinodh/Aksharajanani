@@ -160,7 +160,11 @@ const KerningEditorPage: React.FC<KerningEditorPageProps> = (props) => {
     }, [props.character.unicode, glyphDataDispatch, showNotification]);
 
     const session = useKerningSession(props);
-    const sourceGlyphs = useMemo(() => [props.pair.left, props.pair.right], [props.pair]);
+    // A pair can use the same glyph on both sides (e.g. "AA"): list it once.
+    const sourceGlyphs = useMemo(
+        () => props.pair.left.unicode === props.pair.right.unicode ? [props.pair.left] : [props.pair.left, props.pair.right],
+        [props.pair]
+    );
 
     const updateSize = useCallback(() => {
         const container = containerRef.current;

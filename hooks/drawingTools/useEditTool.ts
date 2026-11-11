@@ -6,6 +6,7 @@ import { distanceToSegment } from '../../utils/geometryUtils';
 import { DraggedPointInfo, ToolHookProps } from './types';
 import { paperScope } from '../../services/glyphRenderService';
 import { deepClone } from '../../utils/cloneUtils';
+import { isEditableTarget } from '../../utils/domUtils';
 
 
 export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, zoom, onToolChange: _onToolChange, ...props }: ToolHookProps) => {
@@ -51,6 +52,8 @@ export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentP
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Let text fields (e.g. Glyph Properties inputs) handle their own Backspace/Delete.
+            if (isEditableTarget(e.target)) return;
             // If paths are selected via the Select tool, let the main modal handler manage deletion.
             if (props.selectedPathIds.size > 0) return;
             if (!selectedPointInfo) return;

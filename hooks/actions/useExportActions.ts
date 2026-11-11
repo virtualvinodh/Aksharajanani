@@ -291,9 +291,14 @@ export const useExportActions = ({
             }
         };
 
-        checkAndExecute(proceedToCreator);
-
-    }, [getCachedOrGeneratedFont, layout, t, checkAndExecute]);
+        // Creator Studio only previews the font, so an unfinished font is fine here; the
+        // "tasks incomplete" warning is for exporting a font file. It still needs some glyphs.
+        if (drawingProgress.completed === 0) {
+            layout.showNotification(t('errorNoGlyphs'), 'error');
+            return;
+        }
+        void proceedToCreator();
+    }, [getCachedOrGeneratedFont, layout, t, drawingProgress.completed]);
 
     return {
         exportingType,

@@ -13,6 +13,7 @@ import { ScriptConfig, ProjectData, Character, CharacterSet, CharacterDefinition
 import { FONT_META_DEFAULTS } from '../../constants';
 import { safeJsonParse, isSafeKey } from '../../utils/safeJson';
 import { migrateLegacySettings } from '../../utils/legacySettings';
+import { fetchOptionalJson, fetchOptionalText } from '../../utils/optionalFetch';
 
 /**
  * `composite` and `link` must be string arrays, but hand-written data (script files,
@@ -86,7 +87,8 @@ export const useProjectLoad = ({
 
             const isStandardScript = allScripts.some(s => s.id === currentScript.id);
 
-            if (projectToLoad?.characterSets) {
+            // An empty list means "no sets saved yet" (e.g. a new empty project), so use the script's sets.
+            if (projectToLoad?.characterSets?.length) {
                  characterDefinitions = projectToLoad.characterSets;
             } else if (currentScript.characterSetData) {
                 characterDefinitions = currentScript.characterSetData.filter(d => 'characters' in d);
@@ -100,13 +102,8 @@ export const useProjectLoad = ({
             if (currentScript.characterSetData) {
                  positioningDefinitions = currentScript.characterSetData.filter(d => !('characters' in d));
             } else {
-                 const positioningPath = `/data/positioning_${currentScript.id}.json`;
-                 try {
-                    const posResponse = await fetch(positioningPath);
-                    positioningDefinitions = posResponse.ok ? await posResponse.json() : [];
-                 } catch {
-                     positioningDefinitions = [];
-                 }
+                 // Optional: not every script has positioning data.
+                 positioningDefinitions = await fetchOptionalJson<CharacterDefinition[]>(`/data/positioning_${currentScript.id}.json`) ?? [];
             }
             
             const charDefinition = [...characterDefinitions, ...positioningDefinitions];
@@ -118,18 +115,11 @@ export const useProjectLoad = ({
                 const rulesFeaPath = currentScript.rulesFeaPath;
                 
                 if (rulesFeaPath) {
-                    const feaResponse = await fetch(rulesFeaPath);
-                    if (feaResponse.ok) {
-                        feaFileData = await feaResponse.text();
-                        isFeaOnly = true; 
-                    }
+                    feaFileData = await fetchOptionalText(rulesFeaPath);
+                    if (feaFileData !== null) isFeaOnly = true;
                 }
-                try {
-                    const rulesResponse = await fetch(rulesPath);
-                    rulesData = rulesResponse.ok ? await rulesResponse.json() : { 'DFLT': {} };
-                } catch {
-                    rulesData = { 'DFLT': {} }
-                }    
+                // Optional: a script without a rules file starts with no rules.
+                rulesData = await fetchOptionalJson(rulesPath) ?? { 'DFLT': {} };
             } else {
                 if (currentScript.rulesFeaContent) {
                     feaFileData = currentScript.rulesFeaContent;
@@ -176,7 +166,7 @@ export const useProjectLoad = ({
             const defaultCharSets = charDefinition.filter(i => 'characters' in i) as CharacterSet[];
             
             let puaCounter = 0xE000 - 1;
-            const finalCharacterSets = projectToLoad?.characterSets || defaultCharSets;
+            const finalCharacterSets = projectToLoad?.characterSets?.length ? projectToLoad.characterSets : defaultCharSets;
             
             const allCharacterLists = finalCharacterSets.flatMap(set => set.characters);
             allCharacterLists.forEach(char => {
@@ -252,7 +242,7 @@ export const useProjectLoad = ({
             const activePositioningRules = projectToLoad?.positioningRules || rawPositioningRules;
             setPositioningRules(activePositioningRules);
 
-            if (!projectToLoad?.characterSets) {
+            if (!projectToLoad?.characterSets?.length) {
                 // Dynamic Ligature Creation
                  const scriptTag = Object.keys(rulesData).find(key => key !== 'groups' && key !== 'lookups');
                 if (isSafeKey(scriptTag) && activePositioningRules) {
@@ -304,26 +294,10 @@ export const useProjectLoad = ({
             });
             dependencyMap.current = newDependencyMap;
             
-            let sampleText = currentScript.sampleText;
-            try {
-                const sampleTextResponse = await fetch(`/data/sample_${currentScript.id}.txt`);
-                if (sampleTextResponse.ok) {
-                    const text = await sampleTextResponse.text();
-                    const contentType = sampleTextResponse.headers.get("content-type");
-                    // Check if it's actually HTML (SPA fallback)
-                    if (contentType && contentType.includes("text/html")) {
-                        sampleText = "";
-                    } else if (text.trim().toLowerCase().startsWith('<!doctype html>')) {
-                        sampleText = "";
-                    } else {
-                        sampleText = text;
-                    }
-                } else {
-                    sampleText = "";
-                }
-            } catch { 
-                sampleText = "";
-            }
+            // A sample_<id>.txt file wins over the script's own sampleText, but only when it
+            // exists and has content; otherwise keep the curated text from scripts.json.
+            const sampleFileText = await fetchOptionalText(`/data/sample_${currentScript.id}.txt`);
+            let sampleText = sampleFileText?.trim() ? sampleFileText : currentScript.sampleText;
 
             if (!sampleText && processedCharSets) {
                 const allChars = processedCharSets.flatMap(cs => cs.characters);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Point, Path } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { usePanTool } from './drawingTools/usePanTool';
+import { useNonPassiveWheel } from './useNonPassiveWheel';
 
 export interface UsePositioningCanvasProps {
     canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -30,7 +31,7 @@ export const usePositioningCanvas = ({
     useEffect(() => { zoomRef.current = zoom; }, [zoom]);
     useEffect(() => { viewOffsetRef.current = viewOffset; }, [viewOffset]);
 
-    const getViewportPoint = useCallback((e: React.MouseEvent | React.TouchEvent, touchIndex = 0): Point | null => {
+    const getViewportPoint = useCallback((e: React.MouseEvent | React.TouchEvent | MouseEvent, touchIndex = 0): Point | null => {
         const canvas = canvasRef.current;
         if (!canvas) return null;
         const rect = canvas.getBoundingClientRect();
@@ -103,8 +104,8 @@ export const usePositioningCanvas = ({
         setIsDragging(false);
     }, [panTool]);
 
-    const handleWheel = useCallback((e: React.WheelEvent) => {
-        e.preventDefault();
+    // Attached natively (non-passive) so pinch / Ctrl+wheel can't also zoom the page (D14).
+    const handleWheel = useCallback((e: WheelEvent) => {
         const viewportPoint = getViewportPoint(e);
         if (!viewportPoint) return;
 
@@ -124,6 +125,7 @@ export const usePositioningCanvas = ({
         setZoom(newZoom);
         setViewOffset(newViewOffset);
     }, [getViewportPoint, setZoom, setViewOffset]);
+    useNonPassiveWheel(canvasRef, handleWheel);
 
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         if (tool === 'pan' && e.touches.length > 1) {
@@ -181,7 +183,7 @@ export const usePositioningCanvas = ({
 
 
     return {
-        handleMouseDown, handleMouseMove, handleMouseUp, handleWheel,
+        handleMouseDown, handleMouseMove, handleMouseUp,
         handleTouchStart, handleTouchMove, handleTouchEnd,
         isPanning: panTool.isPanning, isDragging
     };

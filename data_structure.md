@@ -349,7 +349,7 @@ Initial values used to populate `AppSettings` when a new project is created.
 
 ### B. Drawing & Transformation Types
 - **PositioningMode**: `'relative' | 'absolute' | 'touching'`. Used in component assembly logic.
-- **AttachmentPoint**: `'topLeft' | 'topCenter' | 'topRight' | 'midLeft' | 'midRight' | 'bottomLeft' | 'bottomCenter' | 'bottomRight'`.
+- **AttachmentPoint**: `'topLeft' | 'topCenter' | 'topRight' | 'midLeft' | 'center' | 'midRight' | 'bottomLeft' | 'bottomCenter' | 'bottomRight'`.
 - **HandleType**: `'point' | 'handleIn' | 'handleOut'`. Used in edit tool hit-testing for Bezier control.
 - **Handle**: `{ type: 'scale' | 'rotate' | 'move', direction: HandleDirection }`.
 - **TransformState**: `{ rotate: number, scale: number, flipX?: boolean, flipY?: boolean }` (State model for batch/toolbar operations).

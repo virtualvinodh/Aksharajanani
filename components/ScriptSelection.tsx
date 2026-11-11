@@ -21,6 +21,7 @@ import ImportFontModal from './ImportFontModal';
 import { safeJsonParse } from '../utils/safeJson';
 import { fontFaceRule } from '../utils/cssFont';
 import { migrateLegacySettings } from '../utils/legacySettings';
+import { fetchOptionalJson } from '../utils/optionalFetch';
 
 interface ScriptSelectionProps {
     scripts: ScriptConfig[];
@@ -347,17 +348,8 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                 if (!originalRes.ok) throw new Error(`Could not fetch original characters for ${script.nameKey}`);
                 originalCharDefs = await originalRes.json();
 
-                const positioningPath = `/data/positioning_${script.id}.json`;
-                try {
-                    const positioningRes = await fetch(positioningPath);
-                    if (positioningRes.ok) {
-                        positioningDefs = await positioningRes.json();
-                    } else {
-                        console.warn(`Could not load positioning data from ${positioningPath}.`);
-                    }
-                } catch (err) {
-                    console.warn(`Could not load positioning data from ${positioningPath}.`, err);
-                }
+                // Optional: not every script has positioning data.
+                positioningDefs = await fetchOptionalJson<CharacterDefinition[]>(`/data/positioning_${script.id}.json`) ?? [];
             }
             
             const fetchPromises = [
@@ -545,7 +537,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
              name: projectName, // This sets the dashboard name
              glyphs: [],
              scriptId: newScript.id,
-             characterSets: [], // Will be populated from script config by loader
+             // No characterSets: the loader takes them from newScript.characterSetData (basic + optional Latin).
              metrics: newScript.metrics
         };
         

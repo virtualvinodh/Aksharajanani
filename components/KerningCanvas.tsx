@@ -34,7 +34,7 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();
 
-    const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel, isPanning, isDragging, handleTouchStart, handleTouchMove, handleTouchEnd } = useKerningCanvas({
+    const { handleMouseDown, handleMouseMove, handleMouseUp, isPanning, isDragging, handleTouchStart, handleTouchMove, handleTouchEnd } = useKerningCanvas({
         canvasRef, leftChar, rightChar, glyphDataMap, strokeThickness, metrics,
         kernValue, onKernChange, tool, zoom, setZoom, viewOffset, setViewOffset, baseScale
     });
@@ -177,7 +177,6 @@ const KerningCanvas: React.FC<KerningCanvasProps> = ({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchEnd}
-            onWheel={handleWheel}
         />
     );
 };

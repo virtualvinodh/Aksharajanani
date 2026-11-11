@@ -49,7 +49,7 @@ const AppContainer: React.FC = () => {
     useEffect(() => {
         const LOGO_FONT_STYLE_ID = 'logo-font-face-style';
         const FONT_NAME = 'Purnavarman_1';
-        const FONT_URL = 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts/Purnawarman_1.ttf';
+        const FONT_URL = 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-fonts@a348d7fded9e95a5cfbd2052c7e92523dfe90d62/Purnawarman_1.ttf';
 
         if (document.getElementById(LOGO_FONT_STYLE_ID)) return;
 

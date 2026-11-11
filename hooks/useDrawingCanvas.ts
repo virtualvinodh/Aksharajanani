@@ -14,7 +14,8 @@ import { useEraserTool } from './drawingTools/useEraserTool';
 import { useSliceTool } from './drawingTools/useSliceTool';
 import { useLayout } from '../contexts/LayoutContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { distanceToSegment } from '../utils/geometryUtils';
+import { distanceToSegment, isPointOnDot } from '../utils/geometryUtils';
+import { useNonPassiveWheel } from './useNonPassiveWheel';
 import { getAccurateGlyphBBox, curveToPolyline, quadraticCurveToPolyline, paperScope } from '../services/glyphRenderService';
 
 export type { DraggedPointInfo, Handle };
@@ -188,7 +189,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         }
     }, [props.backgroundImage]);
 
-    const getViewportPoint = useCallback((e: React.MouseEvent | React.TouchEvent | React.WheelEvent, touchIndex = 0): Point | null => {
+    const getViewportPoint = useCallback((e: React.MouseEvent | React.TouchEvent | MouseEvent, touchIndex = 0): Point | null => {
         const canvas = canvasRef.current;
         if (!canvas) return null;
         const rect = canvas.getBoundingClientRect();
@@ -231,6 +232,11 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
                 if (paperItem && paperItem.hitTest(new paperScope.Point(point.x, point.y), { fill: true, tolerance: 0 })) {
                     return path;
                 }
+                continue;
+            }
+
+            if (path.type === 'dot') {
+                if (isPointOnDot(point, path.points, settings.strokeThickness, tolerance)) return path;
                 continue;
             }
 
@@ -343,6 +349,8 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
     const endInteraction = useCallback(() => {
         isPinchingRef.current = false;
         if (draggingMetric) { setDraggingMetric(null); setIsDrawing(false); return; }
+        // A middle-button (or post-pinch) pan can be active with any tool selected.
+        if (panTool.isPanning) panTool.end();
         switch (tool) {
             case 'pan': panTool.end(); break;
             case 'pen': case 'calligraphy': penTool.end(); break;
@@ -453,8 +461,8 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         }
     }, [tool, getViewportPoint, getCanvasPoint, editTool, findPathAtPoint, onToolChange, onSelectionChange, currentCharacter]);
     
-    const handleWheel = useCallback((e: React.WheelEvent) => {
-        e.preventDefault(); 
+    // Attached natively (non-passive) so pinch / Ctrl+wheel can't also zoom the page.
+    const handleWheel = useCallback((e: WheelEvent) => {
         const viewportPoint = getViewportPoint(e); 
         if (!viewportPoint) return;
         const currentZoom = zoomRef.current;
@@ -472,6 +480,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         targetViewOffsetRef.current = newViewOffset;
         startAnimation();
     }, [getViewportPoint, startAnimation]);
+    useNonPassiveWheel(canvasRef, handleWheel);
     
     const getCursor = useCallback(() => {
         if (hoveredMetric || draggingMetric) return 'col-resize';
@@ -499,7 +508,7 @@ export const useDrawingCanvas = (props: UseDrawingCanvasProps) => {
         hoveredPathIds,
         handleMouseDown, handleMouseMove, handleMouseUp: endInteraction, handleTouchStart, handleTouchMove,
         handleTouchEnd, handleTouchCancel: endInteraction,
-        handleWheel, handleDoubleClick, getCursor, handles: selectTool.handles,
+        handleDoubleClick, getCursor, handles: selectTool.handles,
         isMobile: selectTool.isMobile, HANDLE_SIZE: selectTool.HANDLE_SIZE,
         glyphBBox, hoveredMetric, draggingMetric,
         highlightedPathId: sliceTool.highlightedPathId

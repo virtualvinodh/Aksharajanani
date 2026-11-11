@@ -10,3 +10,18 @@ export const distanceToSegment = (p: Point, v: Point, w: Point): { distance: num
     const projection = { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) };
     return { distance: VEC.len(VEC.sub(p, projection)), projection };
 };
+
+/**
+ * Radius a 'dot' path is drawn with. Mirrors the dot branches in
+ * services/glyphRenderService.ts (renderPath and getAccurateGlyphBBox):
+ * a 2-point dot uses the distance to its second point, a 1-point dot uses
+ * half the stroke thickness.
+ */
+export const getDotRadius = (points: Point[], strokeThickness: number): number =>
+    points.length > 1 ? VEC.len(VEC.sub(points[1], points[0])) : strokeThickness / 2;
+
+/** True if `p` is within the dot's drawn radius plus `tolerance` of its centre. */
+export const isPointOnDot = (p: Point, points: Point[], strokeThickness: number, tolerance: number): boolean => {
+    if (points.length === 0) return false;
+    return VEC.len(VEC.sub(p, points[0])) <= getDotRadius(points, strokeThickness) + tolerance;
+};

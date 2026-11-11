@@ -15,6 +15,7 @@ import { VEC } from '../utils/vectorUtils';
 import { usePositioningSession } from '../hooks/positioning/usePositioningSession';
 import { deepClone } from '../utils/cloneUtils';
 import { expandMembers } from '../services/groupExpansionService';
+import { isGsubPositioningPair } from '../services/positioningHeuristicsService';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 import { usePositioning } from '../contexts/PositioningContext';
 import { isGlyphDrawn } from '../utils/glyphUtils';
@@ -157,14 +158,10 @@ const PositioningEditorPage: React.FC<PositioningEditorPageProps> = (props) => {
 
 
     const isPositioned = useMemo(() => props.markPositioningMap.has(`${props.baseChar.unicode}-${props.markChar.unicode}`), [props.markPositioningMap, props.baseChar, props.markChar]);
-    const isGsubPair = useMemo(() => {
-        if (!props.positioningRules) return false;
-        const rule = props.positioningRules.find(r => 
-            expandMembers(r.base, props.groups, props.characterSets).includes(props.baseChar.name) && 
-            expandMembers(r.mark, props.groups, props.characterSets).includes(props.baseChar.name)
-        );
-        return !!rule?.gsub;
-    }, [props.positioningRules, props.baseChar, props.groups, props.characterSets]);
+    const isGsubPair = useMemo(
+        () => isGsubPositioningPair(props.positioningRules, props.baseChar.name, props.markChar.name, props.groups, props.characterSets),
+        [props.positioningRules, props.baseChar.name, props.markChar.name, props.groups, props.characterSets]
+    );
 
     const classSiblings = useMemo(() => {
         if (session.activeAttachmentClass && session.activeClassType) {

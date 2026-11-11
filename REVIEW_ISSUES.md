@@ -18,6 +18,7 @@ Issues are split into **Functional** (a user can see or hit them) and **Technica
 - **Help crashed in "Supported scripts".** `HelpPage` maps over `scripts`, but `AppContainer` never passed them.
 - **"Merge imported font" added characters but no drawings.** Saved glyphs are `[unicode, data]` pairs; `mergeFontIntoProject` read `g.unicode` (always undefined), so every glyph looked "already present".
 - **The Command button in the phone nav drawer threw an error.** It called `layout.openPalette`, which didn't exist; the palette state now lives in `LayoutContext`, shared with the header and Ctrl+K.
+- **Duplicate React key in the Spacing editor** for pairs that use the same glyph twice (e.g. ं + ं): the Sources strip listed it twice. It's now listed once.
 
 ---
 
@@ -135,20 +136,23 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** after undoing a linked-component move, the paths revert but the transform stays moved and is saved.
   - **Fix:** store `{paths, compositeTransform}` in each history entry.
 
-- [ ] **D9 Middle-button pan gets stuck on tools other than pan** (confirmed by reading)
+- [x] **D9 Middle-button pan gets stuck on tools other than pan** (confirmed by reading)
   - **Where:** `hooks/useDrawingCanvas.ts` 343–364.
   - **Problem:** `endInteraction` only ends the pan when `tool === 'pan'`.
   - **Fix:** call `panTool.end()` whenever a pan is active.
+  - **Fixed:** a pan now ends whichever tool is active (also fixes lifting one finger after a pinch).
 
-- [ ] **D10 Dots can't be clicked or hovered** (confirmed by reading)
+- [x] **D10 Dots can't be clicked or hovered** (confirmed by reading)
   - **Where:** `useDrawingCanvas.ts` 237–246.
   - **Problem:** a 1-point dot has no segments to hit-test.
   - **Fix:** special-case dots: hit when the distance to the centre is at most radius + tolerance.
+  - **Fixed:** dots are hit-tested as a disc (radius + the usual tolerance); helpers in `utils/geometryUtils.ts`, tested.
 
-- [ ] **D11 Backspace in a text field deletes the selected point** (confirmed by reading)
+- [x] **D11 Backspace in a text field deletes the selected point** (confirmed by reading)
   - **Where:** `useEditTool.ts` 52–110.
   - **Problem:** the window keydown listener has no input/textarea guard, unlike `useDrawingShortcuts`.
   - **Fix:** add the same target guard.
+  - **Fixed:** the edit tool ignores keys typed in inputs, textareas, selects and editable text (`utils/domUtils.ts`, tested). `useDrawingShortcuts` still has its own older guard, which doesn't cover editable text.
 
 - [ ] **D12 Pasted copies join the original's group** (confirmed by reading)
   - **Where:** `hooks/drawing/useCanvasOperations.ts` 50–57.
@@ -160,10 +164,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** a "new" character keeps the source unicode without checking the target. That gives two characters on one code point, an uncounted overwrite, and colliding selection state.
   - **Fix:** if the unicode is already taken, assign a PUA code point.
 
-- [ ] **D14 Trackpad pinch and ctrl+wheel also zoom the page** (confirmed)
+- [x] **D14 Trackpad pinch and ctrl+wheel also zoom the page** (confirmed)
   - **Where:** `useDrawingCanvas.ts` 456–457; the same in `hooks/useKerningCanvas.ts` 128–144.
   - **Problem:** React's `onWheel` is passive, so `preventDefault()` is ignored.
   - **Fix:** attach a native `wheel` listener with `{passive: false}`.
+  - **Fixed:** native non-passive wheel listener (`hooks/useNonPassiveWheel.ts`) on the drawing, spacing and positioning canvases; checked in the browser that Ctrl+wheel no longer reaches the page. Safari reports trackpad pinch as gesture events, which this doesn't cover.
 
 ---
 
@@ -217,20 +222,22 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** it translates `points` but not `segmentGroups`, and it bakes ligature glyphs even for GPOS-only pairs.
   - **Fix:** use the shared transform helper, and write glyph data only when the rule has `gsub`.
 
-- [ ] **K10 Documented `center` anchor not implemented** (confirmed)
+- [x] **K10 Documented `center` anchor not implemented** (confirmed)
   - **Where:** `getAttachmentPointCoords` in `positioningHeuristicsService.ts` 56 and `glyphRenderService.ts` 220.
   - **Problem:** `center` falls through to topLeft.
   - **Fix:** add the case, and add it to the `AttachmentPoint` type.
+  - **Fixed:** `center` added to both implementations, the `AttachmentPoint` type and the anchor dropdowns; tested that both copies agree on all nine points.
 
 - [ ] **K13 Propagation count and Undo are wrong when re-editing** (confirmed)
   - **Where:** `usePositioningActions.ts` 141; `components/UnifiedEditorModal.tsx` 179.
   - **Problem:** `newSize - oldSize - 1` gives -1 or 0 when the siblings already exist, so no toast or Undo appears.
   - **Fix:** count the sibling keys actually written.
 
-- [ ] **K14 `isGsubPair` checks the base instead of the mark** (confirmed)
+- [x] **K14 `isGsubPair` checks the base instead of the mark** (confirmed)
   - **Where:** `components/PositioningEditorPage.tsx` 165.
   - **Problem:** the Properties button never shows for GSUB pairs in the Positioning workspace.
   - **Fix:** use `props.markChar.name`.
+  - **Fixed:** uses the mark name, via a tested `isGsubPositioningPair` helper. About eight other places copy the same rule lookup and could use it later.
 
 - [ ] **K15 Kerning canvas zoom drift and stranded pagination** (confirmed)
   - **Where:** `useKerningCanvas.ts` 128–144; `KerningSelectionView.tsx` 53–65, 287.
@@ -283,10 +290,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Where:** `useProjectPersistence.ts` (`getProjectState` uses `script.guideFont`); `components/SettingsPage.tsx` 60.
   - **Fix:** save `guideFont` from ProjectContext, and add it to the dirty deps.
 
-- [ ] **P10 "Include Latin" ignored for a new empty project** (confirmed)
+- [x] **P10 "Include Latin" ignored for a new empty project** (confirmed)
   - **Where:** `ScriptSelection.tsx` ~515; `useProjectLoad.ts` 75, ~165.
   - **Problem:** `characterSets: []` is truthy, so the project starts with zero glyphs.
   - **Fix:** omit the field, or test `?.length`.
+  - **Fixed:** empty lists are treated as "no sets" (`?.length`), so the toggle adds A–Z/a–z; checked in the browser. A saved project with a truly empty list now loads the script's default sets.
 
 - [ ] **P11 Status filters go stale after drawing** (confirmed)
   - **Where:** `hooks/useGlyphFilter.ts` 123.
@@ -328,10 +336,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** pressing Enter without changes renames `vowels` to its translated label (e.g. `உயிரெழுத்துக்கள்`), which sanitizes to `@` and breaks FEA (see E5).
   - **Fix:** pre-fill `nameKey`, skip unchanged renames, and sanitize with a uniqueness check.
 
-- [ ] **R5 Positioning rule editor adds one tag per keystroke** (confirmed)
+- [x] **R5 Positioning rule editor adds one tag per keystroke** (confirmed)
   - **Where:** `components/rules/manager/RuleManager.tsx` 216, 225.
   - **Problem:** `<SmartGlyphInput value="" onChange={v => addTag(...)}>`, so typing `$cons` adds `$`, `c`, `o`… and the dropdown never filters.
   - **Fix:** keep local input state, and add a tag on select/Enter.
+  - **Fixed:** tags are added only on Enter or when a suggestion is picked; typing just filters.
 
 - [ ] **R6 Positioning rule add/edit overwrites the wrong rule** (confirmed)
   - **Where:** `RuleManager.tsx` 398–408, 460, 468.
@@ -352,15 +361,17 @@ A user can see or hit these. All ⚠ items are here.
   - **Where:** `components/RulesPage.tsx` 541–560; `useRulesState.ts` (handleAddLookupReference).
   - **Fix:** create the feature, seeded with `inline` + `auto_generated`, before adding the reference.
 
-- [ ] **R10 Typed but unconfirmed glyph is lost on Save** (confirmed)
+- [x] **R10 Typed but unconfirmed glyph is lost on Save** (confirmed)
   - **Where:** `components/RuleEditor.tsx` 225–249; `DistRulesEditor.tsx` 209–232.
   - **Problem:** `onBlur` clears `addValue` before Save runs.
   - **Fix:** commit a non-empty `addValue` on blur.
+  - **Fixed:** a typed glyph is committed on blur (same check as Enter), so Save keeps it; Escape still discards.
 
-- [ ] **R11 Command palette search can clear while typing** (likely)
+- [x] **R11 Command palette search can clear while typing** (likely)
   - **Where:** `components/AppHeader.tsx` 121, 320; `components/CommandPalette.tsx` 175–178.
   - **Problem:** `handleCommandAction` is recreated on every render and is a dependency of the effect that calls `setSearchTerm('')`.
   - **Fix:** wrap it in `useCallback`, or rebuild the index only when the palette opens.
+  - **Fixed:** the search box resets only when the palette opens, so it can't clear while typing.
 
 - [ ] **R12 `GlyphTile` reads a field the rules context doesn't have** (confirmed; TS2339)
   - **Where:** `components/GlyphTile.tsx` 35.
@@ -373,37 +384,48 @@ A user can see or hit these. All ⚠ items are here.
 
 - ~~**U1 No way to switch between Simple and Advanced mode**~~: withdrawn. The modes were dropped on purpose in favour of progressive disclosure. The leftover code is listed under T4.
 
-- [ ] **U2 Raw i18n keys shown to users** (confirmed)
+- [x] **U2 Raw i18n keys shown to users** (confirmed)
   - **Status:** partly fixed in `01969c4`: `scriptHebrew`, `scriptTutorial`, `archaicLetters` and the "s" script icons. The other set names listed below are still raw.
   - **Problem:**
     - `scriptHebrew` and `scriptTutorial` are missing from `en.json` (home-screen tiles).
     - Missing set `nameKey`s: `archaicLetters` (Tamil), `basicCyrillic`, `specialCyrillic`, `consonantsTemplate` (Kannada/Telugu), `ottu`, `LatinIndicLetters`, `mini_marks`, `letters`, `others`.
     - Script cards for Tutorial, Gurmukhi and Latin (Indic) show "s" as their icon (`ScriptSelection.tsx` ~789 falls back to `nameKey[0]`).
+  - **Fixed:** English labels added for the 8 remaining set names (e.g. `ottu` "Ottu (Joined Consonants)", `consonantsTemplate` "Consonant Building Blocks"); Tamil falls back to English.
 
-- [ ] **U3 Tamil tutorial has 15 missing keys with no English fallback** (confirmed)
+- [x] **U3 Tamil tutorial has 15 missing keys with no English fallback** (confirmed)
   - **Where:** `locales/tutorial/ta.json`; `components/TutorialManager.tsx`.
   - **Problem:** keys such as `relinkExpl`, `kerningNav`, `compositeTools` and `hintKerning*` are missing. Those steps render empty tooltips, and some have `hideFooter: true`.
   - **Fix:** fall back to English per key, and add the keys.
+  - **Fixed:** tutorial strings fall back to English per key (`components/tutorial/tutorialTranslations.ts`, tested). The 15 keys still need Tamil translations.
 
 - [ ] **U4 Locale gaps in `ta.json`** (confirmed)
   - **Problem:** 15 keys are missing (they fall back to English, e.g. `copySelection`, `pasteSelection`, `ignorePair`). Three placeholder mismatches: `linkedGlyphLocked` drops `{components}`, `mismatchedScriptError` drops `{currentScript}`, and `mismatchedScriptMessage` drops both.
 
-- [ ] **U5 Tour and hint text shows raw markdown** (e.g. `**Pen Tool**`) (confirmed in the browser)
+- [x] **U5 Tour and hint text shows raw markdown** (e.g. `**Pen Tool**`) (confirmed in the browser)
+  - **Fixed:** one shared renderer (`utils/formattedText.tsx`, tested) for bold, italic and code in the tour, hints, Help and About; it replaced 23+ places that inserted locale text as raw HTML. Two toast messages still show `**` (`compositeGlyphPrefilledShort`, `linkedGlyphLockedShort`).
 
 - [ ] **U6 The drawing tour reappears when a second glyph is opened and blocks the canvas** (confirmed in the browser)
 
-- [ ] **U7 The "Create" (Creator Studio) button shows the "tasks incomplete… export anyway?" warning** (confirmed in the browser)
+- [x] **U7 The "Create" (Creator Studio) button shows the "tasks incomplete… export anyway?" warning** (confirmed in the browser)
+  - **Fixed:** Create opens Studio without the incomplete-tasks warning (still stops when nothing is drawn); checked in the browser.
 
 - [ ] **U8 Imported-font glyphs are labelled `U+0041` instead of their characters** (confirmed in the browser)
 
-- [ ] **U9 The feature-error dialog text is cut off** (confirmed in the browser)
+- [x] **U9 The feature-error dialog text is cut off** (confirmed in the browser)
+  - **Fixed:** the error text wraps and scrolls inside a wider dialog.
 
 - [ ] **U10 The Positioning tab says "No mark characters have been drawn" when the marks are linked glyphs** (confirmed in the browser: Tutorial script, `ͤ` with `link: ["e"]`)
 
-- [ ] **U11 The header ⋮ (More) button has no accessible name** (confirmed)
+- [x] **U11 The header ⋮ (More) button has no accessible name** (confirmed)
+  - **Fixed:** ⋮ and the phone drawer's icon buttons have `aria-label` and `title`.
 
 - [ ] **U12 Switching locale doesn't refresh some memoized lists** (confirmed by reading)
   - **Where:** `LocaleContext.tsx` (`t` has empty deps), e.g. `SmartGlyphInput` options.
+
+- [ ] **U13 ⚠ The tutorial can't get past "Click the 'A' card"** (likely; seen in headless Chromium on both the current and the previous build)
+  - **Where:** `components/tutorial/useTutorialSteps.ts` step 1 (`spotlightClicks: true`); react-joyride's overlay.
+  - **Problem:** the overlay stays on top of the highlighted card even while the pointer is over it, so the click lands on the overlay: the tour closes and the editor doesn't open.
+  - **Check:** try it in a normal browser (Start tutorial → Next → click A). If it works there, it's a headless-only artefact.
 
 ---
 
@@ -423,12 +445,14 @@ A user can see or hit these. All ⚠ items are here.
 
 - [ ] **S5 Telugu:** `ళు` and `ళూ` are in the `consLeft` group but are undefined.
 
-- [ ] **S6 Missing or broken files:**
+- [x] **S6 Missing or broken files:**
   - `data/rule_german.json` is 0 bytes and misnamed;
   - `rules_hebrew`, `rules_german`, `positioning_latin` (Latin logs a JSON parse error), `sample_lao` and `sample_tutorial` don't exist;
   - the tutorial's curated `sampleText` from `scripts.json` is thrown away when the `.txt` fetch returns HTML (`useProjectLoad.ts` ~305).
+  - **Fixed:** `rules_german.json` (was 0 bytes and misnamed) now matches the other Latin languages. Optional files (rules, positioning, FEA, sample text) that come back missing or as an HTML page are treated as absent (`utils/optionalFetch.ts`, tested), so the Latin parse error is gone and the tutorial keeps its sample text. Required files still fail loudly.
 
-- [ ] **S7 Guide fonts:** the Noto Greek/Cyrillic URLs return 404/403 on every landing load (`scripts.json` ~773, ~817). Gurmukhi's guide font is Noto Sans Devanagari. The jsDelivr `gh/` URLs have no `@ref`, so they track the default branch.
+- [x] **S7 Guide fonts:** the Noto Greek/Cyrillic URLs return 404/403 on every landing load (`scripts.json` ~773, ~817). Gurmukhi's guide font is Noto Sans Devanagari. The jsDelivr `gh/` URLs have no `@ref`, so they track the default branch.
+  - **Fixed:** Greek and Cyrillic use Noto Sans (which covers both; the old per-script folders don't exist), Gurmukhi uses Noto Sans Gurmukhi, and every guide-font URL plus the logo font is pinned to a commit. Each URL checked: HTTP 200, real font, byte-identical to what was served before.
 
 ---
 

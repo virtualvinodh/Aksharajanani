@@ -30,6 +30,11 @@ describe('glyphRenderService', () => {
             expect(getAttachmentPointCoords(bbox, 'midRight')).toEqual({ x: 110, y: 120 });
         });
 
+        it('calculates center', () => {
+            // x + width/2, y + height/2
+            expect(getAttachmentPointCoords(bbox, 'center')).toEqual({ x: 60, y: 120 });
+        });
+
         it('calculates bottomCenter', () => {
             // x + width/2, y + height
             expect(getAttachmentPointCoords(bbox, 'bottomCenter')).toEqual({ x: 60, y: 220 });

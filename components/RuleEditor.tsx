@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Character, GlyphData, CharacterSet } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { ClearIcon, AddIcon } from '../constants';
@@ -104,9 +104,13 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
     // Editing State
     const [editingSlot, setEditingSlot] = useState<{ type: string, index?: number } | null>(null);
     const [addValue, setAddValue] = useState('');
+    // Set when the add slot is closed on purpose (suggestion picked, Escape) so a blur fired
+    // while the input unmounts doesn't commit the stale typed value.
+    const skipBlurCommitRef = useRef(false);
 
     useEffect(() => {
         setAddValue('');
+        skipBlurCommitRef.current = false;
     }, [editingSlot]);
 
     useEffect(() => {
@@ -221,6 +225,14 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
         );
     };
 
+    // Adds the typed (unconfirmed) value to the slot list. Shared by Enter and blur.
+    const commitAddValue = (type: string, index: number) => {
+        const val = addValue.trim();
+        if (!val) return;
+        handleUpdate(type, val, index);
+        setAddValue('');
+    };
+
     // Helper for rendering Add buttons that behave like slots
     const renderAddSlot = (type: string, index: number, placeholder: string = "Add") => {
          const isEditing = editingSlot?.type === type && editingSlot?.index === index;
@@ -230,15 +242,18 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                     <SmartGlyphInput
                         value={addValue}
                         onChange={(val) => setAddValue(val)}
-                        onSelect={(val) => { handleUpdate(type, val, index); setAddValue(''); setEditingSlot(null); }}
-                        onBlur={() => { setAddValue(''); setEditingSlot(null); }}
+                        onSelect={(val) => { skipBlurCommitRef.current = true; handleUpdate(type, val, index); setAddValue(''); setEditingSlot(null); }}
+                        onBlur={() => {
+                             // Commit what was typed so clicking Save straight away doesn't drop it.
+                             if (!skipBlurCommitRef.current) commitAddValue(type, index);
+                             setEditingSlot(null);
+                        }}
                         onKeyDown={(e) => {
-                             if (e.key === 'Enter' && addValue) {
-                                 handleUpdate(type, addValue, index);
-                                 setAddValue('');
+                             if (e.key === 'Enter') {
+                                 commitAddValue(type, index);
                                  // Don't close slot to allow rapid entry
                              }
-                             if (e.key === 'Escape') setEditingSlot(null);
+                             if (e.key === 'Escape') { skipBlurCommitRef.current = true; setAddValue(''); setEditingSlot(null); }
                         }}
                         autoFocus
                         characterSets={allCharacterSets}

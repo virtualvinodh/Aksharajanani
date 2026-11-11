@@ -173,14 +173,21 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                 });
             }
             setCachedItems(items);
-            
-            setSearchTerm('');
-            setActiveIndex(0);
-            setTimeout(() => inputRef.current?.focus(), 50);
         }
     // We intentionally exclude glyphDataMap from deps to avoid re-running on every stroke.
     // It updates only when isOpen becomes true.
     }, [isOpen, t, characterSets, settings, onSetWorkspace, onAction, onSelectGlyph, positioningRules, script, hasKerning, workspaceKerningLabel]);
+
+    // Reset the search only when the palette opens. The index above can rebuild while it is
+    // open (e.g. the parent passes a new `onAction` on every render), and that must not
+    // clear what the user is typing.
+    useEffect(() => {
+        if (!isOpen) return;
+        setSearchTerm('');
+        setActiveIndex(0);
+        const focusTimer = setTimeout(() => inputRef.current?.focus(), 50);
+        return () => clearTimeout(focusTimer);
+    }, [isOpen]);
 
     
     const dynamicResults = useMemo(() => {

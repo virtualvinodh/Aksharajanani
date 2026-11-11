@@ -115,7 +115,7 @@ export interface PositioningRules {
   movement?: 'horizontal' | 'vertical';
 }
 
-export type AttachmentPoint = 'topLeft' | 'topCenter' | 'topRight' | 'midLeft' | 'midRight' | 'bottomLeft' | 'bottomCenter' | 'bottomRight';
+export type AttachmentPoint = 'topLeft' | 'topCenter' | 'topRight' | 'midLeft' | 'center' | 'midRight' | 'bottomLeft' | 'bottomCenter' | 'bottomRight';
 
 export interface MarkAttachmentRules {
   [baseCharName: string]: {

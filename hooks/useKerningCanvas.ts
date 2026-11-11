@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Point, Character, GlyphData, FontMetrics } from '../types';
 import { usePanTool } from './drawingTools/usePanTool';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
+import { useNonPassiveWheel } from './useNonPassiveWheel';
 
 export interface UseKerningCanvasProps {
     canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -66,7 +67,7 @@ export const useKerningCanvas = ({
         };
     }, [leftChar, rightChar, glyphDataMap, strokeThickness, metrics, kernValue, zoom, viewOffset, baseScale, canvasRef]);
 
-    const getViewportPoint = useCallback((e: React.MouseEvent | React.TouchEvent, touchIndex = 0): Point | null => {
+    const getViewportPoint = useCallback((e: React.MouseEvent | React.TouchEvent | MouseEvent, touchIndex = 0): Point | null => {
         const canvas = canvasRef.current;
         if (!canvas) return null;
         const rect = canvas.getBoundingClientRect();
@@ -124,9 +125,9 @@ export const useKerningCanvas = ({
         setIsDragging(false);
     }, [panTool]);
 
-    const handleWheel = useCallback((e: React.WheelEvent) => {
-        e.preventDefault();
-        const viewportPoint = getViewportPoint(e as any);
+    // Attached natively (non-passive) so pinch / Ctrl+wheel can't also zoom the page.
+    const handleWheel = useCallback((e: WheelEvent) => {
+        const viewportPoint = getViewportPoint(e);
         if (!viewportPoint) return;
         const zoomFactor = -e.deltaY * 0.001;
         const newZoom = Math.max(0.1, Math.min(10, zoomRef.current * (1 + zoomFactor)));
@@ -141,6 +142,7 @@ export const useKerningCanvas = ({
         setZoom(newZoom);
         setViewOffset(newViewOffset);
     }, [getViewportPoint, setZoom, setViewOffset]);
+    useNonPassiveWheel(canvasRef, handleWheel);
 
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         if (tool === 'pan' && e.touches.length > 1) {
@@ -189,7 +191,7 @@ export const useKerningCanvas = ({
     }, [panTool]);
 
     return {
-        handleMouseDown, handleMouseMove, handleMouseUp, handleWheel,
+        handleMouseDown, handleMouseMove, handleMouseUp,
         handleTouchStart, handleTouchMove, handleTouchEnd,
         isPanning: panTool.isPanning, isDragging
     };

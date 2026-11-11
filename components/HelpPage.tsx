@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
+import { renderFormattedText } from '../utils/formattedText';
 import { BackIcon } from '../constants';
 import Footer from './Footer';
 import { ScriptConfig } from '../types';
@@ -8,29 +9,6 @@ interface HelpPageProps {
   onClose: () => void;
   scripts: ScriptConfig[];
 }
-
-const renderFormattedText = (text: string): React.ReactNode => {
-    const parts = text.split('**');
-    return (
-        <>
-            {parts.map((part, index) => {
-                const isBold = index % 2 === 1;
-                const subParts = part.split('`');
-                const content = subParts.map((subPart, subIndex) => {
-                    if (subIndex % 2 === 1) {
-                        return <code key={`${index}-${subIndex}`} className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm font-mono text-pink-600 dark:text-pink-400 mx-0.5">{subPart}</code>;
-                    }
-                    return subPart;
-                });
-
-                if (isBold) {
-                    return <strong key={index} className="font-semibold text-gray-800 dark:text-gray-200">{content}</strong>;
-                }
-                return <React.Fragment key={index}>{content}</React.Fragment>;
-            })}
-        </>
-    );
-};
 
 const AccordionItem: React.FC<{ title: string; children: React.ReactNode }> = React.memo(({ title, children }) => {
     const [isOpen, setIsOpen] = useState(false);
