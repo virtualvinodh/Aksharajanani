@@ -429,13 +429,13 @@ A user can see or hit these. All ⚠ items are here.
   - **Fixed:** one shared renderer (`utils/formattedText.tsx`, tested) for bold, italic and code in the tour, hints, Help and About; it replaced 23+ places that inserted locale text as raw HTML. The two notifications that still showed `**` now render bold too (`renderFormattedText` takes a bold class for coloured backgrounds).
 
 - [x] **U6 The drawing tour reappears when a second glyph is opened and blocks the canvas** (confirmed in the browser)
-  - **Fixed:** the toolbar tour is marked as seen as soon as it is shown, so it appears once however it ends (you don't have to click through all 16 steps). Checked in the browser: on the old build the tour came back after the page was reloaded mid-tour; now it doesn't. Its overlay still blocks the canvas while it's open.
+  - **Fixed:** the toolbar tour is marked as seen as soon as it is shown, so it appears once however it ends (you don't have to click through all 16 steps). Checked in the browser: on the old build the tour came back after the page was reloaded mid-tour; now it doesn't. It is also non-blocking now: no dark overlay, Next/Close work as before, and clicking anywhere else (the canvas, Back, another glyph) ends it. Checked in the browser.
 
 - [x] **U7 The "Create" (Creator Studio) button shows the "tasks incomplete… export anyway?" warning** (confirmed in the browser)
   - **Fixed:** Create opens Studio without the incomplete-tasks warning (still stops when nothing is drawn); checked in the browser.
 
-- [ ] **U8 Imported-font glyphs are labelled `U+0041` instead of their characters** (confirmed in the browser)
-  - **Needs a decision:** imported projects turn on Settings → "Show Unicode values" on purpose (`services/importFontService.ts` 356), so each tile shows `U+0041` under the drawing; other projects start with it off. Whether imports should start with it off, or show the character as well, is a design call.
+- [x] **U8 Imported-font glyphs are labelled `U+0041` instead of their characters** (confirmed in the browser)
+  - **Fixed:** new imports start with "Show Unicode values" off, like every other project (`services/importFontService.ts`); it can still be switched on in Settings. Projects imported earlier keep their saved setting. Checked in the browser: an imported font's grid shows no `U+` codes.
 
 - [x] **U9 The feature-error dialog text is cut off** (confirmed in the browser)
   - **Fixed:** the error text wraps and scrolls inside a wider dialog.

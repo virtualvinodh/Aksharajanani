@@ -353,7 +353,7 @@ export const extractProjectData = async (
         preferKerningTerm: true,
         isPrefillEnabled: false,
         showHiddenGlyphs: false,
-        showUnicodeValues: true
+        showUnicodeValues: false
     };
 
     let transformedFeaCode = manualFeaCode;

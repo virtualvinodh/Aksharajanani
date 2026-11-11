@@ -75,7 +75,7 @@ const TutorialTooltip = ({
     }, []); 
   
     return (
-      <div {...tooltipProps} className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 max-w-sm border border-gray-200 dark:border-gray-700 flex flex-col gap-4 relative z-50">
+      <div {...tooltipProps} data-tutorial-tooltip="" className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 max-w-sm border border-gray-200 dark:border-gray-700 flex flex-col gap-4 relative z-50">
          <div className="text-gray-700 dark:text-gray-200 text-sm leading-relaxed">
            {step.content}
          </div>

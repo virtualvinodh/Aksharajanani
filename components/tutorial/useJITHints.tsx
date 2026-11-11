@@ -17,6 +17,23 @@ export const useJITHints = (
     
     const [run, setRun] = useState(false);
     const [steps, setSteps] = useState<Step[]>([]);
+
+    // Tips that shouldn't block the screen: no dark overlay, and clicking anywhere outside the
+    // tip (the canvas, Back, another glyph…) just ends it.
+    const nonBlocking = (list: Step[]): Step[] =>
+        list.map(step => ({ ...step, disableOverlay: true, data: { ...step.data, nonBlocking: true } }));
+    const isNonBlockingRun = run && !!steps[0]?.data?.nonBlocking;
+    useEffect(() => {
+        if (!isNonBlockingRun) return;
+        const onPointerDown = (e: PointerEvent) => {
+            const target = e.target as Element | null;
+            if (target?.closest?.('[data-tutorial-tooltip]')) return;
+            setRun(false);
+            setSteps([]);
+        };
+        document.addEventListener('pointerdown', onPointerDown, true);
+        return () => document.removeEventListener('pointerdown', onPointerDown, true);
+    }, [isNonBlockingRun]);
     const [stepIndex, setStepIndex] = useState(0);
 
     const isTutorialActive = script?.id === 'tutorial';
@@ -180,7 +197,7 @@ export const useJITHints = (
                     if (!localStorage.getItem(toolbarStorageKey)) {
                          const placement = isLargeScreen ? 'right' as Placement : 'bottom' as Placement;
                          const timer = setTimeout(() => {
-                             setSteps([
+                             setSteps(nonBlocking([
                                 {
                                     target: '[data-tour="main-toolbar"]',
                                     content: (
@@ -271,7 +288,7 @@ export const useJITHints = (
                                     placement,
                                     data: { isTutorial: false, storageKey: toolbarStorageKey, translations }
                                 }
-                             ]);
+                             ]));
                              setStepIndex(0);
                              setRun(true);
                              // Show the toolbar tour once, however it ends (finished, closed, or
