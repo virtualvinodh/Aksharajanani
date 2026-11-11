@@ -19,6 +19,7 @@
       { "unicode": 2380, "name": "ौ", "glyphClass": "base", "composite": ["ा", "ै"] },
       { "unicode": 2306, "name": "ं", "glyphClass": "mark", "advWidth": 0 },  
       { "unicode": 2305, "name": "ँ", "glyphClass": "mark", "advWidth": 0 },   
+      { "unicode": 7392, "name": "᳠", "glyphClass": "mark", "advWidth": 0 },
       { "name": "ें", "glyphClass": "mark", "advWidth": 0 , "composite": ["े", "ं"]},
       {  "name": "ैं", "glyphClass": "mark", "advWidth": 0, "composite": ["ै", "ं"] },        
       {  "name": "ेँ", "glyphClass": "mark", "advWidth": 0 , "composite": ["े", "ँ"]},

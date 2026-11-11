@@ -506,19 +506,24 @@ A user can see or hit these. All ⚠ items are here.
 
 ## S: Script data
 
-- [ ] **S1 Sinhala: 120 `akhn` ligature outputs aren't defined as glyphs** (e.g. `ක්‍රි`, `ක්‍ර්`), plus 120 group members. Those rules are silently skipped at export.
+- [x] **S1 Sinhala: 120 `akhn` ligature outputs aren't defined as glyphs** (e.g. `ක්‍රි`, `ක්‍ර්`), plus 120 group members. Those rules are silently skipped at export.
+  - **Fixed:** the whole rakāransaya family was missing (251 rule outputs, not 120: 40 consonants × C්‍ර plus ි ී ු ූ ්; 11 of the bases are also `blwf` outputs). Added 240 entries to the `conjuncts` set (U+E28D–U+E37C), following the existing ද pattern: `C්‍ර` = composite of C + `්‍ර`, and the vowel forms = composite of `C්‍ර` + `ි`/`ී`/`ැ`/`ෑ`/`්`. Export builds them without drawing. Checked: with ක, ්, ර, ්‍ර and ි drawn, HarfBuzz shapes "ක්‍ර" and "ක්‍රි" into the new glyphs.
 
 - [ ] **S2 Kannada:**
   - the `symbols` set has glyphs named `"0"`–`"9"` (resolving to ASCII and duplicating `characters_basic`) and Telugu fraction signs U+0C77–0C7F;
   - the `ಢಾ` composite uses Telugu `ా` (U+0C3E);
   - groups `$ottuR`/`$ottuAi` are undefined, as are PUA glyphs U+E02D, U+E02F–E032 and U+E039;
   - the `ಕ್ಷೀ` ligature output is undefined.
+  - **Partly fixed:** digits renamed to Kannada `೦`–`೯` (they export at U+0CE6–U+0CEF; checked), and `ಢಾ` now uses the Kannada `ಾ` (U+0CBE). Still open (for later): the Telugu fraction signs U+0C77–0C7F in `symbols`, the undefined `$ottuAi`, and the undefined akhn/psts outputs (`ಕ್ಷೀ`, `ಕ್ಷೇ`, `ಕ್ಷೊ`, `ಕ್ಷೋ`, U+E02B, U+E02C, U+E02F–E032).
 
-- [ ] **S3 Devanagari:** the `ई` composite references an undefined U+1CE0 (a Vedic tone mark).
+- [x] **S3 Devanagari:** the `ई` composite references an undefined U+1CE0 (a Vedic tone mark).
+  - **Fixed:** U+1CE0 (`᳠`) added to the Devanagari combining signs as a visible zero-width mark (hidden glyphs can't be drawn), so the `ई` composite (`इ` + `᳠`) works. Checked: with इ and ᳠ drawn, the exported font contains ई.
 
-- [ ] **S4 Tamil:** `liga: ["ன","ூா"]` has a two-character component (typo).
+- [x] **S4 Tamil:** `liga: ["ன","ூா"]` has a two-character component (typo).
+  - **Fixed:** the archaic letter U+E002 is the pre-reform **னா** (its neighbours are ணா and றா): `liga` changed from `["ன", "ூா"]` to `["ன", "ா"]`.
 
-- [ ] **S5 Telugu:** `ళు` and `ళూ` are in the `consLeft` group but are undefined.
+- [x] **S5 Telugu:** `ళు` and `ళూ` are in the `consLeft` group but are undefined.
+  - **Fixed:** `ళు` and `ళూ` added to `uCons` following `హు`/`పూ`: `ళు` = link [ళ, ు], `ళూ` = link [ళు, ా], with ligature inputs ళ+ు / ళ+ూ. Telugu loads without errors.
 
 - [x] **S6 Missing or broken files:**
   - `data/rule_german.json` is 0 bytes and misnamed;

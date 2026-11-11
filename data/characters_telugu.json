@@ -445,6 +445,8 @@
 
       { "name": "హు", "glyphClass": "ligature", "link": ["హ", "ు"], "liga": ["హ", "ు"]  },
       { "name": "హూ", "glyphClass": "ligature", "link": ["హు", "ా"], "liga": ["హు", "ూ"]  },   
+      { "name": "ళు", "glyphClass": "ligature", "link": ["ళ", "ు"], "liga": ["ళ", "ు"]  },
+      { "name": "ళూ", "glyphClass": "ligature", "link": ["ళు", "ా"], "liga": ["ళ", "ూ"]  },
 
       { "name": "", "glyphClass": "ligature", "link": ["క", "ు"], "liga": ["క", "ు"]  },
       { "name": "", "glyphClass": "base", "link": ["", ""], "liga": ["క", "ు", "్", "ష"], "gsub": "akhn" },

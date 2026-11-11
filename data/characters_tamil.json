@@ -210,7 +210,7 @@
   "nameKey": "archaicLetters", 
   "characters": [
       { "name": "", "glyphClass": "ligature", "liga": ["ண", "ா" ], "optional": true },
-      { "name": "", "glyphClass": "ligature", "liga": ["ன", "ூா" ], "optional": true  },
+      { "name": "", "glyphClass": "ligature", "liga": ["ன", "ா" ], "optional": true  },
       { "name": "", "glyphClass": "ligature", "liga": ["ற", "ா" ], "optional": true  },
       { "name": "", "glyphClass": "base", "optional": true  },
       { "name": "", "glyphClass": "ligature", "link": ["","ண"],  "liga": ["ை","ண"], "optional": true  },
