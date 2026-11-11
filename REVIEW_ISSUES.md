@@ -73,15 +73,17 @@ A user can see or hit these. All ⚠ items are here.
     - mkmk anchors add the base's LSB even when the base is a zero-width mark.
   - **Fix:** gate the zero-advance rule on `advWidth === 0` alone, don't re-shift imported outlines, and use LSB 0 for zero-advance bases.
 
-- [ ] **E8 Newer Indic script tags are missing** (confirmed by reading)
+- [x] **E8 Newer Indic script tags are missing** (confirmed by reading)
   - **Where:** `data/indicScripts.json`; `feaService.ts` 176–177, 232–233.
   - **Problem:** `dev2`, `knd2` and `gur2` (and `bng2`, `gjr2`, `ory2`) are missing, though the shipped rules use dev2, knd2 and gur2. User-defined ligatures in those scripts go into `liga` instead of akhn/blws/psts, which Windows Indic shaping doesn't apply.
   - **Fix:** add the v2 tags.
+  - **Fixed:** `dev2`, `bng2`, `gur2`, `gjr2`, `ory2` and `knd2` added to `data/indicScripts.json`. A user-added ligature without a feature in a Hindi, Kannada or Punjabi project now goes into the Indic features (tested: `services/feaIndicTags.test.ts`; it fails on the old list). Built-in projects export unchanged: Tamil and Devanagari (with GSUB and GPOS) differ only in the `head` timestamp.
 
-- [ ] **E9 Blank glyphs get the default 800-unit advance** (confirmed by reading)
+- [x] **E9 Blank glyphs get the default 800-unit advance** (confirmed by reading)
   - **Where:** `fontBuilder.ts` (advance-width block); `importFontService.ts` 54.
   - **Problem:** undrawn Zs/Cf/Cc glyphs (NBSP, thin space, ZWSP…) get `defaultAdvanceWidth`. In edit mode this overwrites the base font's widths. The imported `char.advWidth` is never used.
   - **Fix:** use `char.advWidth` when set; otherwise 0 for Cf characters and the space width for Zs.
+  - **Fixed:** undrawn glyphs use `getBlankAdvanceWidth` (`utils/glyphUtils.ts`, tested): a width stored on the character (e.g. from an imported font) wins; format and control characters get 0 (tab and CR get the space width); spaces get their usual em fraction (em space 1000, thin 200, hair 100…) or the space width. Exporting a General Punctuation project: 38 blank characters went from 800 to their proper widths; the drawn glyph, space, ZWJ and ZWNJ are unchanged.
 
 - [ ] **E10 Kerning only in `dist`, under a single `languagesystem`** (likely; depends on the renderer)
   - **Where:** `feaService.ts` ~318, ~899, ~946.

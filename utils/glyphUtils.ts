@@ -1,5 +1,5 @@
 
-import { GlyphData, Character, MarkPositioningMap, KerningMap } from '../types';
+import { GlyphData, Character, MarkPositioningMap, KerningMap, FontMetrics } from '../types';
 import UnicodeProperties from 'unicode-properties';
 
 /**
@@ -13,6 +13,51 @@ export const shouldExportEmpty = (unicode: number | undefined, name?: string): b
     const category = UnicodeProperties.getCategory(unicode);
     const isSeparator = category && category.startsWith('Z');
     return isSeparator || category === 'Cf' || category === 'Cc';
+};
+
+// Conventional widths of the fixed-width Unicode spaces, as fractions of the em.
+// Spaces not listed (no-break space, figure and punctuation space…) use the font's space width.
+const SPACE_EM_FRACTIONS: Record<number, number> = {
+    0x2000: 1 / 2, // en quad
+    0x2001: 1,     // em quad
+    0x2002: 1 / 2, // en space
+    0x2003: 1,     // em space
+    0x2004: 1 / 3, // three-per-em space
+    0x2005: 1 / 4, // four-per-em space
+    0x2006: 1 / 6, // six-per-em space
+    0x2009: 1 / 5, // thin space
+    0x200A: 1 / 10, // hair space
+    0x202F: 1 / 5, // narrow no-break space
+    0x205F: 4 / 18, // medium mathematical space
+    0x3000: 1,     // ideographic space
+};
+
+const parseWidth = (value: number | string | undefined): number | undefined => {
+    if (value === undefined || value === '') return undefined;
+    const n = typeof value === 'string' ? Number(value) : value;
+    return Number.isFinite(n) && n >= 0 ? Math.round(n) : undefined;
+};
+
+/**
+ * Advance width for a glyph that has no outline (spaces, format and control characters, and in
+ * edit mode any undrawn glyph). Returns undefined when the default advance width should be used.
+ * - A width stored on the character (e.g. read from an imported font) wins.
+ * - Format characters (zero-width space, joiners, marks like U+2060) and controls are 0,
+ *   except tab and carriage return, which take the space width.
+ * - Spaces get their conventional em fraction, or the font's space width.
+ */
+export const getBlankAdvanceWidth = (unicode: number, char: Pick<Character, 'advWidth'> | undefined, metrics: Pick<FontMetrics, 'unitsPerEm' | 'spaceAdvanceWidth'>): number | undefined => {
+    const own = parseWidth(char?.advWidth);
+    if (own !== undefined) return own;
+
+    const category = UnicodeProperties.getCategory(unicode);
+    if (category === 'Zs') {
+        const fraction = SPACE_EM_FRACTIONS[unicode];
+        return fraction !== undefined ? Math.round(metrics.unitsPerEm * fraction) : metrics.spaceAdvanceWidth;
+    }
+    if (unicode === 0x09 || unicode === 0x0D) return metrics.spaceAdvanceWidth;
+    if (category === 'Cf' || category === 'Cc' || category === 'Zl' || category === 'Zp') return 0;
+    return undefined;
 };
 
 /**

@@ -11,7 +11,7 @@ import { VEC } from '../utils/vectorUtils';
 import { curveToPolyline, quadraticCurveToPolyline, getStrokeOutlinePoints, generateCap } from '../utils/strokeExpansion';
 // Not '../constants': that is a .tsx module, which breaks inside the worker in dev (see canvasConstants.ts).
 import { DRAWING_CANVAS_SIZE } from '../canvasConstants';
-import { isGlyphDrawn, getGlyphExportNameByUnicode } from '../utils/glyphUtils';
+import { isGlyphDrawn, getGlyphExportNameByUnicode, getBlankAdvanceWidth } from '../utils/glyphUtils';
 import opentype from 'opentype.js';
 import paper from 'paper';
 
@@ -398,6 +398,10 @@ export const createFont = (
                   advanceWidth = Math.round(newBbox.x2 + RSB);
               }
           }
+      } else {
+          // No outline: spaces and invisible characters must not get a letter-sized width.
+          const blankWidth = getBlankAdvanceWidth(unicode, char, metrics);
+          if (blankWidth !== undefined) advanceWidth = blankWidth;
       }
 
       const glyphName = (isEditMode && char?.originalName) 
