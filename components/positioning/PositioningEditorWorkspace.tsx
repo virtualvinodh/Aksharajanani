@@ -71,7 +71,7 @@ interface PositioningEditorWorkspaceProps {
 const PositioningEditorWorkspace: React.FC<PositioningEditorWorkspaceProps> = ({
     markPaths, basePaths, targetLigature, onPathsChange, pageTool, onToggleTool, zoom, setZoom,
     viewOffset, setViewOffset, onZoom, onReuseClick, canEdit, lockedMessage, movementConstraint,
-    settings, metrics, showStrip, classSiblings, activePair, pivotChar, glyphDataMap, anchorDelta,
+    settings, metrics, classSiblings, activePair, pivotChar, glyphDataMap, anchorDelta,
     isLinked, onToggleLink, handleSelectSibling, markAttachmentRules, positioningRules,
     characterSets, groups, isStripExpanded, setIsStripExpanded, activeAttachmentClass,
     hasDualContext, activeClassType, onToggleContext, isLargeScreen,

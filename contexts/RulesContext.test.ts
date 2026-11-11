@@ -1,37 +1,9 @@
 
 import { describe, it, expect } from 'vitest';
-// We need to export rulesReducer from RulesContext.tsx to test it, 
-// or recreate it here if it's not exported. Assuming it is or can be tested similarly.
-// Since I cannot modify RulesContext.tsx to export the reducer in this prompt without re-printing the file, 
-// I will replicate the reducer logic for testing verification or assume export if I edited it previously.
-// Based on typical React context patterns, I will mock the test against the logic structure.
-
-// Replicating reducer logic for isolation testing since it wasn't exported in original file
-type RulesState = {
-  fontRules: any | null;
-  isFeaEditMode: boolean;
-  manualFeaCode: string;
-  hasUnsavedRules: boolean;
-};
-
-const rulesReducer = (state: RulesState, action: any): RulesState => {
-    switch (action.type) {
-        case 'SET_FONT_RULES': return { ...state, fontRules: action.payload };
-        case 'SET_FEA_EDIT_MODE': return { ...state, isFeaEditMode: action.payload };
-        case 'SET_MANUAL_FEA_CODE': return { ...state, manualFeaCode: action.payload };
-        case 'SET_HAS_UNSAVED_RULES': return { ...state, hasUnsavedRules: action.payload };
-        case 'RESET': return { fontRules: null, isFeaEditMode: false, manualFeaCode: '', hasUnsavedRules: false };
-        default: return state;
-    }
-};
+import { rulesReducer, initialRulesState, RulesState } from './rulesReducer';
 
 describe('rulesReducer', () => {
-    const initialState: RulesState = {
-        fontRules: null,
-        isFeaEditMode: false,
-        manualFeaCode: '',
-        hasUnsavedRules: false,
-    };
+    const initialState: RulesState = initialRulesState;
 
     it('SET_FONT_RULES updates rules', () => {
         const rules = { test: 123 };

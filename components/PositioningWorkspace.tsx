@@ -1,7 +1,7 @@
 
 import React from 'react';
 import PositioningPage from './PositioningPage';
-import { MarkAttachmentRules, PositioningRules, AttachmentClass } from '../../types';
+import { MarkAttachmentRules, PositioningRules, AttachmentClass } from '../types';
 import { useRules } from '../contexts/RulesContext';
 import ProgressIndicator from './ProgressIndicator';
 

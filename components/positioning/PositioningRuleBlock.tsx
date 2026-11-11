@@ -85,7 +85,7 @@ const MiniGlyphCanvas: React.FC<{
                         if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {
                             shouldVerticallyCenter = false;
                         }
-                    } catch (e) { }
+                    } catch { }
                 }
 
                 if (shouldVerticallyCenter) {
@@ -111,6 +111,7 @@ const MiniGlyphCanvas: React.FC<{
 
     return <canvas ref={canvasRef} width={MINI_SIZE} height={MINI_SIZE} />;
 });
+MiniGlyphCanvas.displayName = 'MiniGlyphCanvas';
 
 // Component to render a stack of glyphs
 const GroupStack: React.FC<{

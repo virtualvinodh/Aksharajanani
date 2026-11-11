@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
-import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, MarkAttachmentRules, PositioningRules, AttachmentClass, Point } from '../types';
+import { Character, GlyphData, MarkAttachmentRules, PositioningRules, AttachmentClass, Point } from '../types';
 import PositioningEditorPage from './PositioningEditorPage';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useProject } from '../contexts/ProjectContext';
@@ -157,7 +157,6 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
                              // Direct set is safer as drill-down just renders grid.
                              setEditingPair(match);
                              // Calculate index within that group
-                             const groupIndex = group.pairs.indexOf(match);
                              const classKey = getPairClassKey(match);
                              const filteredContext = group.pairs.filter((p: any) => getPairClassKey(p) === classKey);
                              const filteredIndex = filteredContext.findIndex((p: any) => p.base.unicode === match.base.unicode && p.mark.unicode === match.mark.unicode);
@@ -262,9 +261,9 @@ const PositioningPage: React.FC<PositioningPageProps> = ({
         );
     }, [displayedCombinations, markPositioningMap, viewMode]);
 
-    const fullyPositionedItems = useMemo(() => {
+    const _fullyPositionedItems = useMemo(() => {
         if (isFiltered || !characterSets || viewMode === 'rules') return []; 
-        return navItems.filter(item => {
+        return navItems.filter(_item => {
              // Logic simplified for performance. In a full implementation, check if all required marks for this base are positioned.
              return true;
         }).filter(item => item.unicode !== reuseSourceItem?.unicode);

@@ -1,9 +1,8 @@
 
-import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { DRAWING_CANVAS_SIZE } from '../../constants';
-import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Point, PositioningRules, CharacterSet, ComponentTransform, AttachmentClass } from '../../types';
+import { AppSettings, Character, FontMetrics, GlyphData, MarkAttachmentRules, MarkPositioningMap, Point, PositioningRules, CharacterSet, ComponentTransform, AttachmentClass } from '../types';
 import ReusePreviewCard from './ReusePreviewCard';
 import UnsavedChangesModal from './UnsavedChangesModal';
 import { useMediaQuery } from '../hooks/useMediaQuery';

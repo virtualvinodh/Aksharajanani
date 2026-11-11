@@ -2,7 +2,7 @@
 import React from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { useProject } from '../../contexts/ProjectContext';
-import { TransformIcon, SettingsIcon, CompareIcon, TrashIcon, CloseIcon, CheckCircleIcon, CopyIcon, PasteIcon } from '../../constants';
+import { TransformIcon, SettingsIcon, TrashIcon, CloseIcon, CheckCircleIcon, CopyIcon, PasteIcon } from '../../constants';
 
 interface DrawingBatchToolbarProps {
     selectionSize: number;

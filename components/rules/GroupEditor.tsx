@@ -17,7 +17,7 @@ interface GroupEditorProps {
     characterSets: CharacterSet[];
 }
 
-const GroupEditor: React.FC<GroupEditorProps> = ({ onSave, onCancel, initialData, isNew, existingKeys, characterSets }) => {
+const GroupEditor: React.FC<GroupEditorProps> = ({ onSave, onCancel, initialData, isNew, characterSets }) => {
     const { t } = useLocale();
     const { showNotification } = useLayout();
     const { positioningGroupNames } = useProject();

@@ -33,8 +33,8 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
 
     if (!settings) return null;
 
-    const useKerningTerm = settings.editorMode === 'advanced' || settings.preferKerningTerm;
-    const progressTextKey = (settings.editorMode === 'simple' && !settings.preferKerningTerm) ? "spacingProgress" : "kerningProgress";
+    const useKerningTerm = !!settings.preferKerningTerm;
+    const progressTextKey = useKerningTerm ? "kerningProgress" : "spacingProgress";
     const spacedTabLabel = useKerningTerm ? "Kerned" : "Spaced";
 
     return (
@@ -91,7 +91,6 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
             <div className="flex-grow overflow-y-auto">
                 <KerningPage 
                     recommendedKerning={recommendedKerning}
-                    editorMode={settings.editorMode}
                     mode={activeTab}
                     showRecommendedLabel={activeTab === 'all'}
                     onSwitchToAllPairs={() => setActiveTab('all')}

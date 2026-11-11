@@ -52,7 +52,10 @@ describe('VEC (Vector Utilities)', () => {
 
   it('perp: calculates perpendicular vector', () => {
     const p = { x: 1, y: 0 };
-    // Rotates 90 degrees counter-clockwise
-    expect(VEC.perp(p)).toEqual({ x: 0, y: 1 });
+    // Rotates 90 degrees counter-clockwise. x comes out as -0, which is the same
+    // number as 0 but not equal under toEqual (Object.is), so compare numerically.
+    const r = VEC.perp(p);
+    expect(r.x).toBeCloseTo(0);
+    expect(r.y).toBe(1);
   });
 });

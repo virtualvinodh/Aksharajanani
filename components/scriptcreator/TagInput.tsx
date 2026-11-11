@@ -10,7 +10,7 @@ interface TagInputProps {
 }
 
 const TagInput: React.FC<TagInputProps> = ({ tags, setTags, placeholder, availableSets = [] }) => {
-    const { t } = useLocale();
+    useLocale();
     const [inputValue, setInputValue] = useState('');
 
     const handleAddTag = () => {

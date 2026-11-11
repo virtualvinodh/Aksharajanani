@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Tailwind scans every file for class names; docs and tooling scripts only produce junk
+   classes (e.g. "[file:line]" in REVIEW_ISSUES.md gave a build warning). */
+@source not "./*.md";
+@source not "./scripts";
+
 /* `dark:` utilities follow the app's own Light/Dark setting (ThemeContext puts a
    `.dark` class on <html>; it defaults to the OS preference). Without this,
    Tailwind v4 follows only the OS setting and the in-app switch half-works. */

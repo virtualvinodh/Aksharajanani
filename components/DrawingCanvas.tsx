@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
-import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, Segment, ComponentTransform } from '../types';
+import { Point, Path, FontMetrics, Tool, AppSettings, GlyphData, CharacterSet, Character, ImageTransform, TransformState, ComponentTransform } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 
@@ -152,7 +152,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         }
         points.forEach((p, index) => {
             const isSelected = selectedPointInfo?.type === 'freehand' && selectedPointInfo.pathId === path.id && selectedPointInfo.pointIndex === index;
-            let isControlPoint = (type === 'pen' && index > 0 && index < points.length - 1) || (type === 'curve' && index === 1);
+            const isControlPoint = (type === 'pen' && index > 0 && index < points.length - 1) || (type === 'curve' && index === 1);
             if (isControlPoint) {
                 ctx.fillStyle = isSelected ? `rgba(99, 102, 241, ${pointAlpha})` : `rgba(251, 191, 36, ${pointAlpha})`;
                 ctx.strokeStyle = `rgba(0, 0, 0, ${pointAlpha / 2})`;

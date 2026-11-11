@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AppSettings, ToolRanges, FontMetrics, GuideFont } from '../types';
+import { ToolRanges, GuideFont } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { BackIcon, LeftArrowIcon, RightArrowIcon } from '../constants';
 import Footer from './Footer';
@@ -36,6 +36,7 @@ const TabButton: React.FC<{
       {label}
   </button>
 ));
+TabButton.displayName = 'TabButton';
 
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ toolRanges }) => {

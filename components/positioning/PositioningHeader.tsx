@@ -1,7 +1,7 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Character } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { RulesIcon, SaveIcon, BackIcon, LeftArrowIcon, RightArrowIcon } from '../../constants';
+import { RulesIcon, LeftArrowIcon, RightArrowIcon } from '../../constants';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 // FIX: Import useLayout to allow opening the rules manager modal directly from the header using the shared layout state.
 import { useLayout } from '../../contexts/LayoutContext';

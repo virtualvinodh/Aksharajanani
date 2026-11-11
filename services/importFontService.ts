@@ -1,5 +1,5 @@
 
-import { ProjectData, GlyphData, Path, Segment, Point, AppSettings, FontMetrics, CharacterSet, ScriptDefaults } from '../types';
+import { ProjectData, GlyphData, Path, Segment, Point, AppSettings, FontMetrics, CharacterSet } from '../types';
 import { getGlyphExportNameByUnicode } from '../utils/glyphUtils';
 import opentype from 'opentype.js';
 
@@ -20,9 +20,11 @@ export const parseFontFile = async (file: File): Promise<any> => {
 export const mergeFontIntoProject = (
     currentProject: ProjectData,
     importedProject: ProjectData
-): { newGlyphs: GlyphData[], newCharacters: any[] } => {
-    const currentGlyphUnicodes = new Set(currentProject.glyphs.map(g => g.unicode));
-    const newGlyphs = importedProject.glyphs.filter(g => !currentGlyphUnicodes.has(g.unicode));
+): { newGlyphs: [number, GlyphData][], newCharacters: any[] } => {
+    // Saved glyphs are [unicode, data] pairs. (This used to read `g.unicode`, which is
+    // always undefined, so every imported glyph looked "already present" and was dropped.)
+    const currentGlyphUnicodes = new Set(currentProject.glyphs.map(([unicode]) => unicode));
+    const newGlyphs = importedProject.glyphs.filter(([unicode]) => !currentGlyphUnicodes.has(unicode));
     
     const currentCharacterUnicodes = new Set(
         currentProject.characterSets.flatMap(set => set.characters.map(c => c.unicode))
@@ -348,7 +350,7 @@ export const extractProjectData = async (
         pathSimplification: 0,
         showGridOutlines: true,
         isAutosaveEnabled: true,
-        editorMode: 'advanced',
+        preferKerningTerm: true,
         isPrefillEnabled: false,
         showHiddenGlyphs: false,
         showUnicodeValues: true

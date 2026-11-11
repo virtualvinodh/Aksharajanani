@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import Modal from '../Modal';
-import { SaveIcon, TransformIcon } from '../../constants';
 import { sanitizeIdentifier } from '../../utils/stringUtils';
 import { GlyphData } from '../../types';
 import { renderPaths, getAccurateGlyphBBox } from '../../services/glyphRenderService';

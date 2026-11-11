@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
-import { Character, GlyphData, Path, FontMetrics, Tool, AppSettings, CharacterSet, ImageTransform, Point, MarkAttachmentRules, TransformState, ComponentTransform } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Character, Tool, ImageTransform, Point, TransformState } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import DrawingEditorHeader from './drawing/DrawingEditorHeader';
@@ -13,9 +13,7 @@ import { useGlyphEditSession } from '../hooks/drawing/useGlyphEditSession';
 import { useDrawingShortcuts } from '../hooks/drawing/useDrawingShortcuts';
 import { useImportLogic } from '../hooks/drawing/useImportLogic';
 import { useCanvasOperations } from '../hooks/drawing/useCanvasOperations';
-import { useSliceTool } from '../hooks/drawing/useSliceTool';
 import { useGlyphConstruction } from '../hooks/drawing/useGlyphConstruction';
-import { isGlyphDrawn } from '../utils/glyphUtils';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData as useGlyphDataContext } from '../contexts/GlyphDataContext';
 import { useRules } from '../contexts/RulesContext';
@@ -23,13 +21,12 @@ import { useKerning } from '../contexts/KerningContext';
 import { usePositioning } from '../contexts/PositioningContext';
 
 const DrawingModal: React.FC<any> = ({ 
-    character, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, 
+    character, glyphData, onSave, onClose, onDelete, onNavigate, 
     settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, 
-    onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange,
-    prevCharacter, nextCharacter 
+    onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, prevCharacter, nextCharacter 
 }) => {
   const { t } = useLocale();
-  const { showNotification, modalOriginRect, checkAndSetFlag } = useLayout();
+  const { showNotification } = useLayout();
   const { clipboard, dispatch: clipboardDispatch } = useClipboard();
   const { dispatch: characterDispatch, allCharsByName, allCharsByUnicode, script } = useProject();
   const { dispatch: glyphDataDispatch } = useGlyphDataContext();
@@ -63,8 +60,7 @@ const DrawingModal: React.FC<any> = ({
     glyphClass, setGlyphClass, advWidth, setAdvWidth,
     label, setLabel,
     position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
-    link, setLink, composite, setComposite, liga, setLiga, compositeTransform, setCompositeTransform,
-    isTransitioning,
+    liga, setLiga, isTransitioning,
     handleSave, handleRefresh, handleResetGlyph, handleNavigationAttempt,
     wasEmptyOnLoad,
     isUnsavedModalOpen, closeUnsavedModal, confirmSave, confirmDiscard,

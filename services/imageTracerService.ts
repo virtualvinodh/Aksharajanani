@@ -1,5 +1,6 @@
 
-import ImageTracer from 'imagetracerjs';
+// imagetracerjs is loaded the first time someone traces an image.
+const loadImageTracer = () => import('imagetracerjs').then(m => m.default ?? m);
 import paper from 'paper';
 
 interface TraceOptions {
@@ -77,6 +78,7 @@ export const traceImageToSVG = (
                 colorquantcycles: 3
             };
 
+            const ImageTracer = await loadImageTracer();
             ImageTracer.imageToSVG(traceInput, async (svgstr: string) => {
                 let scope: paper.PaperScope | null = null;
                 try {
@@ -94,7 +96,7 @@ export const traceImageToSVG = (
                     }
 
                     // Remove the largest background path
-                    let paths = Array.from(pathElements);
+                    const paths = Array.from(pathElements);
                     if (removeBackground && paths.length > 1) {
                         paths.sort((a, b) => (b.getAttribute('d')?.length || 0) - (a.getAttribute('d')?.length || 0));
                         paths.shift();
@@ -139,7 +141,7 @@ export const traceImageToSVG = (
 
                     if (exportPath) {
                         // Split by 'z' to separate subpaths
-                        let subpaths = exportPath.split(/z/).map(s => s.trim()).filter(Boolean);
+                        const subpaths = exportPath.split(/z/).map(s => s.trim()).filter(Boolean);
 
                         // Remove the first subpath (often the bounding box frame in this subtraction method)
                         if (subpaths.length > 1) {
@@ -171,12 +173,13 @@ export const traceImageToSVG = (
 
                     resolve(svgOutline);
 
-                } catch (err) {
+                } catch {
                     reject(new Error("Failed to merge traced paths into continuous outline."));
                 } finally {
                     // Critical: Remove the scope to clean up DOM event listeners and internal registries
                     if (scope) {
-                        scope.remove();
+                        // PaperScope#remove exists at runtime but is missing from paper's typings.
+                        (scope as paper.PaperScope & { remove: () => void }).remove();
                     }
                 }
             }, aggressiveOptions);

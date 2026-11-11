@@ -27,7 +27,7 @@ interface PositioningCanvasProps {
 
 const PositioningCanvas: React.FC<PositioningCanvasProps> = ({
     width, height, markPaths, basePaths, onPathsChange, metrics, tool, zoom, setZoom,
-    viewOffset, setViewOffset, settings, movementConstraint, canEdit, character, onLockedInteraction
+    viewOffset, setViewOffset, settings, movementConstraint, canEdit, onLockedInteraction
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { theme } = useTheme();

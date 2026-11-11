@@ -1,7 +1,7 @@
 
 import React from 'react';
 import RulesPage from './RulesPage';
-import { PositioningRules, MarkAttachmentRules } from '../types';
+import { PositioningRules } from '../types';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useKerning } from '../contexts/KerningContext';
@@ -29,7 +29,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = (props) => {
     const { state, dispatch } = useRules();
     const { settings, metrics } = useSettings();
     
-    const { rulesProgress, ...rulesPageProps } = props;
+    const { rulesProgress: _rulesProgress, ...rulesPageProps } = props;
 
     if (!characterSets || !settings || !metrics) return null;
 

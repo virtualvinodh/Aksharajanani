@@ -3,7 +3,6 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { useRules } from '../contexts/RulesContext';
 import { useProject } from '../contexts/ProjectContext';
 import { ScriptConfig, ProjectData } from '../types';
 
@@ -36,7 +35,6 @@ export const useAppActions = ({
     // Consolidate all project-related data from useProject
     const { dispatch: glyphDataDispatch } = useGlyphData();
     const { 
-        script, // Retrieved from ProjectContext now
         projectName, 
         setProjectName, 
         positioningRules, 
@@ -146,8 +144,7 @@ export const useAppActions = ({
     // 5. Export Actions Hook
     const {
         exportingType, feaErrorState, testPageFont, creatorFont,
-        startExportProcess, handleSaveProject, handleSaveTemplate, handleTestClick, handleCreatorClick, downloadFontBlob,
-        getCachedOrGeneratedFont
+        startExportProcess, handleSaveProject, handleSaveTemplate, handleTestClick, handleCreatorClick, downloadFontBlob
     } = useExportActions({
         getProjectState, projectId, projectName, setIsAnimatingExport
     });
@@ -171,17 +168,6 @@ export const useAppActions = ({
         } else { setWorkspace(newWorkspace); }
     }, [workspace, hasUnsavedRules, settings?.isAutosaveEnabled, layout, setWorkspace]);
 
-    const handleEditorModeChange = useCallback((mode: 'simple' | 'advanced') => {
-        if (mode === 'simple') {
-            // Don't force exit from rules workspace
-            if (workspace === 'kerning') {
-                if (script?.kerning !== 'true') {
-                    setWorkspace('drawing');
-                }
-            }
-        }
-        settingsDispatch({ type: 'UPDATE_SETTINGS', payload: s => s ? { ...s, editorMode: mode } : null });
-    }, [workspace, setWorkspace, script, settingsDispatch]);
 
     // --- Session Snapshot Logic ---
     const [hasSnapshot, setHasSnapshot] = useState(false);
@@ -320,7 +306,6 @@ export const useAppActions = ({
         openSaveAsModal,
         refreshDependencyMap,
         // FIX: Added missing exported actions from sub-hooks and local scope to resolve errors in App.tsx
-        handleEditorModeChange,
         downloadFontBlob,
         handleAddGlyph,
         handleQuickAddGlyph,

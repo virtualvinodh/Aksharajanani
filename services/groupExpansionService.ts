@@ -1,5 +1,5 @@
 
-import { Character, CharacterSet } from '../types';
+import { CharacterSet } from '../types';
 
 /**
  * Expands a list of items which may contain direct glyph names or group references (starting with $ or @)

@@ -1,6 +1,6 @@
 
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Character, CharacterSet, GlyphData, FontMetrics, UnifiedRenderContext, Path } from '../types';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { Character, CharacterSet, UnifiedRenderContext, Path } from '../types';
 import { BackIcon, ZoomInIcon, ZoomOutIcon, LeftArrowIcon, RightArrowIcon, DRAWING_CANVAS_SIZE, COMPARISON_CELL_HEIGHT, COMPARISON_CELL_WIDTH, ClearIcon } from '../constants';
 import { useLocale } from '../contexts/LocaleContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -17,9 +17,7 @@ import { usePositioning } from '../contexts/PositioningContext';
 import { useKerning } from '../contexts/KerningContext';
 import { useRules } from '../contexts/RulesContext';
 
-interface ComparisonViewProps {}
-
-const ComparisonView: React.FC<ComparisonViewProps> = () => {
+const ComparisonView: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { t } = useLocale();

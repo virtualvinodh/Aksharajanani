@@ -1,6 +1,6 @@
 
-import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { FontMetrics, Character, CharacterSet, GlyphData, ComponentTransform, PositioningMode, Path } from '../types';
+import React, { useRef, useEffect, useState } from 'react';
+import { FontMetrics, Character, CharacterSet, GlyphData, ComponentTransform, Path } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import SmartGlyphInput from './rules/manager/SmartGlyphInput';
 import { SaveIcon, RightArrowIcon, CloseIcon, AddIcon } from '../constants';
@@ -21,7 +21,7 @@ const ComponentListEditor: React.FC<{
     label?: string;
     showAdvanced?: boolean;
     color?: 'blue' | 'purple';
-}> = ({ components, setComponents, transforms, setTransforms, characterSets, groups, label, showAdvanced = true, color = 'blue' }) => {
+}> = ({ components, setComponents, transforms, setTransforms, characterSets, label, showAdvanced = true, color = 'blue' }) => {
     const { t } = useLocale();
     const [inputValue, setInputValue] = useState('');
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
@@ -334,13 +334,12 @@ interface GlyphPropertiesPanelProps {
 
 const GlyphPropertiesPanel: React.FC<GlyphPropertiesPanelProps> = ({ 
   lsb, setLsb, rsb, setRsb, metrics, onClose,
-  character, glyphData, allCharacterSets, onSaveConstruction,
+  character, allCharacterSets, onSaveConstruction,
   glyphClass, setGlyphClass, advWidth, setAdvWidth,
   label, setLabel,
   liga, setLiga,
-  position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,
-  compositeTransform, setCompositeTransform,
-  characterDispatch, glyphDataDispatch, onPathsChange,
+  setPosition, setKern, gpos, setGpos, gsub, setGsub,
+  compositeTransform, characterDispatch, glyphDataDispatch, onPathsChange,
   disableStructuralEditing = false
 }) => {
   const { t } = useLocale();

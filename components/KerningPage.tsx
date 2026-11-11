@@ -16,7 +16,6 @@ import { isGlyphDrawn as isGlyphDrawnUtil } from '../utils/glyphUtils';
 
 interface KerningPageProps {
   recommendedKerning: RecommendedKerning[] | null;
-  editorMode: 'simple' | 'advanced';
   mode: 'recommended' | 'all' | 'spaced';
   showRecommendedLabel: boolean;
   onSwitchToAllPairs?: () => void;
@@ -24,7 +23,6 @@ interface KerningPageProps {
 
 const KerningPage: React.FC<KerningPageProps> = ({ 
     recommendedKerning, 
-    editorMode, 
     mode, 
     showRecommendedLabel, 
     onSwitchToAllPairs 
@@ -33,7 +31,7 @@ const KerningPage: React.FC<KerningPageProps> = ({
     const { 
         pendingNavigationTarget, setPendingNavigationTarget, 
         filterMode, searchQuery, showNotification,
-        setWorkspace, selectCharacter, setActiveTab
+        setWorkspace, selectCharacter
     } = useLayout();
     const { characterSets, allCharsByName, allCharsByUnicode } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();

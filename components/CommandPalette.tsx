@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
-import { Character, GlyphData, PositioningRules, ScriptConfig, KerningMap, RecommendedKerning } from '../types';
+import { Character, PositioningRules, ScriptConfig, KerningMap, RecommendedKerning } from '../types';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { SearchIcon, EditIcon, SettingsIcon, CompareIcon, TestIcon, ExportIcon, SaveIcon, LoadIcon, CodeBracketsIcon, CopyIcon, AddIcon } from '../constants';
@@ -180,7 +180,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         }
     // We intentionally exclude glyphDataMap from deps to avoid re-running on every stroke.
     // It updates only when isOpen becomes true.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, t, characterSets, settings, onSetWorkspace, onAction, onSelectGlyph, positioningRules, script, hasKerning, workspaceKerningLabel]);
 
     

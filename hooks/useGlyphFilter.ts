@@ -27,7 +27,7 @@ export const useGlyphFilter = ({
     const isFiltered = filterMode !== 'none' || isSearching;
 
     const filteredList = useMemo(() => {
-        let candidates = characters.filter(char => {
+        const candidates = characters.filter(char => {
             // Standard ZWJ/ZWNJ exclusion
             if (char.unicode === 8205 || char.unicode === 8204) return false;
             

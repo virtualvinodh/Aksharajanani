@@ -5,7 +5,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  footer: React.ReactNode;
+  footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl';
   titleClassName?: string;
   closeOnBackdropClick?: boolean;

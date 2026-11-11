@@ -13,6 +13,12 @@ Issues are split into **Functional** (a user can see or hit them) and **Technica
 
 **Already fixed on `claude`:** production export (minified worker), build missing data/locales, Devanagari crash, file-load project-ID clash, edits lost on close, rules edits lost, composite/linked glyphs missing from export, canvas-vs-font units for bearings and kerning. Uncaught export errors (spinner stuck) were fixed along with these.
 
+
+**Found while fixing the type errors, now fixed:**
+- **Help crashed in "Supported scripts".** `HelpPage` maps over `scripts`, but `AppContainer` never passed them.
+- **"Merge imported font" added characters but no drawings.** Saved glyphs are `[unicode, data]` pairs; `mergeFontIntoProject` read `g.unicode` (always undefined), so every glyph looked "already present".
+- **The Command button in the phone nav drawer threw an error.** It called `layout.openPalette`, which didn't exist; the palette state now lives in `LayoutContext`, shared with the header and Ctrl+K.
+
 ---
 
 # Functional issues
@@ -235,7 +241,7 @@ A user can see or hit these. All ⚠ items are here.
 
 ## P: Persistence and project lifecycle
 
-- [ ] **P1 ⚠ Cascade worker killed on every LayoutContext change, so baked dependent glyphs go stale** (likely)
+- [ ] **P1 ⚠ Cascade worker killed on every LayoutContext change, so baked dependent glyphs go stale** (confirmed: in the browser a save sent a job and the worker was restarted before it replied; run on its own, the worker re-bakes a linked glyph correctly)
   - **Where:** `hooks/actions/useGlyphActions.ts` 438–471 (deps `[glyphDataDispatch, layout, t]`); `contexts/LayoutContext.tsx` 184 (`value` not memoized).
   - **Problem:** every notification, selection or keystroke terminates and recreates the worker, dropping queued jobs and re-importing paper.js from the CDN. `handleSaveGlyph` shows a notification right before posting the job. Linked glyphs look fine in the UI, because they're rebuilt live, but the export uses the stale stored data.
   - **Fix:** create the worker once and read `layout`/`t` through refs. Memoize the LayoutContext value.
@@ -432,7 +438,7 @@ Code health only; no direct effect on what users see. (K12 is felt only as waiti
 
 ## Dependencies
 
-- [ ] **E11 Remote code still unpinned** (confirmed)
+- [x] **E11 Remote code still unpinned** (confirmed)
   - **Where:** `pythonFontService.ts` 13, 251, 264; `index.html` 12; the inline workers in `hooks/actions/useGlyphActions.ts` ~39 and `services/autoKerningService.ts` ~6.
   - **Problem:**
     - `micropip.install('fontFeatures')` has no version or hash.
@@ -440,19 +446,22 @@ Code health only; no direct effect on what users see. (K12 is felt only as waiti
     - The cascade and auto-kern workers load paper.js 0.12.17 from cdnjs, while the app bundles 0.12.18.
     - The `pyodide` and `unicode-name` npm dependencies are unused.
   - **Fix:** pin `fontFeatures==x.y` with a hash, remove the `index.html` script and the unused dependencies, and bundle paper.js into those workers (as was done for the font worker).
+  - **Fixed:** fontFeatures is installed from its exact wheel URL with a sha256 (1.9.0, as before), like fontTools. The unused main-thread Pyodide script and the `pyodide`/`unicode-name` packages are gone. The cascade and auto-kern workers are now bundled module workers (`workers/cascadeWorker.js`, `workers/autoKerningWorker.js`) using the app's own paper.js, with no CDN load.
 
 ---
 
 ## Dead code
 
-- [ ] **K11 Positioning heuristics are dead code with inverted precedence** (confirmed)
+- [x] **K11 Positioning heuristics are dead code with inverted precedence** (confirmed)
   - **Where:** `positioningHeuristicsService.ts` 24–54, 147–180.
   - **Problem:** `getCombiningClass` returns strings, so the numeric checks never match, and the fetched JSON shape is parsed wrongly. The only effect is a wasted CDN fetch (unpinned `@main`) on load. If these tiers were fixed, they would override explicit project rules.
   - **Fix:** remove them, or fix the parsing and check project rules first.
+  - **Fixed:** both tiers removed, with the CDN fetch and its startup call. Checked first that neither ever matched (0 of the Indic code points U+0900–U+1CFF matched against the live data), so no placement changes.
 
-- [ ] **S8 `data/characters_custom.json` isn't referenced by any script.**
+- [x] **S8 `data/characters_custom.json` isn't referenced by any script.**
+  - **Fixed:** removed. Character files are loaded by script ID and no script has the ID `custom`.
 
-- [ ] **T4 Dead code:**
+- [x] **T4 Dead code:**
   - the stale root `DrawingModal.tsx` (21 of the tsc errors) and root `LayoutContext.tsx`;
   - the unused `contexts/EditorContext.tsx` and `workers/cascadeWorker.ts` (incompatible protocol);
   - duplicate `ProjectContext` fields that are never set (`GlyphTile` reads `metrics` from it and gets null);
@@ -463,55 +472,66 @@ Code health only; no direct effect on what users see. (K12 is felt only as waiti
     - the `advancedMode`/`simpleMode` locale keys are unused;
     - `data/test_cases.json` still has 66 "ADVANCED:" QA cases;
     - `settings.editorMode` is still read, only to choose between the "Kerning" and "Spacing" labels (`AppHeader`, `KerningWorkspace`, `KerningEditorHeader`, `IncompleteFontWarningModal`). Built-in scripts default to `simple` and custom scripts to `advanced`. Consider replacing it with `preferKerningTerm` alone.
+  - **Fixed:** removed the stale root `DrawingModal.tsx`/`LayoutContext.tsx`, `contexts/EditorContext.tsx`, the old `workers/cascadeWorker.ts`, the duplicate `ProjectContext` fields (`GlyphTile` now reads `metrics` from SettingsContext), the `GEMINI_API_KEY` define and the metadata typo. Simple/Advanced leftovers: `handleEditorModeChange` and `settings.editorMode` are gone, and `preferKerningTerm` alone picks the Kerning/Spacing label. Saved and newly created 'advanced' projects keep showing "Kerning" (`utils/legacySettings.ts`, tested). Removed the unused mode locale keys. QA cases: dropped the `ADVANCED:` prefix from 66, reworded 5 that said "in Advanced mode", and deleted 3 that tested the mode switch itself (427 → 424).
 
 ---
 
 ## Speed
 
-- [ ] **K12 Auto-kern discovery is slow on large glyph sets** (likely)
+- [x] **K12 Auto-kern discovery is slow on large glyph sets** (likely)
   - **Where:** `services/autoKerningService.ts` 319–356.
   - **Problem:** `solvePair` recomputes paper.js zones for both glyphs of every one of the n² pairs.
   - **Fix:** cache zones per unicode from step 1.
+  - **Fixed:** zones are cached per glyph for each batch. Benchmark with outline glyphs: 120 glyphs 267 → 129 ms, 250 glyphs 763 → 349 ms, with identical results (47,275 pairs).
 
 ---
 
 ## Security hardening
 
-- [ ] **P8 Crafted rules/positioning file can pollute `Object.prototype`** (confirmed)
+- [x] **P8 Crafted rules/positioning file can pollute `Object.prototype`** (confirmed)
   - **Where:** `useProjectLoad.ts` ~252–257.
   - **Problem:** `gsub: "__proto__"` sets `Object.prototype.liga = {}`, which corrupts state app-wide or crashes it. No XSS.
   - **Fix:** reject `__proto__`/`constructor`/`prototype` keys, or use `Object.create(null)`/Maps. Schema-validate imported files.
+  - **Fixed:** user files are parsed with `safeJsonParse` (drops `__proto__`/`constructor`/`prototype` keys at any depth), and file values used as keys go through `isSafeKey` (`utils/safeJson.ts`, tested).
 
-- [ ] **P14 Guide-font name/URL interpolated into `<style>`** (confirmed; low)
+- [x] **P14 Guide-font name/URL interpolated into `<style>`** (confirmed; low)
   - **Where:** `App.tsx` ~287; `ScriptSelection.tsx` ~215.
   - **Problem:** this allows CSS injection or external loads from project or script files. Scripts can't run.
   - **Fix:** validate or escape the values, or use the `FontFace` API.
+  - **Fixed:** `utils/cssFont.ts` writes the name and URL as escaped CSS strings and accepts only http(s)/data:/blob: URLs; the rules are set with `textContent`. Tested, including break-out attempts.
 
 ---
 
 ## Tooling: tests, lint, types, build
 
-- [ ] **T1 Tests:**
+- [x] **T1 Tests:**
   - `vitest` is in `dependencies` (move it to `devDependencies`);
   - there's no `test` script, though TESTING.md documents `npm run test`;
   - `utils/vectorUtils.test.ts` fails on `-0` vs `+0`;
   - `contexts/RulesContext.test.ts` tests a copy of the reducer, not the real one.
+  - **Fixed:** `vitest` is a devDependency; `npm test`, `test:watch`, `typecheck` and `check` scripts added. The `-0` test compares numerically. The rules reducer moved to `contexts/rulesReducer.ts` and the test uses it. 74 tests now (new ones for safeJson, cssFont, legacySettings).
 
-- [ ] **T2 Lint fails with 340 errors** (mostly unused vars and prefer-const). `eslint-plugin-react-hooks` is installed but not enabled. `globals` is imported by the config but not declared.
+- [x] **T2 Lint fails with 340 errors** (mostly unused vars and prefer-const). `eslint-plugin-react-hooks` is installed but not enabled. `globals` is imported by the config but not declared.
+  - **Fixed:** 0 errors (from ~315). `react-hooks` is enabled (`rules-of-hooks` error, `exhaustive-deps` warn), `globals` is a declared devDependency, and Node/worker globals are configured for scripts and workers. 69 `exhaustive-deps` warnings remain on purpose: changing hook dependencies changes behaviour, so they need case-by-case review.
 
-- [ ] **T3 `tsc --noEmit` reports 43 errors, and there's no typecheck step or CI.** Notable ones:
+- [x] **T3 `tsc --noEmit` reports 43 errors, and there's no typecheck step or CI.** Notable ones:
   - `components/DrawingModal.tsx:16` imports a nonexistent `useSliceTool`;
   - the PositioningEditorPage/Workspace import paths are wrong;
   - the `importFont` modal key is missing from the type;
   - `openPalette` is missing from `LayoutContextType`.
+  - **Fixed:** `tsc` reports 0 errors (from 43); `npm run typecheck` added. Three of the errors hid real bugs, listed under "Found while fixing" below. No CI workflow yet.
 
-- [ ] **T5 One-off scripts in the repo root:** `gen_chars.cjs`, `test_unicode*.cjs` and `patch_locales.cjs` (already applied). `generate_malayalam_traditional_v2.cjs` overwrites hand-edited data. `check_translations.js` fails in ESM. `data/add_liga.js` and `data/remove_gsub.js` are broken. `scripts/fetchIndicCategories.ts` mixes UCD 16 and 17.
+- [x] **T5 One-off scripts in the repo root:** `gen_chars.cjs`, `test_unicode*.cjs` and `patch_locales.cjs` (already applied). `generate_malayalam_traditional_v2.cjs` overwrites hand-edited data. `check_translations.js` fails in ESM. `data/add_liga.js` and `data/remove_gsub.js` are broken. `scripts/fetchIndicCategories.ts` mixes UCD 16 and 17.
+  - **Fixed:** removed the one-off and unsafe scripts (including the Malayalam generator that overwrote hand-edited data and the two broken `data/*.js`). The checkers moved to `scripts/` (`npm run check:translations` works again). `fetchIndicCategories.ts` uses one UCD version (17.0.0); `utils/indicCategoryUtils.ts` hasn't been regenerated.
 
-- [ ] **T6 Build:**
+- [x] **T6 Build:**
   - the main chunk is 1.9 MB (code-split it);
   - a stray `[file:line]` Tailwind class causes a build warning;
   - the `/vite.svg` favicon returns 404.
+  - **Fixed:** no build warnings. The landing page loads 172 kB of app code (was 1.9 MB); the editor and occasional screens (Settings, Rules, Studio, Test page, comparison, tutorial, test cases, positioning rules), the FEA generator and the image tracer load on demand. `paper` resolves to paper-core (drops the bundled JS parser; workers shrank by ~40%). Vendor chunks for React, paper, opentype.js and react-virtuoso. The `[file:line]` class came from docs; Tailwind no longer scans `*.md` and `scripts/`. New `public/favicon.svg` from the logo glyph.
 
-- [ ] **T7 `npm audit` reports 27 vulnerabilities** (1 critical, 11 high), not yet assessed. Many may be in dev-only packages.
+- [x] **T7 `npm audit` reports 27 vulnerabilities** (1 critical, 11 high), not yet assessed. Many may be in dev-only packages.
+  - **Mostly fixed:** 26 findings (1 critical, 10 high) → 10 (0 critical, 0 high), via `npm audit fix` with npm 11. Left: 7 moderate in lint tooling (`minimatch` under `typescript-eslint`; the latest typescript-eslint still uses it, and npm's suggested "fix" is a downgrade) and 3 low from `react-joyride` → `deepmerge` (fix needs joyride 3, a breaking upgrade; the tour only merges the app's own fixed data). The shipped app has only those 3 low.
 
-- [ ] **T8 No version pin for npm** (`packageManager`/`engines`), so lockfile flags change between npm versions.
+- [x] **T8 No version pin for npm** (`packageManager`/`engines`), so lockfile flags change between npm versions.
+  - **Fixed:** `packageManager: npm@11.21.2` and `engines.node` matching the toolchain (Node 20, 22 or 24+). npm 10.9 crashes in this repo when it has to re-resolve vitest's peers (`Cannot read properties of null (reading 'edgesOut')`); npm 11 doesn't.

@@ -94,15 +94,13 @@ const KerningCelebrationOverlay: React.FC<KerningCelebrationOverlayProps> = ({
         window.addEventListener('resize', resize);
 
         const startTime = performance.now();
-        const duration = 2500;
         let animationId: number;
         
         // Particles
-        let particles: {x: number, y: number, vx: number, vy: number, life: number, color: string}[] = [];
+        const particles: {x: number, y: number, vx: number, vy: number, life: number, color: string}[] = [];
 
         const draw = (time: number) => {
             const elapsed = time - startTime;
-            const progress = Math.min(elapsed / duration, 1);
             
             // Loop animation
             const cycleProgress = (elapsed % 2000) / 2000;
@@ -198,7 +196,7 @@ const KerningCelebrationOverlay: React.FC<KerningCelebrationOverlayProps> = ({
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Visual Rhythm Mastered!</h2>
                 <p className="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
-                    You've adjusted the spacing for your pairs. Your font now reads with professional flow and balance.
+                    You&apos;ve adjusted the spacing for your pairs. Your font now reads with professional flow and balance.
                 </p>
                 <div className="flex flex-col gap-3">
                     <button onClick={onProceed} className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">

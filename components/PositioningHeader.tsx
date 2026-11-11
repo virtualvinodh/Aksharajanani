@@ -1,7 +1,7 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Character } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { RulesIcon, SaveIcon, BackIcon, LeftArrowIcon, RightArrowIcon } from '../constants';
+import { LeftArrowIcon, RightArrowIcon } from '../constants';
 import { useHorizontalScroll } from '../hooks/useHorizontalScroll';
 
 interface PositioningHeaderProps {
@@ -20,7 +20,7 @@ const PositioningHeader: React.FC<PositioningHeaderProps> = ({
     navItems, activeTab, setActiveTab,
     isGridView
 }) => {
-    const { t } = useLocale();
+    useLocale();
     const { visibility: showNavArrows, handleScroll, scrollRef, checkVisibility } = useHorizontalScroll();
     const containerElementRef = React.useRef<HTMLDivElement | null>(null);
     

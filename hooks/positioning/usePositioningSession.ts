@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
     Character, GlyphData, Point, Path, AppSettings, FontMetrics, 
     MarkAttachmentRules, MarkPositioningMap, PositioningRules, 
@@ -37,12 +37,11 @@ interface UsePositioningSessionProps {
 
 export const usePositioningSession = ({
     baseChar, markChar, targetLigature, glyphDataMap, markPositioningMap, onSave,
-    settings, metrics, markAttachmentRules, positioningRules, allChars,
-    markAttachmentClasses, baseAttachmentClasses, characterSets, groups,
+    settings, metrics, markAttachmentRules, positioningRules, markAttachmentClasses, baseAttachmentClasses, characterSets, groups,
     onClose, onNavigate
 }: UsePositioningSessionProps) => {
-    const { t } = useLocale();
-    const { showNotification } = useLayout();
+    useLocale();
+    useLayout();
 
     const pairIdentifier = `${baseChar.unicode}-${markChar.unicode}`;
     const pairNameKey = `${baseChar.name}-${markChar.name}`;
@@ -175,7 +174,7 @@ export const usePositioningSession = ({
 
     // --- Class Logic ---
     const { pivotName, isPivot, activeAttachmentClass, activeClassType, hasDualContext } = useMemo(() => {
-        let mClass = markAttachmentClasses?.find(c => {
+        const mClass = markAttachmentClasses?.find(c => {
              // 1. Check Membership
              if (!expandMembers(c.members, groups, characterSets).includes(markChar.name)) return false;
              // 2. Check Scope (Applies) - Empty/Undefined means Global
@@ -185,7 +184,7 @@ export const usePositioningSession = ({
              return true;
         });
 
-        let bClass = baseAttachmentClasses?.find(c => {
+        const bClass = baseAttachmentClasses?.find(c => {
              if (!expandMembers(c.members, groups, characterSets).includes(baseChar.name)) return false;
              if (c.applies && c.applies.length > 0 && !expandMembers(c.applies, groups, characterSets).includes(markChar.name)) return false;
              if (c.exceptions && expandMembers(c.exceptions, groups, characterSets).includes(markChar.name)) return false;

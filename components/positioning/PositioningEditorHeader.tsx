@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Character, FontMetrics, CharacterSet, Path } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, PropertiesIcon, SaveIcon, LinkIcon, BrokenLinkIcon, RefreshIcon, CheckIcon, TrashIcon, MoreIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, UndoIcon, PropertiesIcon, SaveIcon, BrokenLinkIcon, CheckIcon, TrashIcon, MoreIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
 import { GlyphDataAction } from '../../contexts/GlyphDataContext';
 
@@ -61,7 +61,7 @@ interface PositioningEditorHeaderProps {
 const PositioningEditorHeader: React.FC<PositioningEditorHeaderProps> = ({
     targetLigature, prevPair, nextPair, onNavigate, onDelete, activeAttachmentClass, isLinked, isPivot,
     canEdit, isPositioned, onResetRequest, isGsubPair, lsb, setLsb, rsb, setRsb, metrics, isAutosaveEnabled, 
-    onSaveRequest, isLargeScreen, isStripExpanded, isDirty, onConfirmPosition, onDetach,
+    onSaveRequest, isDirty, onConfirmPosition, onDetach,
     allCharacterSets, onSaveConstruction, characterDispatch, glyphDataDispatch, onPathsChange,
     glyphClass, setGlyphClass, advWidth, setAdvWidth, liga, setLiga,
     position, setPosition, kern, setKern, gpos, setGpos, gsub, setGsub,

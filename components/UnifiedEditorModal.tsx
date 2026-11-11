@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, CharacterSet, MarkAttachmentRules, Point, Path, ComponentTransform } from '../types';
 import { useLayout } from '../contexts/LayoutContext';
 import { useProject } from '../contexts/ProjectContext';
@@ -42,7 +42,6 @@ interface UnifiedEditorModalProps {
     setClipboard: (paths: Path[] | null) => void;
     onClose: () => void;
     markAttachmentRules: MarkAttachmentRules | null;
-    onEditorModeChange: (mode: 'simple' | 'advanced') => void;
     isClosing?: boolean;
 }
 
@@ -50,9 +49,9 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
     mode = 'modal',
     character: propCharacter, characterSet, glyphData, onSave, onClose, onDelete, onNavigate, 
     settings, metrics, allGlyphData, allCharacterSets, gridConfig, markAttachmentRules, 
-    onUnlockGlyph, onRelinkGlyph, onUpdateDependencies, onEditorModeChange, isClosing
+    onUnlockGlyph, onRelinkGlyph, onUpdateDependencies
 }) => {
-  const { showNotification, filterMode, searchQuery, openNavDrawer } = useLayout();
+  const { showNotification, openNavDrawer } = useLayout();
   const { 
     allCharsByName, allCharsByUnicode, positioningRules, recommendedKerning, 
     markAttachmentClasses, baseAttachmentClasses, dispatch: characterDispatch 
@@ -262,13 +261,13 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
             );
         }
         case 'positioning': {
-            const posBaseChar = allCharsByName.get(character.position?.[0]!) || character;
-            const posMarkChar = allCharsByName.get(character.position?.[1]!) || character;
+            const posBaseChar = allCharsByName.get(character.position?.[0] as string) || character;
+            const posMarkChar = allCharsByName.get(character.position?.[1] as string) || character;
             return (
                 <PositioningEditorPage
                     key={pageKey} baseChar={posBaseChar} markChar={posMarkChar} targetLigature={character} glyphDataMap={allGlyphData} markPositioningMap={markPositioningMap}
                     onSave={handlePositioningSave} onConfirmPosition={handleConfirmPosition} onClose={() => onClose()} onDelete={() => onDelete(character.unicode!)}
-                    onReset={(b, m, l) => { const key = `${b.unicode}-${m.unicode}`; const newMap = new Map(markPositioningMap); newMap.delete(key); positioningDispatch({ type: 'SET_MAP', payload: newMap }); }}
+                    onReset={(b, m, _l) => { const key = `${b.unicode}-${m.unicode}`; const newMap = new Map(markPositioningMap); newMap.delete(key); positioningDispatch({ type: 'SET_MAP', payload: newMap }); }}
                     settings={settings} metrics={metrics} markAttachmentRules={markAttachmentRules} positioningRules={positioningRules} allChars={allCharsByName}
                     onNavigate={handlePageNavigate} hasPrev={!!prevCharacter} hasNext={!!nextCharacter} setEditingPair={(pair: any) => handlePageNavigate(pair.ligature)}
                     characterSets={allCharacterSets} glyphVersion={glyphVersion} allLigaturesByKey={allLigaturesByKey} onConvertToComposite={handleConvertToComposite}
@@ -286,7 +285,7 @@ const UnifiedEditorModal: React.FC<UnifiedEditorModalProps> = ({
                     onDelete={onDelete} onNavigate={onNavigate} prevCharacter={prevCharacter} nextCharacter={nextCharacter}
                     settings={settings} metrics={metrics} allGlyphData={allGlyphData} allCharacterSets={allCharacterSets}
                     gridConfig={gridConfig} markAttachmentRules={markAttachmentRules} onUnlockGlyph={onUnlockGlyph}
-                    onRelinkGlyph={onRelinkGlyph} onUpdateDependencies={onUpdateDependencies} onEditorModeChange={onEditorModeChange}
+                    onRelinkGlyph={onRelinkGlyph} onUpdateDependencies={onUpdateDependencies}
                 />
             );
     }

@@ -502,7 +502,7 @@ export const useJITHints = (
                             content: (
                                 <div>
                                     <h3 className="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">Test Your Font</h3>
-                                    <p>Click here to type with the characters you've drawn so far!</p>
+                                    <p>Click here to type with the characters you&apos;ve drawn so far!</p>
                                 </div>
                             ),
                             placement: 'bottom',

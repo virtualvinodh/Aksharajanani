@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { BoundingBox, Point, TransformState } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
-import { CheckCircleIcon, ControlPointsIcon } from '../constants';
+import { CheckCircleIcon } from '../constants';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useLocale } from '../contexts/LocaleContext';
 
@@ -28,10 +28,9 @@ const ContextualToolbar: React.FC<ContextualToolbarProps> = ({
   setPreviewTransform,
   containerWidth,
   containerHeight,
-  internalCanvasSize,
-  onEditMode
+  internalCanvasSize
 }) => {
-  const { theme } = useTheme();
+  useTheme();
   const { t } = useLocale();
   const [rotateInput, setRotateInput] = useState('0');
   const [scaleInput, setScaleInput] = useState('1.0');

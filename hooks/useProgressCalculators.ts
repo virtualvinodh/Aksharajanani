@@ -162,7 +162,6 @@ export const useProgressCalculators = ({
         if (!scriptTag) return { completed: 0, total: 0 };
 
         const allReferencedNames = new Set<string>();
-        const groups = fontRules.groups || {};
 
         const collect = (obj: any) => {
             if (!obj) return;

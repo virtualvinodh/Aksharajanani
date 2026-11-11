@@ -8,7 +8,7 @@ import { paperScope } from '../../services/glyphRenderService';
 import { deepClone } from '../../utils/cloneUtils';
 
 
-export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, zoom, onToolChange, ...props }: ToolHookProps) => {
+export const useEditTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentPaths, onPathsChange, zoom, onToolChange: _onToolChange, ...props }: ToolHookProps) => {
     const [draggedPointInfo, setDraggedPointInfo] = useState<DraggedPointInfo | null>(null);
     const [selectedPointInfo, setSelectedPointInfo] = useState<DraggedPointInfo | null>(null);
     const [focusedPathId, setFocusedPathId] = useState<string | null>(null);

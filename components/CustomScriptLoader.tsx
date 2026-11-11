@@ -1,10 +1,11 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { BackIcon, CheckCircleIcon } from '../constants';
-import { ScriptConfig, CharacterDefinition, ScriptsFile } from '../types';
+import { ScriptConfig, ScriptsFile } from '../types';
 import Footer from './Footer';
+import { safeJsonParse } from '../utils/safeJson';
 
 interface CustomScriptLoaderProps {
     onBack: () => void;
@@ -40,8 +41,8 @@ const CustomScriptLoader: React.FC<CustomScriptLoaderProps> = ({ onBack, onSelec
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
-                        resolve(JSON.parse(e.target?.result as string));
-                    } catch (err) {
+                        resolve(safeJsonParse(e.target?.result as string));
+                    } catch {
                         reject(new Error(t('errorParsingFile', { fileName: file.name })));
                     }
                 };

@@ -22,15 +22,6 @@ const replaceInArray = (arr: string[] | undefined, oldRef: string, newRef: strin
     return arr.map(item => item === oldRef ? newRef : item);
 };
 
-const replaceInExceptPairs = (arr: string[] | undefined, oldName: string, newName: string, type: 'group' | 'set'): string[] | undefined => {
-    if (!arr) return undefined;
-    // Exception pairs are stored as "BaseName-MarkName". 
-    // Groups are referenced here? Usually not, but if they were:
-    // This logic assumes resolved names usually, but if groups were supported here, we'd need regex.
-    // For now, groups in exception pairs are rare/unsupported, but we'll leave this hook for future.
-    return arr; 
-};
-
 // Recursive function to walk FontRules (GSUB/GPOS tree) and replace strings
 const traverseAndReplace = (obj: any, oldRef: string, newRef: string): any => {
     if (typeof obj === 'string') {
@@ -159,7 +150,7 @@ export const renameGroupInState = (
     // 6. Update Font Rules (GSUB/Lookups)
     // This is the heaviest part - recursive walk
     // We skip 'groups' key as we handled it explicitly above
-    const { groups, ...restRules } = newState.fontRules || {};
+    const { groups: _groups, ...restRules } = newState.fontRules || {};
     const updatedRest = traverseAndReplace(restRules, oldRef, newRef);
     newState.fontRules = { groups: newState.groups, ...updatedRest };
 

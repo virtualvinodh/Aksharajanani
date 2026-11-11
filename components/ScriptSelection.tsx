@@ -18,6 +18,9 @@ import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderServic
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import NewProjectModal, { NewProjectData } from './NewProjectModal';
 import ImportFontModal from './ImportFontModal';
+import { safeJsonParse } from '../utils/safeJson';
+import { fontFaceRule } from '../utils/cssFont';
+import { migrateLegacySettings } from '../utils/legacySettings';
 
 interface ScriptSelectionProps {
     scripts: ScriptConfig[];
@@ -235,14 +238,14 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
         const fontFaces = scripts
             .map(script => {
                 if (script.guideFont && script.guideFont.fontName && script.guideFont.fontUrl) {
-                    return `@font-face { font-family: "${script.guideFont.fontName}"; src: url('${script.guideFont.fontUrl}'); font-display: swap; }`;
+                    return fontFaceRule(script.guideFont.fontName, script.guideFont.fontUrl);
                 }
                 return null;
             })
             .filter(Boolean)
             .join('\n');
             
-        styleElement.innerHTML = fontFaces;
+        styleElement.textContent = fontFaces;
     }, [scripts]);
 
     // This effect handles hiding the delete icon when the user interacts with anything else.
@@ -293,7 +296,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                     pathSimplification: project.settings.pathSimplification,
                     showGridOutlines: project.settings.showGridOutlines,
                     isAutosaveEnabled: project.settings.isAutosaveEnabled,
-                    editorMode: project.settings.editorMode,
+                    preferKerningTerm: migrateLegacySettings({ ...project.settings }).preferKerningTerm,
                     isPrefillEnabled: project.settings.isPrefillEnabled ?? true,
                     showUnicodeValues: project.settings.showUnicodeValues ?? false,
                 },
@@ -514,7 +517,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                 pathSimplification: 0.5,
                 showGridOutlines: true,
                 isAutosaveEnabled: true,
-                editorMode: 'advanced',
+                preferKerningTerm: true,
                 isPrefillEnabled: true,
                 showUnicodeValues: false,
             },
@@ -564,8 +567,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                 const text = e.target?.result as string;
                 // The file's projectId is the exporting browser's local IndexedDB key. Never reuse it:
                 // adopting it would make the next autosave overwrite whichever local project has that id.
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                const { projectId: _fileProjectId, ...projectData }: ProjectData = JSON.parse(text);
+                const { projectId: _fileProjectId, ...projectData }: ProjectData = safeJsonParse<ProjectData>(text);
 
                 if (projectData.scriptId) {
                     const scriptToLoad = scripts.find(s => s.id === projectData.scriptId);

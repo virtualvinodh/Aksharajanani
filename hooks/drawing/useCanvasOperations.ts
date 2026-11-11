@@ -99,8 +99,8 @@ export const useCanvasOperations = ({
         const sy = (transform.flipY ? -1 : 1) * transform.scale;
 
         const transformPoint = (pt: Point) => {
-            let px = pt.x - center.x;
-            let py = pt.y - center.y;
+            const px = pt.x - center.x;
+            const py = pt.y - center.y;
             const rx = px * Math.cos(angleRad) - py * Math.sin(angleRad);
             const ry = px * Math.sin(angleRad) + py * Math.cos(angleRad);
             return { x: rx * sx + center.x, y: ry * sy + center.y };
@@ -140,7 +140,7 @@ export const useCanvasOperations = ({
     const handleUngroup = useCallback(() => {
         const affectedGroupIds = new Set<string>();
         currentPaths.forEach(p => { if (selectedPathIds.has(p.id) && p.groupId) affectedGroupIds.add(p.groupId); });
-        const newPaths = currentPaths.map(p => (p.groupId && affectedGroupIds.has(p.groupId) ? (({ groupId, ...rest }) => rest)(p) : p));
+        const newPaths = currentPaths.map(p => (p.groupId && affectedGroupIds.has(p.groupId) ? (({ groupId: _groupId, ...rest }) => rest)(p) : p));
         handlePathsChange(newPaths);
         showNotification(t('ungroupedSuccess'));
     }, [currentPaths, selectedPathIds, handlePathsChange, showNotification, t]);

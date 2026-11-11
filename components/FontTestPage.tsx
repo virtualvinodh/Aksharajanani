@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, TestPageConfig } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { BackIcon, TEST_PAGE_RANGES, UndoIcon } from '../constants';
 import Footer from './Footer';
 

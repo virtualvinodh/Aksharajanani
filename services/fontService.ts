@@ -2,7 +2,6 @@
 
 import { AppSettings, Character, CharacterSet, FontMetrics, GlyphData, Point, Path, KerningMap, MarkPositioningMap, PositioningRules, MarkAttachmentRules } from '../types';
 import { compileFeaturesAndPatch, patchFont } from './pythonFontService';
-import { generateFea } from './feaService';
 import { VEC } from '../utils/vectorUtils';
 import { getAccurateGlyphBBox, generateCompositeGlyphData } from './glyphRenderService';
 import { calculateDefaultMarkOffset } from './positioningHeuristicsService';
@@ -250,6 +249,9 @@ export const exportToOtf = async (
         return { blob: patchedBlob, feaError: null };
     }
 
+    // The FEA generator (with its Unicode data table) is only needed when a font is built,
+    // so it's loaded on first export instead of with the editor.
+    const { generateFea } = await import('./feaService');
     const feaContent = isFeaEditMode 
         ? manualFeaCode || '' 
         : generateFea(

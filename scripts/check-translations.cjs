@@ -22,7 +22,7 @@ loadKeys('./locales/tutorial/en.json');
 
 // 2. Scan for used keys
 const usedKeys = new Set();
-const usedLocations = {}; // key -> [file:line]
+const usedLocations = {}; // key -> list of "file:line" places
 
 function scanFile(filePath) {
     const content = fs.readFileSync(filePath, 'utf8');

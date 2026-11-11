@@ -121,7 +121,7 @@ const AddGlyphModal: React.FC<AddGlyphModalProps> = ({ isOpen, onClose, onAdd, o
         onAdd({ unicode, name });
       }
 
-    } catch (err) {
+    } catch {
       setError(t('errorInvalidCodepoint'));
     }
   };
@@ -151,7 +151,7 @@ const AddGlyphModal: React.FC<AddGlyphModalProps> = ({ isOpen, onClose, onAdd, o
           <div>
             <label htmlFor="char-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('characterLabel')}</label>
             <input id="char-input" type="text" value={charValue} onChange={e => setCharValue(e.target.value)} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-3xl text-center font-bold" autoFocus />
-            <p className="text-xs text-gray-500 mt-1">Type a single character or a name (e.g. "space", "zwj").</p>
+            <p className="text-xs text-gray-500 mt-1">Type a single character or a name (e.g. &quot;space&quot;, &quot;zwj&quot;).</p>
           </div>
         ) : (
           <div>

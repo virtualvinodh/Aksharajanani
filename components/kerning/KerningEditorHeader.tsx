@@ -2,7 +2,7 @@
 import React, {useState, useRef, useEffect} from 'react';
 import { Character, AppSettings, CharacterSet, Path, FontMetrics } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
-import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon, PropertiesIcon, TrashIcon, MoreIcon, BrokenLinkIcon, LinkIcon, RefreshIcon, EyeOffIcon } from '../../constants';
+import { BackIcon, LeftArrowIcon, RightArrowIcon, SparklesIcon, SaveIcon, CheckIcon, UndoIcon, PropertiesIcon, TrashIcon, MoreIcon, BrokenLinkIcon, EyeOffIcon } from '../../constants';
 import GlyphPropertiesPanel from '../GlyphPropertiesPanel';
 import { GlyphDataAction } from '../../contexts/GlyphDataContext';
 
@@ -76,7 +76,7 @@ const KerningEditorHeader: React.FC<KerningEditorHeaderProps> = (props) => {
 
     const navButtonClass = "p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all";
     
-    const useKerningTerm = props.settings.editorMode === 'advanced' || props.settings.preferKerningTerm;
+    const useKerningTerm = !!props.settings.preferKerningTerm;
     const autoLabel = useKerningTerm ? t('autoKern') : t('autoSpace');
 
     const renderActionButton = () => {

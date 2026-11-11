@@ -205,7 +205,7 @@ const TestCasePage: React.FC<TestCasePageProps> = ({ onClose }) => {
           {isLoading ? (
              <div className="text-center p-8">{t('loadingTestCases')}</div>
           ) : (
-            Object.entries(groupedCases).map(([category, cases]: [string, TestCase[]], index) => {
+            Object.entries(groupedCases).map(([category, cases]: [string, TestCase[]], _index) => {
               const categoryPassed = cases.filter(c => statuses[c.id] === 'pass').length;
               const categorySkipped = cases.filter(c => statuses[c.id] === 'skip').length;
               const totalInCategory = cases.length;

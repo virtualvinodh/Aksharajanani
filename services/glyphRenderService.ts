@@ -1,5 +1,5 @@
 
-import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings, ComponentTransform, PositioningRules, UnifiedRenderContext } from '../types';
+import { Point, Path, AttachmentPoint, MarkAttachmentRules, Character, FontMetrics, CharacterSet, GlyphData, Segment, AppSettings, ComponentTransform, UnifiedRenderContext } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { DRAWING_CANVAS_SIZE } from '../constants';
@@ -158,9 +158,9 @@ export const getGlyphSubBBoxes = (
     if (!fullBBox) return null;
     const fullBBoxAsBBox: BBox = { minX: fullBBox.x, maxX: fullBBox.x + fullBBox.width, minY: fullBBox.y, maxY: fullBBox.y + fullBBox.height };
 
-    let ascenderRaw = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
-    let xHeightRaw = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
-    let descenderRaw = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+    const ascenderRaw = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+    const xHeightRaw = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+    const descenderRaw = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
 
     const expandBox = (box, p) => {
         box.minX = Math.min(box.minX, p.x);
@@ -254,7 +254,6 @@ export const resolveAttachmentRule = (
         // that contain our baseName.
         for (const baseKey in markAttachmentRules) {
             if (baseKey.startsWith('$') || baseKey.startsWith('@')) {
-                const groupName = baseKey.substring(1);
                 const safeGroups = groups || {};
                 
                 // Use expandMembers logic to check if baseName is in this group
@@ -309,13 +308,12 @@ export const calculateDefaultMarkOffset = (
     let offset = { x: 0, y: 0 };
     
     if (baseBbox && markBbox) {
-        let rule = resolveAttachmentRule(baseChar.name, markChar.name, markAttachmentRules, characterSets, groups);
+        const rule = resolveAttachmentRule(baseChar.name, markChar.name, markAttachmentRules, characterSets, groups);
         
         // 3. FALLBACK: Geometric Defaults (if no rule found)
         if (!rule) {
             // Only use topCenter/bottomCenter default if the mark is explicitly non-spacing (advWidth: 0)
-            const isNonSpacing = markChar.advWidth === 0 || markChar.advWidth === '0';
-            // if (isNonSpacing) {
+            // if (markChar.advWidth === 0 || markChar.advWidth === '0') {
             //    rule = ["topCenter", "bottomCenter"];
             //}
         }
@@ -592,7 +590,7 @@ export const generateCompositeGlyphData = ({
             return VEC.add(vec, { x: centerX, y: centerY });
         };
 
-        let transformed = paths.map((p: Path) => ({
+        const transformed = paths.map((p: Path) => ({
             ...p,
             points: p.points.map(transformPoint),
             segmentGroups: p.segmentGroups ? p.segmentGroups.map((group: Segment[]) => group.map(seg => ({
@@ -623,10 +621,10 @@ export const generateCompositeGlyphData = ({
 
     // Base Component (Index 0)
     // Apply manual shift immediately
-    let baseComp = transformedComponents[0];
-    let baseOffset = { x: baseComp.manualTransform.x, y: baseComp.manualTransform.y };
+    const baseComp = transformedComponents[0];
+    const baseOffset = { x: baseComp.manualTransform.x, y: baseComp.manualTransform.y };
 
-    let accumulatedPaths: Path[] = baseComp.paths.map(p => ({ 
+    const accumulatedPaths: Path[] = baseComp.paths.map(p => ({ 
         ...p, 
         id: generateId(), 
         groupId: 'component-0',
@@ -659,10 +657,8 @@ export const generateCompositeGlyphData = ({
              autoOffset = { x: 0, y: 0 };
         } else {
             // Relative (Default)
-            let baseBboxForOffset: BoundingBox | null;
-            
             // For relative, we typically attach to the accumulated shape
-            baseBboxForOffset = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
+            const baseBboxForOffset: BoundingBox | null = getAccurateGlyphBBox(accumulatedPaths, settings.strokeThickness);
             
             // Pass characterSets for group expansion within offset calculation
             autoOffset = calculateDefaultMarkOffset(
@@ -937,7 +933,7 @@ export const calculateUnifiedTransform = (
                 if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {
                     shouldVerticallyCenter = false;
                 }
-            } catch (e) {}
+            } catch {}
         }
 
         if (shouldVerticallyCenter) {

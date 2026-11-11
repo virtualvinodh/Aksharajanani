@@ -30,8 +30,7 @@ const GlyphDisplay: React.FC<{ char: Character, glyphData?: GlyphData, strokeThi
 
 const ExistingRuleDisplay: React.FC<ExistingRuleDisplayProps> = ({ 
     ruleKey, ruleValue, ruleType, onEdit, onDelete, allCharsByName, 
-    glyphDataMap, strokeThickness = 15, mode = 'editing', glyphVersion,
-    readOnly = false
+    glyphDataMap, strokeThickness = 15, mode = 'editing', readOnly = false
 }) => {
     const { t } = useLocale();
 

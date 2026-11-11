@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { GlyphData, AppSettings } from '../types';
 import { renderPaths } from '../services/glyphRenderService';
-import { useTheme } from '../contexts/ThemeContext';
 import { DRAWING_CANVAS_SIZE, ExportIcon } from '../constants';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 

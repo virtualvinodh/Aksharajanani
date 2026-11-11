@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Point, Path, ImageTransform, Segment } from '../../types';
+import { Point, ImageTransform } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { VEC } from '../../utils/vectorUtils';
 import { getAccurateGlyphBBox, BoundingBox } from '../../services/glyphRenderService';
-import { ToolHookProps, TransformAction, Handle, HandleDirection } from './types';
+import { ToolHookProps, TransformAction, Handle } from './types';
 
 
 export const useSelectTool = ({
@@ -396,7 +396,7 @@ export const useSelectTool = ({
 
 
         if (type === 'move') {
-            let delta = VEC.sub(point, startPoint);
+            const delta = VEC.sub(point, startPoint);
             
             if (target === 'paths') {
                 if (movementConstraint === 'horizontal') {
@@ -475,7 +475,7 @@ export const useSelectTool = ({
                         const anchorY = handle.includes('n') ? initialBox.y + initialBox.height : initialBox.y;
                         
                         const transformPoint = (pt: Point) => {
-                            let newPoint = { ...pt };
+                            const newPoint = { ...pt };
                             if (handle.includes('e') || handle.includes('w')) newPoint.x = anchorX + (pt.x - anchorX) * sx;
                             if (handle.includes('n') || handle.includes('s')) newPoint.y = anchorY + (pt.y - anchorY) * sy;
                             return newPoint;
@@ -535,7 +535,7 @@ export const useSelectTool = ({
                     const localStartPoint = VEC.rotate(VEC.sub(startPoint, center), -rotation);
                     const localDelta = VEC.sub(localPoint, localStartPoint);
                     let newWidth = iW; let newHeight = iH;
-                    let centerShift = { x: 0, y: 0 };
+                    const centerShift = { x: 0, y: 0 };
                     if (handle?.includes('e')) { newWidth += localDelta.x; centerShift.x += localDelta.x / 2; }
                     if (handle?.includes('w')) { newWidth -= localDelta.x; centerShift.x += localDelta.x / 2; }
                     if (handle?.includes('s')) { newHeight += localDelta.y; centerShift.y += localDelta.y / 2; }

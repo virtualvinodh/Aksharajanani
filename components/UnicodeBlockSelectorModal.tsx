@@ -132,7 +132,7 @@ const UnicodeBlockSelectorModal: React.FC<UnicodeBlockSelectorModalProps> = ({
           defaults: {
               ...customScriptTemplate.defaults,
               fontName: 'CustomBlockFont',
-              editorMode: 'advanced',
+              preferKerningTerm: true,
           }
         };
 

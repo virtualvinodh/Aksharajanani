@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Point, Path, Tool, AppSettings, ImageTransform, Segment } from '../types';
+import { Point, Path, Segment } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { useTheme } from '../contexts/ThemeContext';
 import { DraggedPointInfo, UseDrawingCanvasProps, Handle } from './drawingTools/types';

@@ -10,7 +10,6 @@ interface ProgressIndicatorProps {
 const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ completed, total, progressTextKey }) => {
   const { t } = useLocale();
 
-  const isComplete = total > 0 ? completed >= total : true;
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 100;
 
   const progressText = t(progressTextKey, { completed, total, percentage });

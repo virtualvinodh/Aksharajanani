@@ -1,7 +1,6 @@
 
-import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Virtuoso } from 'react-virtuoso';
 import { Character, GlyphData, Point, FontMetrics, MarkAttachmentRules, CharacterSet, AttachmentClass, PositioningRules, MarkPositioningMap } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { renderPaths, calculateDefaultMarkOffset, getAccurateGlyphBBox } from '../../services/glyphRenderService';
@@ -237,6 +236,7 @@ const SiblingThumbnail: React.FC<{
         </div>
     );
 });
+SiblingThumbnail.displayName = 'SiblingThumbnail';
 
 const ClassPreviewStrip: React.FC<ClassPreviewStripProps> = ({ 
     siblings, activePair, pivotChar, glyphDataMap, strokeThickness, anchorDelta, isLinked, onToggleLink, onSelectPair,

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Character, GlyphData, CharacterSet } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
-import { ClearIcon, AddIcon, TrashIcon } from '../constants';
+import { ClearIcon, AddIcon } from '../constants';
 import GlyphTile from './GlyphTile';
 import SmartGlyphInput from './rules/manager/SmartGlyphInput';
 
@@ -75,11 +75,11 @@ const GlyphSlot: React.FC<GlyphSlotProps> = React.memo(({ onClick, char, glyphDa
         </div>
     );
 });
+GlyphSlot.displayName = 'GlyphSlot';
 
 const RuleEditor: React.FC<RuleEditorProps> = ({ 
     ruleKey, ruleValue, ruleType, allCharacterSets, allCharsByName, 
-    glyphDataMap, strokeThickness = 15, isNew, onSave, onCancel, showNotification, mode = 'editing',
-    groups = {}, glyphVersion
+    glyphDataMap, strokeThickness = 15, isNew, onSave, onCancel, showNotification, groups = {}
 }) => {
     const { t } = useLocale();
     

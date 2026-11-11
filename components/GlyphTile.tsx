@@ -27,12 +27,13 @@ const GlyphTile: React.FC<GlyphTileProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
-  const { settings } = useSettings();
-  const { metrics, allCharsByName, characterSets } = useProject();
+  const { settings, metrics } = useSettings();
+  const { allCharsByName, characterSets } = useProject();
   const { glyphDataMap } = useGlyphData();
   const { kerningMap } = useKerning();
   const { markPositioningMap } = usePositioning();
-  const { groups } = useRules();
+  const { state: rulesState } = useRules();
+  const groups = rulesState.fontRules?.groups;
 
   const strokeThickness = propStrokeThickness ?? settings.strokeThickness;
 
@@ -47,11 +48,12 @@ const GlyphTile: React.FC<GlyphTileProps> = ({
       kerningMap,
       characterSets,
       groups,
-      metrics
+      metrics,
+      strokeThickness
     });
 
     return resolvedPaths.length > 0 ? { paths: resolvedPaths } : undefined;
-  }, [propGlyphData, character, glyphDataMap, allCharsByName, markPositioningMap, kerningMap, characterSets, groups, metrics]);
+  }, [propGlyphData, character, glyphDataMap, allCharsByName, markPositioningMap, kerningMap, characterSets, groups, metrics, strokeThickness]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -71,8 +73,7 @@ const GlyphTile: React.FC<GlyphTileProps> = ({
         strokeThickness, 
         {
             character,
-            metrics,
-            contrast: settings.contrast
+            metrics
         }
     );
     

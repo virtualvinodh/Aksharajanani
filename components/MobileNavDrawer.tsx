@@ -1,5 +1,5 @@
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { Character, CharacterSet } from '../types';
 import DrawingWorkspace from './DrawingWorkspace';
 import { ExportIcon, CreatorIcon, TestIcon, SettingsIcon, SearchIcon, CompareIcon, BatchIcon } from '../constants';
@@ -43,7 +43,7 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
   setIsPaletteOpen,
   exportingType
 }) => {
-  const { t } = useLocale();
+  useLocale();
 
   const handleSelect = useCallback((character: Character, rect?: DOMRect) => {
     onSelectCharacter(character, rect);

@@ -157,7 +157,6 @@ export interface AppSettings {
   showGridOutlines: boolean;
   gridGhostSize?: number;
   isAutosaveEnabled: boolean;
-  editorMode: 'simple' | 'advanced';
   isPrefillEnabled?: boolean;
   isBackgroundAutoKerningEnabled?: boolean;
   showHiddenGlyphs: boolean;
@@ -268,7 +267,6 @@ export interface ScriptDefaults {
     pathSimplification: number;
     showGridOutlines: boolean;
     isAutosaveEnabled: boolean;
-    editorMode: 'simple' | 'advanced';
     isPrefillEnabled: boolean;
     showHiddenGlyphs?: boolean;
     showUnicodeValues?: boolean;

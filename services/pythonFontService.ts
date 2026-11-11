@@ -261,7 +261,11 @@ async function initializePyodide() {
     await micropip.install(fonttools_url);
     
     self.postMessage({ type: 'status', payload: 'installingFontFeatures' });
-    await micropip.install('fontFeatures');
+    // Pinned to an exact wheel (content-addressed URL + hash), like fontTools above, so a new
+    // PyPI release can't change font compilation underneath us. Its other dependency, lxml,
+    // comes from Pyodide's own package set.
+    const fontfeatures_url = "https://files.pythonhosted.org/packages/87/26/a0369ad3be7c74fa13cd2dc687c083b26d65380310957f5736c1a32395b0/fontfeatures-1.9.0-py3-none-any.whl#sha256=d7fcf48b77fa4f61fdffb5e28d588be05255fff0b54693c62de4013b129c3f1b";
+    await micropip.install(fontfeatures_url);
 
     
     micropip.destroy();

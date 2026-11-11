@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { Character, GlyphData, FontMetrics, RecommendedKerning, KerningMap } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { Character, RecommendedKerning, KerningMap } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { SparklesIcon, UndoIcon, CheckCircleIcon, SearchIcon, GridViewIcon } from '../../constants';
 import { calculateAutoKerning } from '../../services/kerningService';
@@ -36,12 +36,11 @@ interface KerningSelectionViewProps {
 
 const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({ 
     filteredPairs, onEditPair, selectedLeftChars, setSelectedLeftChars, selectedRightChars, setSelectedRightChars, mode, showRecommendedLabel,
-    hasHiddenRecommended, kerningMap, suggestedKerningMap, onAcceptSuggestions, onSwitchToAllPairs,
-    emptyStateTitle, emptyStateMessage
+    hasHiddenRecommended, kerningMap, suggestedKerningMap, onAcceptSuggestions, emptyStateTitle, emptyStateMessage
 }) => {
     const { t } = useLocale();
-    const { showNotification, filterMode, searchQuery, setFilterMode } = useLayout();
-    const { queueAutoKern, dispatch: kerningDispatch, discoverKerning } = useKerning();
+    const { showNotification, filterMode, searchQuery } = useLayout();
+    const { dispatch: kerningDispatch, discoverKerning } = useKerning();
     const { characterSets, allCharsByUnicode, setRecommendedKerning, recommendedKerning } = useProject();
     const { glyphDataMap, version: glyphVersion } = useGlyphData();
     const { settings, metrics } = useSettings();
@@ -202,7 +201,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
             <div className="flex flex-1 overflow-hidden">
                 {isLargeScreen && (
                     <div className="w-64 flex-shrink-0 h-full border-r dark:border-gray-700">
-                        <CharacterSelectionPanel title={leftTitle} characters={drawnCharacters} selectedChars={selectedLeftChars} onSelectionChange={(u, s) => setSelectedLeftChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedLeftChars(new Set())} />
+                        <CharacterSelectionPanel title={leftTitle} characters={drawnCharacters} selectedChars={selectedLeftChars} onSelectionChange={(u, s) => setSelectedLeftChars(prev => { const n = new Set(prev); if (s) { n.add(u); } else { n.delete(u); } return n; })} onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedLeftChars(new Set())} />
                     </div>
                 )}
                 
@@ -215,8 +214,8 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
 
                     {!isLargeScreen && (
                         <div className="p-4 space-y-4 border-b dark:border-gray-700">
-                             <CharacterSelectionRow title={leftTitle} characters={drawnCharacters} selectedChars={selectedLeftChars} onSelectionChange={(u, s) => setSelectedLeftChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedLeftChars(new Set())} />
-                             <CharacterSelectionRow title={rightTitle} characters={drawnCharacters} selectedChars={selectedRightChars} onSelectionChange={(u, s) => setSelectedRightChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedRightChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedRightChars(new Set())} />
+                             <CharacterSelectionRow title={leftTitle} characters={drawnCharacters} selectedChars={selectedLeftChars} onSelectionChange={(u, s) => setSelectedLeftChars(prev => { const n = new Set(prev); if (s) { n.add(u); } else { n.delete(u); } return n; })} onSelectAll={() => setSelectedLeftChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedLeftChars(new Set())} />
+                             <CharacterSelectionRow title={rightTitle} characters={drawnCharacters} selectedChars={selectedRightChars} onSelectionChange={(u, s) => setSelectedRightChars(prev => { const n = new Set(prev); if (s) { n.add(u); } else { n.delete(u); } return n; })} onSelectAll={() => setSelectedRightChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedRightChars(new Set())} />
                         </div>
                     )}
 
@@ -295,7 +294,7 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
 
                 {isLargeScreen && (
                     <div className="w-64 flex-shrink-0 h-full border-l dark:border-gray-700">
-                        <CharacterSelectionPanel title={rightTitle} characters={drawnCharacters} selectedChars={selectedRightChars} onSelectionChange={(u, s) => setSelectedRightChars(prev => { const n = new Set(prev); s ? n.add(u) : n.delete(u); return n; })} onSelectAll={() => setSelectedRightChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedRightChars(new Set())} />
+                        <CharacterSelectionPanel title={rightTitle} characters={drawnCharacters} selectedChars={selectedRightChars} onSelectionChange={(u, s) => setSelectedRightChars(prev => { const n = new Set(prev); if (s) { n.add(u); } else { n.delete(u); } return n; })} onSelectAll={() => setSelectedRightChars(new Set(drawnCharacters.map(c => c.unicode!)))} onSelectNone={() => setSelectedRightChars(new Set())} />
                     </div>
                 )}
             </div>

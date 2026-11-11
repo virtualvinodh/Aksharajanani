@@ -3,9 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AppSettings, ScriptConfig, PositioningRules, KerningMap, Character, RecommendedKerning } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import { useLayout, Workspace } from '../contexts/LayoutContext';
-import { useSettings } from '../contexts/SettingsContext';
 import { useProject } from '../contexts/ProjectContext';
-import { SaveIcon, ExportIcon, SettingsIcon, CompareIcon, AboutIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, SparklesIcon, HelpIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, CopyIcon, WrenchIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, AddIcon, CreatorIcon, MoreIcon, TrashIcon } from '../constants';
+import { SaveIcon, ExportIcon, SettingsIcon, CompareIcon, TestIcon, EditIcon, KerningIcon, PositioningIcon, RulesIcon, TestCaseIcon, CheckCircleIcon, SpinnerIcon, CodeBracketsIcon, CopyIcon, WrenchIcon, ImportIcon, SearchIcon, BatchIcon, CameraIcon, HistoryIcon, CreatorIcon, MoreIcon } from '../constants';
 import CommandPalette from './CommandPalette';
 import { ExportingType } from '../hooks/actions/useExportActions';
 import { FilterMenu } from './FilterMenu';
@@ -35,7 +34,6 @@ interface AppHeaderProps {
     onShowAbout: () => void;
     onShowHelp: () => void;
     onShowTestCases: () => void;
-    onEditorModeChange: (mode: 'simple' | 'advanced') => void;
     onWorkspaceChange: (workspace: Workspace) => void;
     activeWorkspace: Workspace;
     hasUnsavedChanges: boolean;
@@ -90,13 +88,13 @@ const WorkspaceTab: React.FC<{
       </button>
     );
   });
+WorkspaceTab.displayName = 'WorkspaceTab';
 
 
 const AppHeader: React.FC<AppHeaderProps> = ({
     script, settings, exportingType, onSaveProject, onSaveToDB, onLoadProject, onImportGlyphsClick, onAddGlyphClick, onExportClick,
-    onTestClick, onCompareClick, onSettingsClick, onChangeScriptClick, onShowAbout,
-    onShowHelp, onShowTestCases, onEditorModeChange, onWorkspaceChange, activeWorkspace, hasUnsavedChanges, hasUnsavedRules,
-    hasPositioning, hasKerning, drawingProgress, positioningProgress, kerningProgress, rulesProgress, positioningRules,
+    onTestClick, onCompareClick, onSettingsClick, onChangeScriptClick, onShowTestCases, onWorkspaceChange, activeWorkspace, hasUnsavedChanges, hasUnsavedRules,
+    hasPositioning, hasKerning, drawingProgress, positioningProgress, kerningProgress, positioningRules,
     kerningMap, allCharsByUnicode, recommendedKerning, onTakeSnapshot, onRestoreSnapshot, hasSnapshot, onSaveAs, onExportTemplate,
     onQuickAddGlyph, onCreatorClick
 }) => {
@@ -104,17 +102,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     const { projectName, setProjectName } = useProject();
     const [isEditingFontName, setIsEditingFontName] = useState(false);
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-    const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+    const { isPaletteOpen, setIsPaletteOpen } = useLayout();
     const moreMenuRef = useRef<HTMLDivElement>(null);
     
     const { 
         selectCharacter, setWorkspace, setCurrentView, 
         isMetricsSelectionMode, setIsMetricsSelectionMode, setMetricsSelection, 
-        setComparisonCharacters,
         openModal
     } = useLayout();
     
-    const kerningLabel = (settings.editorMode === 'advanced' || settings.preferKerningTerm) ? t('workspaceKerning') : t('workspaceSpacing');
+    const kerningLabel = settings.preferKerningTerm ? t('workspaceKerning') : t('workspaceSpacing');
     
     const visibleTabCount = 1 + (hasPositioning ? 1 : 0) + (hasKerning ? 1 : 0);
     let tabIndex = 1;
@@ -154,7 +151,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [setIsPaletteOpen]); // a state setter: stable, so this still runs once
     
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

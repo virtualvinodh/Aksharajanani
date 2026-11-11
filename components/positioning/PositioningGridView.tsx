@@ -2,7 +2,6 @@ import React, { forwardRef } from 'react';
 import CombinationCard from '../CombinationCard';
 import { Character, GlyphData, MarkAttachmentRules, MarkPositioningMap, CharacterSet, AttachmentClass, PositioningRules } from '../../types';
 import { PasteIcon, CheckCircleIcon, UndoIcon, LinkIcon } from '../../constants';
-import { useLocale } from '../../contexts/LocaleContext';
 import { expandMembers } from '../../services/groupExpansionService';
 import { VirtuosoGrid } from 'react-virtuoso';
 
@@ -61,10 +60,12 @@ const ListContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
       className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4 px-6 pb-20 pt-10"
     />
 ));
+ListContainer.displayName = 'ListContainer';
 
 const ItemContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => (
     <div {...props} ref={ref} className="min-w-0 w-full" />
 ));
+ItemContainer.displayName = 'ItemContainer';
 
 const PositioningGridView: React.FC<PositioningGridViewProps> = ({
     displayedCombinations, markPositioningMap, glyphDataMap, strokeThickness,

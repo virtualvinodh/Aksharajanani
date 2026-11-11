@@ -29,7 +29,7 @@ interface KerningToolbarProps {
 const KerningToolbar: React.FC<KerningToolbarProps> = ({
     orientation = 'vertical', onZoom, 
     kernValue, onKernChange, onKernFocus, onKernHover, isKernDirty,
-    xDistValue, onXDistChange, onXDistCommit, isXDistFocused, isXDistHovered, onXDistFocus, onXDistHover, xDistInputRef
+    xDistValue, onXDistChange, onXDistCommit, isXDistFocused, onXDistFocus, onXDistHover, xDistInputRef
 }) => {
     const { t } = useLocale();
     const isVertical = orientation === 'vertical';

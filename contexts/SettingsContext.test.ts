@@ -20,7 +20,7 @@ const settingsReducer = (state: SettingsState, action: any): SettingsState => {
 
 describe('settingsReducer', () => {
     const initialState: SettingsState = { settings: null, metrics: null };
-    const mockSettings: AppSettings = { fontName: 'Test', strokeThickness: 10, pathSimplification: 0, contrast: 1, showGridOutlines: true, isAutosaveEnabled: true, editorMode: 'simple', isPrefillEnabled: true, showHiddenGlyphs: false, showUnicodeValues: false };
+    const mockSettings: AppSettings = { fontName: 'Test', strokeThickness: 10, pathSimplification: 0, contrast: 1, showGridOutlines: true, isAutosaveEnabled: true, isPrefillEnabled: true, showHiddenGlyphs: false, showUnicodeValues: false };
 
     it('SET_SETTINGS updates settings', () => {
         const newState = settingsReducer(initialState, { type: 'SET_SETTINGS', payload: mockSettings });

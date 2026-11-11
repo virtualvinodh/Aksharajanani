@@ -58,7 +58,7 @@ const AboutPage: React.FC<AboutPageProps> = ({ onClose }) => {
       <main className="flex-grow overflow-y-auto p-6 md:p-10 text-gray-700 dark:text-gray-300">
         <div className="max-w-4xl mx-auto">
           <blockquote className="text-center italic text-xl text-gray-600 dark:text-gray-400 border-l-4 border-indigo-500 pl-4 py-2 my-8">
-            <p>"{t('aboutQuote')}"</p>
+            <p>&quot;{t('aboutQuote')}&quot;</p>
             <footer className="text-base not-italic text-gray-500 dark:text-gray-500 mt-2">- {t('aboutQuoteAuthor')}</footer>
           </blockquote>
 

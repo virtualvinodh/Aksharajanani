@@ -13,7 +13,6 @@ interface IncompleteFontWarningModalProps {
     positioning: boolean;
     kerning: boolean;
   };
-  editorMode?: 'simple' | 'advanced';
 }
 
 const IncompleteFontWarningModal: React.FC<IncompleteFontWarningModalProps> = ({ isOpen, onClose, onConfirm, status }) => {
@@ -22,7 +21,7 @@ const IncompleteFontWarningModal: React.FC<IncompleteFontWarningModalProps> = ({
 
   const incompleteTasks: string[] = [];
   
-  const useKerningTerm = settings ? (settings.editorMode === 'advanced' || settings.preferKerningTerm) : false;
+  const useKerningTerm = !!settings?.preferKerningTerm;
   const kerningLabel = useKerningTerm ? t('workspaceKerning') : t('workspaceSpacing');
 
   if (status.drawing) incompleteTasks.push(t('workspaceDrawing'));

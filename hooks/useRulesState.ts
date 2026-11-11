@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useRules } from '../contexts/RulesContext';
 import { useLayout } from '../contexts/LayoutContext';
@@ -14,7 +14,7 @@ export type RuleType = 'ligature' | 'contextual' | 'multiple' | 'single';
 export type DistRuleType = 'simple' | 'contextual';
 
 export const useRulesState = () => {
-    const { t } = useLocale();
+    useLocale();
     const { state: rulesState, dispatch: rulesDispatch } = useRules();
     const { showNotification } = useLayout();
     const { allCharsByUnicode } = useProject();
@@ -22,7 +22,7 @@ export const useRulesState = () => {
     // Use the Refactoring Hook
     const { renameGroup } = useRefactoring();
 
-    const { fontRules, manualFeaCode, isFeaEditMode } = rulesState;
+    const { fontRules } = rulesState;
 
     const [localRules, setLocalRules] = useState(() => deepClone(fontRules));
     const [activeFeature, setActiveFeature] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export const useRulesState = () => {
                 return;
             }
             setLocalRules(deepClone(fontRules));
-        } catch (e) {
+        } catch {
             setLocalRules(deepClone(fontRules));
         }
     }, [fontRules]);

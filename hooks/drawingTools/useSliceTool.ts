@@ -4,7 +4,6 @@ import { Point, Path } from '../../types';
 import { generateId, ToolHookProps } from './types';
 import { paperScope } from '../../services/glyphRenderService';
 import { VEC } from '../../utils/vectorUtils';
-import { simplifyPath } from '../../utils/pathUtils';
 
 
 export const useSliceTool = ({
@@ -94,7 +93,7 @@ export const useSliceTool = ({
         
         // 3. Handle Circles/Ellipses/Polygons - Explicit Points
         else {
-             let points = [...pathData.points];
+             const points = [...pathData.points];
              const isClosed = ['circle', 'ellipse', 'rect', 'line'].includes(pathData.type);
              // Remove duplicate end point if present to make math easier
              if (isClosed && points.length > 1 && VEC.len(VEC.sub(points[0], points[points.length-1])) < 0.1) {

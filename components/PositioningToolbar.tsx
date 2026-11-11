@@ -32,6 +32,7 @@ const ToolButton: React.FC<{ isActive: boolean, label: string, onClick: () => vo
       {children}
     </button>
 ));
+ToolButton.displayName = 'ToolButton';
 
 const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: boolean, children: React.ReactNode }> = React.memo(({ onClick, title, disabled, children }) => (
   <button
@@ -43,6 +44,7 @@ const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: bo
     {children}
   </button>
 ));
+ActionButton.displayName = 'ActionButton';
 
 const CoordinateInput: React.FC<{
     axis: 'x' | 'y';

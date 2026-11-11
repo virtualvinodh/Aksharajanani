@@ -10,10 +10,8 @@ interface CreatorPageProps {
     fontBlob: Blob | null;
 }
 
-const FONT_FACE_ID = 'creator-font-face';
-
 const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
-    const { t } = useLocale();
+    useLocale();
     const { settings, dispatch: settingsDispatch } = useSettings();
     const { handleBack } = useLayout();
     const saved = settings?.creatorSettings;
@@ -105,7 +103,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
         if (!canvas || !ctx || !fontLoaded) return;
 
         // Dimensions
-        let width = 1080;
+        const width = 1080;
         let height = 1080;
         if (aspectRatio === 'portrait') height = 1920;
         if (aspectRatio === 'landscape') height = 608;
@@ -152,7 +150,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
              const words = paragraph.split(' ');
              let currentLine = words[0];
              for (let i = 1; i < words.length; i++) {
-                 let testLine = currentLine + " " + words[i];
+                 const testLine = currentLine + " " + words[i];
                  if (ctx.measureText(testLine).width > maxWidth) {
                      finalLines.push(currentLine);
                      currentLine = words[i];
@@ -218,8 +216,8 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ fontBlob }) => {
         // If first drag, initialize textPos to current default to avoid jumping
         if (!textPos && canvasRef.current) {
             const canvas = canvasRef.current;
-            let width = canvas.width;
-            let height = canvas.height;
+            const width = canvas.width;
+            const height = canvas.height;
             
             let anchorX = width / 2;
             if (textAlign === 'left') anchorX = width * 0.1;

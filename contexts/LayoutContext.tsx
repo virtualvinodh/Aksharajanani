@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, ReactNode, useCallback, useRef } from 'react';
+import React, { createContext, useState, useContext, useCallback, useRef } from 'react';
 import { Character, ProjectData, FilterMode } from '../types';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 
@@ -8,7 +8,7 @@ type View = 'grid' | 'comparison' | 'settings' | 'creator' | 'rules' | 'editor';
 export type PanelLayout = 'grid' | 'split' | 'editor';
 
 interface ModalState {
-  name: 'confirmChangeScript' | 'incompleteWarning' | 'mismatchedScript' | 'testPage' | 'addGlyph' | 'positioningUpdateWarning' | 'feaError' | 'unsavedRules' | 'about' | 'help' | 'restoreSession' | 'testCases' | 'confirmLoadProject' | 'addBlock' | 'importGlyphs' | 'confirmSnapshotRestore' | 'snapshotRestore' | 'saveAs' | 'positioningRulesManager';
+  name: 'confirmChangeScript' | 'incompleteWarning' | 'mismatchedScript' | 'testPage' | 'addGlyph' | 'positioningUpdateWarning' | 'feaError' | 'unsavedRules' | 'about' | 'help' | 'restoreSession' | 'testCases' | 'confirmLoadProject' | 'addBlock' | 'importGlyphs' | 'confirmSnapshotRestore' | 'snapshotRestore' | 'saveAs' | 'positioningRulesManager' | 'importFont';
   props?: any;
 }
 
@@ -65,6 +65,9 @@ interface LayoutContextType {
   setMetricsSelection: React.Dispatch<React.SetStateAction<Set<number>>>;
   isMetricsSelectionMode: boolean;
   setIsMetricsSelectionMode: React.Dispatch<React.SetStateAction<boolean>>;
+  /** Command palette (Ctrl+K); opened from the header and from the mobile nav drawer. */
+  isPaletteOpen: boolean;
+  setIsPaletteOpen: React.Dispatch<React.SetStateAction<boolean>>;
   
   // Filtering
   filterMode: FilterMode;
@@ -113,6 +116,7 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // New states for improvements
     const [metricsSelection, setMetricsSelection] = useState<Set<number>>(new Set());
     const [isMetricsSelectionMode, setIsMetricsSelectionMode] = useState(false);
+    const [isPaletteOpen, setIsPaletteOpen] = useState(false);
     const [pendingNavigationTarget, setPendingNavigationTarget] = useState<string | null>(null);
     const [filterMode, setFilterMode] = useState<FilterMode>('none');
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -197,6 +201,7 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         projectToRestore, setProjectToRestore,
         metricsSelection, setMetricsSelection,
         isMetricsSelectionMode, setIsMetricsSelectionMode,
+        isPaletteOpen, setIsPaletteOpen,
         pendingNavigationTarget, setPendingNavigationTarget,
         checkAndSetFlag,
         filterMode, setFilterMode,

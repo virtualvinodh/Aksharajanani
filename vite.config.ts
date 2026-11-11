@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import { defineConfig, loadEnv, type Plugin } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
@@ -39,22 +39,35 @@ function copyRuntimeAssets(): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
+export default defineConfig(() => {
     return {
       server: {
         port: 3000,
         host: '0.0.0.0',
       },
       plugins: [react(), tailwindcss(), copyRuntimeAssets()],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
       resolve: {
-        alias: {
-          '@': path.resolve(__dirname, '.'),
-        }
-      }
+        alias: [
+          { find: '@', replacement: path.resolve(__dirname, '.') },
+          // paper's default build is paper-full, which bundles a JavaScript parser (acorn) for
+          // PaperScript. The app never uses PaperScript, and paper-core has the same API.
+          { find: /^paper$/, replacement: 'paper/dist/paper-core.js' },
+        ],
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            // Long-lived libraries in their own chunks, so app updates don't re-download them.
+            manualChunks(id) {
+              if (!id.includes('/node_modules/')) return undefined;
+              if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react';
+              if (id.includes('/node_modules/paper/')) return 'paper';
+              if (id.includes('/node_modules/opentype.js/')) return 'opentype';
+              if (id.includes('/node_modules/react-virtuoso/')) return 'virtuoso';
+              return undefined;
+            },
+          },
+        },
+      },
     };
 });

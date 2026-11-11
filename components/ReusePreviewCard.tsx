@@ -29,7 +29,7 @@ const ReusePreviewCard: React.FC<ReusePreviewCardProps> = ({
     const markPaths = glyphDataMap.get(markChar.unicode)?.paths ?? [];
     const offset = markPositioningMap.get(`${baseChar.unicode}-${markChar.unicode}`);
     
-    let combinedPaths = [...basePaths];
+    const combinedPaths = [...basePaths];
     if (offset) {
         const transformedMarkPaths = deepClone(markPaths).map((p: Path) => {
             p.points = p.points.map(pt => ({ x: pt.x + offset!.x, y: pt.y + offset!.y }));

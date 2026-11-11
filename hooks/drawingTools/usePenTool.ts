@@ -40,7 +40,7 @@ export const usePenTool = ({ isDrawing, setIsDrawing, currentPaths, setCurrentPa
             setCurrentPaths(finalPaths);
             onPathsChange(finalPaths);
         } else if (lastPath.points.length > 1) {
-            let finalPaths = [...currentPaths];
+            const finalPaths = [...currentPaths];
             if (settings.pathSimplification > 0) {
                 const simplifiedPoints = simplifyPath(lastPath.points, settings.pathSimplification);
                 finalPaths[finalPaths.length - 1] = { ...lastPath, points: simplifiedPoints };

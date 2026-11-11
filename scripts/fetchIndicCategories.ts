@@ -1,8 +1,10 @@
 import fs from 'fs';
 import https from 'https';
 
-const syllabicUrl = 'https://www.unicode.org/Public/16.0.0/ucd/IndicSyllabicCategory.txt';
-const positionalUrl = 'https://www.unicode.org/Public/17.0.0/ucd/IndicPositionalCategory.txt';
+// Both tables must come from the same Unicode version (they used to mix 16.0 and 17.0).
+const UCD_VERSION = '17.0.0';
+const syllabicUrl = `https://www.unicode.org/Public/${UCD_VERSION}/ucd/IndicSyllabicCategory.txt`;
+const positionalUrl = `https://www.unicode.org/Public/${UCD_VERSION}/ucd/IndicPositionalCategory.txt`;
 
 function fetchUrl(url: string): Promise<string> {
   return new Promise((resolve, reject) => {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Point, Character, GlyphData, FontMetrics } from '../types';
-import { VEC } from '../utils/vectorUtils';
 import { usePanTool } from './drawingTools/usePanTool';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
 

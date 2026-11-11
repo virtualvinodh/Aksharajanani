@@ -372,7 +372,7 @@ export const useGlyphEditSession = ({
     }, [onSave, character.unicode, currentPaths]);
 
     const handlePathsChange = useCallback((newPaths: Path[]) => {
-        let updatedTransforms = metaRef.current.compositeTransform ? [...metaRef.current.compositeTransform] : [];
+        const updatedTransforms = metaRef.current.compositeTransform ? [...metaRef.current.compositeTransform] : [];
         
         if (character.link && character.link.length > 0) {
             const componentsList = character.link;

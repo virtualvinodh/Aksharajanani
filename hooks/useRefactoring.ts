@@ -10,8 +10,7 @@ export const useRefactoring = () => {
     const { t } = useLocale();
     const { showNotification } = useLayout();
     const { 
-        characterSets, setCharacterSets,
-        positioningRules, setPositioningRules,
+        characterSets, positioningRules, setPositioningRules,
         markAttachmentRules, setMarkAttachmentRules,
         markAttachmentClasses, setMarkAttachmentClasses,
         baseAttachmentClasses, setBaseAttachmentClasses,

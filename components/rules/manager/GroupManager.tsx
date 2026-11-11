@@ -4,7 +4,6 @@ import { AttachmentClass, CharacterSet } from '../../../types';
 import { useLocale } from '../../../contexts/LocaleContext';
 import { AddIcon, TrashIcon, EditIcon, SaveIcon, CloseIcon } from '../../../constants';
 import SmartGlyphInput from './SmartGlyphInput';
-import { expandMembers } from '../../../services/groupExpansionService';
 import { useLayout } from '../../../contexts/LayoutContext';
 import { sanitizeIdentifier } from '../../../utils/stringUtils';
 import { useRules } from '../../../contexts/RulesContext';

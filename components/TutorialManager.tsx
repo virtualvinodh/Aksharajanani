@@ -33,7 +33,7 @@ const TutorialManager: React.FC = () => {
     const { locale } = useLocale();
     
     const [translations, setTranslations] = useState<Record<string, string> | null>(null);
-    const [currentTool, setCurrentTool] = useState<Tool>('pen');
+    const [_currentTool, setCurrentTool] = useState<Tool>('pen');
     
     const isLargeScreen = useMediaQuery('(min-width: 1024px)');
     const [scrollOffset, setScrollOffset] = useState(150);

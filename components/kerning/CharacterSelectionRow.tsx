@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Character } from '../../types';
 import { useLocale } from '../../contexts/LocaleContext';
 import { LeftArrowIcon, RightArrowIcon } from '../../constants';

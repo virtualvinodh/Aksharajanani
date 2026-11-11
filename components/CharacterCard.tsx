@@ -77,11 +77,11 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       }
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (_e: React.MouseEvent) => {
       startPress();
   };
 
-  const handleMouseUp = (e: React.MouseEvent) => {
+  const handleMouseUp = (_e: React.MouseEvent) => {
       cancelPress();
   };
 
@@ -216,10 +216,6 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   } else {
     ghostFontSizeClass = isCompact ? "text-2xl sm:text-4xl" : "text-4xl sm:text-6xl";
   }
-
-  const ghostTextColor = !isAvailable 
-    ? "text-gray-400 dark:text-gray-500" 
-    : "text-gray-200 dark:text-gray-700 group-hover:text-gray-300 dark:group-hover:text-gray-600";
 
   let status = 'complete';
   if (!isAvailable) status = 'unavailable';

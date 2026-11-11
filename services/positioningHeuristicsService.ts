@@ -1,6 +1,5 @@
 import {
     Character,
-    GlyphData,
     Point,
     MarkAttachmentRules,
     CharacterSet,
@@ -10,48 +9,7 @@ import {
     AttachmentPoint
 } from '../types';
 import { VEC } from '../utils/vectorUtils';
-import { getAccurateGlyphBBox } from './glyphRenderService';
 import { expandMembers } from './groupExpansionService';
-
-import UnicodeProperties from 'unicode-properties';
-
-let indicPosCategoryData: any | null = null;
-
-/**
- * Initializes the positioning heuristics service by fetching required Unicode data.
- * Should be called once on application startup.
- */
-export const initPositioningHeuristics = async () => {
-    if (indicPosCategoryData) return;
-    try {
-        const response = await fetch('https://cdn.jsdelivr.net/gh/iLib-js/UCD@main/json/IndicPositionalCategory.json');
-        if (response.ok) {
-            indicPosCategoryData = await response.json();
-        } else {
-            console.error("Failed to load IndicPositionalCategory.json");
-        }
-    } catch (e) {
-        console.error("Error fetching IndicPositionalCategory.json", e);
-    }
-};
-
-const getIndicPosCategory = (codepoint: number): string | null => {
-    if (!indicPosCategoryData) return null;
-    for (const rangeKey in indicPosCategoryData) {
-        if (rangeKey.includes('..')) {
-            const [start, end] = rangeKey.split('..').map(s => parseInt(s, 16));
-            if (codepoint >= start && codepoint <= end) {
-                return indicPosCategoryData[rangeKey];
-            }
-        } else {
-            const cp = parseInt(rangeKey, 16);
-            if (codepoint === cp) {
-                return indicPosCategoryData[rangeKey];
-            }
-        }
-    }
-    return 'NA'; // Explicitly return Not Applicable
-};
 
 export const getAttachmentPointCoords = (bbox: BoundingBox, pointName: AttachmentPoint): Point => {
     const { x, y, width, height } = bbox;
@@ -130,59 +88,12 @@ export const calculateDefaultMarkOffset = (
     let rule: any | null = null;
     
     if (baseBbox && markBbox) {
-        // --- TIER 1: INDIC POSITIONAL CATEGORY ---
-        if (markChar.unicode) {
-            const indicCategory = getIndicPosCategory(markChar.unicode);
-            if (indicCategory && indicCategory !== 'NA') {
-                 switch (indicCategory) {
-                    case 'Top': rule = ["topCenter", "bottomCenter", "0", "-50"]; break;
-                    case 'Bottom': rule = ["bottomCenter", "topCenter", "0", "50"]; break;
-                    case 'Left': rule = ["midLeft", "midRight", "-50", "0"]; break;
-                    case 'Right': rule = ["midRight", "midLeft", "50", "0"]; break;
-                 }
-            }
-        }
-        
-        // --- TIER 2: CCC (Canonical Combining Class) ---
-        if (!rule && markChar.unicode) {
-            const ccc = UnicodeProperties.getCombiningClass(markChar.unicode);
-            
-            // Group 1 & 3 (Attached / Overlay) - Offset (0, 0)
-            if (ccc === 1) { rule = ["topCenter", "bottomCenter", "0", "0"]; } // Overlay
-            else if (ccc === 7) { rule = ["bottomCenter", "topCenter", "0", "0"]; } // Nukta
-            else if (ccc === 9) { rule = ["bottomCenter", "topCenter", "0", "0"]; } // Virama
-            else if (ccc === 200) { rule = ["bottomLeft", "topRight", "0", "0"]; } // Attached Bottom Left
-            else if (ccc === 202) { rule = ["bottomCenter", "topCenter", "0", "0"]; } // Attached Directly Below
-            else if (ccc === 204) { rule = ["bottomRight", "topLeft", "0", "0"]; } // Attached Bottom Right
-            else if (ccc === 208) { rule = ["midLeft", "midRight", "0", "0"]; } // Attached to Left
-            else if (ccc === 210) { rule = ["midRight", "midLeft", "0", "0"]; } // Attached to Right
-            else if (ccc === 212) { rule = ["topLeft", "bottomRight", "0", "0"]; } // Attached Top Left
-            else if (ccc === 214) { rule = ["topCenter", "bottomCenter", "0", "0"]; } // Attached Directly Above
-            else if (ccc === 216) { rule = ["topRight", "bottomLeft", "0", "0"]; } // Attached Top Right
-            else if (ccc === 240) { rule = ["bottomRight", "topLeft", "0", "0"]; } // Iota Subscript
-            else if (ccc === 6 || ccc === 8) { rule = ["topRight", "bottomLeft", "0", "0"]; } // Han/Kana Voicing
-            
-            // Group 2 (Non-Attached / Spacing) - Offset 50
-            else if (ccc === 218) { rule = ["bottomLeft", "topRight", "-50", "50"]; }
-            else if (ccc === 220) { rule = ["bottomCenter", "topCenter", "0", "50"]; }
-            else if (ccc === 222) { rule = ["bottomLeft", "topRight", "-50", "50"]; }
-            else if (ccc === 224) { rule = ["bottomRight", "topLeft", "50", "50"]; }
-            else if (ccc === 228) { rule = ["midLeft", "midRight", "-50", "0"]; }
-            else if (ccc === 230) { rule = ["topCenter", "bottomCenter", "0", "-50"]; }
-            else if (ccc === 232) { rule = ["midRight", "midLeft", "50", "0"]; }
-            else if (ccc === 233) { rule = ["topLeft", "bottomRight", "-50", "-50"]; }
-            else if (ccc === 234) { rule = ["topRight", "bottomLeft", "50", "-50"]; }
-
-            // Group 3 (Fallback for Fixed Position Classes)
-            else if (ccc >= 10 && ccc <= 199) {
-                rule = ["topCenter", "bottomCenter", "0", "-50"];
-            }
-        }
-
-        // --- TIER 4: MANUAL RULE-BASED FALLBACK ---
-        if (!rule) {
-            rule = resolveAttachmentRule(baseChar.name, markChar.name, markAttachmentRules, characterSets, groups);
-        }
+        // Project rules decide placement. (Two automatic tiers used to run first, based on the
+        // Unicode Indic positional category and combining class, but neither ever matched: the
+        // fetched data was nested one level deeper than the lookup expected, and
+        // getCombiningClass returns names, not numbers. Had they worked, they would have
+        // overridden the project's own rules. Removed rather than fixed.)
+        rule = resolveAttachmentRule(baseChar.name, markChar.name, markAttachmentRules, characterSets, groups);
 
         if (rule) {
             const [baseAttachName, markAttachName, xOffsetStr, yOffsetStr] = rule;

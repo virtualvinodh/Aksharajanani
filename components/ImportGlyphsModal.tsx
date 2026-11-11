@@ -1,15 +1,16 @@
-import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useLocale } from '../contexts/LocaleContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useSettings } from '../contexts/SettingsContext';
 import Modal from './Modal';
 import { ProjectData, GlyphData, Character, ScriptConfig } from '../types';
-import { SpinnerIcon, CheckCircleIcon, ImportIcon } from '../constants';
+import { SpinnerIcon, ImportIcon } from '../constants';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import GlyphTile from './GlyphTile';
 import * as dbService from '../services/dbService';
 import { parseFontFile, extractProjectData } from '../services/importFontService';
+import { safeJsonParse } from '../utils/safeJson';
 
 interface ImportGlyphsModalProps {
   isOpen: boolean;
@@ -126,14 +127,14 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const projectData: ProjectData = JSON.parse(e.target?.result as string);
+                const projectData: ProjectData = safeJsonParse<ProjectData>(e.target?.result as string);
                 if (projectData && Array.isArray(projectData.glyphs) && Array.isArray(projectData.characterSets)) {
                     setSourceProject(projectData);
                     setStep('selectGlyphs');
                 } else {
                     throw new Error(t('invalidProjectFileFormat'));
                 }
-            } catch (err) {
+            } catch {
                 setFileError(t('errorReadingProjectFile'));
             }
         };
@@ -152,7 +153,7 @@ const ImportGlyphsModal: React.FC<ImportGlyphsModalProps> = ({ isOpen, onClose, 
           } else {
               throw new Error(t('invalidProjectDataFormat'));
           }
-      } catch (err) {
+      } catch {
           setFileError(t('errorReadingProjectFile'));
       }
   };

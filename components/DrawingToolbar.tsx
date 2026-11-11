@@ -58,6 +58,7 @@ const ToolButton: React.FC<{ tool: Tool, currentTool: Tool, label: string, onCli
     </button>
   );
 });
+ToolButton.displayName = 'ToolButton';
 
 const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: boolean, children: React.ReactNode, dataTour?: string }> = React.memo(({ onClick, title, disabled, children, dataTour }) => (
   <button
@@ -71,10 +72,11 @@ const ActionButton: React.FC<{ onClick: () => void, title: string, disabled?: bo
     {React.cloneElement(children as React.ReactElement<{ className?: string }>, { className: 'w-5 h-5' })}
   </button>
 ));
+ActionButton.displayName = 'ActionButton';
 
 const DrawingToolbar: React.FC<DrawingToolbarProps> = (props) => {
     const { t } = useLocale();
-    const { character, currentTool, setCurrentTool, settings, isLargeScreen, onUndo, canUndo, onRedo, canRedo, onCut, selectedPathIds, onCopy, onPaste, clipboard, onGroup, canGroup, onUngroup, canUngroup, onZoom, onImageImportClick, onSvgImportClick, calligraphyAngle, setCalligraphyAngle } = props;
+    const { character, currentTool, setCurrentTool, isLargeScreen, onUndo, canUndo, onRedo, canRedo, onCut, selectedPathIds, onCopy, onPaste, clipboard, onGroup, canGroup, onUngroup, canUngroup, onZoom, onImageImportClick, onSvgImportClick, calligraphyAngle, setCalligraphyAngle } = props;
     
     const [isAnglePickerOpen, setIsAnglePickerOpen] = useState(false);
     const calligraphyToolButtonRef = useRef<HTMLDivElement>(null);

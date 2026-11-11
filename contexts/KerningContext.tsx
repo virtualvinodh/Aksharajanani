@@ -1,6 +1,6 @@
 
 import React, { createContext, useReducer, useContext, ReactNode, useMemo, Dispatch, useEffect, useRef, useCallback } from 'react';
-import { KerningMap, GlyphData, FontMetrics, AppSettings, Character } from '../types';
+import { KerningMap, GlyphData, Character } from '../types';
 import { initAutoKernWorker, terminateAutoKernWorker } from '../services/autoKerningService';
 import { useGlyphData } from './GlyphDataContext';
 import { useSettings } from './SettingsContext';
@@ -110,7 +110,7 @@ export const KerningProvider: React.FC<{ children: ReactNode }> = ({ children })
         workerRef.current = initAutoKernWorker();
         
         workerRef.current.onmessage = (e) => {
-            const { results, batchId: resultBatchId, type, progress } = e.data;
+            const { results, type, progress } = e.data;
             
             if (type === 'progress') {
                  if (onDiscoveryProgressRef.current) {

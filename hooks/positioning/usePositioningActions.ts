@@ -3,7 +3,6 @@ import { useCallback } from 'react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { usePositioning } from '../../contexts/PositioningContext';
-import { useSettings } from '../../contexts/SettingsContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
 import { updatePositioningAndCascade } from '../../services/positioningService';
@@ -290,7 +289,7 @@ export const usePositioningActions = ({
         showNotification(t('acceptedAllDefaults', { count: unpositionedPairs.length }), 'success');
     }, [displayedCombinations, markPositioningMap, glyphDataMap, t, metrics, settings, markAttachmentRules, characterSets, allChars, allLigaturesByKey, markAttachmentClasses, baseAttachmentClasses, positioningRules, positioningDispatch, glyphDataDispatch, characterDispatch, groups, showNotification]);
 
-    const handleCopyPositions = useCallback((copyFromItem: Character, reuseSourceItem: Character, navItems: Character[]) => {
+    const handleCopyPositions = useCallback((copyFromItem: Character, reuseSourceItem: Character, _navItems: Character[]) => {
         // Reuse logic simplified: works on displayedCombinations (Grid View).
         if (!reuseSourceItem) return;
 

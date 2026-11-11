@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { Character, CharacterSet, GlyphData } from '../types';
 import CharacterGrid from './CharacterGrid';
 import { useLocale } from '../contexts/LocaleContext';
@@ -49,12 +49,10 @@ const DrawingWorkspace: React.FC<DrawingWorkspaceProps> = ({ characterSets, onSe
     const { 
         activeTab, setActiveTab, showNotification, 
         metricsSelection, setMetricsSelection, isMetricsSelectionMode, setIsMetricsSelectionMode, 
-        filterMode, setComparisonCharacters, setCurrentView,
-        searchQuery, selectedCharacter, triggerActiveEditorUpdate,
-        setWorkspace
+        filterMode, searchQuery, selectedCharacter, triggerActiveEditorUpdate
     } = useLayout();
     
-    const { dispatch: characterDispatch, positioningGroupNames, allCharsByName, allCharsByUnicode, markAttachmentRules, positioningRules } = useProject();
+    const { dispatch: characterDispatch, allCharsByName, allCharsByUnicode, markAttachmentRules, positioningRules } = useProject();
     const { settings, metrics } = useSettings();
     const { glyphDataMap, version: glyphVersion, dispatch: glyphDataDispatch } = useGlyphData();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();

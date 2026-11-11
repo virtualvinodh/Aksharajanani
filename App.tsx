@@ -1,12 +1,9 @@
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ScriptConfig, ProjectData, Character, GlyphData } from './types';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+import { ScriptConfig, ProjectData } from './types';
 import UnifiedEditorModal from './components/UnifiedEditorModal';
-import SettingsPage from './components/SettingsPage';
-import ComparisonView from './components/ComparisonView';
 import ConfirmationModal from './components/ConfirmationModal';
 import IncompleteFontWarningModal from './components/IncompleteFontWarningModal';
-import FontTestPage from './components/FontTestPage';
 import Footer from './components/Footer';
 import DonateNotice from './components/DonateNotice';
 import AddGlyphModal from './components/AddGlyphModal';
@@ -18,16 +15,12 @@ import AppHeader from './components/AppHeader';
 import DrawingWorkspace from './components/DrawingWorkspace';
 import PositioningWorkspace from './components/PositioningWorkspace';
 import KerningWorkspace from './components/KerningWorkspace';
-import RulesWorkspace from './components/RulesWorkspace';
-import TestCasePage from './components/TestCasePage';
 import ExportAnimation from './components/ExportAnimation';
 import ImportGlyphsModal from './components/ImportGlyphsModal';
 import ImportFontModal from './components/ImportFontModal';
 import SnapshotRestoreModal from './components/SnapshotRestoreModal';
 import SaveAsModal from './components/SaveAsModal';
-import CreatorPage from './components/CreatorPage';
 import MobileNavDrawer from './components/MobileNavDrawer';
-import TutorialManager from './components/TutorialManager';
 import CelebrationManager from './components/CelebrationManager'; // Added
 import { useLocale } from './contexts/LocaleContext';
 import { useLayout } from './contexts/LayoutContext';
@@ -40,9 +33,19 @@ import { useRules } from './contexts/RulesContext';
 import { useProject } from './contexts/ProjectContext';
 import { useProgressCalculators } from './hooks/useProgressCalculators';
 import { useAppActions } from './hooks/useAppActions';
-import { TOOL_RANGES, LeftArrowIcon, RightArrowIcon, GridViewIcon, SplitViewIcon, EditorViewIcon } from './constants';
+import { TOOL_RANGES, LeftArrowIcon, RightArrowIcon } from './constants';
 import { useMediaQuery } from './hooks/useMediaQuery';
-import PositioningRulesModal from './components/PositioningRulesModal';
+import { fontFaceRule, cssString } from './utils/cssFont';
+
+// Screens opened only now and then are loaded on demand, keeping the editor's startup code small.
+const SettingsPage = lazy(() => import('./components/SettingsPage'));
+const ComparisonView = lazy(() => import('./components/ComparisonView'));
+const FontTestPage = lazy(() => import('./components/FontTestPage'));
+const RulesWorkspace = lazy(() => import('./components/RulesWorkspace'));
+const TestCasePage = lazy(() => import('./components/TestCasePage'));
+const CreatorPage = lazy(() => import('./components/CreatorPage'));
+const TutorialManager = lazy(() => import('./components/TutorialManager'));
+const PositioningRulesModal = lazy(() => import('./components/PositioningRulesModal'));
 
 const GUIDE_FONT_STYLE_ID = 'guide-font-face-style';
 
@@ -67,7 +70,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const { markPositioningMap } = usePositioning();
   const { state: rulesState } = useRules();
   
-  const { fontRules, isFeaEditMode, manualFeaCode, hasUnsavedRules } = rulesState;
+  const { fontRules, hasUnsavedRules } = rulesState;
   const { workspace, currentView, setCurrentView, selectedCharacter, selectCharacter, closeCharacterModal, panelLayout, setPanelLayout, isNavDrawerOpen, closeNavDrawer } = layout;
 
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
@@ -153,7 +156,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       handleUnlockGlyph,
       handleRelinkGlyph,
       handleUpdateDependencies,
-      handleEditorModeChange,
       downloadFontBlob,
       handleAddGlyph,
       handleQuickAddGlyph,
@@ -282,12 +284,16 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
     const existingStyle = document.getElementById(GUIDE_FONT_STYLE_ID); 
     if (existingStyle) existingStyle.remove();
 
-    if (activeGuideFont && activeGuideFont.fontName && activeGuideFont.fontUrl) {
+    // Name and URL come from script/project files, so they go through fontFaceRule (escaped, URL allow-list).
+    const guideFontRule = activeGuideFont?.fontName && activeGuideFont.fontUrl
+        ? fontFaceRule(activeGuideFont.fontName, activeGuideFont.fontUrl, 'truetype')
+        : null;
+    if (activeGuideFont && guideFontRule) {
         const styleEl = document.createElement('style'); 
         styleEl.id = GUIDE_FONT_STYLE_ID;
-        styleEl.innerHTML = `@font-face { font-family: "${activeGuideFont.fontName}"; src: url('${activeGuideFont.fontUrl}') format('truetype'); font-display: swap; }`;
+        styleEl.textContent = guideFontRule;
         document.head.appendChild(styleEl);
-        document.documentElement.style.setProperty('--guide-font-family', `"${activeGuideFont.fontName}", sans-serif`);
+        document.documentElement.style.setProperty('--guide-font-family', `${cssString(activeGuideFont.fontName)}, sans-serif`);
         document.documentElement.style.setProperty('--guide-font-feature-settings', activeGuideFont.stylisticSet || 'normal');
     } else { 
         document.documentElement.style.removeProperty('--guide-font-family'); 
@@ -336,28 +342,30 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
   const showEditorPanel = isLargeScreen && characterForModal && workspace === 'drawing' && (panelLayout === 'split' || panelLayout === 'editor');
   const RESIZER_WIDTH = isLargeScreen ? 8 : 16; 
 
+  const viewFallback = <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400" role="status">{t('loading')}</div>;
+
   return (
     <div className="h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
        
-       <TutorialManager />
+       <Suspense fallback={null}><TutorialManager /></Suspense>
        <CelebrationManager />
 
        {currentView === 'creator' ? (
-           <CreatorPage 
+           <Suspense fallback={viewFallback}><CreatorPage 
                 fontBlob={creatorFont?.blob ?? null}
-           />
+           /></Suspense>
        ) : currentView === 'settings' ? (
-           <SettingsPage toolRanges={TOOL_RANGES} />
+           <Suspense fallback={viewFallback}><SettingsPage toolRanges={TOOL_RANGES} /></Suspense>
        ) : currentView === 'comparison' ? (
-           <ComparisonView />
+           <Suspense fallback={viewFallback}><ComparisonView /></Suspense>
        ) : currentView === 'rules' ? (
-           <RulesWorkspace 
+           <Suspense fallback={viewFallback}><RulesWorkspace 
                 
                 positioningRules={positioningRules}
                 isFeaOnlyMode={isFeaOnlyMode}
                 rulesProgress={rulesProgress}
-            />
+            /></Suspense>
        ) : (
            <>
                <AppHeader
@@ -379,7 +387,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 onShowAbout={onShowAbout}
                 onShowHelp={onShowHelp}
                 onShowTestCases={onShowTestCases}
-                onEditorModeChange={handleEditorModeChange}
                 onWorkspaceChange={handleWorkspaceChange}
                 activeWorkspace={workspace}
                 hasUnsavedChanges={hasUnsavedChanges}
@@ -473,7 +480,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                                 setClipboard={(paths) => clipboardDispatch({ type: 'SET_CLIPBOARD', payload: paths })}
                                 onClose={closeEditorWithAnimation}
                                 markAttachmentRules={markAttachmentRules}
-                                onEditorModeChange={handleEditorModeChange}
                             />
                         </aside>
                     </>
@@ -544,7 +550,6 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 setClipboard={(paths) => clipboardDispatch({ type: 'SET_CLIPBOARD', payload: paths })}
                 onClose={closeEditorWithAnimation}
                 markAttachmentRules={markAttachmentRules}
-                onEditorModeChange={handleEditorModeChange}
             />
        )}
        
@@ -564,7 +569,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 onCompareClick={handleCompareClick}
                 toggleSelectionMode={() => layout.setIsMetricsSelectionMode(!layout.isMetricsSelectionMode)}
                 isMetricsSelectionMode={layout.isMetricsSelectionMode}
-                setIsPaletteOpen={layout.openPalette}
+                setIsPaletteOpen={layout.setIsPaletteOpen}
                 exportingType={exportingType}
             />
         )}
@@ -612,7 +617,7 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       {layout.activeModal?.name === 'confirmLoadProject' && <ConfirmationModal isOpen={true} onClose={layout.closeModal} title={t('confirmLoadProjectTitle')} message={t('confirmLoadProjectMessage')} {...layout.activeModal.props} />}
       {layout.activeModal?.name === 'incompleteWarning' && <IncompleteFontWarningModal isOpen={true} onClose={layout.closeModal} {...layout.activeModal.props} />}
       {layout.activeModal?.name === 'testPage' && (
-         <FontTestPage 
+         <Suspense fallback={null}><FontTestPage 
             onClose={layout.closeModal} 
             fontBlob={appActions.testPageFont.blob} 
             feaError={appActions.testPageFont.feaError} 
@@ -626,13 +631,13 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
                 lineHeight: script.testPage.lineHeight.default,
                 sampleText: script.sampleText
             }}
-         />
+         /></Suspense>
       )}
       
       {layout.activeModal?.name === 'positioningUpdateWarning' && <PositioningUpdateWarningModal isOpen={true} onClose={() => layout.closeModal()} {...layout.activeModal.props} />}
       {layout.activeModal?.name === 'feaError' && feaErrorState && <FeaErrorModal isOpen={true} onClose={() => { layout.closeModal(); }} onConfirm={() => { downloadFontBlob(feaErrorState.blob, projectName); layout.closeModal(); }} errorMessage={feaErrorState.error} />}
       {layout.activeModal?.name === 'unsavedRules' && ( <UnsavedRulesModal isOpen={true} onClose={layout.closeModal} onDiscard={() => { layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} onSave={() => { handleSaveToDB(); layout.setWorkspace(layout.activeModal?.props.pendingWorkspace); layout.closeModal(); }} /> )}
-      {layout.activeModal?.name === 'testCases' && <TestCasePage onClose={layout.closeModal} />}
+      {layout.activeModal?.name === 'testCases' && <Suspense fallback={null}><TestCasePage onClose={layout.closeModal} /></Suspense>}
       {layout.activeModal?.name === 'snapshotRestore' && (
         <SnapshotRestoreModal 
             isOpen={true} 
@@ -652,10 +657,10 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
         />
       )}
       {layout.activeModal?.name === 'positioningRulesManager' && (
-        <PositioningRulesModal 
+        <Suspense fallback={null}><PositioningRulesModal 
             isOpen={true} 
             onClose={layout.closeModal} 
-        />
+        /></Suspense>
       )}
       {layout.activeModal?.name === 'saveAs' && (
         <SaveAsModal 

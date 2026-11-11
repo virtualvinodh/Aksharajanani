@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useLocale } from '../../contexts/LocaleContext';
 import { AddIcon, EditIcon, SaveIcon, TrashIcon } from '../../constants';
 import RuleEditor, { RuleType } from '../RuleEditor';

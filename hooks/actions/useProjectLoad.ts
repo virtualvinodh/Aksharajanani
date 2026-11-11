@@ -9,8 +9,10 @@ import { usePositioning } from '../../contexts/PositioningContext';
 import { useRules } from '../../contexts/RulesContext';
 import { useLayout } from '../../contexts/LayoutContext';
 import { useLocale } from '../../contexts/LocaleContext';
-import { ScriptConfig, ProjectData, Character, CharacterSet, CharacterDefinition, AttachmentClass, RecommendedKerning, MarkAttachmentRules, PositioningRules, AppSettings } from '../../types';
+import { ScriptConfig, ProjectData, Character, CharacterSet, CharacterDefinition, AppSettings } from '../../types';
 import { FONT_META_DEFAULTS } from '../../constants';
+import { safeJsonParse, isSafeKey } from '../../utils/safeJson';
+import { migrateLegacySettings } from '../../utils/legacySettings';
 
 /**
  * `composite` and `link` must be string arrays, but hand-written data (script files,
@@ -125,7 +127,7 @@ export const useProjectLoad = ({
                 try {
                     const rulesResponse = await fetch(rulesPath);
                     rulesData = rulesResponse.ok ? await rulesResponse.json() : { 'DFLT': {} };
-                } catch(error) {
+                } catch {
                     rulesData = { 'DFLT': {} }
                 }    
             } else {
@@ -253,9 +255,10 @@ export const useProjectLoad = ({
             if (!projectToLoad?.characterSets) {
                 // Dynamic Ligature Creation
                  const scriptTag = Object.keys(rulesData).find(key => key !== 'groups' && key !== 'lookups');
-                if (scriptTag && activePositioningRules) {
+                if (isSafeKey(scriptTag) && activePositioningRules) {
                     activePositioningRules.forEach(rule => {
-                        if (rule.gsub) {
+                        // `gsub` comes from the file and is used as a key (P8).
+                        if (isSafeKey(rule.gsub)) {
                             if (!rulesData[scriptTag][rule.gsub]) rulesData[scriptTag][rule.gsub] = {};
                             if (!rulesData[scriptTag][rule.gsub].liga) rulesData[scriptTag][rule.gsub].liga = {};
                             
@@ -318,7 +321,7 @@ export const useProjectLoad = ({
                 } else {
                     sampleText = "";
                 }
-            } catch (e) { 
+            } catch { 
                 sampleText = "";
             }
 
@@ -351,6 +354,7 @@ export const useProjectLoad = ({
                     ...projectToLoad.settings 
                 };
                 newSettings.testPage = { ...currentScript.testPage, ...(newSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(newSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(newSettings.testPage?.lineHeight || {}) } };
+                migrateLegacySettings(newSettings);
                 if (!newSettings.customSampleText) newSettings.customSampleText = sampleText;
                 if (!newSettings.description) newSettings.description = `${newSettings.fontName} - ${t(currentScript.nameKey)}`;
                 
@@ -363,7 +367,7 @@ export const useProjectLoad = ({
                 if (projectToLoad.markPositioning) positioningDispatch({ type: 'SET_MAP', payload: new Map(projectToLoad.markPositioning) });
                 rulesDispatch({ type: 'SET_FEA_EDIT_MODE', payload: isFeaOnly ? true : (projectToLoad.isFeaEditMode ?? false) });
                 rulesDispatch({ type: 'SET_MANUAL_FEA_CODE', payload: isFeaOnly ? (feaFileData || '') : (projectToLoad.manualFeaCode ?? '') });
-                const { projectId: loadedProjectId, savedAt, ...loadedState } = projectToLoad;
+                const { projectId: _loadedProjectId, savedAt: _savedAt, ...loadedState } = projectToLoad;
                 setLastSavedState(JSON.stringify(loadedState));
                 setProjectName(projectToLoad.name || projectToLoad.settings.fontName);
                 
@@ -393,6 +397,7 @@ export const useProjectLoad = ({
                 };
                 newSettings.testPage = { ...currentScript.testPage, ...(savedSettings.testPage || {}), fontSize: { ...currentScript.testPage.fontSize, ...(savedSettings.testPage?.fontSize || {}) }, lineHeight: { ...currentScript.testPage.lineHeight, ...(savedSettings.testPage?.lineHeight || {}) } };
                 newSettings.customSampleText = sampleText;
+                migrateLegacySettings(newSettings);
 
                 settingsDispatch({ type: 'SET_SETTINGS', payload: newSettings });
                 settingsDispatch({ type: 'SET_METRICS', payload: currentScript.metrics });
@@ -420,8 +425,7 @@ export const useProjectLoad = ({
             try {
                 // The file's projectId is the exporting browser's local IndexedDB key. Never reuse it:
                 // adopting it would make the next autosave overwrite whichever local project has that id.
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                const { projectId: _fileProjectId, ...projectData }: ProjectData = JSON.parse(event.target?.result as string);
+                const { projectId: _fileProjectId, ...projectData }: ProjectData = safeJsonParse<ProjectData>(event.target?.result as string);
                 const currentScript = scriptRef.current;
                 
                 if (projectData.scriptId && projectData.scriptId !== currentScript?.id && !projectData.characterSets) {

@@ -235,7 +235,6 @@ export const useExportActions = ({
         if (shouldWarn) {
             layout.openModal('incompleteWarning', {
                 status: isIncomplete,
-                editorMode: settings?.editorMode,
                 onConfirm: () => {
                     layout.closeModal();
                     onProceed();

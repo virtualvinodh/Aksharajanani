@@ -110,7 +110,7 @@ const EditorSettings: React.FC<EditorSettingsProps> = ({ settings, onSettingsCha
                         
                         <label className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300 select-none">
                             <input type="checkbox" checked={settings.preferKerningTerm ?? false} onChange={handleToggleChange('preferKerningTerm')} className="h-4 w-4 rounded accent-indigo-500" />
-                            <span>Use "Kerning" terminology</span>
+                            <span>Use &quot;Kerning&quot; terminology</span>
                         </label>
                     </div>
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Point, Path, FontMetrics } from '../types';
+import { Point, Path } from '../types';
 import { VEC } from '../utils/vectorUtils';
 import { usePanTool } from './drawingTools/usePanTool';
 

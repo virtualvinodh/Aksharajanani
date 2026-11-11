@@ -7,7 +7,7 @@ import { usePositioning } from '../contexts/PositioningContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { Path, Point, Segment } from '../types';
+import { Path, Point } from '../types';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { VEC } from '../utils/vectorUtils';
@@ -67,7 +67,7 @@ export const useBatchOperations = () => {
     const { glyphDataMap, dispatch: glyphDataDispatch } = useGlyphData();
     const { kerningMap, dispatch: kerningDispatch } = useKerning();
     const { markPositioningMap, dispatch: positioningDispatch } = usePositioning();
-    const { settings, metrics } = useSettings();
+    const { settings } = useSettings();
     const { t } = useLocale();
     const { showNotification } = useLayout();
 

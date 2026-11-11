@@ -135,7 +135,7 @@ const PositioningRulesView: React.FC<PositioningRulesViewProps> = ({
 
             {/* Grid */}
             <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-4">
-                {pagedRulePairs.map((pair, idx) => {
+                {pagedRulePairs.map((pair, _idx) => {
                     const isPositioned = markPositioningMap.has(`${pair.base.unicode}-${pair.mark.unicode}`);
                     const pairId = `${pair.base.unicode}-${pair.mark.unicode}`;
                     

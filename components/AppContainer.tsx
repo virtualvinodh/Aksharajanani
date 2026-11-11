@@ -1,14 +1,14 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { ScriptConfig, ScriptsFile, ProjectData } from '../types';
 import { useLocale } from '../contexts/LocaleContext';
 import ScriptSelection from './ScriptSelection';
-import App from '../App';
+// The editor is loaded on demand: the landing page doesn't need its code.
+const App = lazy(() => import('../App'));
 import AboutPage from './AboutPage';
 import HelpPage from './HelpPage';
 import { initializePyodide } from '../services/pythonFontService';
-import { initPositioningHeuristics } from '../services/positioningHeuristicsService';
 import { useProject } from '../contexts/ProjectContext';
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { useKerning } from '../contexts/KerningContext';
@@ -44,7 +44,6 @@ const AppContainer: React.FC = () => {
 
     useEffect(() => {
         initializePyodide();
-        initPositioningHeuristics();
     }, []);
 
     useEffect(() => {
@@ -125,7 +124,7 @@ const AppContainer: React.FC = () => {
     return (
         <>
             {activeModal?.name === 'about' && <AboutPage onClose={closeModal} />}
-            {activeModal?.name === 'help' && <HelpPage onClose={closeModal} />}
+            {activeModal?.name === 'help' && <HelpPage onClose={closeModal} scripts={scriptsFile.scripts} />}
             
             {!script ? (
                  <ScriptSelection 
@@ -135,14 +134,16 @@ const AppContainer: React.FC = () => {
                     onShowHelp={() => openModal('help')}
                 />
             ) : (
-                <App 
-                    allScripts={scriptsFile.scripts}
-                    onBackToSelection={handleBackToSelection} 
-                    onShowAbout={() => openModal('about')}
-                    onShowHelp={() => openModal('help')}
-                    onShowTestCases={() => openModal('testCases')}
-                    projectDataToRestore={projectDataToRestore}
-                />
+                <Suspense fallback={<div className="flex-1 flex items-center justify-center p-8 text-gray-500 dark:text-gray-400" role="status">{t('loading')}</div>}>
+                    <App 
+                        allScripts={scriptsFile.scripts}
+                        onBackToSelection={handleBackToSelection} 
+                        onShowAbout={() => openModal('about')}
+                        onShowHelp={() => openModal('help')}
+                        onShowTestCases={() => openModal('testCases')}
+                        projectDataToRestore={projectDataToRestore}
+                    />
+                </Suspense>
             )}
             
             {notification && (

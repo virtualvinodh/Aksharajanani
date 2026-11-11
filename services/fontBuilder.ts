@@ -171,7 +171,7 @@ export const createFont = (
                 });
                 
                 if (strokePath.segmentGroups.length > 1) {
-                    const paperCompoundPath = new paperScope.CompoundPath();
+                    const paperCompoundPath = new paperScope.CompoundPath({});
                     strokePath.segmentGroups.forEach((segmentGroup: Segment[]) => {
                         const transformedSegments = segmentGroup.map(seg => {
                             const newSegPoint = transformPoint(seg.point);
@@ -294,7 +294,7 @@ export const createFont = (
                         const n1 = VEC.perp(dir1);
                         const dir2 = VEC.normalize(VEC.sub(p_next, p_curr));
                         const n2 = VEC.perp(dir2);
-                        let miterVec = VEC.normalize(VEC.add(n1, n2));
+                        const miterVec = VEC.normalize(VEC.add(n1, n2));
                         const dotProduct = VEC.dot(miterVec, n1);
                         if (Math.abs(dotProduct) < 1e-6) {
                             normal = n1;
@@ -341,7 +341,7 @@ export const createFont = (
           if (paperPaths.length > 0) {
               // Start with an empty path. This is crucial for correctly resolving self-intersections
               // on the very first stroke path, as uniting with an empty path forces resolution.
-              let combinedPath = new paperScope.Path(); 
+              let combinedPath: paper.PathItem = new paperScope.Path(); 
               for (const strokePath of paperPaths) {
                   combinedPath = combinedPath.unite(strokePath);
               }

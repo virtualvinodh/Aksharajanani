@@ -1,8 +1,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { 
-    GlyphData, KerningMap, CharacterSet, Path, 
-    ProjectData, ScriptConfig, AppSettings, FontMetrics, Character,
+    CharacterSet, ProjectData, ScriptConfig, Character,
     PositioningRules, MarkAttachmentRules, AttachmentClass, RecommendedKerning,
     GuideFont, ComponentTransform
 } from '../types';
@@ -30,18 +29,8 @@ type CharacterAction =
 
 interface ProjectContextType {
     script: ScriptConfig | null;
-    glyphDataMap: Map<number, GlyphData>;
-    setGlyphDataMap: React.Dispatch<React.SetStateAction<Map<number, GlyphData>>>;
-    kerningMap: KerningMap;
-    setKerningMap: React.Dispatch<React.SetStateAction<KerningMap>>;
     characterSets: CharacterSet[] | null;
     setCharacterSets: React.Dispatch<React.SetStateAction<CharacterSet[] | null>>;
-    clipboard: Path[] | null;
-    setClipboard: React.Dispatch<React.SetStateAction<Path[] | null>>;
-    settings: AppSettings | null;
-    setSettings: React.Dispatch<React.SetStateAction<AppSettings | null>>;
-    metrics: FontMetrics | null;
-    setMetrics: React.Dispatch<React.SetStateAction<FontMetrics | null>>;
     allCharsByUnicode: Map<number, Character>;
     allCharsByName: Map<string, Character>;
     projectDataToRestore: ProjectData | null;
@@ -84,12 +73,7 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [script, setScript] = useState<ScriptConfig | null>(null);
-    const [glyphDataMap, setGlyphDataMap] = useState<Map<number, GlyphData>>(new Map());
-    const [kerningMap, setKerningMap] = useState<KerningMap>(new Map());
     const [characterSets, setCharacterSets] = useState<CharacterSet[] | null>(null);
-    const [clipboard, setClipboard] = useState<Path[] | null>(null);
-    const [settings, setSettings] = useState<AppSettings | null>(null);
-    const [metrics, setMetrics] = useState<FontMetrics | null>(null);
     const [projectDataToRestore, setProjectDataToRestore] = useState<ProjectData | null>(null);
     const [projectName, setProjectName] = useState<string>('My Project');
 
@@ -139,21 +123,21 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                                 const p = action.payload;
 
                                 // Helper to update or delete based on presence in payload
-                                if ('lsb' in p) p.lsb !== undefined ? newChar.lsb = p.lsb : delete newChar.lsb;
-                                if ('rsb' in p) p.rsb !== undefined ? newChar.rsb = p.rsb : delete newChar.rsb;
-                                if ('glyphClass' in p) p.glyphClass !== undefined ? newChar.glyphClass = p.glyphClass : delete newChar.glyphClass;
-                                if ('advWidth' in p) p.advWidth !== undefined ? newChar.advWidth = p.advWidth : delete newChar.advWidth;
-                                if ('label' in p) p.label !== undefined ? newChar.label = p.label : delete newChar.label;
+                                if ('lsb' in p) { if (p.lsb !== undefined) newChar.lsb = p.lsb; else delete newChar.lsb; }
+                                if ('rsb' in p) { if (p.rsb !== undefined) newChar.rsb = p.rsb; else delete newChar.rsb; }
+                                if ('glyphClass' in p) { if (p.glyphClass !== undefined) newChar.glyphClass = p.glyphClass; else delete newChar.glyphClass; }
+                                if ('advWidth' in p) { if (p.advWidth !== undefined) newChar.advWidth = p.advWidth; else delete newChar.advWidth; }
+                                if ('label' in p) { if (p.label !== undefined) newChar.label = p.label; else delete newChar.label; }
 
                                 // Construction props
-                                if ('position' in p) p.position !== undefined ? newChar.position = p.position : delete newChar.position;
-                                if ('kern' in p) p.kern !== undefined ? newChar.kern = p.kern : delete newChar.kern;
-                                if ('link' in p) p.link !== undefined ? newChar.link = p.link : delete newChar.link;
-                                if ('composite' in p) p.composite !== undefined ? newChar.composite = p.composite : delete newChar.composite;
-                                if ('liga' in p) p.liga !== undefined ? newChar.liga = p.liga : delete newChar.liga;
-                                if ('compositeTransform' in p) p.compositeTransform !== undefined ? newChar.compositeTransform = p.compositeTransform : delete newChar.compositeTransform;
-                                if ('gpos' in p) p.gpos !== undefined ? newChar.gpos = p.gpos : delete newChar.gpos;
-                                if ('gsub' in p) p.gsub !== undefined ? newChar.gsub = p.gsub : delete newChar.gsub;
+                                if ('position' in p) { if (p.position !== undefined) newChar.position = p.position; else delete newChar.position; }
+                                if ('kern' in p) { if (p.kern !== undefined) newChar.kern = p.kern; else delete newChar.kern; }
+                                if ('link' in p) { if (p.link !== undefined) newChar.link = p.link; else delete newChar.link; }
+                                if ('composite' in p) { if (p.composite !== undefined) newChar.composite = p.composite; else delete newChar.composite; }
+                                if ('liga' in p) { if (p.liga !== undefined) newChar.liga = p.liga; else delete newChar.liga; }
+                                if ('compositeTransform' in p) { if (p.compositeTransform !== undefined) newChar.compositeTransform = p.compositeTransform; else delete newChar.compositeTransform; }
+                                if ('gpos' in p) { if (p.gpos !== undefined) newChar.gpos = p.gpos; else delete newChar.gpos; }
+                                if ('gsub' in p) { if (p.gsub !== undefined) newChar.gsub = p.gsub; else delete newChar.gsub; }
 
                                 return newChar;
                             }
@@ -311,12 +295,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     const value = {
         script, setScript,
-        glyphDataMap, setGlyphDataMap,
-        kerningMap, setKerningMap,
         characterSets, setCharacterSets,
-        clipboard, setClipboard,
-        settings, setSettings,
-        metrics, setMetrics,
         allCharsByUnicode,
         allCharsByName,
         projectDataToRestore, setProjectDataToRestore,

@@ -76,11 +76,12 @@ const GlyphSlot: React.FC<GlyphSlotProps> = React.memo(({ onClick, char, glyphDa
         </div>
     );
 });
+GlyphSlot.displayName = 'GlyphSlot';
 
 
 const DistRulesEditor: React.FC<DistRulesEditorProps> = ({ 
     rules, onSave, onDelete, onEditRule, addingRuleType, onAddRule, allCharacterSets,
-    allCharsByName, glyphDataMap, strokeThickness, showNotification, groups, glyphVersion
+    allCharsByName, glyphDataMap, strokeThickness, showNotification, groups
 }) => {
     const { t } = useLocale();
     const [editorState, setEditorState] = useState<{ type: 'simple' | 'contextual', target: string | null, value: string, left: string[], right: string[] }>({

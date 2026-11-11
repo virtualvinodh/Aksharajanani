@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocale } from '../../contexts/LocaleContext';
 import { Character, GlyphData, AppSettings, CharacterSet, MarkAttachmentRules, Path, KerningMap, MarkPositioningMap, UnifiedRenderContext } from '../../types';
@@ -96,7 +96,7 @@ const GlyphThumbnail: React.FC<{
                     if (cat === 'Lm' || cat === 'Sk' || cat.startsWith('P')) {
                         shouldVerticallyCenter = false;
                     }
-                } catch (e) { }
+                } catch { }
             }
 
             if (shouldVerticallyCenter) {
@@ -146,6 +146,7 @@ const GlyphThumbnail: React.FC<{
         </div>
     );
 });
+GlyphThumbnail.displayName = 'GlyphThumbnail';
 
 const LinkedGlyphsStrip: React.FC<LinkedGlyphsStripProps> = ({ 
     title, items, glyphDataMap, settings, onSelect, variant,

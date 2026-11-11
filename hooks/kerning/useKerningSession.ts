@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character, GlyphData, FontMetrics, AppSettings, RecommendedKerning, Point } from '../../types';
 import { calculateAutoKerning } from '../../services/kerningService';
 import { getAccurateGlyphBBox, getGlyphSubBBoxes } from '../../services/glyphRenderService';
@@ -18,7 +18,7 @@ interface UseKerningSessionProps {
 }
 
 export const useKerningSession = ({
-    pair, initialValue, glyphDataMap, strokeThickness, metrics, settings, recommendedKerning, onSave, onClose, onNavigate
+    pair, initialValue, glyphDataMap, strokeThickness, metrics, settings, recommendedKerning, onSave, onNavigate
 }: UseKerningSessionProps) => {
     // --- State ---
     const [kernValue, setKernValue] = useState(String(initialValue));

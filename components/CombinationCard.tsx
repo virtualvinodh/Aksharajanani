@@ -1,11 +1,10 @@
 import React, { useRef, useEffect, forwardRef, useMemo } from 'react';
-import { Character, GlyphData, Path, Point, MarkAttachmentRules, MarkPositioningMap, FontMetrics, CharacterSet, PositioningRules } from '../types';
+import { Character, GlyphData, Path, Point, MarkAttachmentRules, MarkPositioningMap, CharacterSet, PositioningRules } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLocale } from '../contexts/LocaleContext';
 import { renderPaths, getAccurateGlyphBBox } from '../services/glyphRenderService';
 import { calculateDefaultMarkOffset } from '../services/positioningHeuristicsService';
 import { PREVIEW_CANVAS_SIZE, DRAWING_CANVAS_SIZE, CheckCircleIcon } from '../constants';
-import { VEC } from '../utils/vectorUtils';
 import { useSettings } from '../contexts/SettingsContext';
 import { deepClone } from '../utils/cloneUtils';
 import { expandMembers } from '../services/groupExpansionService';
@@ -194,5 +193,6 @@ const CombinationCard = forwardRef<HTMLDivElement, CombinationCardProps>(({
     </div>
   );
 });
+CombinationCard.displayName = 'CombinationCard';
 
 export default React.memo(CombinationCard);

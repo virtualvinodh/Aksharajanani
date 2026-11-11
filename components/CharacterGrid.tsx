@@ -34,6 +34,7 @@ interface CharacterGridProps {
 const ItemContainer = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => (
     <div {...props} ref={ref} className="min-w-0 w-full" />
 ));
+ItemContainer.displayName = 'ItemContainer';
 
 const GridHeader = () => <div className="col-span-full h-6" />;
 const GridFooter = () => <div className="col-span-full h-24" />;
@@ -66,7 +67,7 @@ const CharacterGrid: React.FC<CharacterGridProps> = ({
   const [editingGroupIndex, setEditingGroupIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
 
-  const ListContainer = useMemo(() => forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
+  const ListContainer = useMemo(() => forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(function ListContainer(props, ref) {
     const gridClasses = variant === 'overlay'
         ? "grid grid-cols-2 gap-2 p-2"
         : (variant === 'compact' 
