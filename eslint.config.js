@@ -38,7 +38,7 @@ export default [
   },
   {
     // Node-side files: build/lint config and maintenance scripts.
-    files: ["scripts/**/*.{cjs,js,ts}", "*.config.{js,ts}", "eslint.config.js"],
+    files: ["scripts/**/*.{cjs,js,ts}", "tools/**/*.{cjs,js}", "*.config.{js,ts}", "eslint.config.js"],
     languageOptions: { globals: globals.node }
   },
   {
@@ -52,6 +52,6 @@ export default [
     languageOptions: { globals: globals.worker }
   },
   {
-    ignores: ["dist/**"]
+    ignores: ["dist/**", "tools/**/out/**"]
   }
 ];

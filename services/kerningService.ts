@@ -22,6 +22,9 @@ export const doBBoxesCollide = (boxA: BBox | null, boxB: BBox | null): boolean =
 };
 
 
+/** Whether two boxes overlap vertically (share any height). */
+export const sharesRows = (a: BBox, b: BBox): boolean => a.minY <= b.maxY && b.minY <= a.maxY;
+
 export interface KerningGroupContext {
     groups: Record<string, string[]>;
     characterSets: CharacterSet[] | null | undefined;
@@ -152,9 +155,13 @@ export async function calculateAutoKerning(
 
         // --- Step 2: Use binary search to find the optimal kerning value efficiently. ---
         // 'low' is the maximum possible negative kerning, 'high' is no kerning.
-        let low = -Math.round(metrics.unitsPerEm / 2); 
-        let high = 0; 
+        let low = -Math.round(metrics.unitsPerEm / 2);
+        let high = 0;
         let bestK = 0; // The best valid kerning value found so far.
+
+        // Glyphs that share no height at all (an accent above, a comma below) have nothing to measure
+        // a gap against; tucking one under the other is never what a kerning pair is for.
+        if (!sharesRows(leftBoxes.full, rightBoxes.full)) low = 1; // skip the search; bestK stays 0
 
         while (low <= high) {
             const kMid = Math.floor((low + high) / 2);
@@ -171,8 +178,13 @@ export async function calculateAutoKerning(
 
             let isInvalid = false;
             // --- Step 3: Check for hard collisions and gap violations. ---
-            // First, check for definite collisions in the less critical ascender and descender areas.
-            if (doBBoxesCollide(leftBoxes.ascender, rBoxAscenderT) || doBBoxesCollide(leftBoxes.descender, rBoxDescenderT)) {
+            // The right glyph may tuck under the left one but never start before it. Without this the
+            // search isn't valid: a narrow glyph pushed far enough jumps clean past a narrow neighbour,
+            // stops colliding, and the search runs on to the limit (e.g. ! " kerned by half an em).
+            if (rightBoxes.full.minX + deltaX < leftBoxes.full.minX) {
+                isInvalid = true;
+            // Then check for definite collisions in the less critical ascender and descender areas.
+            } else if (doBBoxesCollide(leftBoxes.ascender, rBoxAscenderT) || doBBoxesCollide(leftBoxes.descender, rBoxDescenderT)) {
                 isInvalid = true;
             } else if (rBoxXHeightT && leftBoxes.xHeight) {
                 // If no hard collisions, check the visually important x-height gap.

@@ -242,6 +242,12 @@ const solvePair = (leftGlyph, rightGlyph, metrics, leftRsb, rightLsb, targetDist
     // Fallback or explicit target distance
     const effectiveTarget = targetDistance !== null ? targetDistance : (leftRsb + rightLsb);
 
+    // Same rules as calculateAutoKerning (services/kerningService.ts): glyphs that share no height
+    // aren't kerned, and the right glyph never starts before the left one (otherwise a narrow glyph
+    // jumps clean past a narrow neighbour and the search runs on to the limit).
+    const L = leftBoxes.full, R = rightBoxes.full;
+    if (!(L.minY <= R.maxY && R.minY <= L.maxY)) return 0;
+
     while (low <= high) {
         const kMid = Math.floor((low + high) / 2);
         
@@ -257,7 +263,9 @@ const solvePair = (leftGlyph, rightGlyph, metrics, leftRsb, rightLsb, targetDist
         let isInvalid = false;
         
         // Collision Check
-        if (doBBoxesCollide(leftBoxes.ascender, rBoxAscenderT) || doBBoxesCollide(leftBoxes.descender, rBoxDescenderT)) {
+        if (rightBoxes.full.minX + deltaX < leftBoxes.full.minX) {
+            isInvalid = true;
+        } else if (doBBoxesCollide(leftBoxes.ascender, rBoxAscenderT) || doBBoxesCollide(leftBoxes.descender, rBoxDescenderT)) {
             isInvalid = true;
         } else if (rBoxXHeightT && leftBoxes.xHeight) {
             const currentGap = rBoxXHeightT.minX - leftBoxes.xHeight.maxX;

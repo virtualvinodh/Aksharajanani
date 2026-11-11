@@ -58,7 +58,8 @@ const KerningSelectionView: React.FC<KerningSelectionViewProps> = ({
 
     const drawnCharacters = useMemo(() => {
         return characterSets?.flatMap(s => s.characters)
-            .filter(c => !c.hidden && c.unicode !== undefined && glyphDataMap.has(c.unicode))
+            // Marks attach to their base (mark positioning), so they're never kerned (as in Detect new pairs).
+            .filter(c => !c.hidden && c.unicode !== undefined && glyphDataMap.has(c.unicode) && c.glyphClass !== 'mark')
             .sort((a,b) => a.unicode! - b.unicode!) || [];
     }, [characterSets, glyphDataMap, glyphVersion]);
 

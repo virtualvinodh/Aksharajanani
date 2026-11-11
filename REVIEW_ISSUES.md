@@ -194,6 +194,16 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** attach a native `wheel` listener with `{passive: false}`.
   - **Fixed:** native non-passive wheel listener (`hooks/useNonPassiveWheel.ts`) on the drawing, spacing and positioning canvases; checked in the browser that Ctrl+wheel no longer reaches the page. Safari reports trackpad pinch as gesture events, which this doesn't cover.
 
+- [x] **D15 ⚠ Pen strokes that end where they started collapsed to a line** (confirmed, end-to-end run)
+  - **Where:** `getPerpendicularDistance` in `utils/pathUtils.ts` (used by `simplifyPath`).
+  - **Problem:** for a closed stroke (an `o` drawn in one go) the first and last points are the same, the chord has zero length, and every point measured 0 from it, so simplification dropped them all and kept 2 points.
+  - **Fixed:** with a zero-length chord the distance is measured from that point. Test in `utils/pathUtils.test.ts`.
+
+- [ ] **D16 ⚠ A pen stroke that starts on a spacing line moves the spacing instead** (confirmed, end-to-end run; needs your call)
+  - **Where:** `startInteraction` / `moveInteraction` in `hooks/useDrawingCanvas.ts`.
+  - **Problem:** the glyph's left and right spacing lines run the full height of the canvas and take any drag that starts within 8 px of them, whatever the tool. The left line of a narrow letter (`t`, `f`, `l`) is right where a crossbar starts: drawing the crossbar of `t` dragged the left spacing by −130 instead, and the exported `t` overlapped the letter before it ("kilómetros" showed as "kilómdros"). The cursor does turn into ↔ first, but it's easy to miss, and a pen or finger has no hover at all.
+  - **Options:** (1) drag spacing lines only with the select tool, or (2) only from a small handle at the top or bottom of the line, outside the drawing area. Recommended: 2 (keeps the feature where people expect it, nothing hides it from the pen).
+
 ---
 
 ## K: Kerning and positioning
@@ -278,6 +288,21 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** wheel zoom ignores the centre translation, so it drifts about 40 px per step. `currentPage` is never reset, so a narrowed search shows "No results" with no pagination controls.
   - **Fix:** correct the zoom math, and reset to page 1 when the filter changes.
   - **Partly fixed:** pagination part: the page snaps back to the last page when a narrower search leaves it past the end. Zoom now keeps the point under the cursor fixed (the offset is computed relative to the canvas centre, matching how the view is drawn).
+
+- [x] **K16 ⚠ Auto-kern pushes narrow glyphs half an em into each other** (confirmed, end-to-end run)
+  - **Where:** `calculateAutoKerning` in `services/kerningService.ts`; `solvePair` in `workers/autoKerningWorker.js`.
+  - **Problem:** the kern is found by binary search, which assumes "too tight" stays too tight. It doesn't for narrow glyphs: at the first probe (half the limit) a narrow glyph has already jumped clean past a narrow neighbour, nothing collides, and the search runs to the limit. Pairs with no height in common (an accent and a comma) had nothing to collide with at all. In a full Spanish font, All Pairs → Auto-kern gave 5,948 pairs, many at −750 (`!"`, `t'`, …).
+  - **Fixed:** the right glyph may tuck under the left one but never start before it, and glyphs that share no height aren't kerned. Tests in `services/kerningService.test.ts`. The rerun gave 4,150 pairs; text rendered with the exported font has no overlaps.
+
+- [x] **K17 All Pairs listed and kerned combining marks** (confirmed, end-to-end run)
+  - **Where:** `components/kerning/KerningSelectionView.tsx` (`drawnCharacters`).
+  - **Problem:** marks (á's accent etc.) were in both character lists, so Select All → Auto-kern kerned them against everything, although they're attached by positioning and take no space.
+  - **Fixed:** marks are left out of the lists, as "Detect new pairs" already did.
+
+- [ ] **K18 Auto-kern lets glyphs touch when only their boxes are compared** (confirmed, end-to-end run)
+  - **Where:** the same two solvers, the ascender/descender/full-box collision branches.
+  - **Problem:** the normal gap is kept only between the x-height parts of the two glyphs. Elsewhere the check is "boxes don't overlap", so the glyphs may touch: `D` + `T` and `D` + `"` get exactly −(right bearing + left bearing), i.e. no gap at all. The boxes are rough, too (the round top of `D` counts as square), so this is tighter than it looks in the code.
+  - **Suggested fix:** keep some clearance in those branches as well (e.g. half the normal gap). Needs a look at a few real pairs before choosing the amount.
 
 ---
 
@@ -503,6 +528,16 @@ A user can see or hit these. All ⚠ items are here.
   - **Check:** try it in a normal browser (Start tutorial → Next → click A). If it works there, it's a headless-only artefact.
   - **Checked by the author in a real browser:** the tutorial gets past "Click the 'A' card". The blocked click only happens in headless Chromium.
 
+- [ ] **U14 The "Test" and "Export" tips open in the middle of drawing a letter** (confirmed, end-to-end run; needs your call)
+  - **Where:** header hints in `components/tutorial/useJITHints.tsx` (`hint_test_seen`, `hint_export_seen`).
+  - **Problem:** on a large screen they open 1 s after the 1st and the 3rd glyph count as drawn, i.e. usually while the person is still drawing that letter. The tip's overlay then swallows the next strokes (in the run, `B` and `D` lost their bowls).
+  - **Suggested fix:** show them only once the editor is closed (back on the grid), as phones already do.
+
+- [ ] **U15 Studio's back and download buttons have no label** (confirmed)
+  - **Where:** `components/CreatorPage.tsx` header.
+  - **Problem:** icon-only buttons with no `title`/`aria-label`: no tooltip, and screen readers announce just "button".
+  - **Fix:** add a translated `title` and `aria-label`.
+
 ---
 
 ## S: Script data
@@ -534,6 +569,20 @@ A user can see or hit these. All ⚠ items are here.
 
 - [x] **S7 Guide fonts:** the Noto Greek/Cyrillic URLs return 404/403 on every landing load (`scripts.json` ~773, ~817). Gurmukhi's guide font is Noto Sans Devanagari. The jsDelivr `gh/` URLs have no `@ref`, so they track the default branch.
   - **Fixed:** Greek and Cyrillic use Noto Sans (which covers both; the old per-script folders don't exist), Gurmukhi uses Noto Sans Gurmukhi, and every guide-font URL plus the logo font is pinned to a commit. Each URL checked: HTTP 200, real font, byte-identical to what was served before.
+
+- [ ] **S9 Kannada: `$ottuR` is undefined.** It's used in `recommendedKerning` (`positioning_kannada.json`), but no group or character set has that name, so those recommendations never match. (Found by the data check; an earlier note wrongly said it existed.)
+
+- [ ] **S10 Kannada: more undefined private-use glyphs.** The `$consLeft` group lists U+E02F–E032, a composite uses U+E02D, and `recommendedKerning` uses U+E039; none are defined. Related to the S2 leftovers.
+
+- [ ] **S11 Devanagari: two undefined `abvs` outputs.** `ऋ` + U+E000 and `ॠ` + U+E000 ligatures produce glyphs that aren't defined, so those rules are skipped at export.
+
+- [ ] **S12 Gurmukhi: `ੋ` and `ੌ` are classed as base.** Unicode calls them non-spacing marks and they sit above the letter, so they probably should be `mark` with `advWidth: 0` (like Devanagari `ं`). Needs the author's call.
+
+- [ ] **S13 Telugu: two zero-width glyphs classed as base.** U+E03A and `、` have `advWidth: 0` but `glyphClass: "base"`, so they export with a gap (the same slip as Devanagari `ं`).
+
+- [ ] **S14 Tutorial: attachment rule for `N`.** `markAttachment` mentions `N`, which the Tutorial script doesn't contain; the rule is never used. Harmless; remove it or add `N`.
+
+  *(S9–S14 come from a data check over all 20 scripts; the 7 European scripts came out clean.)*
 
 ---
 

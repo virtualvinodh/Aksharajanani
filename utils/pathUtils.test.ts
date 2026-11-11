@@ -44,3 +44,17 @@ describe('pathUtils', () => {
         });
     });
 });
+
+describe('simplifyPath with closed loops', () => {
+    it('keeps the shape of a stroke that ends where it started', async () => {
+        const { simplifyPath } = await import('./pathUtils');
+        const loop = Array.from({ length: 37 }, (_, i) => {
+            const a = (i / 36) * 2 * Math.PI;
+            return { x: 500 + 100 * Math.cos(a), y: 500 + 100 * Math.sin(a) };
+        });
+        const out = simplifyPath(loop, 0.5);
+        expect(out.length).toBeGreaterThan(8);
+        expect(out[0]).toEqual(loop[0]);
+        expect(out[out.length - 1]).toEqual(loop[loop.length - 1]);
+    });
+});

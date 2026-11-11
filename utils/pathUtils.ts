@@ -8,7 +8,10 @@ const getPerpendicularDistance = (point: Point, lineStart: Point, lineEnd: Point
   const { x: x2, y: y2 } = lineEnd;
   const numerator = Math.abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1);
   const denominator = Math.sqrt(Math.pow(y2 - y1, 2) + Math.pow(x2 - x1, 2));
-  return denominator === 0 ? 0 : numerator / denominator;
+  // A stroke that ends where it started (a closed loop like "o") has a zero-length chord. Measure
+  // from that point instead; returning 0 here discarded every point, collapsing the loop to 2 points.
+  if (denominator === 0) return Math.sqrt(Math.pow(x0 - x1, 2) + Math.pow(y0 - y1, 2));
+  return numerator / denominator;
 };
 
 export const simplifyPath = (points: Point[], epsilon: number): Point[] => {

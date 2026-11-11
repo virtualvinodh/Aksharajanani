@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Output of the tools/ scripts (screenshots, fonts, videos, browser profiles)
+tools/out/
+tools/**/out/
+
+# End-to-end test recordings (large; kept out of git)
+videos/
