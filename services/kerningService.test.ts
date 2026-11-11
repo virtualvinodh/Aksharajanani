@@ -1,58 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
-import { doBBoxesCollide, calculateAutoKerning } from './kerningService';
+import { calculateAutoKerning } from './kerningService';
 import { Character, FontMetrics, GlyphData } from '../types';
-import { BBox } from './glyphRenderService';
-
-describe('kerningService', () => {
-    describe('doBBoxesCollide', () => {
-        it('returns false if either box is null', () => {
-            const box: BBox = { minX: 0, maxX: 10, minY: 0, maxY: 10 };
-            expect(doBBoxesCollide(null, box)).toBe(false);
-            expect(doBBoxesCollide(box, null)).toBe(false);
-        });
-
-        it('detects overlapping boxes', () => {
-            const boxA: BBox = { minX: 0, maxX: 10, minY: 0, maxY: 10 };
-            const boxB: BBox = { minX: 5, maxX: 15, minY: 5, maxY: 15 };
-            expect(doBBoxesCollide(boxA, boxB)).toBe(true);
-        });
-
-        it('detects boxes contained within another', () => {
-             const boxA: BBox = { minX: 0, maxX: 20, minY: 0, maxY: 20 };
-             const boxB: BBox = { minX: 5, maxX: 15, minY: 5, maxY: 15 };
-             expect(doBBoxesCollide(boxA, boxB)).toBe(true);
-        });
-
-        it('returns false for non-overlapping boxes (horizontal separation)', () => {
-            const boxA: BBox = { minX: 0, maxX: 10, minY: 0, maxY: 10 };
-            const boxB: BBox = { minX: 11, maxX: 20, minY: 0, maxY: 10 };
-            expect(doBBoxesCollide(boxA, boxB)).toBe(false);
-        });
-
-        it('returns false for non-overlapping boxes (vertical separation)', () => {
-            const boxA: BBox = { minX: 0, maxX: 10, minY: 0, maxY: 10 };
-            const boxB: BBox = { minX: 0, maxX: 10, minY: 11, maxY: 20 };
-            expect(doBBoxesCollide(boxA, boxB)).toBe(false);
-        });
-        
-        it('returns false if boxes just touch (based on < > logic)', () => {
-            // Logic is !(boxA.maxX < boxB.minX ...). If maxX == minX, it's NOT <, so it evaluates to true (collision).
-            // Note: In many physics engines touching is collision.
-            // Let's verify the implementation: !(10 < 10) is true. So touching is collision.
-            const boxA: BBox = { minX: 0, maxX: 10, minY: 0, maxY: 10 };
-            const boxB: BBox = { minX: 10, maxX: 20, minY: 0, maxY: 10 };
-            expect(doBBoxesCollide(boxA, boxB)).toBe(true); 
-        });
-        
-        it('returns false for strictly separated boxes', () => {
-             const boxA: BBox = { minX: 0, maxX: 10, minY: 0, maxY: 10 };
-             // Shifted far away
-             const boxB: BBox = { minX: 100, maxX: 110, minY: 100, maxY: 110 };
-             expect(doBBoxesCollide(boxA, boxB)).toBe(false);
-        });
-    });
-});
 
 describe('calculateAutoKerning', () => {
     const metrics: FontMetrics = {
@@ -88,5 +37,21 @@ describe('calculateAutoKerning', () => {
         const o = { paths: [line(450, 500, 550, 500), line(450, 620, 550, 620), line(450, 500, 450, 620), line(550, 500, 550, 620)] };
         const k = (await kern(T, o))!;
         expect(k).toBeLessThan(0);
+    });
+
+    // V and E as drawn by the e2e test (canvas units): the V is wide at the top, narrow at the bottom.
+    const V = { paths: [line(370, 260, 500, 660), line(500, 660, 630, 260)] };
+    const E = { paths: [line(610, 260, 390, 260), line(390, 260, 390, 660), line(390, 660, 610, 660), line(390, 460, 570, 460)] };
+    const A = { paths: [line(370, 660, 500, 260), line(500, 260, 630, 660), line(420, 530, 580, 530)] };
+
+    it("doesn't pull an E into the top of a V (K18)", async () => {
+        // The old zone boxes only kept the gap at x-height, so the E slid in until the tops touched (-145).
+        const k = (await kern(V, E))!;
+        expect(k).toBeGreaterThan(-20);
+    });
+
+    it('still tucks a V and an A together', async () => {
+        expect((await kern(A, V))!).toBeLessThan(-100);
+        expect((await kern(V, A))!).toBeLessThan(-100);
     });
 });

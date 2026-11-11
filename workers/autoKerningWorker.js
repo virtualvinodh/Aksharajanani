@@ -2,8 +2,9 @@
 //
 // A bundled module worker, started with new Worker(new URL(..., import.meta.url), { type: "module" }).
 // It used to be a string turned into a blob URL that loaded paper.js 0.12.17 from cdnjs at runtime;
-// it now imports the paper.js version bundled with the app. The code below is otherwise unchanged.
+// it now imports the paper.js version bundled with the app, and the pair solver from utils/inkProfile.ts.
 import paper from "paper";
+import { getInkProfile, solveKernFromProfiles } from "../utils/inkProfile";
 
 
 // --- Math & Geometry Helpers (Inlined for Worker) ---
@@ -206,16 +207,6 @@ const getGlyphSubBBoxes = (glyphData, baselineY, toplineY, strokeThickness) => {
     };
 };
 
-const doBBoxesCollide = (boxA, boxB) => {
-    if (!boxA || !boxB) return false;
-    return !(
-        boxA.maxX < boxB.minX ||
-        boxA.minX > boxB.maxX ||
-        boxA.maxY < boxB.minY ||
-        boxA.minY > boxB.maxY
-    );
-};
-
 // Zones (sub-bounding boxes) depend only on the glyph, so compute each glyph's once per batch
 // instead of once per pair: discovery checks up to n^2 pairs, and every computation rebuilds
 // and flattens paper.js paths. Callers only read the returned boxes, so sharing is safe.
@@ -228,72 +219,32 @@ const makeZoneCache = (metrics, strokeThickness) => {
 };
 
 // --- Solver Logic ---
-const solvePair = (leftGlyph, rightGlyph, metrics, leftRsb, rightLsb, targetDistance, zonesFor) => {
+// Same rule as calculateAutoKerning (services/kerningService.ts), from the same code: every band
+// where both glyphs have ink keeps at least the target gap (K18). Zones are still used above to
+// pick candidate pairs, and for each glyph's full box (what its advance is built from).
+const makeProfileCache = (strokeThickness) => {
+    const cache = new Map();
+    return (glyph) => {
+        if (!cache.has(glyph)) cache.set(glyph, getInkProfile(glyph, strokeThickness));
+        return cache.get(glyph);
+    };
+};
+
+const solvePair = (leftGlyph, rightGlyph, metrics, leftRsb, rightLsb, targetDistance, zonesFor, profileFor) => {
     const leftBoxes = zonesFor(leftGlyph);
     const rightBoxes = zonesFor(rightGlyph);
-
     if (!leftBoxes || !rightBoxes || !leftBoxes.full || !rightBoxes.full) return 0;
-    
-    // Binary Search
-    let low = -Math.round(metrics.unitsPerEm / 2); 
-    let high = 0; 
-    let bestK = 0; 
-    
-    // Fallback or explicit target distance
-    const effectiveTarget = targetDistance !== null ? targetDistance : (leftRsb + rightLsb);
-
-    // Same rules as calculateAutoKerning (services/kerningService.ts): glyphs that share no height
-    // aren't kerned, and the right glyph never starts before the left one (otherwise a narrow glyph
-    // jumps clean past a narrow neighbour and the search runs on to the limit).
-    const L = leftBoxes.full, R = rightBoxes.full;
-    if (!(L.minY <= R.maxY && R.minY <= L.maxY)) return 0;
-
-    while (low <= high) {
-        const kMid = Math.floor((low + high) / 2);
-        
-        // X position of right glyph in the test configuration
-        const rightStartX = leftBoxes.full.maxX + leftRsb + rightLsb + kMid;
-        const deltaX = rightStartX - rightBoxes.full.minX;
-        
-        // Translate right boxes
-        const rBoxAscenderT = rightBoxes.ascender ? { ...rightBoxes.ascender, minX: rightBoxes.ascender.minX + deltaX, maxX: rightBoxes.ascender.maxX + deltaX } : null;
-        const rBoxXHeightT = rightBoxes.xHeight ? { ...rightBoxes.xHeight, minX: rightBoxes.xHeight.minX + deltaX, maxX: rightBoxes.xHeight.maxX + deltaX } : null;
-        const rBoxDescenderT = rightBoxes.descender ? { ...rightBoxes.descender, minX: rightBoxes.descender.minX + deltaX, maxX: rightBoxes.descender.maxX + deltaX } : null;
-
-        let isInvalid = false;
-        
-        // Collision Check
-        if (rightBoxes.full.minX + deltaX < leftBoxes.full.minX) {
-            isInvalid = true;
-        } else if (doBBoxesCollide(leftBoxes.ascender, rBoxAscenderT) || doBBoxesCollide(leftBoxes.descender, rBoxDescenderT)) {
-            isInvalid = true;
-        } else if (rBoxXHeightT && leftBoxes.xHeight) {
-            const currentGap = rBoxXHeightT.minX - leftBoxes.xHeight.maxX;
-            if (currentGap < effectiveTarget) {
-                isInvalid = true; 
-            }
-        } else {
-             const rBoxFullT = { ...rightBoxes.full, minX: rightBoxes.full.minX + deltaX, maxX: rightBoxes.full.maxX + deltaX };
-             if (doBBoxesCollide(leftBoxes.full, rBoxFullT)) {
-                isInvalid = true;
-            }
-        }
-
-        if (isInvalid) {
-            low = kMid + 1; // Too tight, need less negative
-        } else {
-            bestK = kMid;
-            high = kMid - 1; // Try tighter
-        }
-    }
-    return bestK;
-}
+    const target = targetDistance !== null ? targetDistance : (leftRsb + rightLsb);
+    return solveKernFromProfiles(profileFor(leftGlyph), profileFor(rightGlyph), leftBoxes.full, rightBoxes.full,
+        leftRsb, rightLsb, target, metrics.unitsPerEm);
+};
 
 // --- Main Calculation ---
 self.onmessage = async (e) => {
     const { batchId, type, pairs, glyphDataMap, metrics, strokeThickness, allGlyphDefs, shouldCalculateValues } = e.data;
     const results = {}; // Map<string, number> as obj
     const zonesFor = makeZoneCache(metrics, strokeThickness);
+    const profileFor = makeProfileCache(strokeThickness);
 
     try {
         if (type === 'discover') {
@@ -363,7 +314,7 @@ self.onmessage = async (e) => {
                             const rightGlyph = glyphDataMap[R.unicode];
                             if (leftGlyph && rightGlyph) {
                                 if (shouldCalculateValues) {
-                                     const k = solvePair(leftGlyph, rightGlyph, metrics, L.rsb, R.lsb, null, zonesFor);
+                                     const k = solvePair(leftGlyph, rightGlyph, metrics, L.rsb, R.lsb, null, zonesFor, profileFor);
                                      if (k <= -10) { // Threshold to ignore micro-adjustments
                                          results[`${L.unicode}-${R.unicode}`] = k;
                                      }
@@ -395,7 +346,7 @@ self.onmessage = async (e) => {
                 const rightGlyph = glyphDataMap[rightId];
 
                 if (leftGlyph && rightGlyph) {
-                    const bestK = solvePair(leftGlyph, rightGlyph, metrics, leftRsb, rightLsb, targetDistance, zonesFor);
+                    const bestK = solvePair(leftGlyph, rightGlyph, metrics, leftRsb, rightLsb, targetDistance, zonesFor, profileFor);
                     if (bestK <= 0) {
                         results[`${leftId}-${rightId}`] = bestK;
                     }

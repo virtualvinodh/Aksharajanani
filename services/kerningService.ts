@@ -1,29 +1,8 @@
 
 import { Character, CharacterSet, GlyphData, FontMetrics, RecommendedKerning } from '../types';
 import { expandMembers } from './groupExpansionService';
-import { getGlyphSubBBoxes, BBox } from './glyphRenderService';
-
-/**
- * A simple geometric check to see if two rectangular bounding boxes overlap.
- * @param boxA The first bounding box.
- * @param boxB The second bounding box.
- * @returns True if the boxes intersect, false otherwise.
- */
-export const doBBoxesCollide = (boxA: BBox | null, boxB: BBox | null): boolean => {
-    if (!boxA || !boxB) return false;
-    // Boxes do NOT collide if one is entirely to the left, right, top, or bottom of the other.
-    // If none of these conditions are true, they must be colliding.
-    return !(
-        boxA.maxX < boxB.minX ||
-        boxA.minX > boxB.maxX ||
-        boxA.maxY < boxB.minY ||
-        boxA.minY > boxB.maxY
-    );
-};
-
-
-/** Whether two boxes overlap vertically (share any height). */
-export const sharesRows = (a: BBox, b: BBox): boolean => a.minY <= b.maxY && b.minY <= a.maxY;
+import { getAccurateGlyphBBox } from './glyphRenderService';
+import { getInkProfile, solveKernFromProfiles, InkProfile } from '../utils/inkProfile';
 
 export interface KerningGroupContext {
     groups: Record<string, string[]>;
@@ -68,35 +47,22 @@ export const resolveRecommendedTarget = (
  * Calculates optically-pleasing kerning values for a list of character pairs.
  * 
  * --- HOW IT WORKS ---
- * This is not a simple bounding box collision algorithm. It's designed to be smarter by
- * understanding the vertical structure of glyphs to achieve better visual spacing.
- * 
- * 1.  **Vertical Zoning:** Each glyph is divided into three vertical zones:
- *     - Ascender Zone: The area above the x-height (e.g., the top of 'h', 'd').
- *     - X-Height Zone: The main body of lowercase letters (e.g., 'a', 'x', 'n'). This is the most
- *       visually important area for kerning.
- *     - Descender Zone: The area below the baseline (e.g., the tail of 'g', 'p').
- * 
- * 2.  **Target Distance:** The algorithm first determines the ideal minimum gap between the glyphs
- *     in the crucial x-height zone. This target is determined in two ways:
- *     - **Rule-Based:** If a `recommendedKerning` rule exists for the pair, its value is used as the target:
- *       - `['T', 'o', 20]`: The target gap is 20 font units.
- *       - `['A', 'V', 'lsb']`: The target gap is the right glyph's Left Side Bearing.
- *       - **`['V', 'A', 0]`**: A value of `0` is a special case. It instructs the algorithm to kern the
- *         pair until their x-height bounding boxes are just touching (a gap of 0).
- *     - **Default:** If no rule exists, it defaults to the sum of the left glyph's Right Side Bearing (RSB)
- *       and the right glyph's Left Side Bearing (LSB). This provides a sensible baseline spacing.
- * 
- * 3.  **Collision Avoidance & Gap Enforcement:**
- *     - The algorithm uses a binary search to efficiently find the tightest possible kerning value.
- *     - For each tested kerning value, it checks for "hard collisions" in the ascender and descender zones.
- *       This prevents tall or low parts of letters from crashing into each other.
- *     - Crucially, it then checks the gap in the x-height zone. If this gap is smaller than the
- *       `targetDistance`, the kerning is considered too tight, even if there's no hard collision. This allows
- *       for pleasing overlaps, like the arm of a 'T' over an 'o', while maintaining proper spacing in the main body.
- * 
- * 4.  **Performance:** The process can be intensive. To prevent UI freezing, it reports progress
- *     and yields to the main thread periodically using `setTimeout`.
+ * 1.  **Ink band by band:** each glyph is cut into thin horizontal bands, noting where its ink
+ *     starts and ends in each (see utils/inkProfile.ts).
+ *
+ * 2.  **Target distance:** the gap the pair must keep.
+ *     - **Rule-based:** a `recommendedKerning` rule for the pair sets it:
+ *       `['T', 'o', 20]` keeps 20 units; `['A', 'V', 'lsb']` keeps the right glyph's LSB;
+ *       `['V', 'A', 0]` kerns until the glyphs touch.
+ *     - **Default:** the left glyph's RSB plus the right glyph's LSB, i.e. the normal space
+ *       between two letters.
+ *
+ * 3.  **The kerning:** the right glyph moves as close as it can while every band where both
+ *     glyphs have ink keeps at least the target distance. Bands where only one has ink don't
+ *     count, so the arm of a T still reaches over an o, while a V never touches an E (K18).
+ *     It never goes past half an em, and the right glyph never starts before the left one.
+ *
+ * 4.  **Performance:** it reports progress and yields to the main thread every few pairs.
  *
  * @param pairsToKern An array of character pairs to process.
  * @param glyphDataMap A map containing the drawing data for all glyphs.
@@ -117,6 +83,8 @@ export async function calculateAutoKerning(
 ): Promise<Map<string, number>> {
 
     const newKerningMap = new Map<string, number>();
+    const profiles = new Map<GlyphData, InkProfile>();
+    const profileOf = (g: GlyphData) => { let pr = profiles.get(g); if (!pr) { pr = getInkProfile(g, strokeThickness); profiles.set(g, pr); } return pr; };
     const totalPairs = pairsToKern.length;
     if (totalPairs === 0) {
         onProgress(100);
@@ -131,14 +99,12 @@ export async function calculateAutoKerning(
 
         if (!leftGlyph || !rightGlyph) continue;
 
-        // Get the bounding boxes for the vertical zones (ascender, x-height, descender) of each glyph.
-        const leftBoxes = getGlyphSubBBoxes(leftGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
-        const rightBoxes = getGlyphSubBBoxes(rightGlyph, metrics.baseLineY, metrics.topLineY, strokeThickness);
+        // Each glyph's full ink box (what its advance is built from) and its ink band by band.
+        const leftBox = getAccurateGlyphBBox(leftGlyph.paths, strokeThickness);
+        const rightBox = getAccurateGlyphBBox(rightGlyph.paths, strokeThickness);
+        if (!leftBox || !rightBox) continue;
 
-        // We need the full bounding boxes to proceed.
-        if (!leftBoxes || !rightBoxes || !leftBoxes.full || !rightBoxes.full) continue;
-
-        // --- Step 1: Determine the target distance for the x-height gap. ---
+        // --- Step 1: Determine the target distance. ---
         let targetDistance: number;
         const recommended = resolveRecommendedTarget(leftChar, rightChar, recommendedKerning, metrics, groupContext);
 
@@ -153,68 +119,15 @@ export async function calculateAutoKerning(
             targetDistance = rsbL + lsbR;
         }
 
-        // --- Step 2: Use binary search to find the optimal kerning value efficiently. ---
-        // 'low' is the maximum possible negative kerning, 'high' is no kerning.
-        let low = -Math.round(metrics.unitsPerEm / 2);
-        let high = 0;
-        let bestK = 0; // The best valid kerning value found so far.
+        // --- Step 2: The tightest kerning that keeps every band where both glyphs have ink at
+        // least targetDistance apart (K18). Comparing whole zones instead let a V's narrow
+        // bottom hide its wide top, so V E was kerned until the two touched.
+        const bestK = solveKernFromProfiles(
+            profileOf(leftGlyph), profileOf(rightGlyph),
+            { minX: leftBox.x, maxX: leftBox.x + leftBox.width }, { minX: rightBox.x, maxX: rightBox.x + rightBox.width },
+            leftChar.rsb ?? metrics.defaultRSB, rightChar.lsb ?? metrics.defaultLSB, targetDistance, metrics.unitsPerEm
+        );
 
-        // Glyphs that share no height at all (an accent above, a comma below) have nothing to measure
-        // a gap against; tucking one under the other is never what a kerning pair is for.
-        if (!sharesRows(leftBoxes.full, rightBoxes.full)) low = 1; // skip the search; bestK stays 0
-
-        while (low <= high) {
-            const kMid = Math.floor((low + high) / 2);
-            
-            // Calculate the starting X position of the right glyph's content area based on the current kerning value (kMid).
-            const rightStartX = leftBoxes.full.maxX + (leftChar.rsb ?? metrics.defaultRSB) + (rightChar.lsb ?? metrics.defaultLSB) + kMid;
-            // Calculate how much the right glyph needs to be shifted from its original position.
-            const deltaX = rightStartX - rightBoxes.full.minX;
-            
-            // Create temporary, translated bounding boxes for the right glyph's zones.
-            const rBoxAscenderT = rightBoxes.ascender ? { ...rightBoxes.ascender, minX: rightBoxes.ascender.minX + deltaX, maxX: rightBoxes.ascender.maxX + deltaX } : null;
-            const rBoxXHeightT = rightBoxes.xHeight ? { ...rightBoxes.xHeight, minX: rightBoxes.xHeight.minX + deltaX, maxX: rightBoxes.xHeight.maxX + deltaX } : null;
-            const rBoxDescenderT = rightBoxes.descender ? { ...rightBoxes.descender, minX: rightBoxes.descender.minX + deltaX, maxX: rightBoxes.descender.maxX + deltaX } : null;
-
-            let isInvalid = false;
-            // --- Step 3: Check for hard collisions and gap violations. ---
-            // The right glyph may tuck under the left one but never start before it. Without this the
-            // search isn't valid: a narrow glyph pushed far enough jumps clean past a narrow neighbour,
-            // stops colliding, and the search runs on to the limit (e.g. ! " kerned by half an em).
-            if (rightBoxes.full.minX + deltaX < leftBoxes.full.minX) {
-                isInvalid = true;
-            // Then check for definite collisions in the less critical ascender and descender areas.
-            } else if (doBBoxesCollide(leftBoxes.ascender, rBoxAscenderT) || doBBoxesCollide(leftBoxes.descender, rBoxDescenderT)) {
-                isInvalid = true;
-            } else if (rBoxXHeightT && leftBoxes.xHeight) {
-                // If no hard collisions, check the visually important x-height gap.
-                const currentGap = rBoxXHeightT.minX - leftBoxes.xHeight.maxX;
-                // The kerning is too tight if the actual gap is less than our desired target.
-                if (currentGap < targetDistance) {
-                    isInvalid = true; 
-                }
-            } else {
-                // FIX: Fallback logic for glyphs without x-height content was flawed.
-                // The old logic incorrectly compared the full bounding box gap (which includes side bearings)
-                // against the target distance, effectively preventing any negative kerning.
-                // The corrected logic simply checks for a hard collision between the full bounding boxes,
-                // which is a more robust fallback.
-                const rBoxFullT = { ...rightBoxes.full, minX: rightBoxes.full.minX + deltaX, maxX: rightBoxes.full.maxX + deltaX };
-                if (doBBoxesCollide(leftBoxes.full, rBoxFullT)) {
-                    isInvalid = true;
-                }
-            }
-
-            if (isInvalid) {
-                // This kerning value is too small (too negative). We need to search in the upper half.
-                low = kMid + 1;
-            } else {
-                // This kerning value is valid. Store it as the best so far and try to find an even tighter (more negative) value.
-                bestK = kMid;
-                high = kMid - 1;
-            }
-        }
-        
         // Store the value if it's negative or zero. A zero value indicates the default spacing is optimal,
         // but we store it to mark the pair as officially 'kerned'.
         if (bestK <= 0) {
