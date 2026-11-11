@@ -76,6 +76,8 @@ A user can see or hit these. All ⚠ items are here.
     - Imported non-spacing marks are shifted to xMin=0, which breaks base GPOS anchors in edit mode.
     - mkmk anchors add the base's LSB even when the base is a zero-width mark.
   - **Fix:** gate the zero-advance rule on `advWidth === 0` alone, don't re-shift imported outlines, and use LSB 0 for zero-advance bases.
+  - **Partly fixed (data):** the first bullet was a data slip, not a code problem. In `data/characters_devanagari.json`, `ं` (U+0902) was `glyphClass: "base"` with `advWidth: 0`, while its neighbour `ँ` is a `mark`, Unicode calls it a non-spacing mark, and the positioning rules use it as a mark. It is now a `mark`. Export check (क + ं): advance 414 → 0, GDEF class base → mark, mark positioning (GPOS type 4) unchanged. A scan of all scripts found no other non-spacing mark classed as base except Malayalam `ു ൂ ൃ ൄ`, which look deliberate (spacing in reformed orthography), so they were left alone.
+  - **Still open (no decision needed):** the edit-mode re-shift of imported zero-width marks, and the mkmk base-LSB offset.
 
 - [x] **E8 Newer Indic script tags are missing** (confirmed by reading)
   - **Where:** `data/indicScripts.json`; `feaService.ts` 176–177, 232–233.
