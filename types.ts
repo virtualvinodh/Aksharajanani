@@ -227,6 +227,12 @@ export interface ProjectData {
   // Although fontRules contains groups, we sometimes track them separately in UI state
   groups?: Record<string, string[]>; 
   guideFont?: GuideFont;
+  /**
+   * The script configuration the project was made with, minus its character sets (stored in
+   * `characterSets`). Lets projects of scripts the app doesn't ship (Custom Script Loader) be
+   * reopened (P2).
+   */
+  scriptConfig?: ScriptConfig;
 }
 
 export interface ProjectSnapshot {

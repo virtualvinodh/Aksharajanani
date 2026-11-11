@@ -39,6 +39,16 @@ const getDb = (): Promise<IDBPDatabase> => {
                     snapshotStore.createIndex('timestamp', 'timestamp', { unique: false });
                 }
             },
+            // A newer version of the app opened the database in another tab (P3). Close this
+            // connection so its upgrade isn't stuck, and ask this tab to reload.
+            blocking() {
+                dbPromise?.then(db => db.close()).catch(() => {});
+                dbPromise = null;
+                window.dispatchEvent(new CustomEvent('aksharajanani:db-upgrade-blocked'));
+            },
+            terminated() {
+                dbPromise = null;
+            },
         });
     }
     return dbPromise;

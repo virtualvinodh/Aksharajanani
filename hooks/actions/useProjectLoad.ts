@@ -75,7 +75,7 @@ export const useProjectLoad = ({
         scriptRef.current = script;
     }, [script]);
 
-    const initializeProjectState = useCallback(async (projectToLoad: ProjectData | null) => {
+    const initializeProjectState = useCallback(async (projectToLoad: ProjectData | null, options?: { treatAsUnsaved?: boolean }) => {
         const currentScript = scriptRef.current;
         if (!currentScript) return;
 
@@ -356,7 +356,8 @@ export const useProjectLoad = ({
                 rulesDispatch({ type: 'SET_FEA_EDIT_MODE', payload: isFeaOnly ? true : (projectToLoad.isFeaEditMode ?? false) });
                 rulesDispatch({ type: 'SET_MANUAL_FEA_CODE', payload: isFeaOnly ? (feaFileData || '') : (projectToLoad.manualFeaCode ?? '') });
                 const { projectId: _loadedProjectId, savedAt: _savedAt, ...loadedState } = projectToLoad;
-                setLastSavedState(JSON.stringify(loadedState));
+                // A restored snapshot is not what's stored, so it must not count as saved (P5).
+                setLastSavedState(options?.treatAsUnsaved ? '' : JSON.stringify(loadedState));
                 setProjectName(projectToLoad.name || projectToLoad.settings.fontName);
                 
                 // Restore Edit Mode

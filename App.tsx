@@ -172,7 +172,9 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
       openSaveAsModal,
       handleCreatorClick,
       startExportProcess,
-      handleLoadProjectData
+      handleLoadProjectData,
+      isProjectTabOwner,
+      takeOverProjectTab
   } = appActions;
   
   const mainContainerRef = useRef<HTMLElement>(null);
@@ -368,6 +370,12 @@ const App: React.FC<AppProps> = ({ allScripts, onBackToSelection, onShowAbout, o
             /></Suspense>
        ) : (
            <>
+               {!isProjectTabOwner && (
+                   <div role="alert" className="fixed bottom-0 inset-x-0 z-[95] bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-100 border-t border-yellow-300 dark:border-yellow-700 px-4 py-3 flex flex-wrap items-center justify-center gap-3 text-sm">
+                       <span>{t('projectOpenInAnotherTab')}</span>
+                       <button onClick={takeOverProjectTab} className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700">{t('useThisTab')}</button>
+                   </div>
+               )}
                <AppHeader
                 script={script}
                 settings={settings}

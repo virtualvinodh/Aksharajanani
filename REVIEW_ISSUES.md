@@ -40,10 +40,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** derive the import mapping from the same formula as export: `y_canvas = 1000 - (y - desc)/k`.
   - **Fixed:** import is now the exact inverse of the export transform (k = (asc − desc)/canvas; baseline/top line derived from it), and bearings are converted to canvas units; the left bearing is taken from the outline's left edge. Checked in the browser with a test font (UPM 1000, asc 900, desc −300): `A` [50,0,550,700] adv 600 came back as [0,180,600,1020] adv 1320 on the old build, and [50,0,550,700] adv 600 now (`g` within 1 unit).
 
-- [ ] **E3 ⚠ Edit mode forces UPM to 1000 but keeps the base font's GPOS units** (confirmed by reading)
+- [x] **E3 ⚠ Edit mode forces UPM to 1000 but keeps the base font's GPOS units** (confirmed by reading)
   - **Where:** `importFontService.ts` 47–51; `pythonFontService.ts` 178–213.
   - **Problem:** outlines and `head` are rescaled to 1000 UPM, while `patch_font` keeps the base font's GSUB/GPOS/GDEF values in their original units. Editing a 2048-UPM font makes all kerning and anchors about 2× too large.
   - **Fix:** in edit mode keep the original UPM at scale 1, or scale GPOS on patch (e.g. `fontTools.ttLib.scaleUpem`).
+  - **Fixed:** (author's choice: keep the original units) edit mode imports at the font's own units-per-em instead of 1000, so outlines, metrics and the kept GSUB/GPOS/GDEF stay in one unit system; new fonts built from an import still use 1000. Checked with Trebuchet MS Italic (2048 UPM, GPOS kerning), shaped with HarfBuzz: the old build exported a 1000-UPM font whose 'AV' advances were [485, 461] (kerning effectively doubled); now UPM 2048 with 'AV' [1125, 1077] and 'To' within 2 units of the original.
 
 - [x] **E4 ⚠ Edit-mode `patch_font` can crash or corrupt the cmap** (confirmed)
   - **Where:** `pythonFontService.ts` 180, 192–205.
@@ -54,12 +55,13 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** merge per glyph name into the base hmtx and cmap, and skip PUA code points that came from `isPuaAssigned`.
   - **Fixed:** `glyf` (TrueType) and `hmtx` are merged per glyph name into the base instead of being replaced, and the cmap is merged into the base's (secondary code points kept; PUA codes not already in the base left out; a format-12 table is added if needed). Checked with fontTools on Andale Mono and a CFF delta missing some glyphs: the old code failed with `KeyError 'exclam'`; now it patches, keeps untouched glyphs, keeps U+00B7/U+2219 on one glyph, and no PUA code leaks. (E3, the UPM mismatch, is still open.)
 
-- [ ] **E5 ⚠ FEA class-name sanitising breaks or silently changes features** (confirmed with feaLib)
+- [x] **E5 ⚠ FEA class-name sanitising breaks or silently changes features** (confirmed with feaLib)
   - **Where:** `services/feaService.ts` 14, 425, 442.
   - **Problem:** `sanitizeIdentifier` strips non-ASCII characters and doesn't de-duplicate.
     - A group named `உயிர்` emits `@ = [...]`. feaLib fails, and the font ships with no GSUB or GPOS.
     - A user group named like a character set (e.g. `consonants`) is emitted twice, and the set's definition wins.
   - **Fix:** map names to unique ASCII identifiers (e.g. with a hash suffix), namespace character-set classes, and keep names to 63 characters or fewer.
+  - **Fixed:** (author's choice) `feaIdentifier` (tested): valid ASCII names are kept unchanged; other names become stable ASCII built from code points (e.g. `உயிர்` → `n_x0B89_x0BAF_x0BBF_x0BB0_x0BCD`), so different names stay different; names over 63 characters get a hash. Lookup names and `$`/`@` references use the same function. A group with the same name as a character set now overrides it instead of both being emitted. Checked: feaLib rejects the old stripped `@` and accepts the new name; in the browser, a Tamil project whose Vowels set was renamed `உயிர்` failed with "OpenType Feature Error" on the old build and exports normally now.
 
 - [x] **E6 ⚠ Lookup flags produce invalid or partial FEA** (confirmed)
   - **Where:** `feaService.ts` 642–648, 732–737, 753–758.
@@ -94,10 +96,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** use `char.advWidth` when set; otherwise 0 for Cf characters and the space width for Zs.
   - **Fixed:** undrawn glyphs use `getBlankAdvanceWidth` (`utils/glyphUtils.ts`, tested): a width stored on the character (e.g. from an imported font) wins; format and control characters get 0 (tab and CR get the space width); spaces get their usual em fraction (em space 1000, thin 200, hair 100…) or the space width. Exporting a General Punctuation project: 38 blank characters went from 800 to their proper widths; the drawn glyph, space, ZWJ and ZWNJ are unchanged.
 
-- [ ] **E10 Kerning only in `dist`, under a single `languagesystem`** (likely; depends on the renderer)
+- [x] **E10 Kerning only in `dist`, under a single `languagesystem`** (likely; depends on the renderer)
   - **Where:** `feaService.ts` ~318, ~899, ~946.
   - **Problem:** there's no `kern` feature and no `languagesystem DFLT dflt;`. Latin projects may lose kerning in apps that only apply `kern`, and Latin digits and punctuation in Indic fonts get no positioning.
   - **Fix:** emit pairs in `kern` for non-Indic scripts, and add DFLT.
+  - **Fixed:** (author's choice) non-Indic projects put spacing in `kern` instead of `dist` (not both, which HarfBuzz would apply twice); Indic projects keep `dist`. Projects whose script isn't DFLT also get `languagesystem DFLT dflt;` first, so characters outside the main script (Latin, digits, punctuation) are covered. Checked in the browser: an English project with an A–V kern exports GPOS with a `kern` feature, and HarfBuzz applies it ('AV' first advance 786 → 666).
 
 ---
 
@@ -286,12 +289,13 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** create the worker once and read `layout`/`t` through refs. Memoize the LayoutContext value.
   - **Fixed:** the cascade worker is created once; `layout`, `t` and the dispatcher are read through refs. Checked in the browser with the linked `கி` (க + ி): on the old build its stored drawing was never written (so it was missing from exports); now it is written and updated when க is edited. (Memoizing the LayoutContext value is a separate, broader change, not done.)
 
-- [ ] **P2 ⚠ Custom Script Loader projects can never be reopened** (confirmed by code path)
+- [x] **P2 ⚠ Custom Script Loader projects can never be reopened** (confirmed by code path)
   - **Where:** `components/ScriptSelection.tsx` 243–299, 538–544; `components/CustomScriptLoader.tsx` 66.
   - **Problem:** the script keeps the uploaded `id` (e.g. `"grantha"`), but `handleProjectClick` only rebuilds configs for `custom_blocks_`/`project_` IDs. The dashboard shows "Could not find script configuration…" and the data is stranded.
   - **Fix:** prefix custom IDs, store the full ScriptConfig in ProjectData, and fall back to a generic rebuild.
+  - **Fixed:** (author's choice) projects store their script configuration (minus the character sets, which are already saved) in `scriptConfig`; reopening falls back to it for scripts the app doesn't ship, including from a project file. Custom Script Loader scripts get a `custom_` id so they can't clash with a built-in script. Checked in the browser: a project for an unknown script id could not be reopened on the old build and opens now.
 
-- [ ] **P3 ⚠ No multi-tab or DB-version coordination** (confirmed: the handling is absent)
+- [x] **P3 ⚠ No multi-tab or DB-version coordination** (confirmed: the handling is absent)
   - **Where:** `services/dbService.ts` 13–61.
   - **Problem:**
     - `updateProject` is a blind `put`, so two tabs on one project erase each other's work, and a project deleted in one tab is recreated by another tab's autosave.
@@ -304,6 +308,7 @@ A user can see or hit these. All ⚠ items are here.
     2. warning, and the second tab doesn't save, with a "Use this tab instead" button that moves saving to it (recommended);
     3. the second tab refuses to open the project.
   - **Waiting for:** the author's choice of option.
+  - **Fixed:** (author's choice: option 2) `hooks/useProjectTabLock.ts`: the tab holding the project's Web Lock saves; another tab opening the same project shows a banner ("This project is open in another tab… Changes made here won't be saved") and doesn't save. "Use this tab instead" asks the owner (BroadcastChannel) to save and let go; the new owner reloads the stored project first, then saves. A tab also takes over by itself when the other tab closes. The database now closes its connection and asks for a reload when a newer version of the app needs to upgrade it. Checked in the browser with two tabs: warning in the second tab only, its edits don't overwrite, hand-over moves the warning, and the new owner keeps the first tab's work. Browsers without Web Locks behave as before.
 
 - [x] **P4 "Unsaved changes" flag turns on again after every save and load** (confirmed)
   - **Where:** `hooks/actions/useProjectPersistence.ts` ~78–90.
@@ -311,10 +316,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** derive dirtiness from an edit counter compared against the counter at save time.
   - **Fixed:** any edit schedules a short exact comparison with the last saved state, and the flag follows it; saves and loads no longer switch it back on. Checked in the browser in manual mode: the old build kept the marker after Save, now it clears.
 
-- [ ] **P5 Snapshot restore marked as saved, so it is silently undone** (likely)
+- [x] **P5 Snapshot restore marked as saved, so it is silently undone** (likely)
   - **Where:** `hooks/actions/useProjectLoad.ts` ~366; `hooks/useAppActions.ts` 229–238.
   - **Problem:** after a restore, `lastSavedState` is set to the restored data, so no save happens and the DB keeps the pre-restore version.
   - **Fix:** for restores, set `lastSavedState` to null or save immediately.
+  - **Fixed:** (author's choice) a restored snapshot is loaded as unsaved and saved straight after it renders. Checked in the browser: after restoring, work drawn after the snapshot is gone from the database and stays gone after reopening. (The old build passed this too, but only because of the P4 bug, which kept re-marking projects as unsaved after every load.)
 
 - [x] **P6 Loading is destructive before validation; a failed load can autosave junk** (likely)
   - **Where:** `useProjectLoad.ts` 65–68, ~347.

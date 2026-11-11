@@ -47,7 +47,11 @@ export const extractProjectData = async (
     baseFontBinary?: Uint8Array
 ): Promise<ProjectData> => {
     
-    const scale = 1000 / font.unitsPerEm;
+    // Edit mode keeps the font's own units (E3): the original GSUB/GPOS/GDEF are kept as they
+    // are, so rescaling the outlines to 1000 left kerning and anchors in the old units (about 2×
+    // too large for a 2048-unit font). A new font built from an import uses 1000 units.
+    const targetUnitsPerEm = isEditMode ? font.unitsPerEm : 1000;
+    const scale = targetUnitsPerEm / font.unitsPerEm;
     const ascender = Math.round(font.ascender * scale);
     const descender = Math.round(font.descender * scale);
 
@@ -63,14 +67,14 @@ export const extractProjectData = async (
     const capHeight = (font.tables?.os2?.sCapHeight ? font.tables.os2.sCapHeight * scale : ascender * 0.7);
 
     const metrics: FontMetrics = {
-        unitsPerEm: 1000,
+        unitsPerEm: targetUnitsPerEm,
         ascender,
         descender,
-        defaultAdvanceWidth: 800,
+        defaultAdvanceWidth: Math.round(0.8 * targetUnitsPerEm),
         topLineY: Math.round(toCanvasY(capHeight)),
         baseLineY: baseLineY,
         styleName: 'Regular',
-        spaceAdvanceWidth: 400,
+        spaceAdvanceWidth: Math.round(0.4 * targetUnitsPerEm),
         defaultLSB: 50,
         defaultRSB: 50
     };

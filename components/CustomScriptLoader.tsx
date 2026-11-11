@@ -66,6 +66,8 @@ const CustomScriptLoader: React.FC<CustomScriptLoaderProps> = ({ onBack, onSelec
 
             const customScriptConfig: ScriptConfig = {
                 ...baseScript,
+                // Never share an id with a built-in script, or its projects would reopen as that script.
+                id: String(baseScript.id || 'script').startsWith('custom_') ? baseScript.id : `custom_${baseScript.id || 'script'}`,
                 characterSetData: [
                     ...charactersContent,
                     ...positioningContent,

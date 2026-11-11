@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useKerning } from '../../contexts/KerningContext';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -13,7 +13,9 @@ import { ProjectData } from '../../types';
 
 export const useProjectPersistence = (
     initialProjectId: number | undefined, 
-    isScriptDataLoading: boolean
+    isScriptDataLoading: boolean,
+    /** False while another tab has this project open and saves it (P3). */
+    canSaveRef?: React.MutableRefObject<boolean>
 ) => {
     const { t } = useLocale();
     const layout = useLayout();
@@ -86,7 +88,13 @@ export const useProjectPersistence = (
             
             // Edit Mode
             isEditMode,
-            baseFontBinary
+            baseFontBinary,
+
+            // Self-contained script configuration (P2); character sets are already saved above.
+            scriptConfig: {
+                ...script,
+                characterSetData: script.characterSetData?.filter(d => !('characters' in d)),
+            },
         };
     }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, guideFont, glyphVersion, isEditMode, baseFontBinary]);
 
@@ -120,6 +128,7 @@ export const useProjectPersistence = (
     hasUnsavedRulesRef.current = hasUnsavedRules;
     layoutRef.current = layout;
     const runSave = useCallback(async (): Promise<boolean> => {
+        if (canSaveRef && !canSaveRef.current) return false;
         const currentStateObj = getProjectStateRef.current();
         if (!currentStateObj) return false;
 
@@ -160,7 +169,7 @@ export const useProjectPersistence = (
             layoutRef.current.showNotification("Error saving project to database.", 'error');
             return false;
         }
-    }, [rulesDispatch, setProjectId, setLastSavedState]);
+    }, [rulesDispatch, setProjectId, setLastSavedState, canSaveRef]);
 
     // Saves are queued: a save requested while another runs starts after it, with the latest state.
     const saveChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
@@ -242,6 +251,16 @@ export const useProjectPersistence = (
         }
     }, [isScriptDataLoading, getProjectState, lastSavedState, setLastSavedState]);
 
+    // Save once the state from a just-applied load (e.g. a snapshot restore) has rendered; saving
+    // straight away would read the state from before it (P5).
+    const [pendingSave, setPendingSave] = useState(false);
+    const requestSaveAfterRender = useCallback(() => setPendingSave(true), []);
+    useEffect(() => {
+        if (!pendingSave || isScriptDataLoading) return;
+        setPendingSave(false);
+        saveProjectToDB();
+    }, [pendingSave, isScriptDataLoading, saveProjectToDB]);
+
     // Resolves to true once saved, so "save and continue" actions can stop if the save failed.
     const handleSaveToDB = useCallback(async (): Promise<boolean> => {
         const ok = await saveProjectToDB();
@@ -257,6 +276,7 @@ export const useProjectPersistence = (
         getProjectState,
         hasUnsavedChanges,
         saveProjectToDB,
+        requestSaveAfterRender,
         handleSaveToDB
     };
 };

@@ -8,6 +8,7 @@ import { ScriptConfig, ProjectData } from '../types';
 
 import { useGlyphData } from '../contexts/GlyphDataContext';
 import { mergeFontIntoProject } from '../services/importFontService';
+import { useProjectTabLock } from './useProjectTabLock';
 import { useProjectPersistence } from './actions/useProjectPersistence';
 import { useGlyphActions } from './actions/useGlyphActions';
 import { useProjectLoad } from './actions/useProjectLoad';
@@ -47,6 +48,8 @@ export const useAppActions = ({
     } = useProject();
     
     const dependencyMap = useRef<Map<number, Set<number>>>(new Map());
+    // Whether this tab may save the open project (another tab may have it, P3).
+    const canSaveRef = useRef(true);
     const [isScriptDataLoadingState, setIsScriptDataLoadingState] = useState(true);
 
     const refreshDependencyMap = useCallback(() => {
@@ -88,8 +91,8 @@ export const useAppActions = ({
     // 2. Persistence Hook
     const {
         projectId, setProjectId, setLastSavedState, getProjectState,
-        hasUnsavedChanges, handleSaveToDB
-    } = useProjectPersistence(projectDataToRestore?.projectId, isScriptDataLoadingState);
+        hasUnsavedChanges, handleSaveToDB, requestSaveAfterRender, saveProjectToDB
+    } = useProjectPersistence(projectDataToRestore?.projectId, isScriptDataLoadingState, canSaveRef);
 
     const handleMergeImportedFont = useCallback((importedProject: ProjectData) => {
         const currentProjectState = getProjectState();
@@ -141,6 +144,23 @@ export const useAppActions = ({
     React.useEffect(() => {
         initializeProjectState(projectDataToRestore);
     }, [projectDataToRestore, initializeProjectState]);
+
+    // One tab per project saves (P3).
+    const { isOwner: isProjectTabOwner, takeOver: takeOverProjectTab } = useProjectTabLock(projectId, {
+        beforeRelease: () => saveProjectToDB(),
+        afterTakeOver: async () => {
+            if (projectId === undefined) return;
+            const latest = await dbService.getProject(projectId);
+            if (latest) await initializeProjectState(latest);
+        },
+    });
+    canSaveRef.current = isProjectTabOwner;
+
+    useEffect(() => {
+        const onUpgradeBlocked = () => layout.showNotification(t('dbUpgradeBlocked'), 'info', { duration: 60000 });
+        window.addEventListener('aksharajanani:db-upgrade-blocked', onUpgradeBlocked);
+        return () => window.removeEventListener('aksharajanani:db-upgrade-blocked', onUpgradeBlocked);
+    }, [layout, t]);
 
     // 5. Export Actions Hook
     const {
@@ -214,14 +234,17 @@ export const useAppActions = ({
     
     const handleRestoreAction = useCallback(async (data: ProjectData) => {
         try {
-            initializeProjectState(data);
+            // Restoring is a deliberate choice, so save it right away (P5); it used to be marked as
+            // already saved, so the database kept the version from before the restore.
+            await initializeProjectState(data, { treatAsUnsaved: true });
+            requestSaveAfterRender();
             layout.showNotification(t('snapshotRestoredSuccess'), 'info');
             layout.closeModal();
         } catch (error) {
              console.error("Failed to restore snapshot:", error);
              layout.showNotification(t('snapshotRestoreFailed'), 'error');
         }
-    }, [initializeProjectState, layout, t]);
+    }, [initializeProjectState, requestSaveAfterRender, layout, t]);
 
     const handleRestoreSnapshot = useCallback(() => {
         if (hasSnapshot && projectId) {
@@ -267,6 +290,8 @@ export const useAppActions = ({
     };
 
     return {
+        isProjectTabOwner,
+        takeOverProjectTab,
         isScriptDataLoading,
         scriptDataError,
         hasUnsavedChanges,

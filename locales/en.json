@@ -954,5 +954,8 @@
 	"errorRuleOutputExists": "Another rule here already produces “{name}”. Edit that rule instead, or choose a different result.",
 	"kerningTabSuggestions": "Suggestions",
 	"kerningTabSpaced": "Spaced",
-	"kerningTabKerned": "Kerned"
+	"kerningTabKerned": "Kerned",
+	"projectOpenInAnotherTab": "This project is open in another tab, which saves it. Changes made here won’t be saved.",
+	"useThisTab": "Use this tab instead",
+	"dbUpgradeBlocked": "Aksharajanani was updated in another tab. Reload this tab to keep saving."
 }

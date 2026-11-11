@@ -277,6 +277,15 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
     const handleProjectClick = (project: ProjectData) => {
         let scriptToLoad = scripts.find(s => s.id === project.scriptId);
 
+        // Scripts the app doesn't ship (e.g. from the Custom Script Loader) reopen from the
+        // configuration stored in the project (P2).
+        if (!scriptToLoad && project.scriptConfig) {
+            scriptToLoad = {
+                ...project.scriptConfig,
+                characterSetData: [...(project.characterSets || []), ...(project.scriptConfig.characterSetData || [])],
+            };
+        }
+
         if (!scriptToLoad && project.scriptId?.startsWith('custom_blocks_')) {
             if (!customScriptTemplate || !project.metrics || !project.characterSets) {
                 showNotification('Could not load custom project: template or essential data missing.', 'error');
@@ -565,7 +574,7 @@ const ScriptSelection: React.FC<ScriptSelectionProps> = ({ scripts, onSelectScri
                     const scriptToLoad = scripts.find(s => s.id === projectData.scriptId);
                     if (scriptToLoad) {
                         onSelectScript(scriptToLoad, projectData);
-                    } else if (projectData.scriptId.startsWith('custom_') || projectData.scriptId.startsWith('project_')) {
+                    } else if (projectData.scriptConfig || projectData.scriptId.startsWith('custom_') || projectData.scriptId.startsWith('project_')) {
                          // Handle custom scripts loaded from file
                          handleProjectClick(projectData);
                     } else {
