@@ -35,7 +35,7 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
 
     const useKerningTerm = !!settings.preferKerningTerm;
     const progressTextKey = useKerningTerm ? "kerningProgress" : "spacingProgress";
-    const spacedTabLabel = useKerningTerm ? "Kerned" : "Spaced";
+    const spacedTabLabel = useKerningTerm ? t('kerningTabKerned') : t('kerningTabSpaced');
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -53,7 +53,7 @@ const KerningWorkspace: React.FC<KerningWorkspaceProps> = (props) => {
                                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                         }`}
                     >
-                        Suggestions
+                        {t('kerningTabSuggestions')}
                     </button>
                     <button
                         onClick={() => setActiveTab('spaced')}

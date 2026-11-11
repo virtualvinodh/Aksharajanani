@@ -951,5 +951,8 @@
 	"errorScreenReload": "Reload",
 	"errorScreenDetails": "Details",
 	"glyphNotInProject": "“{name}” isn’t in this project",
-	"errorRuleOutputExists": "Another rule here already produces “{name}”. Edit that rule instead, or choose a different result."
+	"errorRuleOutputExists": "Another rule here already produces “{name}”. Edit that rule instead, or choose a different result.",
+	"kerningTabSuggestions": "Suggestions",
+	"kerningTabSpaced": "Spaced",
+	"kerningTabKerned": "Kerned"
 }

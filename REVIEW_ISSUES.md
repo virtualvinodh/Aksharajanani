@@ -452,10 +452,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Where:** `locales/tutorial/ta.json`; `components/TutorialManager.tsx`.
   - **Problem:** keys such as `relinkExpl`, `kerningNav`, `compositeTools` and `hintKerning*` are missing. Those steps render empty tooltips, and some have `hideFooter: true`.
   - **Fix:** fall back to English per key, and add the keys.
-  - **Fixed:** tutorial strings fall back to English per key (`components/tutorial/tutorialTranslations.ts`, tested). The 15 keys still need Tamil translations.
+  - **Fixed:** tutorial strings fall back to English per key (`components/tutorial/tutorialTranslations.ts`, tested). The 15 keys are now translated (see U4).
 
-- [ ] **U4 Locale gaps in `ta.json`** (confirmed)
+- [x] **U4 Locale gaps in `ta.json`** (confirmed)
   - **Problem:** 15 keys are missing (they fall back to English, e.g. `copySelection`, `pasteSelection`, `ignorePair`). Three placeholder mismatches: `linkedGlyphLocked` drops `{components}`, `mismatchedScriptError` drops `{currentScript}`, and `mismatchedScriptMessage` drops both.
+  - **Fixed:** all missing Tamil strings added (22 older ones, plus the error screen, "not in this project" and rule-clash messages added in this review), and the three placeholder mismatches fixed (`linkedGlyphLocked`, `mismatchedScriptError`, `mismatchedScriptMessage` now carry their full meaning and placeholders). The 15 missing tutorial lines (U3) are translated too. The Spacing tabs "Suggestions" / "Spaced" / "Kerned" were hard-coded English and are now translatable, so the Tamil tutorial refers to labels that actually appear. `npm run check:translations` reports nothing missing; checked in the browser in Tamil. The wording is the reviewer's and should be read by a Tamil speaker.
 
 - [x] **U5 Tour and hint text shows raw markdown** (e.g. `**Pen Tool**`) (confirmed in the browser)
   - **Fixed:** one shared renderer (`utils/formattedText.tsx`, tested) for bold, italic and code in the tour, hints, Help and About; it replaced 23+ places that inserted locale text as raw HTML. The two notifications that still showed `**` now render bold too (`renderFormattedText` takes a bold class for coloured backgrounds).
