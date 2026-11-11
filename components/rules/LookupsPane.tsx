@@ -5,6 +5,7 @@ import { useLayout } from '../../contexts/LayoutContext';
 import { AddIcon, EditIcon, SaveIcon, TrashIcon } from '../../constants';
 import RuleEditor, { RuleType } from '../RuleEditor';
 import ExistingRuleDisplay from './ExistingRuleDisplay';
+import { formatLookupFlags } from '../../services/feaService';
 import { Character, CharacterSet, GlyphData } from '../../types';
 
 interface LookupsPaneProps {
@@ -199,7 +200,7 @@ const LookupsPane: React.FC<LookupsPaneProps> = ({
                                         <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-md text-sm">
                                             <h4 className="font-bold mb-1 text-blue-800 dark:text-blue-200">Lookup Flags</h4>
                                             <pre className="font-mono text-xs text-blue-700 dark:text-blue-300 whitespace-pre-wrap">
-                                                {Object.entries(lookupData.lookupflags).map(([flag, value]) => `lookupflag ${flag} ${value};`).join('\n')}
+                                                {formatLookupFlags(lookupData.lookupflags, '').trim()}
                                             </pre>
                                         </div>
                                     )}

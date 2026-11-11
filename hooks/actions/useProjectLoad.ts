@@ -1,6 +1,7 @@
 
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { validateProjectData } from '../../utils/projectValidation';
 import { useProject } from '../../contexts/ProjectContext';
 import { useGlyphData } from '../../contexts/GlyphDataContext';
 import { useKerning } from '../../contexts/KerningContext';
@@ -65,6 +66,10 @@ export const useProjectLoad = ({
     const [isFeaOnlyMode, setIsFeaOnlyMode] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Read through a ref: `layout` changes on every render, and initializeProjectState must stay
+    // stable or the effect that calls it would reload the project again and again.
+    const layoutRef = useRef(layout);
+    layoutRef.current = layout;
     const scriptRef = useRef(script);
     useEffect(() => {
         scriptRef.current = script;
@@ -73,6 +78,15 @@ export const useProjectLoad = ({
     const initializeProjectState = useCallback(async (projectToLoad: ProjectData | null) => {
         const currentScript = scriptRef.current;
         if (!currentScript) return;
+
+        // Reject a broken project before anything is cleared (P6).
+        if (projectToLoad) {
+            const problem = validateProjectData(projectToLoad);
+            if (problem) {
+                layoutRef.current.showNotification(t('errorLoadingProject', { error: problem }), 'error');
+                return;
+            }
+        }
 
         setIsScriptDataLoading(true);
         setScriptDataError(null);
@@ -399,7 +413,10 @@ export const useProjectLoad = ({
             try {
                 // The file's projectId is the exporting browser's local IndexedDB key. Never reuse it:
                 // adopting it would make the next autosave overwrite whichever local project has that id.
-                const { projectId: _fileProjectId, ...projectData }: ProjectData = safeJsonParse<ProjectData>(event.target?.result as string);
+                const parsed = safeJsonParse<ProjectData>(event.target?.result as string);
+                const problem = validateProjectData(parsed);
+                if (problem) throw new Error(problem);
+                const { projectId: _fileProjectId, ...projectData }: ProjectData = parsed;
                 const currentScript = scriptRef.current;
                 
                 if (projectData.scriptId && projectData.scriptId !== currentScript?.id && !projectData.characterSets) {
@@ -420,13 +437,13 @@ export const useProjectLoad = ({
         reader.readAsText(file);
     }, [initializeProjectState, layout, t, allScripts]);
 
-    const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, hasUnsavedChanges: boolean, handleSaveToDB: () => void) => {
+    const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, hasUnsavedChanges: boolean, handleSaveToDB: () => Promise<boolean>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (hasUnsavedChanges) {
             layout.openModal('confirmLoadProject', {
                 onConfirm: () => processFile(file),
-                onSaveAndConfirm: () => { handleSaveToDB(); processFile(file); },
+                onSaveAndConfirm: async () => { if (await handleSaveToDB()) processFile(file); },
                 confirmActionText: t('loadWithoutSaving'),
                 saveAndConfirmActionText: t('saveAndLoad')
             });

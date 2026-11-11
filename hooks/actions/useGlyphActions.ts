@@ -12,6 +12,7 @@ import { isGlyphDrawn } from '../../utils/glyphUtils';
 import { generateCompositeGlyphData, getAccurateGlyphBBox, calculateDefaultMarkOffset } from '../../services/glyphRenderService';
 import * as dbService from '../../services/dbService';
 import { deepClone } from '../../utils/cloneUtils';
+import { findCharacterLocations, restoreCharacters, pairEntriesInvolving } from '../../utils/undoHelpers';
 import { useRules } from '../../contexts/RulesContext';
 import { expandMembers } from '../../services/groupExpansionService';
 
@@ -84,34 +85,43 @@ export const useGlyphActions = (
     }, []);
 
     // --- Worker Lifecycle Management ---
-    useEffect(() => {
-        cascadeWorker = new Worker(new URL('../../workers/cascadeWorker.js', import.meta.url), { type: 'module' });
+    // The worker is created once. It used to depend on `layout` (a new object on every layout
+    // change, e.g. each notification), so it was terminated and recreated constantly, and a save's
+    // re-bake job was dropped before the worker could answer (P1). Read the latest values via refs.
+    const layoutRef = useRef(layout);
+    const tRef = useRef(t);
+    const glyphDataDispatchRef = useRef(glyphDataDispatch);
+    layoutRef.current = layout;
+    tRef.current = t;
+    glyphDataDispatchRef.current = glyphDataDispatch;
 
-        cascadeWorker.onmessage = (event) => {
+    useEffect(() => {
+        const worker = new Worker(new URL('../../workers/cascadeWorker.js', import.meta.url), { type: 'module' });
+        cascadeWorker = worker;
+
+        worker.onmessage = (event) => {
             const { type, payload, error } = event.data;
             if (type === 'complete') {
                 const { updates, silent } = payload;
                 if (isMounted.current && updates.length > 0) {
-                    glyphDataDispatch({ type: 'BATCH_UPDATE_GLYPHS', payload: updates });
+                    glyphDataDispatchRef.current({ type: 'BATCH_UPDATE_GLYPHS', payload: updates });
                 }
                  if (isMounted.current && !silent) {
-                    layout.showNotification(t('saveGlyphSuccess'));
+                    layoutRef.current.showNotification(tRef.current('saveGlyphSuccess'));
                  }
             } else if (type === 'error') {
                 console.error("Cascade worker failed:", error);
                 if (isMounted.current) {
-                    layout.showNotification(`Error updating dependents: ${error}`, 'error');
+                    layoutRef.current.showNotification(`Error updating dependents: ${error}`, 'error');
                 }
             }
         };
 
         return () => {
-            if (cascadeWorker) {
-                cascadeWorker.terminate();
-                cascadeWorker = null;
-            }
+            worker.terminate();
+            if (cascadeWorker === worker) cascadeWorker = null;
         };
-    }, [glyphDataDispatch, layout, t]);
+    }, []);
     
     // --- Auto-Kern Trigger Logic ---
     const triggerAutoKernForChar = useCallback((unicode: number) => {
@@ -294,23 +304,32 @@ export const useGlyphActions = (
         if (script?.isImportedFont) return;
         const charToDelete = allCharsByUnicode.get(unicode); if (!charToDelete) return;
         
-        const glyphDataSnapshot = new Map(glyphDataMap);
-        const characterSetsSnapshot = deepClone(characterSets);
-        const kerningSnapshot = new Map(kerningMap);
-        const positioningSnapshot = new Map(markPositioningMap);
-        const dependencySnapshot = new Map(dependencyMap.current);
-        
+        // Undo puts back only what this delete removed or changed (P13): the glyph, its character,
+        // its kerning/positioning pairs, and its dependents' drawings and links. Later edits stay.
+        const dependents = dependencyMap.current.get(unicode);
+        const dependentUnicodes = dependents ? Array.from(dependents) : [];
+        const removedChars = findCharacterLocations(characterSets, new Set([unicode]));
+        const removedKerning = pairEntriesInvolving(kerningMap, new Set([unicode]));
+        const removedPositioning = pairEntriesInvolving(markPositioningMap, new Set([unicode]));
+        const glyphsToRestore: [number, GlyphData][] = [unicode, ...dependentUnicodes]
+            .filter(u => glyphDataMap.has(u))
+            .map(u => [u, deepClone(glyphDataMap.get(u)!)]);
+        const dependentFields = new Map<number, Partial<Character>>();
+        dependentUnicodes.forEach(u => {
+            const c = allCharsByUnicode.get(u);
+            if (c) dependentFields.set(u, { link: c.link, composite: c.composite, compositeTransform: c.compositeTransform, sourceLink: c.sourceLink });
+        });
+        const dependencyEntry = dependents ? new Set(dependents) : undefined;
+
         const undo = () => {
-            glyphDataDispatch({ type: 'SET_MAP', payload: glyphDataSnapshot });
-            characterDispatch({ type: 'SET_CHARACTER_SETS', payload: characterSetsSnapshot });
-            kerningDispatch({ type: 'SET_MAP', payload: kerningSnapshot });
-            positioningDispatch({ type: 'SET_MAP', payload: positioningSnapshot });
-            dependencyMap.current = dependencySnapshot;
+            if (glyphsToRestore.length > 0) glyphDataDispatch({ type: 'BATCH_UPDATE_GLYPHS', payload: glyphsToRestore });
+            characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: prev => restoreCharacters(prev, removedChars, dependentFields) });
+            if (removedKerning.size > 0) kerningDispatch({ type: 'BATCH_UPDATE', payload: removedKerning });
+            if (removedPositioning.size > 0) positioningDispatch({ type: 'MERGE_ENTRIES', payload: removedPositioning });
+            if (dependencyEntry) dependencyMap.current.set(unicode, dependencyEntry);
         };
 
-        const dependents = dependencyMap.current.get(unicode);
-        if (dependents && dependents.size > 0) {
-            const dependentUnicodes = Array.from(dependents);
+        if (dependentUnicodes.length > 0) {
             const batchUpdates: [number, GlyphData][] = [];
             
             dependentUnicodes.forEach((depUni: number) => {

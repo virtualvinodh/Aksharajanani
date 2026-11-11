@@ -38,10 +38,23 @@ export const useProjectPersistence = (
         guideFont
     } = useProject();
 
-    const [projectId, setProjectId] = useState<number | undefined>(initialProjectId);
-    const [lastSavedState, setLastSavedState] = useState<string | null>(null);
+    const [projectId, setProjectIdState] = useState<number | undefined>(initialProjectId);
+    const [lastSavedState, setLastSavedStateValue] = useState<string | null>(null);
     
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+    // Saves run one after another and must see the newest id / saved state immediately (not
+    // after the next render), or a second Ctrl+S on a new project would add it twice (P7).
+    const projectIdRef = useRef<number | undefined>(initialProjectId);
+    const lastSavedStateRef = useRef<string | null>(null);
+    const setProjectId = useCallback((id: number | undefined) => {
+        projectIdRef.current = id;
+        setProjectIdState(id);
+    }, []);
+    const setLastSavedState = useCallback((value: string | null) => {
+        lastSavedStateRef.current = value;
+        setLastSavedStateValue(value);
+    }, []);
 
     // Update: Include all structural definitions in the saved project state
     const getProjectState = useCallback((): Omit<ProjectData, 'projectId' | 'savedAt'> | null => {
@@ -77,28 +90,43 @@ export const useProjectPersistence = (
         };
     }, [script, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, glyphDataMap, kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, projectName, positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, guideFont, glyphVersion, isEditMode, baseFontBinary]);
 
+    // Unsaved-changes flag (P4). It used to be switched on by any change to its trigger list, which
+    // included lastSavedState itself, so every save or load turned it straight back on. Now any
+    // edit schedules an exact comparison with what was last saved, and the flag follows that.
+    const getProjectStateRef = useRef(getProjectState);
+    const isScriptDataLoadingRef = useRef(isScriptDataLoading);
+    getProjectStateRef.current = getProjectState;
+    isScriptDataLoadingRef.current = isScriptDataLoading;
+    const dirtyCheckTimer = useRef<number | null>(null);
     useEffect(() => {
-        if (!isScriptDataLoading && lastSavedState !== null) {
-            setHasUnsavedChanges(true);
-        }
+        if (dirtyCheckTimer.current) clearTimeout(dirtyCheckTimer.current);
+        dirtyCheckTimer.current = window.setTimeout(() => {
+            if (isScriptDataLoadingRef.current || lastSavedStateRef.current === null) return;
+            const state = getProjectStateRef.current();
+            setHasUnsavedChanges(!!state && JSON.stringify(state) !== lastSavedStateRef.current);
+        }, 300);
+        return () => { if (dirtyCheckTimer.current) clearTimeout(dirtyCheckTimer.current); };
     }, [
-        // Trigger dependencies
-        // glyphDataMap is a ref, so it's stable. glyphVersion changes on update.
+        // glyphDataMap is mutated in place; glyphVersion changes on update.
         glyphVersion, 
         kerningMap, suggestedKerningMap, ignoredPairs, markPositioningMap, settings, metrics, characterSets, fontRules, isFeaEditMode, manualFeaCode, projectName,
         positioningRules, markAttachmentRules, markAttachmentClasses, baseAttachmentClasses, recommendedKerning, guideFont,
-        // Logic dependencies
-        isScriptDataLoading, lastSavedState
+        isScriptDataLoading
     ]);
 
-    const saveProjectToDB = useCallback(async () => {
-        const currentStateObj = getProjectState();
-        if (!currentStateObj) return;
+    // One save attempt. Resolves to true when the project is saved (or nothing had changed).
+    const hasUnsavedRulesRef = useRef(hasUnsavedRules);
+    const layoutRef = useRef(layout);
+    hasUnsavedRulesRef.current = hasUnsavedRules;
+    layoutRef.current = layout;
+    const runSave = useCallback(async (): Promise<boolean> => {
+        const currentStateObj = getProjectStateRef.current();
+        if (!currentStateObj) return false;
 
         const currentStateString = JSON.stringify(currentStateObj);
-        if (currentStateString === lastSavedState) {
+        if (currentStateString === lastSavedStateRef.current) {
             setHasUnsavedChanges(false);
-            return;
+            return true;
         }
 
         const currentState = {
@@ -107,7 +135,7 @@ export const useProjectPersistence = (
         };
 
         try {
-            let currentProjectId = projectId;
+            let currentProjectId = projectIdRef.current;
             if (currentProjectId === undefined) {
                 const newId = await dbService.addProject(currentState);
                 setProjectId(newId);
@@ -122,26 +150,32 @@ export const useProjectPersistence = (
             }
 
             setLastSavedState(currentStateString);
-            setHasUnsavedChanges(false);
-            if (hasUnsavedRules) rulesDispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: false });
+            // Edits made while the save was running stay marked as unsaved.
+            const latest = getProjectStateRef.current();
+            setHasUnsavedChanges(!!latest && JSON.stringify(latest) !== currentStateString);
+            if (hasUnsavedRulesRef.current) rulesDispatch({ type: 'SET_HAS_UNSAVED_RULES', payload: false });
+            return true;
         } catch (error) {
             console.error("Failed to save project to DB:", error);
-            layout.showNotification("Error saving project to database.", 'error');
+            layoutRef.current.showNotification("Error saving project to database.", 'error');
+            return false;
         }
-    }, [projectId, getProjectState, lastSavedState, hasUnsavedRules, rulesDispatch, layout]);
+    }, [rulesDispatch, setProjectId, setLastSavedState]);
+
+    // Saves are queued: a save requested while another runs starts after it, with the latest state.
+    const saveChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
+    const saveProjectToDB = useCallback((): Promise<boolean> => {
+        const next = saveChainRef.current.catch(() => false).then(() => runSave());
+        saveChainRef.current = next;
+        return next;
+    }, [runSave]);
 
     // Latest values for timers and window event handlers, so they never act on stale state
     // and don't need to be re-armed whenever these callbacks change identity.
     const saveProjectToDBRef = useRef(saveProjectToDB);
-    const getProjectStateRef = useRef(getProjectState);
-    const lastSavedStateRef = useRef(lastSavedState);
     const isAutosaveEnabledRef = useRef(!!settings?.isAutosaveEnabled);
-    const isScriptDataLoadingRef = useRef(isScriptDataLoading);
     saveProjectToDBRef.current = saveProjectToDB;
-    getProjectStateRef.current = getProjectState;
-    lastSavedStateRef.current = lastSavedState;
     isAutosaveEnabledRef.current = !!settings?.isAutosaveEnabled;
-    isScriptDataLoadingRef.current = isScriptDataLoading;
 
     // Autosave Effect
     // The timer is deliberately NOT re-armed when saveProjectToDB changes identity: it depends on
@@ -206,12 +240,14 @@ export const useProjectPersistence = (
                 setHasUnsavedChanges(false);
             }
         }
-    }, [isScriptDataLoading, getProjectState, lastSavedState]);
+    }, [isScriptDataLoading, getProjectState, lastSavedState, setLastSavedState]);
 
-    const handleSaveToDB = useCallback(async () => {
-        await saveProjectToDB();
-        layout.showNotification(t('projectSaved'));
-    }, [saveProjectToDB, layout, t]);
+    // Resolves to true once saved, so "save and continue" actions can stop if the save failed.
+    const handleSaveToDB = useCallback(async (): Promise<boolean> => {
+        const ok = await saveProjectToDB();
+        if (ok) layoutRef.current.showNotification(t('projectSaved'));
+        return ok;
+    }, [saveProjectToDB, t]);
 
     return {
         projectId,

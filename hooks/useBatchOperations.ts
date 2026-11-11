@@ -7,11 +7,12 @@ import { usePositioning } from '../contexts/PositioningContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { useLocale } from '../contexts/LocaleContext';
-import { Path, Point } from '../types';
+import { Path, Point, Character, GlyphData } from '../types';
 import { getAccurateGlyphBBox } from '../services/glyphRenderService';
 import { isGlyphDrawn } from '../utils/glyphUtils';
 import { VEC } from '../utils/vectorUtils';
 import { deepClone } from '../utils/cloneUtils';
+import { findCharacterLocations, restoreCharacters, pairEntriesInvolving } from '../utils/undoHelpers';
 
 // Helper Logic for Transformation
 export const transformGlyphPaths = (
@@ -78,8 +79,9 @@ export const useBatchOperations = () => {
         flipH: boolean, flipV: boolean,
         onComplete: () => void
     ) => {
-        const previousGlyphData = new Map(glyphDataMap);
-        const undo = () => glyphDataDispatch({ type: 'SET_MAP', payload: previousGlyphData });
+        // Undo restores only the transformed glyphs (P13).
+        const previousGlyphs: [number, GlyphData][] = [];
+        const undo = () => { if (previousGlyphs.length > 0) glyphDataDispatch({ type: 'BATCH_UPDATE_GLYPHS', payload: previousGlyphs }); };
 
         const newMap = new Map(glyphDataMap);
         const strokeThickness = settings?.strokeThickness || 15;
@@ -89,6 +91,7 @@ export const useBatchOperations = () => {
             const glyph = newMap.get(unicode);
             if (!glyph || !isGlyphDrawn(glyph)) return;
             const newPaths = transformGlyphPaths(glyph.paths, strokeThickness, scaleX, scaleY, rotation, flipH, flipV);
+            previousGlyphs.push([unicode, deepClone(glyph)]);
             newMap.set(unicode, { paths: newPaths });
             transformCount++;
         });
@@ -105,8 +108,12 @@ export const useBatchOperations = () => {
         newLSB: string, newRSB: string,
         onComplete: () => void
     ) => {
-        const previousCharSets = deepClone(characterSets);
-        const undo = () => characterDispatch({ type: 'SET_CHARACTER_SETS', payload: previousCharSets });
+        // Undo restores only the selected glyphs' bearings (P13).
+        const previousBearings = new Map<number, Partial<Character>>();
+        characterSets?.forEach(set => set.characters.forEach(c => {
+            if (c.unicode !== undefined && selectedUnicodes.has(c.unicode)) previousBearings.set(c.unicode, { lsb: c.lsb, rsb: c.rsb });
+        }));
+        const undo = () => characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: prev => restoreCharacters(prev, [], previousBearings) });
 
         const lsbVal = newLSB.trim() === '' ? undefined : parseInt(newLSB, 10);
         const rsbVal = newRSB.trim() === '' ? undefined : parseInt(newRSB, 10);
@@ -148,16 +155,19 @@ export const useBatchOperations = () => {
     ) => {
         if (selectedUnicodes.size === 0) return;
 
-        const glyphDataSnapshot = new Map(glyphDataMap);
-        const characterSetsSnapshot = deepClone(characterSets);
-        const kerningSnapshot = new Map(kerningMap);
-        const positioningSnapshot = new Map(markPositioningMap);
+        // Undo puts back only the deleted glyphs, characters and their pairs (P13).
+        const removedChars = findCharacterLocations(characterSets, selectedUnicodes);
+        const removedKerning = pairEntriesInvolving(kerningMap, selectedUnicodes);
+        const removedPositioning = pairEntriesInvolving(markPositioningMap, selectedUnicodes);
+        const glyphsToRestore: [number, GlyphData][] = Array.from(selectedUnicodes)
+            .filter(u => glyphDataMap.has(u))
+            .map(u => [u, deepClone(glyphDataMap.get(u)!)]);
 
         const undo = () => {
-            glyphDataDispatch({ type: 'SET_MAP', payload: glyphDataSnapshot });
-            characterDispatch({ type: 'SET_CHARACTER_SETS', payload: characterSetsSnapshot });
-            kerningDispatch({ type: 'SET_MAP', payload: kerningSnapshot });
-            positioningDispatch({ type: 'SET_MAP', payload: positioningSnapshot });
+            if (glyphsToRestore.length > 0) glyphDataDispatch({ type: 'BATCH_UPDATE_GLYPHS', payload: glyphsToRestore });
+            characterDispatch({ type: 'UPDATE_CHARACTER_SETS', payload: prev => restoreCharacters(prev, removedChars) });
+            if (removedKerning.size > 0) kerningDispatch({ type: 'BATCH_UPDATE', payload: removedKerning });
+            if (removedPositioning.size > 0) positioningDispatch({ type: 'MERGE_ENTRIES', payload: removedPositioning });
         };
 
         const newKerningMap = new Map(kerningMap);

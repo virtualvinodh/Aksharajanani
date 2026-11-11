@@ -13,6 +13,34 @@ import indicScriptsData from '../data/indicScripts.json';
 // Ensures class names follow the Adobe FEA spec: Alphanumeric, underscores, periods, hyphens. No spaces.
 const sanitizeIdentifier = (name: string) => name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
 
+const BOOLEAN_LOOKUP_FLAGS = new Set(['RightToLeft', 'IgnoreBaseGlyphs', 'IgnoreLigatures', 'IgnoreMarks']);
+const CLASS_LOOKUP_FLAGS = new Set(['UseMarkFilteringSet', 'MarkAttachmentType']);
+
+/**
+ * Turns a rules-file `lookupflags` object into one FEA statement, e.g.
+ * `{ IgnoreMarks: "true", UseMarkFilteringSet: "$virama" }` → `lookupflag IgnoreMarks UseMarkFilteringSet @virama;`.
+ * Boolean flags are bare names (feaLib rejects `IgnoreMarks true`), and every flag goes into a
+ * single statement, because each `lookupflag` statement replaces the previous one.
+ */
+export const formatLookupFlags = (flags: Record<string, unknown> | undefined, indent = '  '): string => {
+    if (!flags) return '';
+    const parts: string[] = [];
+    for (const [name, value] of Object.entries(flags)) {
+        if (BOOLEAN_LOOKUP_FLAGS.has(name)) {
+            const on = value === true || value === 1 || (typeof value === 'string' && !['false', '0', ''].includes(value.trim().toLowerCase()));
+            if (on) parts.push(name);
+        } else if (CLASS_LOOKUP_FLAGS.has(name)) {
+            const raw = typeof value === 'string' ? value.trim() : '';
+            const className = raw.replace(/^[@$]/, '');
+            if (className) parts.push(`${name} @${sanitizeIdentifier(className)}`);
+            else console.warn(`lookupflag ${name} needs a class name; ignored.`);
+        } else {
+            console.warn(`Unknown lookupflag "${name}" ignored.`);
+        }
+    }
+    return parts.length ? `${indent}lookupflag ${parts.join(' ')};\n` : '';
+};
+
 // Use ASCII-safe uniXXXX names, which fontService will also use.
 const getGlyphName = (char: Character | undefined): string | null => {
     if (!char || char.unicode === undefined) return null;
@@ -617,14 +645,7 @@ export const generateFea = (
                 const lookupBlock = lookups[lookupName];
                 let namedLookupContent = '';
 
-                if (lookupBlock.lookupflags) {
-                    for (const flagName in lookupBlock.lookupflags) {
-                        if (Object.prototype.hasOwnProperty.call(lookupBlock.lookupflags, flagName)) {
-                            const flagValue = lookupBlock.lookupflags[flagName];
-                            namedLookupContent += `  lookupflag ${flagName} ${flagValue};\n`;
-                        }
-                    }
-                }
+                namedLookupContent += formatLookupFlags(lookupBlock.lookupflags);
 
                 for (const ruleType in lookupBlock) {
                     if (Object.prototype.hasOwnProperty.call(lookupBlock, ruleType) && ruleGenerators[ruleType as keyof typeof ruleGenerators]) {
@@ -707,13 +728,7 @@ export const generateFea = (
                     const anonLookupName = `${featureTag}_inline_rules`;
                     
                     let lookupBody = '';
-                    if (featureData.lookupflags) {
-                        for (const flagName in featureData.lookupflags) {
-                             if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
-                                lookupBody += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
-                            }
-                        }
-                    }
+                    lookupBody += formatLookupFlags(featureData.lookupflags);
                     lookupBody += inlineContent;
                     
                     if (!allLookupDefinitions.includes(`lookup ${anonLookupName}`)) {
@@ -728,13 +743,7 @@ export const generateFea = (
                      let content = '';
                      
                      // Apply feature flags to auto-generated lookup too for consistency
-                     if (featureData.lookupflags) {
-                        for (const flagName in featureData.lookupflags) {
-                             if (Object.prototype.hasOwnProperty.call(featureData.lookupflags, flagName)) {
-                                content += `  lookupflag ${flagName} ${featureData.lookupflags[flagName]};\n`;
-                            }
-                        }
-                    }
+                     content += formatLookupFlags(featureData.lookupflags);
 
                      dynamicRules.forEach(r => {
                          const inputs = r.input.map(n => toFeaName(n)).filter(Boolean).join(' ');

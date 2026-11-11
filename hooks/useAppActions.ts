@@ -133,9 +133,10 @@ export const useAppActions = ({
         dependencyMap
     });
 
+    // A failed load counts as "not loaded" for saving: autosave must not write a half-loaded project (P6).
     React.useEffect(() => {
-        setIsScriptDataLoadingState(isScriptDataLoading);
-    }, [isScriptDataLoading]);
+        setIsScriptDataLoadingState(isScriptDataLoading || !!scriptDataError);
+    }, [isScriptDataLoading, scriptDataError]);
 
     React.useEffect(() => {
         initializeProjectState(projectDataToRestore);
@@ -155,7 +156,7 @@ export const useAppActions = ({
         if (hasUnsavedChanges) {
             layout.openModal('confirmChangeScript', {
                 onConfirm: onBackToSelection, 
-                onSaveAndConfirm: () => { handleSaveToDB(); onBackToSelection(); },
+                onSaveAndConfirm: async () => { if (await handleSaveToDB()) onBackToSelection(); },
                 confirmActionText: t('changeWithoutSaving'), 
                 saveAndConfirmActionText: t('saveAndChange')
             });

@@ -7,12 +7,18 @@ type PositioningState = {
 
 type PositioningAction =
     | { type: 'SET_MAP'; payload: MarkPositioningMap }
+    | { type: 'MERGE_ENTRIES'; payload: MarkPositioningMap }
     | { type: 'RESET' };
 
 const positioningReducer = (state: PositioningState, action: PositioningAction): PositioningState => {
     switch (action.type) {
         case 'SET_MAP':
             return { ...state, markPositioningMap: action.payload };
+        case 'MERGE_ENTRIES': {
+            const merged = new Map(state.markPositioningMap);
+            action.payload.forEach((value, key) => merged.set(key, value));
+            return { ...state, markPositioningMap: merged };
+        }
         case 'RESET':
             return { ...state, markPositioningMap: new Map() };
         default:

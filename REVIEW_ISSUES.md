@@ -28,10 +28,11 @@ A user can see or hit these. All ⚠ items are here.
 
 ## E: Font export and import
 
-- [ ] **E1 ⚠ Pyodide init failure hangs export and import forever** (confirmed)
+- [x] **E1 ⚠ Pyodide init failure hangs export and import forever** (confirmed)
   - **Where:** `services/pythonFontService.ts` ~413–516.
   - **Problem:** `init_error` and `worker.onerror` never reject `pyodideReadyPromise`, and `worker` is never reset. If the CDN or PyPI fails (e.g. offline, or `micropip.install('fontFeatures')` fails), every `compileFeaturesAndPatch`, `patchFont` and `extractFea` awaits forever. `ImportFontModal` awaits `extractFea` with its close button disabled, so the dialog can't be dismissed. If the worker crashes after it was ready, later requests go to a dead worker.
   - **Fix:** keep the reject function and reject on `init_error`/`onerror`; null out `worker` so it can restart; add a per-request timeout.
+  - **Fixed:** the worker is torn down on `init_error`, `onerror` or a 5-minute timeout: waiting requests fail with a clear message ("The font compiler could not start… Check your internet connection and try again") and the next export starts a fresh worker. Checked in the browser with the Pyodide/PyPI downloads blocked: the old build was still spinning after 40 s and couldn't export again; now the error appears in about 7 s, and exporting works once the network is back.
 
 - [ ] **E2 ⚠ Imported fonts come back rescaled and shifted** (confirmed)
   - **Where:** `services/importFontService.ts` 47–61, 129–136 vs `services/fontBuilder.ts` (outline transform).
@@ -58,12 +59,13 @@ A user can see or hit these. All ⚠ items are here.
     - A user group named like a character set (e.g. `consonants`) is emitted twice, and the set's definition wins.
   - **Fix:** map names to unique ASCII identifiers (e.g. with a hash suffix), namespace character-set classes, and keep names to 63 characters or fewer.
 
-- [ ] **E6 ⚠ Lookup flags produce invalid or partial FEA** (confirmed)
+- [x] **E6 ⚠ Lookup flags produce invalid or partial FEA** (confirmed)
   - **Where:** `feaService.ts` 642–648, 732–737, 753–758.
   - **Problem:** each flag is emitted as `lookupflag ${name} ${value};`.
     - The documented `{"IgnoreMarks":"true"}` (rules_json.md:225) becomes `lookupflag IgnoreMarks true;`, which feaLib rejects. That kills all features.
     - Several flags become separate statements, and only the last applies.
   - **Fix:** emit one `lookupflag A B UseMarkFilteringSet @x;` statement, treat boolean values as bare flag names, and map `$group` to `@group`.
+  - **Fixed:** one `lookupflag` statement per lookup (`formatLookupFlags` in `services/feaService.ts`, tested): boolean flags become bare names, `$group`/`@group` become `@group`, unknown flags are skipped. Checked with feaLib: the old `lookupflag IgnoreMarks true;` is rejected, the new forms compile. The shipped Kannada/Telugu `UseMarkFilteringSet @virama` output is unchanged (Kannada export identical apart from the `head` timestamp). The Rules screens show the same text.
 
 - [ ] **E7 Zero-width marks get wrong advances and anchors** (confirmed)
   - **Where:** `fontBuilder.ts` (zero-advance branch); `feaService.ts` ~857.
@@ -256,10 +258,11 @@ A user can see or hit these. All ⚠ items are here.
 
 ## P: Persistence and project lifecycle
 
-- [ ] **P1 ⚠ Cascade worker killed on every LayoutContext change, so baked dependent glyphs go stale** (confirmed: in the browser a save sent a job and the worker was restarted before it replied; run on its own, the worker re-bakes a linked glyph correctly)
+- [x] **P1 ⚠ Cascade worker killed on every LayoutContext change, so baked dependent glyphs go stale** (confirmed: in the browser a save sent a job and the worker was restarted before it replied; run on its own, the worker re-bakes a linked glyph correctly)
   - **Where:** `hooks/actions/useGlyphActions.ts` 438–471 (deps `[glyphDataDispatch, layout, t]`); `contexts/LayoutContext.tsx` 184 (`value` not memoized).
   - **Problem:** every notification, selection or keystroke terminates and recreates the worker, dropping queued jobs and re-importing paper.js from the CDN. `handleSaveGlyph` shows a notification right before posting the job. Linked glyphs look fine in the UI, because they're rebuilt live, but the export uses the stale stored data.
   - **Fix:** create the worker once and read `layout`/`t` through refs. Memoize the LayoutContext value.
+  - **Fixed:** the cascade worker is created once; `layout`, `t` and the dispatcher are read through refs. Checked in the browser with the linked `கி` (க + ி): on the old build its stored drawing was never written (so it was missing from exports); now it is written and updated when க is edited. (Memoizing the LayoutContext value is a separate, broader change, not done.)
 
 - [ ] **P2 ⚠ Custom Script Loader projects can never be reopened** (confirmed by code path)
   - **Where:** `components/ScriptSelection.tsx` 243–299, 538–544; `components/CustomScriptLoader.tsx` 66.
@@ -274,25 +277,28 @@ A user can see or hit these. All ⚠ items are here.
     - The v3→v4 upgrade deleted the snapshot store without migrating it.
   - **Fix:** use BroadcastChannel or Web Locks per project (or a revision check), and add blocked/blocking handlers.
 
-- [ ] **P4 "Unsaved changes" flag turns on again after every save and load** (confirmed)
+- [x] **P4 "Unsaved changes" flag turns on again after every save and load** (confirmed)
   - **Where:** `hooks/actions/useProjectPersistence.ts` ~78–90.
   - **Problem:** `lastSavedState` and `isScriptDataLoading` are effect triggers, so the flag is set right after a save or load. In manual mode the indicator never clears and the "change script"/"load project" confirmations always appear. (The new close prompt uses an exact check, so it isn't affected.)
   - **Fix:** derive dirtiness from an edit counter compared against the counter at save time.
+  - **Fixed:** any edit schedules a short exact comparison with the last saved state, and the flag follows it; saves and loads no longer switch it back on. Checked in the browser in manual mode: the old build kept the marker after Save, now it clears.
 
 - [ ] **P5 Snapshot restore marked as saved, so it is silently undone** (likely)
   - **Where:** `hooks/actions/useProjectLoad.ts` ~366; `hooks/useAppActions.ts` 229–238.
   - **Problem:** after a restore, `lastSavedState` is set to the restored data, so no save happens and the DB keeps the pre-restore version.
   - **Fix:** for restores, set `lastSavedState` to null or save immediately.
 
-- [ ] **P6 Loading is destructive before validation; a failed load can autosave junk** (likely)
+- [x] **P6 Loading is destructive before validation; a failed load can autosave junk** (likely)
   - **Where:** `useProjectLoad.ts` 65–68, ~347.
   - **Problem:** contexts are reset before validation. A file missing `settings` then throws, and autosave can write a hybrid record (old settings, empty glyphs).
   - **Fix:** validate and build the new state first, and disable autosave while `scriptDataError` is set.
+  - **Fixed:** projects are validated (`utils/projectValidation.ts`, tested) before anything is cleared, both from a file and from the database; a failed load also counts as "not loaded" for autosave and the leave-page save. Checked in the browser with a file missing `settings`: the old build dropped the open project and showed "Error Loading Script Data"; now a message says why and the project stays open.
 
-- [ ] **P7 Save races: duplicate projects, and "save & continue" doesn't wait** (likely)
+- [x] **P7 Save races: duplicate projects, and "save & continue" doesn't wait** (likely)
   - **Where:** `useProjectPersistence.ts` 108–112; `useAppActions.ts` 162; `useProjectLoad.ts` (onSaveAndConfirm).
   - **Problem:** a double Ctrl+S on a new project calls `addProject` twice. "Save & change" and "Save & load" don't await the save, so a failed save (e.g. QuotaExceeded) is reported after the work is already gone.
   - **Fix:** serialize saves through an in-flight promise, await them, and abort navigation on failure.
+  - **Fixed:** saves are queued (one at a time, each with the latest state), the project id and saved state update immediately, and "Save & change", "Save & load" and the unsaved-rules Save wait for the save and stop if it fails. Checked in the browser by firing two Ctrl+S at once on a new project: old build 2 projects, now 1.
 
 - [x] **P9 Guide font changed in Settings isn't saved** (confirmed)
   - **Where:** `useProjectPersistence.ts` (`getProjectState` uses `script.guideFont`); `components/SettingsPage.tsx` 60.
@@ -317,10 +323,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** use `Promise.allSettled` with `{}` per locale, or show an error state.
   - **Fixed:** translations load with `Promise.allSettled`; a failed locale becomes `{}` and falls back to English. Checked in the browser with `ta.json` blocked.
 
-- [ ] **P13 Undo of delete and bulk operations reverts later edits** (confirmed by reading)
+- [x] **P13 Undo of delete and bulk operations reverts later edits** (confirmed by reading)
   - **Where:** `handleDeleteGlyph` and the bulk operations in `useGlyphActions.ts` / `useBatchOperations.ts`.
   - **Problem:** they restore whole-map snapshots.
   - **Fix:** undo only the affected entries.
+  - **Fixed:** single delete, bulk delete, bulk transform and bulk bearings now undo only what they changed (`utils/undoHelpers.ts`, tested; positioning gained a `MERGE_ENTRIES` action): the deleted character goes back to its old place, with its drawing and pairs, and later edits stay. Checked in the browser that undoing a delete brings the glyph back in place; that later edits survive is covered by the unit tests (the Undo button only shows for 3 s, which is too short to make edits in the browser test).
 
 ---
 

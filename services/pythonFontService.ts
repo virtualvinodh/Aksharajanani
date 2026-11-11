@@ -2,11 +2,18 @@
 
 
 let worker: Worker | null = null;
-const requestMap = new Map<number, { resolve: (value: any) => void; reject: (reason?: any) => void }>();
+const requestMap = new Map<number, { resolve: (value: any) => void; reject: (reason?: any) => void; timer: ReturnType<typeof setTimeout> }>();
 let requestId = 0;
 let isPyodideReady = false;
 let pyodideReadyPromise: Promise<void> | null = null;
 let pyodideReadyResolve: (() => void) | null = null;
+let pyodideReadyReject: ((reason: Error) => void) | null = null;
+let initTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Downloading Pyodide and the Python packages can be slow on a poor connection; a single
+// compile/patch/extract is normally seconds. Past these limits we give up and report it.
+const INIT_TIMEOUT_MS = 5 * 60 * 1000;
+const REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 
 const workerCode = `
 // Self-contained worker code
@@ -382,58 +389,121 @@ function createWorker() {
     return new Worker(workerUrl);
 }
 
+/**
+ * Tears the worker down after a failure so the next request starts a fresh one, and fails
+ * everything that was waiting on it (instead of leaving export/import hanging forever).
+ */
+function resetWorker(reason: Error) {
+    if (initTimer) { clearTimeout(initTimer); initTimer = null; }
+    if (pyodideReadyReject) pyodideReadyReject(reason);
+    pyodideReadyResolve = null;
+    pyodideReadyReject = null;
+    pyodideReadyPromise = null;
+    isPyodideReady = false;
+    requestMap.forEach(request => { clearTimeout(request.timer); request.reject(reason); });
+    requestMap.clear();
+    if (worker) {
+        worker.terminate();
+        worker = null;
+    }
+}
+
+const compilerUnavailable = (detail?: string) =>
+    new Error(`The font compiler could not start${detail ? ` (${detail})` : ''}. Check your internet connection and try again.`);
+
 export function initializePyodide() {
     if (worker) return;
 
     console.log("Initializing Python worker...");
     worker = createWorker();
 
-    pyodideReadyPromise = new Promise(resolve => {
+    pyodideReadyPromise = new Promise<void>((resolve, reject) => {
         pyodideReadyResolve = resolve;
+        pyodideReadyReject = reject;
     });
+    // Nobody may be waiting yet (it is started on app load); don't report that as unhandled.
+    pyodideReadyPromise.catch(() => {});
+
+    initTimer = setTimeout(() => {
+        console.error("Python worker did not become ready in time.");
+        resetWorker(compilerUnavailable('timed out'));
+    }, INIT_TIMEOUT_MS);
 
     worker.onmessage = (event) => {
         const { type, payload } = event.data;
 
         if (type === 'result') {
             const { id, blobBuffer, feaError, extractedFea } = payload;
-            if (requestMap.has(id)) {
+            const request = requestMap.get(id);
+            if (request) {
+                clearTimeout(request.timer);
                 if (extractedFea !== undefined) {
-                    requestMap.get(id)!.resolve(extractedFea);
+                    request.resolve(extractedFea);
                 } else {
                     const blob = new Blob([blobBuffer], { type: 'font/opentype' });
-                    requestMap.get(id)!.resolve({ blob, feaError });
+                    request.resolve({ blob, feaError });
                 }
                 requestMap.delete(id);
             }
         } else if (type === 'error') {
             const { id, message } = payload;
-            if (requestMap.has(id)) {
-                requestMap.get(id)!.reject(new Error(message));
+            const request = requestMap.get(id);
+            if (request) {
+                clearTimeout(request.timer);
+                request.reject(new Error(message));
                 requestMap.delete(id);
             } else {
                 console.error("Python Worker Error:", message);
             }
         } else if (type === 'init_error') {
             console.error("Python Worker Init Error:", payload.message);
-            isPyodideReady = false;
+            resetWorker(compilerUnavailable(payload.message));
         } else if (type === 'status') {
             console.log(`Python worker status: ${payload}`);
             if (payload === 'ready') {
                 isPyodideReady = true;
+                if (initTimer) { clearTimeout(initTimer); initTimer = null; }
                 if (pyodideReadyResolve) pyodideReadyResolve();
+                pyodideReadyResolve = null;
+                pyodideReadyReject = null;
             }
         }
     };
     
     worker.onerror = (error) => {
         console.error("Unhandled Python Worker error:", error);
-        isPyodideReady = false;
-        requestMap.forEach(request => request.reject(error));
-        requestMap.clear();
+        resetWorker(isPyodideReady
+            ? new Error(`The font compiler stopped unexpectedly${error.message ? ` (${error.message})` : ''}. Please try again.`)
+            : compilerUnavailable(error.message || undefined));
     };
 
     worker.postMessage({ type: 'init' });
+}
+
+/** Starts the worker if needed and waits until Python is ready; rejects if it can't start. */
+async function ensurePyodideReady(onWait?: () => void): Promise<Worker> {
+    if (!worker || !pyodideReadyPromise) initializePyodide();
+    if (!isPyodideReady) {
+        onWait?.();
+        await pyodideReadyPromise;
+    }
+    if (!worker) throw compilerUnavailable();
+    return worker;
+}
+
+/** Sends one job to the worker; rejects (and restarts the worker next time) if it never answers. */
+function sendRequest<T>(activeWorker: Worker, type: string, payload: Record<string, unknown>, transfer: Transferable[], mapResult: (res: any) => T = res => res): Promise<T> {
+    const currentId = requestId++;
+    return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => {
+            if (!requestMap.has(currentId)) return;
+            console.error(`Python worker request '${type}' timed out.`);
+            // Python runs one job at a time, so a stuck job blocks everything after it.
+            resetWorker(new Error('The font compiler took too long and was stopped. Please try again.'));
+        }, REQUEST_TIMEOUT_MS);
+        requestMap.set(currentId, { resolve: (res) => resolve(mapResult(res)), reject, timer });
+        activeWorker.postMessage({ type, payload: { id: currentId, ...payload } }, transfer);
+    });
 }
 
 export async function extractFea(
@@ -441,30 +511,10 @@ export async function extractFea(
     showNotification?: (message: string, type?: 'success' | 'info') => void,
     t?: (key: string) => string
 ): Promise<string> {
-    if (!worker || !pyodideReadyPromise) {
-        initializePyodide();
-    }
-    
-    if (!isPyodideReady) {
-        if (showNotification && t) showNotification(t('preparingPythonEnv'), 'info');
-        await pyodideReadyPromise;
-    }
-
+    const activeWorker = await ensurePyodideReady(() => { if (showNotification && t) showNotification(t('preparingPythonEnv'), 'info'); });
     if (showNotification && t) showNotification(t('extractingFea'), 'info');
-
     const fontBuffer = await fontBlob.arrayBuffer();
-    const currentId = requestId++;
-
-    return new Promise((resolve, reject) => {
-        requestMap.set(currentId, { resolve, reject });
-        worker!.postMessage({
-            type: 'extract',
-            payload: {
-                id: currentId,
-                fontBuffer
-            }
-        }, [fontBuffer]);
-    });
+    return sendRequest<string>(activeWorker, 'extract', { fontBuffer }, [fontBuffer]);
 }
 
 export async function patchFont(
@@ -473,32 +523,11 @@ export async function patchFont(
     showNotification: (message: string, type?: 'success' | 'info') => void,
     t: (key: string) => string
 ): Promise<Blob> {
-    if (!worker || !pyodideReadyPromise) {
-        initializePyodide();
-    }
-    
-    if (!isPyodideReady) {
-        showNotification(t('preparingPythonEnv'), 'info');
-        await pyodideReadyPromise;
-    }
-
+    const activeWorker = await ensurePyodideReady(() => showNotification(t('preparingPythonEnv'), 'info'));
     showNotification(t('patchingFont'), 'info');
-
     const baseFontBuffer = await baseFontBlob.arrayBuffer();
     const deltaFontBuffer = await deltaFontBlob.arrayBuffer();
-    const currentId = requestId++;
-
-    return new Promise((resolve, reject) => {
-        requestMap.set(currentId, { resolve: (res) => resolve(res.blob), reject });
-        worker!.postMessage({
-            type: 'patch',
-            payload: {
-                id: currentId,
-                baseFontBuffer,
-                deltaFontBuffer
-            }
-        }, [baseFontBuffer, deltaFontBuffer]);
-    });
+    return sendRequest<Blob>(activeWorker, 'patch', { baseFontBuffer, deltaFontBuffer }, [baseFontBuffer, deltaFontBuffer], res => res.blob);
 }
 
 export async function compileFeaturesAndPatch(
@@ -507,31 +536,8 @@ export async function compileFeaturesAndPatch(
     showNotification: (message: string, type?: 'success' | 'info') => void,
     t: (key: string) => string
 ): Promise<{ blob: Blob; feaError: string | null }> {
-    if (!worker || !pyodideReadyPromise) {
-        // This function is now called on app load, so this should not happen.
-        // But as a fallback, we initialize it here.
-        initializePyodide();
-    }
-    
-    if (!isPyodideReady) {
-        showNotification(t('preparingPythonEnv'), 'info');
-        await pyodideReadyPromise;
-    }
-
+    const activeWorker = await ensurePyodideReady(() => showNotification(t('preparingPythonEnv'), 'info'));
     showNotification(t('applyingOtfFeatures'), 'info');
-
     const fontBuffer = await fontBlob.arrayBuffer();
-    const currentId = requestId++;
-
-    return new Promise((resolve, reject) => {
-        requestMap.set(currentId, { resolve, reject });
-        worker!.postMessage({
-            type: 'compile',
-            payload: {
-                id: currentId,
-                fontBuffer,
-                feaContent
-            }
-        }, [fontBuffer]);
-    });
+    return sendRequest<{ blob: Blob; feaError: string | null }>(activeWorker, 'compile', { fontBuffer, feaContent }, [fontBuffer]);
 }
