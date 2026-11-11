@@ -2,6 +2,11 @@
 // imagetracerjs is loaded the first time someone traces an image.
 const loadImageTracer = () => import('imagetracerjs').then(m => m.default ?? m);
 import paper from 'paper';
+import { paperScope as sharedPaperScope } from './glyphRenderService';
+
+// Larger images are scaled down before tracing: full-resolution tracing on the main thread is
+// slow, and the outline doesn't need more detail than this.
+const MAX_TRACE_SIZE = 1200;
 
 interface TraceOptions {
     ltres: number;
@@ -32,16 +37,17 @@ export const traceImageToSVG = (
         img.crossOrigin = "Anonymous";
 
         img.onload = async () => {
+            const downscale = Math.min(1, MAX_TRACE_SIZE / Math.max(img.width, img.height));
             const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
+            canvas.width = Math.max(1, Math.round(img.width * downscale));
+            canvas.height = Math.max(1, Math.round(img.height * downscale));
             const ctx = canvas.getContext('2d');
             if (!ctx) {
                 return reject(new Error("Could not get canvas context for tracing."));
             }
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            let traceInput: string | ImageData = imageSrc;
+            let traceInput: string | ImageData = downscale < 1 ? canvas.toDataURL('image/png') : imageSrc;
 
             // Optional background removal
             if (removeBackground) {
@@ -130,33 +136,28 @@ export const traceImageToSVG = (
                         return;
                     }
 
-                    // Convert the unified Paper.js path back to SVG data
-                    const boundsRect = new scope.Path.Rectangle(scope.view.bounds);
+                    // Invert against the traced image's own area (D2: the detached canvas's view is
+                    // the default 300×150, which clipped every larger image).
+                    const imageRect = new scope.Rectangle(0, 0, canvas.width, canvas.height);
+                    const boundsRect = new scope.Path.Rectangle(imageRect);
                     const inverted = boundsRect.subtract(unified as paper.CompoundPath);
                     unified.remove();
                     unified = inverted;
 
-                    const unifiedPath = unified as paper.CompoundPath;
-                    let exportPath = unifiedPath.pathData;
-
-                    if (exportPath) {
-                        // Split by 'z' to separate subpaths
-                        const subpaths = exportPath.split(/z/).map(s => s.trim()).filter(Boolean);
-
-                        // Remove the first subpath (often the bounding box frame in this subtraction method)
-                        if (subpaths.length > 1) {
-                            subpaths.shift();
-                        }
-
-                        // Reconstruct path with 'z' at the end of each subpath
-                        exportPath = subpaths.map(s => s + 'z').join('');
-                    }
+                    // Drop the outer frame: the subpath that spans the whole image, found by its
+                    // bounds rather than assuming it comes first.
+                    const isFrame = (item: paper.Item) =>
+                        Math.abs(item.bounds.width - imageRect.width) < 1 && Math.abs(item.bounds.height - imageRect.height) < 1 &&
+                        Math.abs(item.bounds.x - imageRect.x) < 1 && Math.abs(item.bounds.y - imageRect.y) < 1;
+                    const parts = unified instanceof scope.CompoundPath ? [...unified.children] : [unified];
+                    const keep = parts.length > 1 ? parts.filter(part => !isFrame(part)) : parts;
+                    const exportPath = keep.map(part => (part as paper.Path).pathData).filter(Boolean).join('');
 
                     // --- Build output SVG ---
                     const newSvgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                     newSvgElement.setAttribute('width', originalSvgElement.getAttribute('width') || '100');
                     newSvgElement.setAttribute('height', originalSvgElement.getAttribute('height') || '100');
-                    newSvgElement.setAttribute('viewBox', originalSvgElement.getAttribute('viewBox') || `0 0 ${img.width} ${img.height}`);
+                    newSvgElement.setAttribute('viewBox', originalSvgElement.getAttribute('viewBox') || `0 0 ${canvas.width} ${canvas.height}`);
                     newSvgElement.setAttribute('xmlns', "http://www.w3.org/2000/svg");
 
                     const outline = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -181,6 +182,9 @@ export const traceImageToSVG = (
                         // PaperScope#remove exists at runtime but is missing from paper's typings.
                         (scope as paper.PaperScope & { remove: () => void }).remove();
                     }
+                    // setup() made the tracer's scope the active one; after removing it, every new
+                    // shape on the main thread would fail (D1). Switch back to the app's shared scope.
+                    sharedPaperScope.activate();
                 }
             }, aggressiveOptions);
         };

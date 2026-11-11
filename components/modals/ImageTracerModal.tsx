@@ -129,8 +129,8 @@ const ImageTracerModal: React.FC<ImageTracerModalProps> = ({ isOpen, onClose, im
                 </div>
                 <div className="border p-2 rounded-md dark:border-gray-700">
                     <h4 className="font-semibold mb-2">{t('livePreview')}</h4>
-                    <div className="w-full h-64 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-                        {isTracing ? <SpinnerIcon /> : (tracerPreview && <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: tracerPreview }} />)}
+                    <div className="w-full h-64 bg-gray-100 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
+                        {isTracing ? <SpinnerIcon /> : (tracerPreview && <div className="w-full h-full [&>svg]:w-full [&>svg]:h-full" dangerouslySetInnerHTML={{ __html: tracerPreview }} />)}
                     </div>
                 </div>
             </div>

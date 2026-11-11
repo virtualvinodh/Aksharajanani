@@ -273,7 +273,28 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
          );
     };
 
+    // Every name must be a glyph in the project, or a group / character set ($name or @name);
+    // otherwise the rule is saved with an empty result and silently skipped at export (R13).
+    const isKnownName = (name: string) => {
+        if (name.startsWith('$') || name.startsWith('@')) {
+            const groupName = name.substring(1);
+            return !!groups?.[groupName] || allCharacterSets.some(set => set.nameKey === groupName);
+        }
+        return allCharsByName.has(name);
+    };
+
     const handleSave = () => {
+        const namesInRule: (string | null | undefined)[] =
+            ruleType === 'ligature' ? [ligature, ...components] :
+            ruleType === 'contextual' ? [replacement, ...leftContext, ...target, ...rightContext] :
+            ruleType === 'multiple' ? [multiInputGlyph, ...outputSequence] :
+            [singleInput, singleOutput];
+        const unknown = namesInRule.filter((n): n is string => !!n).find(n => !isKnownName(n));
+        if (unknown) {
+            showNotification(t('glyphNotInProject', { name: unknown }), 'error');
+            return;
+        }
+
         if (ruleType === 'ligature') {
             if (ligature && components.length > 0) {
                 const ok = onSave({ ligatureName: ligature, componentNames: components }, 'ligature') !== false;

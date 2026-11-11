@@ -326,11 +326,15 @@ export const useRulesState = () => {
         if (!featureName || !lookupName) return;
         setLocalRules(prev => {
             const newRules = deepClone(prev);
-            const feature = newRules[scriptTag!]?.[featureName];
-            if (feature) {
-                if (!feature.children) feature.children = [];
-                feature.children.push({ type: 'lookup', name: lookupName });
-            }
+            if (!scriptTag) return newRules;
+            if (!newRules[scriptTag]) newRules[scriptTag] = {};
+            // A feature that is only implied by the character data has no entry yet (R9). Create it,
+            // keeping its auto-generated rules, which generateFea only adds implicitly when the
+            // feature has no children.
+            if (!newRules[scriptTag][featureName]) newRules[scriptTag][featureName] = {};
+            const feature = newRules[scriptTag][featureName];
+            if (!feature.children) feature.children = [{ type: 'auto_generated' }];
+            feature.children.push({ type: 'lookup', name: lookupName });
             return newRules;
         });
     };

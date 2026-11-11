@@ -96,15 +96,17 @@ A user can see or hit these. All ⚠ items are here.
 
 ## D: Drawing and editing
 
-- [ ] **D1 ⚠ Image tracer breaks paper.js for the rest of the session** (confirmed)
+- [x] **D1 ⚠ Image tracer breaks paper.js for the rest of the session** (confirmed)
   - **Where:** `services/imageTracerService.ts` 106–107, 177–180.
   - **Problem:** `new paper.PaperScope().setup(canvas)` makes the tracer's scope the global active `paper`, and `scope.remove()` never switches back. Afterwards every `new paperScope.Path(...)` on the main thread throws `Cannot read properties of null (reading '_currentStyle')`. That breaks "insert as vector", outline bounding boxes during render, hover hit-testing, slice and edit double-click.
   - **Fix:** in `finally`, call `scope.remove()` and then `paperScope.activate()`, or reuse the shared scope with `project.clear()`.
+  - **Fixed:** after the tracer removes its paper.js scope it re-activates the app's shared scope. Checked in the browser: on the old build, Insert after tracing failed (`Cannot read properties of null (reading 'getSize')`) and the dialog stayed open; now it inserts with no errors.
 
-- [ ] **D2 Image tracer output clipped to 300×150** (confirmed)
+- [x] **D2 Image tracer output clipped to 300×150** (confirmed)
   - **Where:** `imageTracerService.ts` 104–107, 132–147.
   - **Problem:** the result is inverted against `scope.view.bounds`, which for a detached canvas is the default 300×150, and then the "first subpath" is dropped. A 1000×1000 image traces to a frame rectangle. Large images are also traced at full resolution on the main thread, on every slider change.
   - **Fix:** invert against the image bounds, pick the frame by its bounds rather than its position, and downscale before tracing.
+  - **Fixed:** the trace is inverted against the image's own size (not the 300×150 default view), the outer frame is dropped by its bounds, images over 1200 px are scaled down first, and the preview SVG now fits its box (it used to overflow and cover the Insert button). Checked in the browser with a 1000×1000 image of an L: the old build previewed a 300×150 frame; now the L's outline is previewed and inserted.
 
 - [ ] **D3 ⚠ Undo history wiped after every autosave** (confirmed by reading)
   - **Where:** `hooks/drawing/useGlyphEditSession.ts` 112–122.
@@ -276,6 +278,12 @@ A user can see or hit these. All ⚠ items are here.
     - There are no `blocked`/`versionchange` handlers, so the next DB_VERSION bump hangs while an old tab is open.
     - The v3→v4 upgrade deleted the snapshot store without migrating it.
   - **Fix:** use BroadcastChannel or Web Locks per project (or a revision check), and add blocked/blocking handlers.
+  - **What users see today:** whichever tab saves last wins, silently. Each tab autosaves its own in-memory copy over the stored project, so working in tab A and then touching tab B throws A's work away; a project deleted in one tab is recreated by the other's autosave.
+  - **Wanted:** a warning when the same project is open in two tabs (Web Locks per project id, BroadcastChannel for the handover). Options:
+    1. warning banner only (both tabs keep saving);
+    2. warning, and the second tab doesn't save, with a "Use this tab instead" button that moves saving to it (recommended);
+    3. the second tab refuses to open the project.
+  - **Waiting for:** the author's choice of option.
 
 - [x] **P4 "Unsaved changes" flag turns on again after every save and load** (confirmed)
   - **Where:** `hooks/actions/useProjectPersistence.ts` ~78–90.
@@ -382,9 +390,10 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** store `{lookupKey, type}`, and pass the real notifier.
   - **Fixed:** the add form is tied to one lookup (`{lookupKey, type}`), and rule editors in the pane get the real notifier.
 
-- [ ] **R9 "Add Lookup" does nothing on an implied feature** (confirmed)
+- [x] **R9 "Add Lookup" does nothing on an implied feature** (confirmed)
   - **Where:** `components/RulesPage.tsx` 541–560; `useRulesState.ts` (handleAddLookupReference).
   - **Fix:** create the feature, seeded with `inline` + `auto_generated`, before adding the reference.
+  - **Fixed:** adding a lookup to a feature that exists only implicitly now creates the feature first (keeping its auto-generated rules). Checked in the browser: a new lookup added to Tamil's ABVS appears under it.
 
 - [x] **R10 Typed but unconfirmed glyph is lost on Save** (confirmed)
   - **Where:** `components/RuleEditor.tsx` 225–249; `DistRulesEditor.tsx` 209–232.
@@ -404,10 +413,11 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** use `state.fontRules?.groups`.
   - **Fixed:** already done in the type-error cleanup (`915db10`): `GlyphTile` reads `rulesState.fontRules?.groups`.
 
-- [ ] **R13 The substitution-rule editor accepts names that aren't glyphs** (seen in the browser while testing R2)
+- [x] **R13 The substitution-rule editor accepts names that aren't glyphs** (seen in the browser while testing R2)
   - **Where:** `components/RuleEditor.tsx` (handleSave); the typed text in `SmartGlyphInput` is used as-is.
   - **Problem:** typing text that isn't a glyph name (e.g. `ஙஸ்ரீ`) and saving creates a rule whose result tile is empty. Export skips it as undrawn, so nothing breaks, but the rule is junk.
   - **Fix:** check every name against the project's glyphs and groups on save, as the spacing-rule editor now does (R1).
+  - **Fixed:** `RuleEditor` checks every name (result, components, contexts) against the project's glyphs, groups and character sets on save and refuses unknown ones with a message, keeping the form open. Checked in the browser (AKHN, result `zzz-not-a-glyph` refused).
 
 ---
 
@@ -447,16 +457,18 @@ A user can see or hit these. All ⚠ items are here.
 - [x] **U9 The feature-error dialog text is cut off** (confirmed in the browser)
   - **Fixed:** the error text wraps and scrolls inside a wider dialog.
 
-- [ ] **U10 The Positioning tab says "No mark characters have been drawn" when the marks are linked glyphs** (to be verified properly; the original diagnosis looks wrong)
+- [x] **U10 The Positioning tab says "No mark characters have been drawn" when the marks are linked glyphs** (not a bug; verified)
   - **Re-checked (browser):** after drawing `e`, the linked `ͤ` gets its own drawing at once and counts as drawn. The Tutorial script's only positioning pairs are `n + ̃` and `n + ̄`; `ͤ` is in none, so the empty By Mark view was correct while `n`, `̃` and `̄` were undrawn. The link was never the cause. The author also found linked marks available for positioning in their own check.
   - **Still to verify:** positioning with a linked mark that *is* in a rule (e.g. add a rule using `ͤ`, then check it appears, previews correctly and exports).
   - **Changed:** the message was misleading (it said no marks were drawn when one was). It now reads "No marks are ready to position yet. In the character grid, draw the marks used in positioning and the letters they go on." (Tamil updated too).
+  - **Verified:** verified properly: the Tutorial rule positions `ͤ` over `A`/`E`. With `e` and `A` drawn, By Mark lists `ͤ`, the A + ͤ preview shows the small e above A, and the exported font contains the `ͤ` outline and a mark-positioning lookup (GPOS type 4). The earlier "no marks" view came from drawing `a` instead of `A`.
 
 - [x] **U11 The header ⋮ (More) button has no accessible name** (confirmed)
   - **Fixed:** ⋮ and the phone drawer's icon buttons have `aria-label` and `title`.
 
-- [ ] **U12 Switching locale doesn't refresh some memoized lists** (confirmed by reading)
+- [x] **U12 Switching locale doesn't refresh some memoized lists** (confirmed by reading)
   - **Where:** `LocaleContext.tsx` (`t` has empty deps), e.g. `SmartGlyphInput` options.
+  - **Fixed:** `t` now changes identity when the language (or loaded translations) changes, so memoized lists rebuild after a switch; it stays stable otherwise. Only four effects depend on `t` (test-page font reload, command-palette index, comparison redraw, Save As default name); re-running them once on a switch is harmless. Not checked in the browser.
 
 - [ ] **U13 ⚠ The tutorial can't get past "Click the 'A' card"** (likely; seen in headless Chromium on both the current and the previous build)
   - **Where:** `components/tutorial/useTutorialSteps.ts` step 1 (`spotlightClicks: true`); react-joyride's overlay.

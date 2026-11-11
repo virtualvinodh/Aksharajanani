@@ -139,7 +139,11 @@ export const LocaleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         });
     }
     return translation;
-  }, []); // Empty dependency array makes `t` stable, preventing re-renders in consuming components.
+    // `t` changes identity only when the language or the loaded translations change, so memoized
+    // lists and labels that depend on it are rebuilt after a language switch (U12), while it stays
+    // stable during normal use.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- values are read from stateRef; these are the change signals
+  }, [locale, translations]);
 
   // Don't render children until the translations have been successfully fetched.
   if (!translations) {
