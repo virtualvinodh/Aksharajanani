@@ -5,24 +5,57 @@
 //   SCRIPT=spanish VIDEO=1 node tools/e2e/e2e.cjs
 //   DEBUG_GLYPHS=D,t SCRIPT=spanish node tools/e2e/e2e.cjs   only draw these, one screenshot each
 //
+// Strokes come from alphabet.cjs (hand-made) and, for scripts traced from a font with
+// trace-glyphs.py, from strokes/<script id>.json.
+//
 // Output: tools/e2e/out/<script>/ (numbered screenshots, <script>.otf, <script>-studio.png,
 // summary.json, and <script>.webm with VIDEO=1). See tools/README.md.
 const { chromium, launchOptions, BASE } = require('../lib/browser.cjs');
-const { G } = require('./alphabet.cjs');
+const { G, guides } = require('./alphabet.cjs');
 const fs = require('fs'), path = require('path');
 const SCRIPT = process.env.SCRIPT || 'english';
-const TILE = { english: /English$/, spanish: /Spanish$/ }[SCRIPT];
-const SAMPLE = {
-    english: 'The quick brown fox jumps over the lazy dog.\nPack my box with five dozen liquor jugs.\nAVATAR  Wave  Type  LOVE  Toy',
-    spanish: 'El pingüino Wenceslao hizo kilómetros bajo exhaustiva lluvia y frío,\nañoraba a su querido cachorro. ÑANDÚ  Árbol  Ícono  Óvalo  Último',
+// Each script: its data file id, a sample for the Test page and a line for Creator.
+const CONFIG = {
+    english: { id: 'latin', creator: 'Hello World',
+        sample: 'The quick brown fox jumps over the lazy dog.\nPack my box with five dozen liquor jugs.\nAVATAR  Wave  Type  LOVE  Toy' },
+    spanish: { id: 'spanish', creator: '¡Hola, Mañana!',
+        sample: 'El pingüino Wenceslao hizo kilómetros bajo exhaustiva lluvia y frío,\nañoraba a su querido cachorro. ÑANDÚ  Árbol  Ícono  Óvalo  Último' },
+    french: { id: 'french', creator: 'Ça va, Noël !',
+        sample: 'Portez ce vieux whisky au juge blond qui fume.\nÇà et là, l\'été, Zoé mangeait des œufs à côté de l\'île. ÉCOLE  Être  ŒUVRE  Ægée  Ÿ' },
+    portuguese: { id: 'portuguese', creator: 'Olá, Ação!',
+        sample: 'À noite, vovô Kowalsky vê o ímã cair no pé do pinguim\nqueixoso e vovó põe açúcar no chá de tâmaras do jabuti feliz. AÇÃO  Ônibus  Último  Àquele' },
+    german: { id: 'german', creator: 'Grüße, Straße!',
+        sample: 'Victor jagt zwölf Boxkämpfer quer über den großen Sylter Deich.\nFalsches Üben von Xylophonmusik quält jeden größeren Zwerg. ÄRGER  Öl  Übung  STRAẞE' },
+    greek: { id: 'greek', creator: 'Καλημέρα!',
+        sample: 'Ξεσκεπάζω την ψυχοφθόρα βδελυγμία.\nΤάχιστη αλώπηξ βαφής ψημένη γη, δρασκελίζει υπέρ νωθρού κυνός. ΑΘΗΝΑ  Ώρα  Ένα  Ϊ  ΰ' },
+    tamil: { id: 'tamil', creator: 'வணக்கம்!',
+        sample: 'யாமறிந்த மொழிகளிலே தமிழ்மொழி போல்\nஇனிதாவது எங்கும் காணோம். கூடு, பூ, தீ, ஸ்ரீ ௧௨௩' },
+    cyrillic: { id: 'cyrillic', creator: 'Привет, мир!',
+        sample: 'Съешь же ещё этих мягких французских булок, да выпей чаю.\nЇжак і ґудзик, Єва. Ђак, Љубав, Њива, Ћерка, Џеп. ЁЛКА  Йод  Ўзбек  Қазақ  Әже' },
 }[SCRIPT];
+if (!CONFIG) { console.error(`Unknown SCRIPT ${SCRIPT}; one of english, spanish, french, portuguese, german, greek, cyrillic, tamil`); process.exit(1); }
+const SAMPLE = CONFIG.sample;
 const OUT = path.join(__dirname, 'out', SCRIPT);
 const REPO = path.resolve(__dirname, '../..');
-const DATA_ID = { english: 'latin', spanish: 'spanish' }[SCRIPT];
+const DATA_ID = CONFIG.id;
+const scriptDef = (() => { const j = JSON.parse(fs.readFileSync(`${REPO}/scripts.json`, 'utf8')); return (Array.isArray(j) ? j : Object.values(j).find(Array.isArray)).find(x => x.id === DATA_ID); })();
 const en = JSON.parse(fs.readFileSync(`${REPO}/locales/en.json`, 'utf8'));
+const SCRIPT_NAME = en[scriptDef.nameKey];
+const TILE = new RegExp(`${SCRIPT_NAME}$`);
 const sets = [...JSON.parse(fs.readFileSync(`${REPO}/data/characters_${DATA_ID}.json`, 'utf8')), ...JSON.parse(fs.readFileSync(`${REPO}/data/characters_basic.json`, 'utf8'))]
     .filter(st => st.characters);
-const ORDER = sets.flatMap(st => st.characters.map(c => ({ name: c.name, set: en[st.nameKey] || st.nameKey, positioned: !!c.position })));
+// Hidden glyphs aren't in the grid; linked ones (i = ı + dot) the app makes by itself.
+const ORDER = sets.flatMap(st => st.characters.filter(c => !c.hidden).map(c => ({
+    name: c.name, set: en[st.nameKey] || st.nameKey, positioned: !!c.position, built: !!c.composite, linked: !!c.link,
+})));
+// Strokes for each glyph. The hand-made alphabet is drawn on the European guide lines (baseline
+// 660), so it moves with the script's baseline; traced strokes are already on the script's lines.
+const shiftY = scriptDef.metrics.baseLineY - guides.B;
+const STROKES = Object.fromEntries(Object.entries(G).map(([n, ss]) => [n, ss.map(st => st.map(([x, y]) => [x, y + shiftY]))]));
+const tracedFile = path.join(__dirname, 'strokes', `${DATA_ID}.json`);
+if (fs.existsSync(tracedFile)) Object.assign(STROKES, JSON.parse(fs.readFileSync(tracedFile, 'utf8')).strokes);
+// A built glyph starts from its parts in the editor; only hand-made extra strokes go on top (Ґ).
+const canDraw = (it) => !it.positioned && !it.linked && (it.built ? !!G[it.name] : !!STROKES[it.name]);
 fs.mkdirSync(OUT, { recursive: true });
 const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
 
@@ -81,7 +114,7 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
     };
     const drawGlyph = async (name) => {
         const box = await canvasBox(); const s = box.width / 1000;
-        for (const stroke of G[name]) {
+        for (const stroke of STROKES[name]) {
             const pts = stroke.map(([x, y]) => [box.x + (500 + x) * s, box.y + y * s]);
             if (await tipOpen()) await closeTips();
             await stroke1(pts);
@@ -102,7 +135,8 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
 
     // 1. Start a project
     await p.goto(BASE); await p.waitForTimeout(2500);
-    await caption(`Start a new ${SCRIPT === 'english' ? 'English' : 'Spanish'} font`);
+    if (!/Aksharajanani/.test(await p.title())) throw new Error(`${BASE} is not the app (title: "${await p.title()}"); start it with npm run dev and pass BASE=<its URL>`);
+    await caption(`Start a new ${SCRIPT_NAME} font`);
     await p.waitForTimeout(1200);
     await p.getByRole('button', { name: TILE }).first().click(); await p.waitForTimeout(3000); await closeTips();
     await shot('01-grid');
@@ -124,16 +158,20 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
     if (process.env.DEBUG_GLYPHS) {
         for (const name of process.env.DEBUG_GLYPHS.split(',')) {
             await openGlyph(ORDER.find(o => o.name === name)); await p.waitForTimeout(1500); await closeTips();
-            await drawGlyph(name); await p.screenshot({ path: path.join(OUT, `dbg-${name}.png`) });
+            if (STROKES[name]) await drawGlyph(name);
+            // The code point keeps Ω and ω apart (macOS treats their file names as the same).
+            const cp = [...name].map(ch => ch.codePointAt(0).toString(16)).join('-');
+            await p.screenshot({ path: path.join(OUT, `dbg-${name}-${cp}.png`) });
             await back();
         }
+        await p.screenshot({ path: path.join(OUT, 'dbg-grid.png') });
         await browser.close(); return;
     }
 
     // 2. Draw every glyph. The editor's Next arrow steps through the set; accented letters are
     //    skipped here (the app builds them by placing a mark on a letter; see step 3).
     await caption('Draw every glyph; the editor\'s Next arrow steps through the whole set');
-    const toDraw = ORDER.filter(it => !it.positioned && G[it.name]);
+    const toDraw = ORDER.filter(canDraw);
     const drawn = []; const missing = [];
     await openGlyph(toDraw[0]);
     for (const item of toDraw) {
@@ -151,11 +189,23 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
     log(`drew ${drawn.length} of ${toDraw.length}${missing.length ? '; could not open: ' + missing.join(' ') : ''}`);
     await back(); await p.waitForTimeout(1500); await shot('03-grid-drawn');
 
+    // 2b. Letters the app builds from two others (Æ = A + E): open each and keep what the app made.
+    const toBuild = ORDER.filter(it => it.built && !G[it.name]);
+    for (const item of toBuild) {
+        await caption(`“${item.name}” is built by the app from letters already drawn: check it`);
+        await openGlyph(item); await p.waitForTimeout(1200);
+        const save = p.locator('button[title="Save"]').first();
+        if (await save.count() && await save.isEnabled().catch(() => false)) await save.click().catch(() => {});
+        drawn.push(item.name); await back();
+    }
+
     // 3. Positioning: every accented letter, with one adjusted by hand
     const toPosition = ORDER.filter(it => it.positioned);
     const positioned = [];
+    const notOpened = [];
     for (const item of toPosition) {
         await openGlyph(item);
+        if ((await title()) !== item.name) { notOpened.push(item.name); log(`could not open “${item.name}” to position it`); continue; }
         const acceptPos = p.locator('[data-tour="header-accept-pos"]').first();
         const clickSafely = async (loc) => { await closeTips(); await loc.click({ timeout: 3000 }).catch(() => loc.click({ force: true }).catch(() => {})); };
         if (positioned.length === 0) {
@@ -175,29 +225,64 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
         await back();
     }
     if (toPosition.length) { log(`positioned ${positioned.length}: ${positioned.join(' ')}`); await shot('05-positioned'); }
-    const skipped = ORDER.filter(it => !it.positioned && !G[it.name]).map(it => it.name);
+    const skipped = ORDER.filter(it => !it.positioned && !it.linked && !it.built && !canDraw(it)).map(it => it.name);
 
-    // 4. Spacing: auto-kern all pairs, accept, then fine-tune one pair by hand
-    await caption('Spacing: auto-kern every pair of letters');
-    await p.getByRole('button', { name: /Spacing|Kerning/ }).first().click(); await p.waitForTimeout(1800); await closeTips();
-    await p.getByRole('button', { name: 'All Pairs' }).first().click(); await p.waitForTimeout(800); await closeTips();
-    for (const sa of await p.getByRole('button', { name: 'Select All' }).all()) await sa.click().catch(() => {});
-    await p.waitForTimeout(800); await shot('06-all-pairs');
-    await p.getByRole('button', { name: /Auto-kern/ }).first().click();
-    for (let t = 0; t < 240; t++) { await p.waitForTimeout(1000); if (!(await p.getByText(/Auto-?kerning|Calculating/i).count())) break; }
-    await p.waitForTimeout(1500); await closeTips(); await shot('07-autokerned');
-    await caption('Accept the suggested spacing');
-    const suggestionsTab = p.getByRole('button', { name: 'Suggestions', exact: true }).first();
-    if (await suggestionsTab.count()) { await suggestionsTab.click(); await p.waitForTimeout(1000); await closeTips(); }
-    const acceptSugg = p.getByRole('button', { name: /Accept Suggestions|Accept All|Accept Visible/ }).first();
-    if (await acceptSugg.count()) { await acceptSugg.click(); await p.waitForTimeout(1500); }
-    await shot('08-spacing-accepted');
+    // 4. Spacing. Scripts that recommend pairs (Tamil: 3,295) get those auto-kerned on the
+    //    Suggestions tab, as the app offers first; the others (no recommendations) auto-kern every
+    //    pair from All Pairs. (Select All in All Pairs on Tamil means 36,828 pairs.)
+    const spacingTab = p.getByRole('button', { name: /Spacing|Kerning/ }).first();
+    let spacingMode = 'none';
+    const waitAutoKern = async () => {
+        for (let t = 0; t < 300; t++) { await p.waitForTimeout(1000); if (!(await p.getByText(/Auto-?kerning|Calculating/i).count())) break; }
+        await p.waitForTimeout(1500); await closeTips();
+    };
+    const accept = async () => {
+        const btn = p.getByRole('button', { name: /Accept Suggestions|Accept All|Accept Visible/ }).first();
+        if (await btn.count() && await btn.isVisible().catch(() => false)) { await btn.click(); await p.waitForTimeout(1500); return true; }
+        return false;
+    };
+    if (!(await spacingTab.count())) {
+        log('no Spacing step for this script');
+    } else {
+        await spacingTab.click(); await p.waitForTimeout(1800); await closeTips();
+        const suggestionsTab = p.getByRole('button', { name: 'Suggestions', exact: true }).first();
+        if (await suggestionsTab.count()) { await suggestionsTab.click(); await p.waitForTimeout(1000); await closeTips(); }
+        const progress = await p.getByText(/recommended pairs spaced/).first().innerText().catch(() => '');
+        const recommended = Number((progress.match(/\/(\d+)/) || [])[1] || 0);
+        if (recommended > 0) {
+            spacingMode = `suggested (${recommended} pairs)`;
+            await caption(`Spacing: auto-kern the ${recommended} pairs this script suggests`);
+            await shot('06-suggested-pairs');
+        } else {
+            spacingMode = 'all pairs';
+            await caption('Spacing: auto-kern every pair of letters');
+            await p.getByRole('button', { name: 'All Pairs' }).first().click(); await p.waitForTimeout(800); await closeTips();
+            for (const sa of await p.getByRole('button', { name: 'Select All' }).all()) await sa.click().catch(() => {});
+            await p.waitForTimeout(800); await shot('06-all-pairs');
+        }
+        await p.getByRole('button', { name: /Auto-kern/ }).first().click();
+        await waitAutoKern(); await shot('07-autokerned');
+        await caption('Accept the suggested spacing');
+        // Accept where we are; if this view has no Accept button, the results are on Suggestions.
+        if (!(await accept()) && await suggestionsTab.count()) { await suggestionsTab.click(); await p.waitForTimeout(1000); await closeTips(); await accept(); }
+        log('spacing:', spacingMode, '|', await p.getByText(/recommended pairs spaced/).first().innerText().catch(() => ''));
+        await shot('08-spacing-accepted');
+    }
 
-    // 5. Try it: Test page
+    // 5. Try it: Test page. Building the font can take a while for big scripts: wait for it.
     await caption('Try the font on the Test page');
-    await p.getByRole('button', { name: /^Test$/ }).first().click(); await p.waitForTimeout(6000);
-    const ea = p.getByRole('button', { name: 'Export Anyway' }); if (await ea.count()) { await ea.click(); await p.waitForTimeout(5000); }
+    let t0 = Date.now();
+    await p.getByRole('button', { name: /^Test$/ }).first().click();
+    const ea = p.getByRole('button', { name: 'Export Anyway' });
     const area = p.locator('textarea').first();
+    for (let t = 0; t < 300; t++) {
+        if (await ea.count()) { await ea.click(); }
+        if (await area.isVisible().catch(() => false)) break;
+        await p.waitForTimeout(1000);
+    }
+    const testSeconds = Math.round((Date.now() - t0) / 1000);
+    log(`Test page ready after ${testSeconds} s`);
+    await p.waitForTimeout(1500);
     if (await area.count()) { await area.fill(SAMPLE); await p.waitForTimeout(2500); }
     await shot('09-test-page');
     await back();
@@ -206,9 +291,9 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
     await caption('Make something with it in Creator');
     const create = p.getByRole('button', { name: /^Create$/ }).first();
     if (await create.count()) {
-        await create.click(); await p.waitForTimeout(6000); await closeTips();
+        await create.click({ timeout: 300000 }); await p.waitForTimeout(6000); await closeTips(); // greyed out while the app is busy
         const text = p.locator('textarea, [contenteditable="true"], input[type="text"]').first();
-        if (await text.count()) { await text.fill(SCRIPT === 'english' ? 'Hello World' : '¡Hola, Mañana!').catch(() => {}); await p.waitForTimeout(2500); }
+        if (await text.count()) { await text.fill(CONFIG.creator).catch(() => {}); await p.waitForTimeout(2500); }
         await shot('10-creator');
         const studio = p.locator('div.fixed.inset-0.z-50 header');
         const imgP = p.waitForEvent('download', { timeout: 30000 }).catch(() => null);
@@ -221,12 +306,14 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
 
     // 7. Export
     await caption('Export the font');
-    const dlP = p.waitForEvent('download', { timeout: 240000 }).catch(() => null);
+    t0 = Date.now();
+    const dlP = p.waitForEvent('download', { timeout: 300000 }).catch(() => null);
     await closeTips(); await p.locator('[data-tour="header-export"]').first().click(); await p.waitForTimeout(800);
     if (await ea.count()) await ea.click();
     const dl = await dlP;
     const fontFile = path.join(OUT, `${SCRIPT}.otf`);
-    if (dl) { await dl.saveAs(fontFile); log('exported', fontFile); } else log('NO DOWNLOAD');
+    const exportSeconds = Math.round((Date.now() - t0) / 1000);
+    if (dl) { await dl.saveAs(fontFile); log(`exported after ${exportSeconds} s:`, fontFile); } else log('NO DOWNLOAD');
     await p.waitForTimeout(1500); await shot('11-exported');
 
     // 8. Show the exported font itself
@@ -241,7 +328,7 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
             .med { font-family: Made; font-size: 34px; line-height: 1.3; margin-top: 24px; white-space: pre-wrap; }
             .label { font: 13px system-ui; color: #777; margin-top: 18px; }
         </style>
-        <h1>The exported ${SCRIPT === 'english' ? 'English' : 'Spanish'} font (${path.basename(fontFile)}), rendered by the browser</h1>
+        <h1>The exported ${SCRIPT_NAME} font (${path.basename(fontFile)}), rendered by the browser</h1>
         <div class="big">${SAMPLE.split('\n')[0]}</div>
         <div class="med">${SAMPLE.split('\n').slice(1).join('\n')}</div>
         <div class="label">Every letter in the font (accented ones were positioned in the app):</div>
@@ -258,5 +345,5 @@ const log = (...a) => console.log(`[${SCRIPT}]`, ...a);
         for (const v of vids) fs.renameSync(path.join(OUT, v), path.join(OUT, `${SCRIPT}.webm`));
     }
     await browser.close();
-    fs.writeFileSync(path.join(OUT, 'summary.json'), JSON.stringify({ drawn, positioned, skipped, fontReadyShown: celebrated, errors, exported: !!dl }, null, 2));
+    fs.writeFileSync(path.join(OUT, 'summary.json'), JSON.stringify({ drawn, positioned, notOpened, skipped, fontReadyShown: celebrated, spacingMode, testSeconds, exportSeconds, errors, exported: !!dl }, null, 2));
 })().catch(async e => { console.log(`[${SCRIPT}] FAILED:`, e.message.split('\n')[0]); await global.__page?.screenshot({ path: path.join(OUT, 'FAILED.png') }).catch(() => {}); console.log(e.message.split("\n").slice(0,6).join(" / ")); process.exit(1); });

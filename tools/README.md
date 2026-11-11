@@ -27,21 +27,21 @@ The font scripts need fontTools (plus uharfbuzz for `fontcheck.py`). The easiest
 
 ### `e2e/e2e.cjs`: build a whole font, end to end
 
-Does what a person would do, in English or Spanish:
+Does what a person would do, in any of the European scripts or Tamil:
 
 1. Starts a new project.
-2. Draws every glyph with the pen, in the stroke alphabet in `e2e/alphabet.cjs` (letters, accents, digits, punctuation).
+2. Draws every glyph with the pen: European letters from the hand-made strokes in `e2e/alphabet.cjs`, Tamil from strokes traced from its guide font (`e2e/strokes/tamil.json`, see below). Letters the app builds from others (Æ, ஆ) are opened and kept as built.
 3. Positions the accented letters (the first by hand, the rest with "Accept Default Position").
-4. Selects all pairs in Spacing, auto-kerns and accepts the suggestions.
+4. Auto-kerns in Spacing and accepts the result: the script's suggested pairs if it has any (Tamil), otherwise every pair (All Pairs → Select All).
 5. Types a sample on the Test page.
 6. Makes a picture in Creator and saves it.
 7. Exports the font and shows it rendered by the browser.
 
 ```sh
 node tools/e2e/e2e.cjs                       # English
-SCRIPT=spanish node tools/e2e/e2e.cjs
+SCRIPT=spanish node tools/e2e/e2e.cjs     # english spanish french portuguese german greek cyrillic tamil
 SCRIPT=spanish VIDEO=1 node tools/e2e/e2e.cjs  # also record a video (with on-screen captions)
-DEBUG_GLYPHS=D,t SCRIPT=spanish node tools/e2e/e2e.cjs  # draw only these glyphs, one screenshot each
+DEBUG_GLYPHS=D,t SCRIPT=spanish node tools/e2e/e2e.cjs  # draw only these glyphs, one screenshot each (dbg-<glyph>-<code point>.png)
 ```
 
 Output goes to `tools/e2e/out/<script>/`:
@@ -50,11 +50,27 @@ Output goes to `tools/e2e/out/<script>/`:
 - `summary.json` (glyphs drawn and positioned, page errors);
 - with `VIDEO=1`, `<script>.webm`.
 
-A run takes about 7 minutes. To get an mp4, use `ffmpeg -i english.webm -c:v libx264 -pix_fmt yuv420p english.mp4`.
+A run takes about 7 minutes (Tamil about 25). The log and `summary.json` say how long the Test page and the export took to build the font. To get an mp4, use `ffmpeg -i english.webm -c:v libx264 -pix_fmt yuv420p english.mp4`.
 
 Adding another script means:
-- adding its tile name to `TILE`, its data file to `DATA_ID` and a sample to `SAMPLE`;
-- giving `alphabet.cjs` strokes for any glyph it doesn't have yet.
+- adding it to `CONFIG` in `e2e.cjs` (its id in `scripts.json`, a sample for the Test page, a line for Creator);
+- giving it strokes: run `trace-glyphs.py` (below), or add hand-made ones to `alphabet.cjs`. Hand-made strokes win only for glyphs the app builds from others, where they're drawn on top (Ґ = Г + upturn).
+
+The run also skips a Spacing step if the script doesn't have one.
+
+### `e2e/trace-glyphs.py`: strokes from a font
+
+Shapes every glyph of a script with a font (by default its guide font from `scripts.json`, downloaded once),
+thins each one to its centre line and traces that into pen strokes on the script's guide lines.
+
+```sh
+uv run --with fonttools --with uharfbuzz --with freetype-py --with scikit-image --with pillow \
+    python3 tools/e2e/trace-glyphs.py tamil [font.otf] [reference-glyph]
+```
+
+Writes `tools/e2e/strokes/<script>.json` (kept in git, so runs don't need Python) and a preview of every traced
+glyph, `tools/e2e/out/trace-<script>.png`. Glyphs the font lacks are listed at the end; give those hand-made
+strokes in `alphabet.cjs`.
 
 The script reads the glyph list and set names from `data/` and `locales/en.json`.
 

@@ -299,10 +299,22 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** marks (á's accent etc.) were in both character lists, so Select All → Auto-kern kerned them against everything, although they're attached by positioning and take no space.
   - **Fixed:** marks are left out of the lists, as "Detect new pairs" already did.
 
-- [ ] **K18 Auto-kern lets glyphs touch when only their boxes are compared** (confirmed, end-to-end run)
-  - **Where:** the same two solvers, the ascender/descender/full-box collision branches.
-  - **Problem:** the normal gap is kept only between the x-height parts of the two glyphs. Elsewhere the check is "boxes don't overlap", so the glyphs may touch: `D` + `T` and `D` + `"` get exactly −(right bearing + left bearing), i.e. no gap at all. The boxes are rough, too (the round top of `D` counts as square), so this is tighter than it looks in the code.
-  - **Suggested fix:** keep some clearance in those branches as well (e.g. half the normal gap). Needs a look at a few real pairs before choosing the amount.
+- [x] **K18 ⚠ Auto-kern squeezed capitals together, VE until they touched** (confirmed, end-to-end run; reported by the author on LOVE)
+  - **Where:** both solvers (`calculateAutoKerning` in `services/kerningService.ts` and `solvePair` in `workers/autoKerningWorker.js`).
+  - **Problem:** each glyph was cut into three zones (above x-height, x-height, below baseline), each reduced to a box. Only the x-height boxes had to keep the normal gap; the others only had to not overlap. For capitals the narrow bottom of a V kept the gap, so E slid in until the V's top arm touched the E's top corner: `VE` −145, 5 units of ink apart instead of 150 (also `EV`, `OV`, `VO`, `TO`). Meanwhile `LO` wasn't kerned at all and `FA`, `PA` hardly.
+  - **Fixed:** both solvers now share `utils/inkProfile.ts`. It notes each glyph's ink in thin horizontal bands, and the kerning keeps the normal gap in every band where both glyphs have ink. On the English test font: `VE` 0, `OV` −74, `AV` −192, `To` −182 (unchanged), `LO` −125. Of stricter and looser versions tried (75%, 60% of the gap), the full gap gave the most even text. Tests: V E doesn't close up; A V still tuck together.
+
+- [ ] **K19 ⚠ An accent placed on a letter that is itself a placed accent can't be finished** (confirmed, end-to-end run; partly fixed; needs your call)
+  - **Where:** `components/UnifiedCard.tsx` (can the card open) and about 15 places that take a base letter's shape from its own drawing: `getUnifiedPaths` (`services/glyphRenderService.ts`), `hooks/positioning/usePositioningActions.ts`, `usePositioningData.ts`, `ClassPreviewStrip`, `CombinationCard`, `DrawingWorkspace`, `useGlyphActions`, `feaService`…
+  - **Affects 10 letters:** Greek `ΐ ΰ` (accent on `ϊ ϋ`) and Latin Indic `ṝ Ṝ ḹ Ḹ r̥̄ R̥̄ l̥̄ L̥̄` (macron on `ṛ ḷ r̥ l̥`…). Bases built as composites or links (e.g. Malayalam `ട്ടു`) are fine, because those get a drawing of their own.
+  - **Problem:** a positioned letter has no drawing of its own, so the placement screens find nothing for the base. The card was greyed out ("To edit this, first draw: ϋ"). Progress stopped at 117/119 and "your font is ready" never came. The export is fine: it stacks the accents correctly.
+  - **Partly fixed:** the card now opens when its parts are complete (the progress bar's test), so the letters are no longer locked. But the card and editor still show only the accent, nothing gets saved, and progress stays at 117/119.
+  - **Suggested fix:** wherever a base letter's shape is needed, use its built shape when it has no drawing (the way `getUnifiedPaths` already handles linked letters). A data-only alternative would be to describe these letters as base + one combined accent (e.g. `ι` + `̈́`), but that means more glyphs to draw.
+
+- [ ] **K20 ⚠ Suggested pairs with a built letter are hidden from Spacing, so Tamil stops at 36%** (confirmed, end-to-end run)
+  - **Where:** the Spacing screen's "is it drawn" test for suggested pairs (`components/KerningPage.tsx`, message `kerningShowOnlyComplete`), probably the same own-drawing check as K19.
+  - **Problem:** Tamil suggests 3,297 pairs, but only 250 have two hand-drawn letters. 1,529 involve a positioned letter (`கீ`, `க்`), 1,027 a linked one (`கி`) and 491 a composite. The screen counts those letters as not drawn, hides their pairs ("Some glyphs required for recommended kerning have not been drawn") and never spaces them. With every glyph finished, auto-spacing and Accept, progress stays at 1177/3295 (36%), and those pairs get no spacing in the exported font. Other scripts with suggested pairs (Malayalam, Telugu, Kannada) are likely affected the same way.
+  - **Suggested fix:** treat a letter as ready when it's complete (drawn, positioned, linked or built from complete parts, as the progress bar does), and measure it by its built shape. Fixing K19's "use the built shape when there's no drawing" in one shared place would cover both.
 
 ---
 
@@ -538,6 +550,27 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** icon-only buttons with no `title`/`aria-label`: no tooltip, and screen readers announce just "button".
   - **Fix:** add a translated `title` and `aria-label`.
 
+- [ ] **U16 Spacing a whole font takes five steps nobody tells you about** (confirmed, end-to-end runs; needs your call)
+  - **Where:** the Spacing workspace (`components/KerningPage.tsx`, `components/KerningWorkspace.tsx`, `components/kerning/KerningSelectionView.tsx`).
+  - **Problem:** this is the one place where a beginner has to know the steps. Spacing every pair means: open **All Pairs**, press **Select All** (on both sides), **Auto-kern**, switch to **Suggestions**, then **Accept**. Nothing on the screen leads you through that, and the "font is ready" celebration hands you over to this screen. Someone who stops early exports a font with no spacing between pairs, so `To`, `AV` and `LT` keep their wide default gaps.
+  - **Worse for big scripts:** in Tamil, All Pairs → Select All means 36,828 pairs (every glyph against every glyph). The script's own 3,295 suggested pairs are on another tab, whose screen has no Accept button, so it isn't obvious which route is meant.
+  - **Suggested fix:** one clear action on the Spacing start screen, such as "Space all letters automatically", and then show the result (with Undo). It should use the script's suggested pairs where it has them, and all pairs only where it doesn't. Keep the lists for people who want to pick pairs or check suggestions one by one.
+
+- [ ] **U17 Help and About still speak to experts, and only to Indian scripts** (needs a rewrite)
+  - **Where:** `locales/en.json` (`aboutHowItWorksContent`) and `locales/help/en.json` (`helpQuickStartContent`, `helpProcessContent`, `helpDrawingContent`, `helpGeometryContent`…), plus their Tamil versions.
+  - **Problem:** they talk about "Indic scripts", "OpenType", "kerning", "consonant conjuncts" and "professional-quality font design", and describe the app as Indic-only, though it now covers European scripts, Thai, Lao and Hebrew too. People are told they *design outlines*, while the app's promise is that you *write your letters by hand*.
+  - **Suggested fix:** rewrite in the voice of the new subtitle ("Where your handwriting becomes a font"): name languages, not script families; say "spacing" and "accents", not kerning and mark positioning; keep the technical detail in a section for people who want it. (The subtitle and the About summary are already done.)
+
+- [ ] **U18 The Spacing screen talks about "kerning"** (needs your call on wording)
+  - **Where:** `locales/en.json` (32 strings, e.g. `autoKern` "Auto-kern", `autoKerningComplete` "…new pairs kerned", `kerningProgress`, `addKerningPair`, `removeKerning`, `noPairsToKern`), `locales/help/en.json` (9), `locales/tutorial/en.json` (12), and the Tamil versions.
+  - **Problem:** the tab is called "Spacing", but the button on it says "Auto-kern" and the messages say "kerned", "un-kerned pairs", "Kerning Pair". Kerning is a typographer's word; a beginner doesn't know it means spacing between two letters.
+  - **Suggested fix:** use spacing words everywhere a user reads them: "Auto-space", "Spacing done: {count} pairs spaced", "Add pair", "Remove spacing", "pairs to space". "Kerning" can stay in the code, in exported font data and in the expert parts (debug options, rules). Check the Tamil wording too.
+
+- [ ] **U19 After auto-spacing, the list still shows every pair, including the ones it didn't change** (needs your call)
+  - **Where:** the Spacing pair list (`components/KerningPage.tsx`, `components/kerning/KerningSelectionView.tsx`).
+  - **Problem:** with All Pairs → Select All, auto-spacing changes only some pairs (in the English run 4,345 of the 10,000 pairs; for Tamil, All Pairs would mean 36,828), but the list keeps showing all of them. The few that changed, the ones worth looking at before pressing Accept, are scattered among thousands of untouched ones. There is a filter for pairs waiting for review (the funnel menu), but it's off by default, and it also lists pairs whose suggestion is 0 (no change).
+  - **Suggested fix:** after auto-spacing, show only the pairs it actually changed, with a clear "Show all pairs" switch to get the rest back, and leave out suggestions of 0 from that view.
+
 ---
 
 ## S: Script data
@@ -583,6 +616,12 @@ A user can see or hit these. All ⚠ items are here.
 - [ ] **S14 Tutorial: attachment rule for `N`.** `markAttachment` mentions `N`, which the Tutorial script doesn't contain; the rule is never used. Harmless; remove it or add `N`.
 
   *(S9–S14 come from a data check over all 20 scripts; the 7 European scripts came out clean.)*
+
+- [x] **S15 Greek accented letters weren't placed automatically.** All 20 (Ά … ΰ) said `postition` instead of `position`, so the app treated them as letters to draw by hand. Fixed; the data check now reports any key it doesn't know.
+
+- [x] **S16 Spanish: `á` didn't join from `a` + accent.** It said `ligature` instead of `liga`, unlike every other accented letter. Fixed (found by the same check).
+
+- [ ] **S17 European scripts lack everyday punctuation.** Missing: Spanish `¡ ¿ « »`; French `« »`; Portuguese `« » º ª`; German `„ ‚`; Greek `« » ·` (the Greek semicolon, U+0387); Cyrillic `« » „ №`. A Spanish font can't write "¡Hola!" or "¿Qué?". Adding them means more glyphs to draw, so it's the author's call which to add (¡ ¿ for Spanish and « » for French look essential).
 
 ---
 

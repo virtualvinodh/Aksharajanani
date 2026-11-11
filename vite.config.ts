@@ -44,6 +44,9 @@ export default defineConfig(() => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        // The test tools and the docs aren't part of the app; editing them shouldn't reload the
+        // page (that broke end-to-end runs in progress).
+        watch: { ignored: ['**/tools/**', '**/*.md'] },
       },
       plugins: [react(), tailwindcss(), copyRuntimeAssets()],
       resolve: {
