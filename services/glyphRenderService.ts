@@ -348,14 +348,17 @@ const getTransformForIndex = (config: any, index: number): ComponentTransform =>
 
     // Case 2: New Object Syntax (Preferred)
     if (typeof item === 'object' && !Array.isArray(item)) {
-        const s = item.scale ?? 1;
+        // Values may be written as text in data or typed into a form ("-20"). Read them as numbers:
+        // "0" + "-20" would otherwise make "0-20", and every point of the built glyph NaN.
+        const num = (v: unknown, fallback: number) => { const n = Number(v); return v === undefined || v === null || v === '' || !Number.isFinite(n) ? fallback : n; };
+        const s = num(item.scale, 1);
         return {
              scale: s,
-             scaleX: item.scaleX ?? s,
-             scaleY: item.scaleY ?? s,
-             rotation: item.rotation ?? 0,
-             x: item.x ?? 0,
-             y: item.y ?? 0,
+             scaleX: num(item.scaleX, s),
+             scaleY: num(item.scaleY, s),
+             rotation: num(item.rotation, 0),
+             x: num(item.x, 0),
+             y: num(item.y, 0),
              mode: item.mode ?? 'relative'
         };
     }

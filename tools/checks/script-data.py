@@ -41,6 +41,10 @@ for s in scripts:
         names[n] += 1; defined.add(n)
         for key in c:
             if key not in KNOWN_KEYS: probs['unknown key (typo?)'].append(f'{n!r}: {key!r}')
+        for t in c.get('compositeTransform') or []:
+            if isinstance(t, dict):
+                for k, v in t.items():
+                    if k != 'mode' and isinstance(v, str): probs['number written as text in compositeTransform'].append(f'{n!r}: {k}={v!r}')
         cp = c.get('unicode')
         if cp is None and len([*n]) == 1: cp = ord(n)
         elif cp is not None and len([*n]) == 1 and ord(n) != cp and not (0xE000 <= ord(n) <= 0xF8FF):

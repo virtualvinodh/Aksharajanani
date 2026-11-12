@@ -159,7 +159,7 @@
   { "unicode": 57389, "name": "ശ്ച", "glyphClass": "ligature", "liga": ["ശ", "്", "ച"] },
   { "unicode": 57390, "name": "സ്സ", "glyphClass": "ligature", "link": ["സ", "സ"], "compositeTransform": [{ "scale": 1 }, { "scale": 0.6, "y": 200, "mode": "absolute" }], "liga": ["സ", "്", "സ"] },
   { "unicode": 57391, "name": "സ്ഥ", "glyphClass": "ligature", "composite": ["സ"], "liga": ["സ", "്", "ഥ"] },
-  { "unicode": 57392, "name": "സ്റ്റ", "glyphClass": "ligature", "link": ["സ", "റ", "റ"], "compositeTransform": [{ "scale": 1 }, { "scale": 0.6, "y": 200, "x": "-20", "mode": "absolute" }, { "scale": 0.6, "y": "20", "x": "100", "mode": "absolute" }], "liga": ["സ", "്", "റ്റ"] },
+  { "unicode": 57392, "name": "സ്റ്റ", "glyphClass": "ligature", "link": ["സ", "റ", "റ"], "compositeTransform": [{ "scale": 1 }, { "scale": 0.6, "y": 200, "x": -20, "mode": "absolute" }, { "scale": 0.6, "y": 20, "x": 100, "mode": "absolute" }], "liga": ["സ", "്", "റ്റ"] },
   { "unicode": 57393, "name": "ത്സ", "glyphClass": "ligature", "liga": ["ത", "്", "സ"] },
   { "unicode": 57394, "name": "ഹ്മ", "glyphClass": "ligature", "liga": ["ഹ", "്", "മ"] },
   { "unicode": 57395, "name": "ഹ്ന", "glyphClass": "ligature", "liga": ["ഹ", "്", "ന"] },

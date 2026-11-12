@@ -239,7 +239,10 @@ import paper from "paper";
         if (!Array.isArray(config)) return { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
         const item = config[index];
         if (item === undefined || item === null) return { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
-        if (typeof item === 'object' && !Array.isArray(item)) return { scale: item.scale ?? 1, rotation: item.rotation ?? 0, x: item.x ?? 0, y: item.y ?? 0, mode: item.mode ?? 'relative' };
+        // Numbers may be written as text ("-20"); read them as numbers (see getTransformForIndex in
+        // services/glyphRenderService.ts: "0" + "-20" made "0-20" and the rebuilt glyph NaN).
+        const num = (v, fallback) => { const n = Number(v); return v === undefined || v === null || v === '' || !Number.isFinite(n) ? fallback : n; };
+        if (typeof item === 'object' && !Array.isArray(item)) return { scale: num(item.scale, 1), rotation: num(item.rotation, 0), x: num(item.x, 0), y: num(item.y, 0), mode: item.mode ?? 'relative' };
         return { scale: 1, rotation: 0, x: 0, y: 0, mode: 'relative' };
     };
 
