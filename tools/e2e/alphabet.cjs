@@ -277,6 +277,7 @@ Object.assign(G, {
     '₂': small('2', 560), '₃': small('3', 560), '₄': small('4', 560),
     'ʼ': [seg(5, 270, -10, 320)],      // modifier apostrophe
     '꞉': [dot(0, 420), dot(0, 540)],   // modifier colon
+    '、': [seg(-15, 600, 15, 640)],     // Telugu uses U+3001 as a building block of ష (S19); not in its guide font
 });
 
 module.exports = { G, guides: { C, X, B, D } };

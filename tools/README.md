@@ -32,6 +32,9 @@ Does what a person would do, in any of the European scripts or Tamil:
 1. Starts a new project.
 2. Draws every glyph with the pen: European letters from the hand-made strokes in `e2e/alphabet.cjs`, Tamil from strokes traced from its guide font (`e2e/strokes/tamil.json`, see below). Letters the app builds from others (Æ, ஆ) are opened and kept as built.
 3. Positions the accented letters (the first by hand, the rest with "Accept Default Position").
+   Scripts that place marks by rule (Malayalam, Telugu) also go through the Positioning workspace:
+   one class representative is moved by hand (its synced pairs should follow), then every rule's
+   suggestions are accepted.
 4. Auto-kerns in Spacing and accepts the result: the script's suggested pairs if it has any (Tamil), otherwise every pair (All Pairs → Select All).
 5. Types a sample on the Test page.
 6. Makes a picture in Creator and saves it.
@@ -39,7 +42,8 @@ Does what a person would do, in any of the European scripts or Tamil:
 
 ```sh
 node tools/e2e/e2e.cjs                       # English
-SCRIPT=spanish node tools/e2e/e2e.cjs     # english spanish french portuguese german greek cyrillic tamil
+SCRIPT=spanish node tools/e2e/e2e.cjs     # english spanish french portuguese german greek cyrillic tamil malayalam telugu
+RESUME=tools/e2e/out/malayalam/malayalam-drawn.json SCRIPT=malayalam node tools/e2e/e2e.cjs  # start from the saved checkpoint, skip drawing
 SCRIPT=spanish VIDEO=1 node tools/e2e/e2e.cjs  # also record a video (with on-screen captions)
 DEBUG_GLYPHS=D,t SCRIPT=spanish node tools/e2e/e2e.cjs  # draw only these glyphs, one screenshot each (dbg-<glyph>-<code point>.png)
 ```
@@ -47,6 +51,8 @@ DEBUG_GLYPHS=D,t SCRIPT=spanish node tools/e2e/e2e.cjs  # draw only these glyphs
 Output goes to `tools/e2e/out/<script>/`:
 - numbered screenshots of each step (`FAILED.png` if a step fails);
 - `<script>.otf` (the exported font) and `<script>-studio.png` (the Creator picture);
+- `<script>-project.json` (the project at the end, for `font/rulecheck.py`) and `<script>-drawn.json`
+  (a checkpoint saved once everything is drawn, for `RESUME`);
 - `summary.json` (glyphs drawn and positioned, page errors);
 - with `VIDEO=1`, `<script>.webm`.
 
@@ -118,6 +124,7 @@ node tools/checks/locales.cjs
 
 | Script | Does |
 |---|---|
+| `font/rulecheck.py font.otf project.json [guide.otf] [--sample "text"]` | Checks the font against its project: every letter present, every joining rule forms its letter, every positioning rule places its marks, every spaced pair is spaced. Writes `<font>-rulecheck.md`, and with a guide font a side-by-side picture of the sample. |
 | `font/fontcheck.py font.otf "To" "ñ"` | Tables, glyph count, empty glyphs, GSUB/GPOS features, and how HarfBuzz shapes the given text. |
 | `font/kerndump.py font.otf` | A few glyphs' metrics, the most negative kerning pairs, any positive ones. |
 | `font/glyphsvg.py font.otf out.svg "DtB"` | Draws glyphs with origin and advance marked, to compare against what was drawn. |
