@@ -4,7 +4,7 @@
 
 A beginner can draw a whole font without help, and the app quietly does the hard parts that normally need a typographer. The trouble starts after drawing: spacing, a few badly timed tips, saving, and the words on the screen. None of it needs a redesign.
 
-**Contents:** [Verdict](#verdict) · [How this was reviewed](#how-this-was-reviewed) · [The journey, step by step](#the-journey-step-by-step) · [The amateur font maker](#the-amateur-font-maker) · [Expert tools](#expert-tools) · [What already works](#what-already-works) · [What to do first](#what-to-do-first)
+**Contents:** [Verdict](#verdict) · [How this was reviewed](#how-this-was-reviewed) · [The journey, step by step](#the-journey-step-by-step) · [The help guide](#the-help-guide) · [The amateur font maker](#the-amateur-font-maker) · [Expert tools](#expert-tools) · [What already works](#what-already-works) · [What to do first](#what-to-do-first)
 
 ---
 
@@ -220,6 +220,58 @@ On a tablet with a stylus, lines don't get thicker when you press harder. The ca
 
 ---
 
+## The help guide
+
+**Verdict: you're right, it doesn't help the people the app is for.** The guide (`locales/help/en.json`, 21 sections, about 16,000 characters, same in Tamil) is written for type designers, puts the beginner's path near the end, and parts of it describe an app that no longer exists.
+
+### Who it's written for
+
+Nearly every section assumes typography knowledge: GSUB, GPOS, FEA, Bézier curves, anchors, side bearings, advance width, PUA, "Virtual vs. Baked Glyphs", "Lookup Execution Order". It describes the app as "a powerful, web-based font design tool tailored for Indic scripts" for "professional-quality OpenType fonts". The new subtitle promises the opposite: write by hand, get a font.
+
+### The order
+
+| # | Section | What a beginner needs |
+|---|---|---|
+| 1–2 | Introduction, The Font Creation Process | ✓ but in jargon |
+| 3–7 | Character grid & Bézier curves, Glyph properties, Glyph types, Ligatures, Virtual vs. Baked | Expert material |
+| **8** | **Starting a Project** | This should be first |
+| 9–13 | Templates, Positioning Rules Editor, Rules Manager, OpenType Rules & FEA, Kerning | Mostly expert |
+| 14–17 | Creator, Project management, Settings, Shortcuts | Partly useful |
+| **18** | **Test page** | Belongs in the main path |
+| 19–21 | Troubleshooting, Export & PUA, Supported Scripts | "Supported Scripts" is **empty** |
+
+Nothing covers what a beginner actually does: accepting the app's accents and joined letters, spacing in one step, exporting, **installing and using the font**, or **backing up the project**.
+
+### What's wrong or out of date (checked against the code)
+
+- **Drawing tools.** It describes a "Pen Tool for precise shapes using Bézier curves", a "Pencil Tool" and "rectangles". The real pen is freehand (drag to draw), there's no pencil or rectangle tool, and the Calligraphy Pen, Eraser, Slice, Line, Curve and Dot tools aren't mentioned.
+- **Shortcuts.** `Ctrl+S` "Save Project" has no handler anywhere. Previous/next letter is plain `←`/`→`, not `Ctrl+←`/`→`. `Ctrl+K` (command palette) and `Ctrl+X` (cut) are missing.
+- **Starting a project.** "Four ways to start" lists four; the start screen has six (tutorial, Load Saved Project, Import Font, Create Empty Project, Build from Unicode Blocks, Create Custom Project).
+- **Spacing.** The section is titled "Workspace: Kerning" (the tab says Spacing), and calls the button "Discover New Pairs" (it says "Detect new pairs").
+- **Creator.** "Use the purple Create button": the button is white.
+- **Troubleshooting.** "Ensure the Base glyph has the anchor 'top' and the Mark glyph has '_top'" comes from other font editors. This app places accents by the edges of each letter (top-centre, bottom-right…), with no named anchors, so the advice can't be followed.
+- **Supported Scripts** has a title and no content.
+
+### Format
+
+One long accordion of 21 sections with no pictures, no search, and no way for a tip or an error message to link to the right section. The Help page also doesn't fill the screen (see section 1).
+
+### What it should be instead
+
+A short main guide for the beginner path, plus a separate section for script builders. The end-to-end videos and screenshots can supply the pictures.
+
+1. **Your first font in 5 steps:** choose your language → write each letter over the guide → accept the accents and joined letters → space all letters → try it and export. One screenshot or short clip per step.
+2. **Using your font:** install on Windows or Mac, use in Word, Canva, on a website, on a phone. Includes "change the name when you re-export" (the font-cache tip, now buried in Troubleshooting).
+3. **Keeping your work safe:** where projects are stored, how to download a backup and open it again.
+4. **Questions:** in plain words. "Why is this letter greyed out?", "Why does my ஆ look like அ?", "Why do letters overlap?", "What do dashed cards mean?", "I closed the tab, where is my font?"
+5. **Drawing tools:** the 12 real tools, one line each, in a table.
+6. **Keyboard shortcuts:** the correct list.
+7. **For script builders:** today's expert material (glyph types, ligatures, virtual vs. baked, positioning rules, OpenType rules, FEA, PUA, templates, custom scripts), corrected (no anchors) and kept as it is otherwise.
+
+Writing 1–6 is about a day plus your Tamil review; section 7 is mostly moving and correcting what exists. This replaces U17's help part.
+
+---
+
 ## The amateur font maker
 
 Someone who has made a font or two, or wants a usable font for a project, cares about different things than a beginner. Here's how the app looks to them.
@@ -288,7 +340,7 @@ Ordered by how much each one helps a first-time user, against the effort. The fi
 | 9 | Plain names: "Letters", "Punctuation & symbols", Sanskrit tile, Test page labels, Settings wording | New, U17 | 1 day + Tamil review |
 | 10 | Missing letters shown as missing on Test and Creator | New | ½ day |
 | 11 | Donation ask after the first export, not over the canvas | New | 1 hour |
-| 12 | Help pages fill the screen; rewrite Help as "Your first font in 5 steps" | New, U17 | 1 day |
+| 12 | Help pages fill the screen; rebuild Help as described in [The help guide](#the-help-guide) | New, U17 | 1 day + Tamil review |
 | 13 | "Finish me" marking for starting-point letters (ஆ, ஞூ) | New | ½ day |
 | 14 | Punctuation for Spanish, French and Russian | S17 | 1–2 hours per language |
 | 15 | Watch 2–3 beginners use it, without help | Everything above | An afternoon |

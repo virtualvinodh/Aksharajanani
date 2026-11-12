@@ -102,6 +102,16 @@ A user can see or hit these. All ⚠ items are here.
   - **Fix:** emit pairs in `kern` for non-Indic scripts, and add DFLT.
   - **Fixed:** (author's choice) non-Indic projects put spacing in `kern` instead of `dist` (not both, which HarfBuzz would apply twice); Indic projects keep `dist`. Projects whose script isn't DFLT also get `languagesystem DFLT dflt;` first, so characters outside the main script (Latin, digits, punctuation) are covered. Checked in the browser: an English project with an A–V kern exports GPOS with a `kern` feature, and HarfBuzz applies it ('AV' first advance 786 → 666).
 
+- [x] **E12 ⚠ Malayalam fonts exported with no working rules** (confirmed, end-to-end run + `tools/font/rulecheck.py`)
+  - **Where:** `data/characters_malayalam*.json` (`സ്റ്റ`), `getTransformForIndex` in `services/glyphRenderService.ts` and `workers/cascadeWorker.js`, anchors in `services/feaService.ts`.
+  - **Problem:** `സ്റ്റ`'s `compositeTransform` had numbers written as text (`"x": "-20"`, `"y": "20"`, `"x": "100"`). `0 + "-20"` gave `"0-20"`, so every point of the built glyph was NaN. Accepting its placements saved NaN offsets, and the export wrote `<anchor NaN NaN>`: *"Unknown anchor NaN"*, so the whole feature file failed and the font came out with bare shapes (no conjuncts, no mark positioning).
+  - **Fixed:** data uses numbers; both transform readers convert text to numbers (test fails without it); the export leaves out any anchor that isn't a number instead of failing the whole font; `tools/checks/script-data.py` flags numbers written as text. Projects made from the old data keep their NaN `സ്റ്റ` until one of its parts is edited (it's rebuilt then); the export no longer breaks on it.
+
+- [x] **E13 ⚠ A ligature built from another ligature never formed** (confirmed, `rulecheck.py` on Malayalam)
+  - **Where:** automatic substitutions in `services/feaService.ts`.
+  - **Problem:** all of a feature's automatic rules went into one lookup (`liga_auto_generated`). A lookup runs in one left-to-right pass, so `സ്റ്റ` = `സ ് റ്റ` never matched: at `സ` the text is still `റ ് റ`, and `റ്റ` forms only afterwards. 38 letters in 7 scripts are built from another joined letter (Telugu 12, e.g. `క్ష` + vowel signs; Malayalam Traditional 12; Tamil 3; Malayalam 1; Greek and Latin Indic 10), so any of them in the same feature as their base were affected.
+  - **Fixed:** rules are layered by dependency (`layerByDependency`): a rule goes one lookup after the rules whose output it uses (`liga_auto_generated`, `liga_auto_generated_2`, …). Tests.
+
 ---
 
 ## D: Drawing and editing
@@ -316,6 +326,22 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** Tamil suggests 3,297 pairs, but only 250 have two hand-drawn letters. 1,529 involve a positioned letter (`கீ`, `க்`), 1,027 a linked one (`கி`) and 491 a composite. The screen counts those letters as not drawn, hides their pairs ("Some glyphs required for recommended kerning have not been drawn") and never spaces them. With every glyph finished, auto-spacing and Accept, progress stays at 1177/3295 (36%), and those pairs get no spacing in the exported font. Other scripts with suggested pairs (Malayalam, Telugu, Kannada) are likely affected the same way.
   - **Suggested fix:** treat a letter as ready when it's complete (drawn, positioned, linked or built from complete parts, as the progress bar does), and measure it by its built shape. Fixing K19's "use the built shape when there's no drawing" in one shared place would cover both.
 
+- [ ] **K21 Accepting a big rule's placements takes many pages** (confirmed, end-to-end run)
+  - **Where:** the Positioning workspace's Rule Details (`components/positioning/PositioningRulesView.tsx`).
+  - **Problem:** Malayalam's first rule has 564 pairs on 16 pages of 36; "Accept Page" then Next, 16 times, and 8 more for the second rule. There is no "accept this whole rule".
+  - **Suggested fix:** an "Accept all N" button on Rule Details (and see U20 for one button for the whole font).
+
+- [ ] **K22 ⚠ Telugu letters built from parts come out with their parts apart** (confirmed, end-to-end run; needs your call)
+  - **Where:** Telugu letters defined as `link` of building blocks with `compositeTransform` in `mode: "absolute"` (e.g. `స`, `న`, the ో / ా forms), the editor's guide for zero-width private-use parts (`components/DrawingCanvas.tsx`, ghost text), and link composition (`generateCompositeGlyphData`).
+  - **Problem:** the test draws every part exactly where the editor's guide shows it. In the app's own grid and in the exported font, many built letters then have their parts apart: the talakattu tick floats up-left of `స`, `న`, `ను`; `స` and `న` look alike; in the ో forms (`టో`, `రో`, `డో`…) the sign pieces sit off to the right; `కా`, `రా` look like `కౌ`, `రౌ`. The ౌ forms mostly look right. A user following the guide would get the same.
+  - **Two likely causes (which one needs your knowledge of the data):** (1) the absolute offsets in the data assume the parts are drawn somewhere other than where the guide shows them; (2) the guide shows a zero-width private-use part at the letter's origin (real Unicode signs get a dotted circle to sit beside, private-use parts don't), so it's drawn left of where it belongs.
+  - **To look at:** the test video and `tools/e2e/out/telugu/03-grid-drawn.png`, `telugu-compare.png`.
+
+- [ ] **K23 The default space beside each letter is 2–4× looser than in the guide fonts** (measured; needs your call on the value)
+  - **Where:** `defaultLSB` / `defaultRSB` in `scripts.json` (50 each for every script); auto-spacing aims for the same gap (`rsb + lsb`).
+  - **Problem:** every script gets 50 + 50 canvas units between letters, whatever their size. Gap ÷ letter height in the exported test fonts: English 0.45; Tamil 0.36 (guide font 0.17, 2.1× looser); Malayalam 0.40 (0.15, 2.6×); Telugu 0.28 (0.07, 3.8×). Text looks letter-spaced. Not caused by recent changes: side bearings are identical in fonts exported before and after K18 (75 font units each side).
+  - **Suggested fix:** about 20–25 per side, for all scripts or one value for Latin/Greek/Cyrillic and another for the Indian scripts. Same text at 50, 30 and 20: `docs/review/spacing-options.png`. Only new projects pick up a new default; letters with their own `lsb`/`rsb` in the data (e.g. Malayalam ്ര `rsb: -30`) should be rechecked.
+
 ---
 
 ## P: Persistence and project lifecycle
@@ -399,6 +425,16 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** they restore whole-map snapshots.
   - **Fix:** undo only the affected entries.
   - **Fixed:** single delete, bulk delete, bulk transform and bulk bearings now undo only what they changed (`utils/undoHelpers.ts`, tested; positioning gained a `MERGE_ENTRIES` action): the deleted character goes back to its old place, with its drawing and pairs, and later edits stay. Checked in the browser that undoing a delete brings the glyph back in place; that later edits survive is covered by the unit tests (the Undo button only shows for 3 s, which is too short to make edits in the browser test).
+
+- [ ] **P15 ⚠ Work lives only in this browser; add free, optional cloud saving** (planned with the author)
+  - **Where:** projects are kept in IndexedDB (`services/dbService.ts`); the only backup is "Export JSON" in the More menu.
+  - **Problem:** browsers can clear site storage (Safari after days without a visit, or when someone clears site data), and the app never asks to keep it. People can't continue on another device. The author wants no mandatory account and no storage costs.
+  - **Sizes:** a Malayalam project is 2.7 MB (0.27 MB gzipped), Telugu 11.8 MB (1.2 MB gzipped).
+  - **Plan:**
+    1. *Now, no cost:* ask the browser to keep storage (`navigator.storage.persist()`); a plain "Download backup / Open backup"; backup reminders. On Chrome/Edge desktop, "Keep this project in a folder" (File System Access API) so a Dropbox/Drive/iCloud folder syncs it.
+    2. *Next:* optional "Save to Google Drive" (OAuth in the browser, access only to files the app creates). Uses the person's own storage: no server, no cost, their handwriting never passes through us. Dropbox / OneDrive later if asked.
+    3. *Only if needed:* a no-account "sync code" (random code or QR) on a free tier such as Cloudflare R2 + Workers, encrypted in the browser before upload. We'd then hold people's work (privacy, abuse, upkeep).
+  - **Avoid:** our own accounts or hosting people's work before it's clearly needed. Check free-tier terms before options 3 or a hosted backend (Supabase pauses idle free projects; Firebase Storage needs a billing account).
 
 ---
 
@@ -576,6 +612,16 @@ A user can see or hit these. All ⚠ items are here.
   - **Problem:** once the letters are drawn, the app has already made the accented and joined forms (49 in Tamil, 26–28 in French, Portuguese and Cyrillic), but each still has to be accepted. Today that means opening them one by one, or knowing that "Accept All (n)" appears only after choosing "Auto-generated" or "To be reviewed" in the funnel filter menu. A beginner won't find it.
   - **Suggested fix:** show an "Accept auto-generated (n)" button on the grid whenever n > 0 (for example next to the progress bar), covering positioned and linked letters in one go, with a short confirmation and Undo. Keep the per-letter review for people who want to adjust placements. It would also help the "your font is ready" moment come sooner.
 
+- [ ] **U21 Small things seen in the Malayalam run**
+  - The celebrations say "Go to Kerning" and "Next: Kerning" (U18's jargon, on the screen meant to reward people).
+  - Opening a finished project in a new browser shows the beginner's "Welcome! Select a character card to start drawing" tip on top of "Drawing Complete!".
+  - The celebration's floating letters can sit over its own button, so a click doesn't always land (the test had to press it directly).
+
+- [ ] **U22 Letter spacing and word space are hidden in Settings → Metrics** (requested by the author)
+  - **Where:** `components/settings/MetricsSettings.tsx`: "Default LSB", "Default RSB" and "Space Advance Width", among Units Per Em, Ascender and other font metrics.
+  - **Problem:** these are the two controls that most change how a finished font reads, and every letter without its own value follows them, so one change re-spaces the whole font. But they sit in an expert tab, under type-designer names, far from the Spacing step where people judge spacing. Nobody would think to look there (see K23: the default is too loose for every script).
+  - **Suggested fix:** put them on the Spacing screen in plain words: "Space between letters" (one control for both sides, as a slider with a live sample line) and "Space between words". Show what changes as you move it, and offer to run auto-spacing again afterwards, since its target is the same gap. Keep the separate left/right numbers in Settings for experts.
+
 ---
 
 ## S: Script data
@@ -627,6 +673,14 @@ A user can see or hit these. All ⚠ items are here.
 - [x] **S16 Spanish: `á` didn't join from `a` + accent.** It said `ligature` instead of `liga`, unlike every other accented letter. Fixed (found by the same check).
 
 - [ ] **S17 European scripts lack everyday punctuation.** Missing: Spanish `¡ ¿ « »`; French `« »`; Portuguese `« » º ª`; German `„ ‚`; Greek `« » ·` (the Greek semicolon, U+0387); Cyrillic `« » „ №`. A Spanish font can't write "¡Hola!" or "¿Qué?". Adding them means more glyphs to draw, so it's the author's call which to add (¡ ¿ for Spanish and « » for French look essential).
+
+- [ ] **S18 Malayalam: `ൎ` is listed as a base for marks** (found by `rulecheck.py`). The positioning rules pair `ൎ` (dot reph) with marks, including itself (`ൎ` + `ൎ`, `ൎ` + `്`). Probably it sits in a set that `$conjuncts` expands to; worth checking which.
+
+- [ ] **S19 Telugu uses `、` (U+3001, the Chinese/Japanese comma) as a building block** (found by the end-to-end run). `U+E023` = link [`U+E01F`?, `、`], and `ష` = link [`U+E023`, `U+E028`], so `、` must be drawn for `ష` and all its forms (`ష్ షా షి …`, `క్ష…`) to exist. A Telugu user sees a tile showing a Chinese comma among their letters (see also S13, where it's classed as base with zero width). Suggest a named private-use building block instead.
+
+- [ ] **S20 Telugu `హూ` is `liga ["హ", "ు", "ూ"]`** (found by `rulecheck.py`). Both ు and ూ; probably meant `["హ", "ూ"]`. As written it only forms if someone types హ ు ూ.
+
+- [ ] **S21 Malayalam spacing suggestions pair zero-width signs with vowel signs** (found by `rulecheck.py`). `U+E001` (്ല) and `U+E002` are marks with `advWidth: 0`, and `recommendedKerning` pairs them with ി ീ ു ൂ…; a zero-width mark can't be spaced, so these 8 pairs do nothing.
 
 ---
 
